@@ -14,12 +14,11 @@ class PostgreSQLConfig(Codable):
     url: str
     schema: str | None
 
-    def table(self, table_name: str, event_timestamp_column: str, column_feature_map: dict[str, str] | None = None) -> "PostgreSQLDataSource":
+    def table(self, table_name: str, mapping_keys: dict[str, str] | None = None) -> "PostgreSQLDataSource":
         return PostgreSQLDataSource(
             config=self,
             table=table_name,
-            event_timestamp_column=event_timestamp_column,
-            column_feature_map=column_feature_map or {}
+            mapping_keys=mapping_keys or {}
         )
 
     def data_enricher(self, sql: str):
@@ -35,8 +34,7 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable):
 
     config: PostgreSQLConfig
     table: str
-    event_timestamp_column: str
-    column_feature_map: dict[str, str]
+    mapping_keys: dict[str, str]
 
     type_name = "psql"
 

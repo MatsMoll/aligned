@@ -28,8 +28,6 @@ class BatchDataSource(ABC, Codable, SerializableType):
     """
     A source of chunked data. This could be a file, sql query, database table, etc.
     """
-    event_timestamp_column: str
-    
     type_name: str
 
     @abstractmethod
