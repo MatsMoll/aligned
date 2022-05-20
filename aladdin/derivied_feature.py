@@ -1,15 +1,15 @@
-from aladdin.feature import Feature, FeatureType, Constraint
+from aladdin.feature import Feature, FeatureReferance, FeatureType, Constraint
 from aladdin.transformation import Transformation
 
 class DerivedFeature(Feature):
 
-    depending_on: set[Feature]
+    depending_on: set[FeatureReferance]
     transformation: Transformation
 
     def __init__(self, 
         name: str,
         dtype: FeatureType,
-        depending_on: set[Feature], 
+        depending_on: set[FeatureReferance], 
         transformation: Transformation,
         description: str | None = None,
         is_target: bool = False,
@@ -29,8 +29,16 @@ class DerivedFeature(Feature):
     def depending_on_names(self) -> list[str]:
         return [feature.name for feature in self.depending_on]
 
-    # @classmethod
-    # def __post_deserialize__(cls, obj: "DerivedFeature") -> "DerivedFeature":
-    #     obj.constraints = set(obj.constraints) if obj.constraints else None
-    #     obj.depending_on = set(obj.depending_on)
-    #     return obj
+    @property
+    def depending_on_views(self) -> set[str]:
+        return {feature.feature_view for feature in self.depending_on}
+
+    @property
+    def feature(self) -> Feature:
+        return Feature(
+            name=self.name,
+            dtype=self.dtype,
+            description=self.description,
+            tags=self.tags,
+            constraints=self.constraints,
+        )

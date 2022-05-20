@@ -26,7 +26,10 @@ class BatchDataSourceFactory:
 
 class BatchDataSource(ABC, Codable, SerializableType):
     """
-    A source of chunked data. This could be a file, sql query, database table, etc.
+    A definition to where a specific pice of data can be found. 
+    E.g: A database table, a file, a web service, etc.
+
+    Ths can thereafter be combined with other BatchDataSources in order to create a rich dataset.
     """
     type_name: str
 
@@ -36,6 +39,9 @@ class BatchDataSource(ABC, Codable, SerializableType):
 
     def _serialize(self):
         return self.to_dict()
+
+    def __hash__(self) -> int:
+        return hash(self.job_group_key())
     
     @classmethod
     def _deserialize(cls, value: dict[str]) -> 'BatchDataSource':
@@ -46,11 +52,11 @@ class BatchDataSource(ABC, Codable, SerializableType):
 
 
 class ColumnFeatureMappable:
-    column_feature_map: dict[str, str]
+    mapping_keys: dict[str, str]
 
     def columns_for(self, features: list[Feature]) -> list[str]:
-        return [self.column_feature_map.get(feature.name, feature.name) for feature in features]
+        return [self.mapping_keys.get(feature.name, feature.name) for feature in features]
 
     def feature_identifier_for(self, columns: list[str]) -> list[str]:
-        reverse_map = {v: k for k, v in self.column_feature_map.items()}
+        reverse_map = {v: k for k, v in self.mapping_keys.items()}
         return [reverse_map.get(column, column) for column in columns]

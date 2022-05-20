@@ -15,6 +15,9 @@ redis = "^4.3.1"
 mashumaro = "^3.0.1"
 dill = "^0.3.4"
 aioaws = {version="^0.13", optional=true}
+databases = {extras = ["asyncpg"], version = "^0.5.5"}
+pyarrow = "^8.0.0"
+Jinja2 = "^3.1.2"
 
 [tool.poetry.extras]
 aws = ["aioaws"]

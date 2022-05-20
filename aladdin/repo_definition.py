@@ -1,5 +1,6 @@
 from pathlib import Path
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
+from aladdin.feature_view.combined_view import CompiledCombinedFeatureView
 from aladdin.codable import Codable
 from dataclasses import dataclass
 
@@ -7,6 +8,7 @@ from dataclasses import dataclass
 @dataclass
 class RepoDefinition(Codable):
     feature_views: set[CompiledFeatureView]
+    combined_feature_views: set[CompiledCombinedFeatureView]
     models: dict[str, list[str]]
 
 

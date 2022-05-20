@@ -110,7 +110,6 @@ class Feature(Codable):
     name: str
     dtype: FeatureType
     description: str | None = None
-    is_target: bool = False
     tags: dict[str, str] | None = None
 
     constraints: set[Constraint] | None = None
@@ -118,7 +117,12 @@ class Feature(Codable):
     def __hash__(self) -> int:
         return hash(self.name)
 
-    # @classmethod
-    # def __post_deserialize__(cls, obj: "Feature") -> "Feature":
-    #     obj.constraints = set(obj.constraints) if obj.constraints else None
-    #     return obj
+
+@dataclass
+class FeatureReferance(Codable):
+    name: str
+    feature_view: str
+    dtype: FeatureType
+
+    def __hash__(self) -> int:
+        return hash(self.name)

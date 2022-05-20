@@ -12,6 +12,18 @@ def make_tzaware(t: datetime) -> datetime:
     else:
         return t
 
+def load_envs(path: Path):
+    if path.is_file():
+        import os
+        with path.open() as file:
+            for line in file:
+                if len(line) < 3:
+                    continue
+                key, value = line.strip().split("=")
+                os.environ[key] = value
+    else:
+        click.echo(f"No env file found at {path}")
+
 @click.group()
 def cli():
     pass
@@ -28,15 +40,20 @@ def cli():
     default="repo_definition.json",
     help="The repo definition file path",
 )
-def apply_command(repo_path: str, repo_file: str):
+@click.option(
+    "--env-file",
+    default=".env",
+    help="The path to env variables",
+)
+def apply_command(repo_path: str, repo_file: str, env_file):
     """
     Create or update a feature store deployment
     """
     from aladdin.repo_reader import RepoReader
-    
-    import os
 
     dir = Path.cwd() if repo_path == "." else Path(repo_path).absolute()
+    load_envs(dir / env_file)
+    sys.path.append(str(dir))
     repo_def = RepoReader.from_path(dir)
     
     with open(repo_file, "w") as file:
@@ -57,6 +74,7 @@ def plan_command(repo_path: str):
     from aladdin.repo_reader import RepoReader
 
     dir = Path.cwd() if repo_path == "." else Path(repo_path).absolute()
+    sys.path.append(str(dir))
     click.echo(RepoReader.from_path(dir))
 
 @cli.command("serve")
@@ -84,10 +102,15 @@ def plan_command(repo_path: str):
 )
 @click.option(
     "--repo-file",
-    default="feature_store.yaml",
+    default="repo_definition.json",
     help="The path to the feature store file",
 )
-def serve_command(repo_path: str, host: str, port: int, repo_file: str, workers: int):
+@click.option(
+    "--env-file",
+    default=".env",
+    help="The path to env variables",
+)
+def serve_command(repo_path: str, host: str, port: int, repo_file: str, workers: int, env_file: str):
     """
     Starts a API serving the feature store
     """
@@ -95,6 +118,8 @@ def serve_command(repo_path: str, host: str, port: int, repo_file: str, workers:
     from aladdin.server import FastAPIServer
 
     dir = Path.cwd() if repo_path == "." else Path(repo_path).absolute()
+    load_envs(dir / env_file)
+
     sys.path.append(str(dir))
     repo_def = RepoDefinition.from_url(repo_file)
     store = FeatureStore.from_definition(repo_def)

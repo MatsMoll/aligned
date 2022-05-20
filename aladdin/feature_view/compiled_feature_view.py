@@ -3,7 +3,6 @@ from aladdin.derivied_feature import DerivedFeature
 
 from aladdin.feature import Feature
 from aladdin.data_source.batch_data_source import BatchDataSource
-from aladdin.data_source.stream_data_source import StreamDataSource
 from aladdin.request.retrival_request import RetrivalRequest
 from aladdin.codable import Codable
 
@@ -19,6 +18,9 @@ class CompiledFeatureView(Codable):
     features: set[Feature]
     derived_features: set[DerivedFeature]
 
+    @property
+    def full_schema(self) -> set[Feature]:
+        return self.entities.union(self.features).union(self.derived_features)
 
     @property
     def entitiy_names(self) -> set[str]:
@@ -35,6 +37,7 @@ class CompiledFeatureView(Codable):
         )
 
     def request_for(self, feature_names: set[str]) -> RetrivalRequest:
+        print(feature_names)
         return RetrivalRequest(
             feature_view_name=self.name,
             entities=self.entities,
@@ -44,10 +47,3 @@ class CompiledFeatureView(Codable):
 
     def __hash__(self) -> int:
         return hash(self.name)
-
-    # @classmethod
-    # def __post_deserialize__(cls, obj: "CompiledFeatureView") -> "CompiledFeatureView":
-    #     obj.entities = set(obj.entities)
-    #     obj.features = set(obj.features)
-    #     obj.derived_features = set(obj.derived_features)
-    #     return obj

@@ -6,9 +6,12 @@ from pandas import DataFrame
 import asyncio
 
 from aladdin.data_source.batch_data_source import BatchDataSource
+from aladdin.derivied_feature import DerivedFeature
 from aladdin.feature import FeatureType
 
 from aladdin.request.retrival_request import RetrivalRequest
+import pyarrow as pa
+
 
 class RetrivalJob(ABC):
 
@@ -19,6 +22,7 @@ class RetrivalJob(ABC):
     @abstractmethod
     async def to_arrow(self) -> DataFrame:
         pass
+
 
 Source = TypeVar("Source", bound=BatchDataSource)
 
@@ -55,34 +59,46 @@ class DateRangeJob(SingleSourceRetrivalJob):
 
 class FactualRetrivalJob(RetrivalJob):
 
-    grouped: dict[Source, RetrivalRequest]
+    requests: set[RetrivalRequest]
     facts: dict[str, list]
 
 
     async def compute_derived_featuers(self, df: DataFrame) -> DataFrame:
         all_features = set()
-        for request in self.grouped.values():
+        combined_views: list[DerivedFeature] = []
+        for request in self.requests:
             for feature in request.derived_features:
+                diff = feature.depending_on_views - {request.feature_view_name} 
+                # print(feature.name, diff)
+                if diff:
+                    combined_views.append(feature)
+                    continue
+
                 df[feature.name] = await feature.transformation.transform(df[feature.depending_on_names])
             all_features = all_features.union(request.all_feature_names).union(request.entity_names)
+
+        print("Result:", df)
         return df[list(all_features)]
 
     async def ensure_types(self, df: DataFrame) -> DataFrame:
-        for request in self.grouped.values():
+        for request in self.requests:
             for feature in request.all_required_features:
                 mask = ~df[feature.name].isnull()
                 try:
-                    df.loc[mask, feature.name] = df.loc[mask, feature.name].str.strip('"').astype(feature.dtype.pandas_type)
+                    df.loc[mask, feature.name] = df.loc[mask, feature.name].str.strip('"')
                 except AttributeError as _:
                     pass
 
-                if feature.dtype == FeatureType("").datetime and not df[feature.name].dtype == feature.dtype.pandas_type:
+                if feature.dtype == FeatureType("").datetime:
                     import pandas as pd
                     df[feature.name] = pd.to_datetime(df[feature.name], infer_datetime_format=True, utc=True)
                 elif feature.dtype == FeatureType("").datetime or feature.dtype == FeatureType("").string:
                     continue
                 else:
                     df.loc[mask, feature.name] = df.loc[mask, feature.name].astype(feature.dtype.pandas_type)
+        return df
+
+    async def fill_missing(self, df: DataFrame) -> DataFrame:
         return df
 
     @abstractmethod
@@ -92,6 +108,7 @@ class FactualRetrivalJob(RetrivalJob):
     async def to_df(self) -> DataFrame:
         df = await self._to_df()
         df = await self.ensure_types(df)
+        df = await self.fill_missing(df)
         return await self.compute_derived_featuers(df)
 
 
@@ -99,11 +116,25 @@ class FactualRetrivalJob(RetrivalJob):
 class CombineFactualJob(RetrivalJob):
 
     jobs: list[RetrivalJob]
+    requested_features: set[str]
+    combined_requests: list[RetrivalRequest]
+
+    async def combine_data(self, df: DataFrame) -> DataFrame:
+        for request in self.combined_requests:
+            for feature in request.derived_features:
+                df[feature.name] = await feature.transformation.transform(df[feature.depending_on_names])
+        return df
+
 
     async def to_df(self) -> DataFrame:
         import pandas as pd
         dfs = await asyncio.gather(*[job.to_df() for job in self.jobs])
-        return pd.concat(dfs, axis=1)
+        df = pd.concat(dfs, axis=1)
+        df = await self.combine_data(df)
+        if self.requested_features:
+            return df[list(self.requested_features)]
+        else:
+            return df
 
     async def to_arrow(self) -> DataFrame:
         return await super().to_arrow()

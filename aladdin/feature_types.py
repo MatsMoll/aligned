@@ -6,17 +6,27 @@ from dataclasses import dataclass
 from datetime import timedelta
 import numpy as np
 
-from aladdin.feature import Constraint, Feature, FeatureType, Above
+from aladdin.feature import Constraint, Feature, FeatureType, FeatureReferance
 from aladdin.transformation import Transformation
 
 
-@dataclass
-class FeatureReference:
-    feature_view: str
-    feature: str
+class FeatureReferancable:
 
+    name: str | None
+    feature_view: str | None
+    
+    @abstractproperty
+    def _dtype(self) -> FeatureType:
+        pass
 
-class FeatureFactory(ABC):
+    def feature_referance(self) -> FeatureReferance:
+        return FeatureReferance(
+            name=self.name,
+            feature_view=self.feature_view,
+            dtype=self._dtype
+        )
+
+class FeatureFactory(ABC, FeatureReferancable):
 
     labels: dict[str, str] | None = None
     name: str | None = None
@@ -24,27 +34,16 @@ class FeatureFactory(ABC):
     constraints: set[Constraint] = set()
 
     @abstractproperty
-    def _dtype(self) -> type:
+    def _dtype(self) -> FeatureType:
         pass
 
     def feature(self, name: str) -> Feature:
         self.name = name
-        return Feature(name, dtype=self._dtype, description=None, is_target=False, tags=self.labels, constraints=self.constraints)
+        return Feature(name, dtype=self._dtype, description=None, tags=self.labels, constraints=self.constraints)
 
     def transformed(self, using_features: list[str], transformation: Callable[[DataFrame], Series]) -> "TransformationFactory":
         return CustomTransformation(using_features, self, transformation)
     
-
-@dataclass
-class CompiledTransformation:
-    using_features: list[FeatureReference]
-    feature: Feature
-    transformation: MethodType
-
-    def transform(self, df: DataFrame) -> DataFrame:
-        df[self.feature.name] = self.transformation(df)
-        return df
-
 
 @dataclass
 class CustomTransformationV2(Transformation):
@@ -65,11 +64,16 @@ class CustomTransformationV2(Transformation):
 
 
 
-class TransformationFactory(ABC):
+class TransformationFactory(ABC, FeatureReferancable):
 
     using_features: list[FeatureFactory]
     feature: FeatureFactory
     name: str | None
+    feature_view: str | None
+
+    @property
+    def _dtype(self) -> FeatureType:
+        return self.feature._dtype
 
     @property
     def transformation(self) -> Transformation:

@@ -2,7 +2,8 @@ from pathlib import Path
 from importlib import import_module
 from typing import Any
 from inspect import isclass, getmro
-from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
+
+from aladdin.model import ModelFeatures
 from aladdin.repo_definition import RepoDefinition
 
 def imports_for(file_path: Path) -> set[str]:
@@ -62,14 +63,20 @@ class RepoReader:
 
     @staticmethod
     def from_path(repo_path: Path) -> "RepoDefinition":
-        repo = RepoDefinition(set(), dict())
+        repo = RepoDefinition(
+            feature_views=set(), 
+            combined_feature_views=set(),
+            models=dict()
+        )
 
         for py_file in python_files(repo_path):
             imports = imports_for(py_file)
 
             module_path = path_to_py_module(py_file, repo_path)
             if module_path.startswith("aladdin"):
+                # Skip aladdin modules
                 continue
+            
             module = import_module(module_path)
             
             for attribute in dir(module):
@@ -78,13 +85,13 @@ class RepoReader:
 
                 obj = getattr(module, attribute)
 
-                # if isinstance(obj, FeatureService):
-                #     repo.services.add(obj)
-                # else:
-                classes = super_classes_in(obj)
-                if "FeatureView" in classes:
-                    repo.feature_views.add(obj.compile())
-                # elif "OnDemandView" in classes:
-                #     od_view: CompiledOnDemandView = obj.compile(module_path)
-                #     repo.on_demand_views.add(od_view)
+                if isinstance(obj, ModelFeatures):
+                    model_name = obj.name or attribute
+                    repo.models[model_name] = obj.feature_refs
+                else:
+                    classes = super_classes_in(obj)
+                    if "FeatureView" in classes:
+                        repo.feature_views.add(obj.compile())
+                    elif "CombinedFeatureView" in classes:
+                        repo.combined_feature_views.add(obj.compile())
         return repo

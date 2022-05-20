@@ -1,0 +1,189 @@
+from dataclasses import dataclass
+from pandas import DataFrame
+from typing import Any
+from datetime import datetime
+
+from aladdin.feature import FeatureType
+from aladdin.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
+from aladdin.request.retrival_request import RetrivalRequest
+from aladdin.psql.data_source import PostgreSQLConfig, PostgreSQLDataSource
+
+
+@dataclass
+class SQLQuery:
+    sql: str
+    values: dict[str, Any] | None = None
+
+@dataclass
+class PostgreSQLRetrivalJob(RetrivalJob):
+
+    config: PostgreSQLConfig
+
+    async def fetch_data(self) -> DataFrame:
+        sql_request = self.build_request()
+        from databases import Database
+        try:
+            async with Database(self.config.url) as db:
+                records = await db.fetch_all(query=sql_request.sql, values=sql_request.values)
+                return DataFrame.from_records([dict(record) for record in records])
+        except Exception as e:
+            print(sql_request.sql)
+            print(e)
+            raise e
+
+
+    def build_request(self) -> SQLQuery:
+        raise NotImplementedError()
+
+
+
+class FullExtractPsqlJob(PostgreSQLRetrivalJob, FullExtractJob):
+    
+    source: PostgreSQLDataSource
+
+    def build_request(self) -> SQLQuery:
+        
+        columns = self.source.columns_for(list(self.request.all_required_features))
+        column_select = ", ".join(columns)
+
+        return SQLQuery(
+            sql=f"SELECT {column_select} FROM {self.source.table}",
+        )
+
+@dataclass
+class DateRangePsqlJob(PostgreSQLRetrivalJob, DateRangeJob):
+    
+    source: PostgreSQLDataSource
+    start_date: datetime
+    end_date: datetime
+    request: RetrivalRequest
+
+    def build_request(self) -> SQLQuery:
+        raise NotImplementedError()
+
+        # columns = self.source.columns_for(list(self.request.all_required_features))
+        # column_select = ", ".join(columns)
+
+        # return SQLQuery(
+        #     sql=f"SELECT {column_select} FROM {self.source.table} WHERE {self.source.event_timestamp_column} BETWEEN ((:start_date), (:end_date))", 
+        #     values={
+        #         "start_date": self.start_date,
+        #         "end_date": self.end_date
+        # })
+
+@dataclass
+class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
+
+    sources: dict[str, PostgreSQLDataSource]
+    requests: set[RetrivalRequest]
+    facts: dict[str, list]
+
+    def dtype_to_sql_type(self, dtype: type) -> str:
+        if isinstance(dtype, str):
+            return dtype
+        if dtype == FeatureType("").string:
+            return "text"
+        if dtype == FeatureType("").uuid:
+            return "uuid"
+        if dtype == FeatureType("").int32 or dtype == FeatureType("").int64:
+            return "integer"
+        return "uuid"
+
+    def build_request(self) -> SQLQuery:
+        import numpy as np
+        from jinja2 import BaseLoader, Environment
+
+        template = Environment(loader=BaseLoader()).from_string(self.__sql_template())
+        template_context = {}
+        final_select_names = set()
+        entity_types: dict[str, str] = {}
+        for request in self.requests:
+            final_select_names = final_select_names.union(request.all_required_feature_names)
+            final_select_names = final_select_names.union({f"entities.{entity}" for entity in request.entity_names})
+            for entity in request.entities:
+                entity_types[entity.name] = entity.dtype
+
+        # Need to replace nan as it will not be encoded
+        fact_df = DataFrame(self.facts).replace(np.nan, None)
+        
+        number_of_values = max([len(values) for values in self.facts.values()])
+        fact_df["row_id"] = list(range(number_of_values))
+
+        entity_types = [self.dtype_to_sql_type(entity_types.get(entity, FeatureType("").int32)) for entity in fact_df.columns]
+
+        query_values = []
+        all_entities = []
+        for values in fact_df.values:
+            row_placeholders = []
+            for column_index, value in enumerate(values):
+                row_placeholders.append({
+                    "value": value, # Could in theory lead to SQL injection (?)
+                    "dtype": entity_types[column_index]
+                })
+                if fact_df.columns[column_index] not in all_entities:
+                    all_entities.append(fact_df.columns[column_index])
+            query_values.append(row_placeholders)
+
+        feature_view_names: list[str] = [source.table for source in self.sources.values()]
+        # Add the joins to the fact
+
+        tables = []
+        for request in self.requests:
+            source = self.sources[request.feature_view_name]
+            field_selects = request.all_required_feature_names.union({f"entities.{entity}" for entity in request.entity_names}).union({"entities.row_id"})
+            field_identifiers = source.feature_identifier_for(field_selects)
+            selects = {feature if feature == db_field_name else f"{db_field_name} AS {feature}" for feature, db_field_name in zip(field_selects, field_identifiers)}
+
+            entities = list(request.entity_names)
+            entity_db_name = source.feature_identifier_for(entities)
+
+            join_conditions = [f"ta.{entity_db_name} = entities.{entity}" for entity, entity_db_name in zip(entities, entity_db_name)]
+            table_name = source.table
+            tables.append({
+                "name": table_name,
+                "joins": join_conditions,
+                "features": selects
+            })
+
+        template_context["selects"] = list(final_select_names)
+        template_context["tables"] = tables
+        template_context["joins"] = [f"INNER JOIN {feature_view}_cte ON {feature_view}_cte.row_id = entities.row_id" for feature_view in feature_view_names]
+        template_context["values"] = query_values
+        template_context["entities"] = list(all_entities)
+
+        # should insert the values as a value variable
+        # As this can lead to sql injection
+        return SQLQuery(
+            sql=template.render(template_context)
+        )
+
+    async def _to_df(self) -> DataFrame:
+        return await self.fetch_data()
+
+    async def to_arrow(self) -> DataFrame:
+        return await super().to_arrow()
+
+    def __sql_template(self) -> str:
+        return """
+WITH entities (
+    {{ entities | join(', ') }}
+) AS (
+VALUES {% for row in values %}
+    ({% for value in row %}
+        {% if value.value %}'{{value.value}}'::{{value.dtype}}{% else %}null{% endif %}{% if loop.last %}{% else %},{% endif %}{% endfor %}){% if loop.last %}{% else %},{% endif %}
+{% endfor %}
+),
+
+{% for table in tables %}
+    {{table.name}}_cte AS (
+        SELECT {{ table.features | join(', ') }}
+        FROM entities
+        LEFT JOIN {{table.name}} ta on {{ table.joins | join(' AND ') }}
+    ){% if loop.last %}{% else %},{% endif %}
+{% endfor %}
+
+SELECT {{ selects | join(', ') }} 
+FROM entities 
+{{ joins | join('\n    ') }}
+
+"""
