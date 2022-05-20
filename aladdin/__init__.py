@@ -4,6 +4,7 @@ from aladdin.feature_view.combined_view import CombinedFeatureView, CombinedFeat
 from aladdin.feature_store import FeatureStore
 from aladdin.local.source import LocalFileSource
 from aladdin.s3.config import AwsS3Config
+from aladdin.redis.config import RedisConfig
 
 from aladdin.psql.data_source import PostgreSQLConfig
 
@@ -17,6 +18,8 @@ __all__ = [
     "PostgreSQLConfig",
     "LocalFileSource",
     "AwsS3Config",
+    # Online Source
+    "RedisConfig",
     # Types
     "Entity",
     "String", 

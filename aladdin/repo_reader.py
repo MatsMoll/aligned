@@ -4,6 +4,7 @@ from typing import Any
 from inspect import isclass, getmro
 
 from aladdin.model import ModelFeatures
+from aladdin.online_source import BatchOnlineSource
 from aladdin.repo_definition import RepoDefinition
 
 def imports_for(file_path: Path) -> set[str]:
@@ -66,7 +67,8 @@ class RepoReader:
         repo = RepoDefinition(
             feature_views=set(), 
             combined_feature_views=set(),
-            models=dict()
+            models=dict(),
+            online_source=BatchOnlineSource()
         )
 
         for py_file in python_files(repo_path):
@@ -76,7 +78,7 @@ class RepoReader:
             if module_path.startswith("aladdin"):
                 # Skip aladdin modules
                 continue
-            
+
             module = import_module(module_path)
             
             for attribute in dir(module):
@@ -94,4 +96,6 @@ class RepoReader:
                         repo.feature_views.add(obj.compile())
                     elif "CombinedFeatureView" in classes:
                         repo.combined_feature_views.add(obj.compile())
+                    elif "OnlineSource" in classes:
+                        repo.online_source = obj
         return repo

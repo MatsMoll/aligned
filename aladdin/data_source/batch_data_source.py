@@ -12,8 +12,12 @@ class BatchDataSourceFactory:
 
     def __init__(self):
         from aladdin.psql.data_source import PostgreSQLDataSource
+        from aladdin.local.source import LocalFileSource
+        from aladdin.s3.config import AwsS3DataSource
         self.supported_data_sources = {
             PostgreSQLDataSource.type_name: PostgreSQLDataSource,
+            LocalFileSource.type_name: LocalFileSource,
+            AwsS3DataSource.type_name: AwsS3DataSource
         }
 
     @classmethod
@@ -46,6 +50,8 @@ class BatchDataSource(ABC, Codable, SerializableType):
     @classmethod
     def _deserialize(cls, value: dict[str]) -> 'BatchDataSource':
         name_type = value["type_name"]
+        if name_type not in BatchDataSourceFactory.shared().supported_data_sources:
+            raise ValueError(f"Unknown batch data source id: '{name_type}'.\nRemember to add the data source to the BatchDataSourceFactory.supported_data_sources if it is a custom type.")
         del value["type_name"]
         data_class = BatchDataSourceFactory.shared().supported_data_sources[name_type]
         return data_class.from_dict(value)

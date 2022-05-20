@@ -2,6 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from aladdin.data_source.batch_data_source import BatchDataSource
 from aladdin.feature_source import BatchFeatureSource, FeatureSource
+from aladdin.online_source import OnlineSource
 from aladdin.feature_view.combined_view import CompiledCombinedFeatureView
 
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
@@ -54,13 +55,7 @@ class FeatureStore:
 
     @staticmethod
     def from_definition(repo: RepoDefinition, feature_source: FeatureSource | None = None) -> "FeatureStore":
-        source = feature_source
-        if not source:
-            from aladdin.job_factories import get_factories
-            source = BatchFeatureSource(
-                get_factories(),
-                sources={fv.name: fv.batch_data_source for fv in repo.feature_views}
-            )
+        source = feature_source or repo.online_source.feature_source(repo.feature_views)
         return FeatureStore(
             feature_views=repo.feature_views,
             combined_feature_views=repo.combined_feature_views,

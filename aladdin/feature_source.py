@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from aladdin.data_source.batch_data_source import BatchDataSource
 
 from aladdin.job_factory import JobFactory
-from aladdin.request.retrival_request import RetrivalRequest, FeatureRequest
+from aladdin.request.retrival_request import RetrivalRequest
 from aladdin.retrival_job import CombineFactualJob, RetrivalJob
 
 class FeatureSource:
@@ -25,4 +25,3 @@ class BatchFeatureSource(FeatureSource):
             requested_features=features,
             combined_requests=[request for request in needed_requests if request.feature_view_name not in self.sources]
         )
-

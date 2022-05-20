@@ -68,16 +68,13 @@ class FactualRetrivalJob(RetrivalJob):
         combined_views: list[DerivedFeature] = []
         for request in self.requests:
             for feature in request.derived_features:
-                diff = feature.depending_on_views - {request.feature_view_name} 
-                # print(feature.name, diff)
-                if diff:
+                if feature.depending_on_views - {request.feature_view_name}:
                     combined_views.append(feature)
                     continue
 
                 df[feature.name] = await feature.transformation.transform(df[feature.depending_on_names])
             all_features = all_features.union(request.all_feature_names).union(request.entity_names)
 
-        print("Result:", df)
         return df[list(all_features)]
 
     async def ensure_types(self, df: DataFrame) -> DataFrame:
