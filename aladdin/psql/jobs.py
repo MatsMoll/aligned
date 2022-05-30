@@ -3,6 +3,8 @@ from pandas import DataFrame
 from typing import Any
 from datetime import datetime
 
+from sqlalchemy import alias
+
 from aladdin.feature import FeatureType
 from aladdin.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
 from aladdin.request.retrival_request import RetrivalRequest
@@ -14,7 +16,7 @@ class SQLQuery:
     sql: str
     values: dict[str, Any] | None = None
 
-@dataclass
+
 class PostgreSQLRetrivalJob(RetrivalJob):
 
     config: PostgreSQLConfig
@@ -34,20 +36,37 @@ class PostgreSQLRetrivalJob(RetrivalJob):
 
     def build_request(self) -> SQLQuery:
         raise NotImplementedError()
+        
+    async def _to_df(self) -> DataFrame:
+        return await self.fetch_data()
 
+    async def to_arrow(self) -> DataFrame:
+        return await super().to_arrow()
 
-
+@dataclass
 class FullExtractPsqlJob(PostgreSQLRetrivalJob, FullExtractJob):
     
     source: PostgreSQLDataSource
+    request: RetrivalRequest
+    limit: int | None = None
+
+    @property
+    def config(self) -> PostgreSQLConfig:
+        return self.source.config
 
     def build_request(self) -> SQLQuery:
         
-        columns = self.source.columns_for(list(self.request.all_required_features))
+        all_features = [feature.name for feature in list(self.request.all_required_features.union(self.request.entities))]
+        sql_columns = self.source.feature_identifier_for(all_features)
+        columns = [f'{sql_col} AS {alias}' if sql_col != alias else sql_col for sql_col, alias in zip(sql_columns, all_features)]
         column_select = ", ".join(columns)
 
+        limit_query = ""
+        if self.limit:
+            limit_query = f"LIMIT {int(self.limit)}"
+
         return SQLQuery(
-            sql=f"SELECT {column_select} FROM {self.source.table}",
+            sql=f"SELECT {column_select} FROM {self.source.table} {limit_query}",
         )
 
 @dataclass
@@ -74,6 +93,7 @@ class DateRangePsqlJob(PostgreSQLRetrivalJob, DateRangeJob):
 @dataclass
 class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
 
+    config: PostgreSQLConfig
     sources: dict[str, PostgreSQLDataSource]
     requests: set[RetrivalRequest]
     facts: dict[str, list]
@@ -107,7 +127,8 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
         fact_df = DataFrame(self.facts).replace(np.nan, None)
         
         number_of_values = max([len(values) for values in self.facts.values()])
-        fact_df["row_id"] = list(range(number_of_values))
+        # + 1 is needed as 0 is evaluated for null
+        fact_df["row_id"] = list(range(1, number_of_values + 1)) 
 
         entity_types = [self.dtype_to_sql_type(entity_types.get(entity, FeatureType("").int32)) for entity in fact_df.columns]
 
@@ -156,12 +177,6 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
         return SQLQuery(
             sql=template.render(template_context)
         )
-
-    async def _to_df(self) -> DataFrame:
-        return await self.fetch_data()
-
-    async def to_arrow(self) -> DataFrame:
-        return await super().to_arrow()
 
     def __sql_template(self) -> str:
         return """

@@ -74,11 +74,11 @@ class CombinedFeatureView(ABC, FeatureSelectable):
 
 
     @staticmethod
-    def _needed_features(feature: DerivedFeature, feature_views: dict[str, CompiledFeatureView]) -> list[RetrivalRequest]:
+    def _needed_features(depending_on: set[Feature], feature_views: dict[str, CompiledFeatureView]) -> list[RetrivalRequest]:
 
         feature_refs: dict[CompiledFeatureView, set[str]] = {}
 
-        for feature_dep in feature.depending_on:
+        for feature_dep in depending_on:
             view = feature_views[feature_dep.feature_view]
             feature_refs.setdefault(view, set()).add(feature_dep.name)
 
@@ -104,16 +104,17 @@ class CombinedFeatureView(ABC, FeatureSelectable):
             if isinstance(feature, TransformationFactory):
                 feature.feature_view = metadata.name
                 feature.name = var_name # Needed in some cases for later inferance and features
+                requests[var_name] = CombinedFeatureView._needed_features(feature.using_features, feature_view_deps)
+
+                sources = [(feature_view_deps[request.feature_view_name], request) for request in requests[var_name]]
+                tran = feature.transformation(sources)
                 derived = DerivedFeature(
                     name=var_name,
                     dtype=feature.feature._dtype,
                     depending_on=[feature.feature_referance() for feature in feature.using_features],
-                    transformation=feature.transformation
+                    transformation=tran
                 )
                 transformations.add(derived)
-                requests[derived.name] = CombinedFeatureView._needed_features(derived, feature_view_deps)
-
-        print(requests)
 
         return CompiledCombinedFeatureView(
             name=metadata.name,

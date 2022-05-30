@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from aladdin.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 
 @dataclass
-class LocalFileSource(BatchDataSource, ColumnFeatureMappable):
+class FileSource(BatchDataSource, ColumnFeatureMappable):
 
     path: str
     mapping_keys: dict[str, str]

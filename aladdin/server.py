@@ -10,11 +10,11 @@ class FastAPIServer:
         requests = feature_store.model_requests[name]
 
         entities: set[Feature] = set()
-        for request in requests.values():
+        for request in requests:
             entities.update(request.entities)
 
         required_features = entities.copy()
-        for request in requests.values():
+        for request in requests:
             required_features.update(request.all_required_features)
 
         featch_api_schema = {

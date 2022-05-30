@@ -12,11 +12,11 @@ class BatchDataSourceFactory:
 
     def __init__(self):
         from aladdin.psql.data_source import PostgreSQLDataSource
-        from aladdin.local.source import LocalFileSource
+        from aladdin.local.source import FileSource
         from aladdin.s3.config import AwsS3DataSource
         self.supported_data_sources = {
             PostgreSQLDataSource.type_name: PostgreSQLDataSource,
-            LocalFileSource.type_name: LocalFileSource,
+            FileSource.type_name: FileSource,
             AwsS3DataSource.type_name: AwsS3DataSource
         }
 

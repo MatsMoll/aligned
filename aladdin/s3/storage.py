@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from http import client
 from pathlib import Path
 from aioaws.s3 import S3Client
 
@@ -32,3 +33,20 @@ class FileStorage(Storage):
 
     async def write(self, path: str, content: bytes) -> None:
         return Path(path).write_bytes(content)
+
+@dataclass
+class HttpStorage(Storage):
+
+    async def read(self, path: str) -> bytes:
+        if not (path.startswith("http://") or path.startswith("https://")):
+            raise ValueError("Invalid url")
+
+        from httpx import AsyncClient
+        async with AsyncClient() as client:
+            response = await client.get(path)
+            response.raise_for_status()
+            return response.content
+
+    async def write(self, path: str, content: bytes) -> None:
+        raise NotImplementedError()
+        # return Path(path).write_bytes(content)

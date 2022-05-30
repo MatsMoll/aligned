@@ -34,10 +34,11 @@ class RedisConfig(Codable):
 
     def redis(self) -> "Redis":
         global _redis
-        if _redis:
+        try:
             return _redis
-        _redis = Redis.from_url(self.url)
-        return _redis
+        except NameError:
+            _redis = Redis.from_url(self.url)
+            return _redis
 
     def online_source(self) -> "RedisOnlineSource":
         return RedisOnlineSource(config=self)

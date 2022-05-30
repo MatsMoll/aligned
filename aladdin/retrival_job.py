@@ -31,13 +31,27 @@ class SingleSourceRetrivalJob(RetrivalJob):
     request: RetrivalRequest
 
     async def compute_derived_featuers(self, df: DataFrame) -> DataFrame:
-        for feature in self.request.derived_features:
-            df[feature.name] = feature.transformation.transform(df[feature.depending_on_names])
-        return df[self.request.all_feature_names]
+        for feature_round in self.request.derived_features_order():
+            for feature in feature_round:
+                df[feature.name] = await feature.transformation.transform(df[feature.depending_on_names])
+
+        return df[list(self.request.all_feature_names.union(self.request.entity_names))]
 
     async def ensure_types(self, df: DataFrame) -> DataFrame:
-        for feature in self.request.all_features:
-            df[feature.name] = df[feature.name].astype(feature.dtype)
+        for feature in self.request.all_required_features:
+            mask = ~df[feature.name].isnull()
+            try:
+                df.loc[mask, feature.name] = df.loc[mask, feature.name].str.strip('"')
+            except AttributeError as _:
+                pass
+
+            if feature.dtype == FeatureType("").datetime:
+                import pandas as pd
+                df[feature.name] = pd.to_datetime(df[feature.name], infer_datetime_format=True, utc=True)
+            elif feature.dtype == FeatureType("").datetime or feature.dtype == FeatureType("").string:
+                continue
+            else:
+                df.loc[mask, feature.name] = df.loc[mask, feature.name].astype(feature.dtype.pandas_type)
         return df
 
     @abstractmethod
@@ -45,13 +59,13 @@ class SingleSourceRetrivalJob(RetrivalJob):
         pass
         
     async def to_df(self) -> DataFrame:
-        df = self._to_df()
+        df = await self._to_df()
         df = await self.ensure_types(df)
         return await self.compute_derived_featuers(df)
 
         
 class FullExtractJob(SingleSourceRetrivalJob):
-    pass
+    limit: int | None
 
 class DateRangeJob(SingleSourceRetrivalJob):
     start_date: datetime
@@ -67,12 +81,13 @@ class FactualRetrivalJob(RetrivalJob):
         all_features = set()
         combined_views: list[DerivedFeature] = []
         for request in self.requests:
-            for feature in request.derived_features:
-                if feature.depending_on_views - {request.feature_view_name}:
-                    combined_views.append(feature)
-                    continue
-
-                df[feature.name] = await feature.transformation.transform(df[feature.depending_on_names])
+            for feature_round in request.derived_features_order():
+                for feature in feature_round:
+                    if feature.depending_on_views - {request.feature_view_name}:
+                        combined_views.append(feature)
+                        continue
+                    print(df.columns)
+                    df[feature.name] = await feature.transformation.transform(df[feature.depending_on_names])
             all_features = all_features.union(request.all_feature_names).union(request.entity_names)
 
         return df[list(all_features)]

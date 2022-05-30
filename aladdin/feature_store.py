@@ -2,8 +2,9 @@ from collections import defaultdict
 from dataclasses import dataclass
 from aladdin.data_source.batch_data_source import BatchDataSource
 from aladdin.feature_source import BatchFeatureSource, FeatureSource
+from aladdin.feature_view.feature_view import FeatureView
 from aladdin.online_source import OnlineSource
-from aladdin.feature_view.combined_view import CompiledCombinedFeatureView
+from aladdin.feature_view.combined_view import CombinedFeatureView, CompiledCombinedFeatureView
 
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.repo_definition import RepoDefinition
@@ -50,7 +51,7 @@ class FeatureStore:
         self.feature_source = feature_source
         self.combined_feature_views = {fv.name: fv for fv in combined_feature_views}
         self.feature_views = {fv.name: fv for fv in feature_views}
-        self.model_requests = {name: self.requests_for(model) for name, model in models.items()}
+        self.model_requests = {name: self.requests_for(RawStringFeatureRequest(model)) for name, model in models.items()}
 
 
     @staticmethod
@@ -96,6 +97,22 @@ class FeatureStore:
                 )
         return requests
 
+    def add_feature_view(self, feature_view: FeatureView):
+        compiled_view = type(feature_view).compile()
+        self.feature_views[compiled_view.name] = compiled_view
+        if isinstance(self.feature_source, BatchFeatureSource):
+            self.feature_source.sources[compiled_view.name] = compiled_view.batch_data_source
+
+    def add_combined_feature_view(self, feature_view: CombinedFeatureView):
+        compiled_view = type(feature_view).compile()
+        self.combined_feature_views[compiled_view.name] = compiled_view
+
+    def all_for(self, view: str, limit: int | None = None) -> RetrivalJob:
+        return self.feature_source.all_for(
+            self.feature_views[view].request_all,
+            limit
+        )
+
 @dataclass
 class OfflineModelStore:
 
@@ -103,7 +120,13 @@ class OfflineModelStore:
     requests: set[RetrivalRequest]
 
     def features_for(self, facts: dict[str, list]) -> RetrivalJob:
-        return self.source.features_for(facts, self.requests)
+
+        feature_names = set()
+        for request in self.requests:
+            feature_names.update(request.all_feature_names)
+            feature_names.update(request.entity_names)
+            
+        return self.source.features_for(facts, self.requests, feature_names)
 
     async def write(self, values: dict[str]):
         pass

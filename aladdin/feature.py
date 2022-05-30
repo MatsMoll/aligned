@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 from typing import Any
 
@@ -44,7 +43,8 @@ class FeatureType(Codable):
             "datetime": datetime,
             "time": time,
             "timedelta": timedelta,
-            "uuid": UUID
+            "uuid": UUID,
+            "array": list
         }[self.name]
 
     @property
@@ -62,7 +62,8 @@ class FeatureType(Codable):
             "datetime": np.datetime64,
             "time": np.datetime64,
             "timedelta": np.timedelta64,
-            "uuid": UUID
+            "uuid": UUID,
+            "array": list
         }[self.name]
 
     def __eq__(self, other: "FeatureType") -> bool:
@@ -104,6 +105,10 @@ class FeatureType(Codable):
     def datetime(self) -> "FeatureType":
         return FeatureType(name="datetime")
 
+    @property
+    def array(self) -> "FeatureType":
+        return FeatureType(name="array")
+
 
 @dataclass
 class Feature(Codable):
@@ -117,12 +122,24 @@ class Feature(Codable):
     def __hash__(self) -> int:
         return hash(self.name)
 
+@dataclass
+class EventTimestamp(Codable):
+    name: str
+    ttl: int
+    description: str | None = None
+    tags: dict[str, str] | None = None
+    dtype: FeatureType = FeatureType("").datetime
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
 
 @dataclass
 class FeatureReferance(Codable):
     name: str
     feature_view: str
     dtype: FeatureType
+    is_derivied: bool
 
     def __hash__(self) -> int:
         return hash(self.name)

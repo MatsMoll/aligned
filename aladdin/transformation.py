@@ -5,10 +5,12 @@ from aladdin.feature import FeatureType
 from typing import Optional
 from mashumaro.types import SerializableType
 
+from aladdin.psql.data_source import PostgreSQLConfig
+
 
 class Transformation(Codable, SerializableType):
     name: str
-    dtype: FeatureType | None # Should be something else
+    dtype: FeatureType
 
     async def transform(self, df: DataFrame) -> Series:
         pass
@@ -37,7 +39,8 @@ class SupportedTransformations:
         
         for tran_type in [
             Equals,
-            CustomTransformationV2
+            CustomTransformationV2,
+            TimeSeriesTransformation
         ]:
             self.add(tran_type)
 
@@ -59,7 +62,7 @@ class Equals(Transformation):
     value: str
 
     name: str = "equals" 
-    dtype: FeatureType = FeatureType.bool
+    dtype: FeatureType = FeatureType("").bool
 
     def __init__(self, key: str, value: str) -> None:
         self.key = key
@@ -68,3 +71,49 @@ class Equals(Transformation):
     async def transform(self, df: DataFrame) -> Series:
         return df[self.key] == self.value
 
+
+@dataclass
+class TimeSeriesTransformation(Transformation):
+
+    method: str
+    field_name: str
+    table_name: str
+    config: PostgreSQLConfig
+    event_timestamp_column: str
+
+    dtype: FeatureType = FeatureType("").int64
+    name: str = "ts_transform"
+
+    async def transform(self, df: DataFrame) -> Series:
+        fact_df = df[[self.event_timestamp_column, self.field_name]]
+        fact_df["row_id"] = list(range(1, fact_df.shape[0] + 1))
+
+        values = []
+        columns = ",".join(list(fact_df.columns))
+        for _, row in fact_df.iterrows():
+            row_values = []
+            for column, value in row.items():
+                if column == self.event_timestamp_column:
+                    row_values.append(f"'{value}'::timestamp with time zone")
+                else:
+                    row_values.append(f"'{value}'")
+            values.append(",".join(row_values))
+        
+        sql_values = "(" + "),\n    (".join(values) + ")"
+        sql = f"""
+WITH entities (
+    {columns}
+) AS (
+VALUES
+    {sql_values}
+)
+
+SELECT {self.method}(t.{self.field_name}) AS {self.field_name}_value, et.row_id
+FROM entities et
+LEFT JOIN {self.table_name} t ON
+    t.{self.field_name} = et.{self.field_name} AND
+    t.{self.event_timestamp_column} < et.{self.event_timestamp_column}
+GROUP BY et.row_id;
+"""
+        data = await self.config.data_enricher(sql).load()
+        return data[f"{self.field_name}_value"]

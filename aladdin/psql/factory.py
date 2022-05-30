@@ -8,8 +8,8 @@ class PostgresJobFactory(JobFactory):
 
     source = PostgreSQLDataSource
 
-    def all_data(self, source: PostgreSQLDataSource) -> FullExtractPsqlJob:
-        return super().all_data()
+    def all_data(self, source: PostgreSQLDataSource, request: RetrivalRequest, limit: int | None) -> FullExtractPsqlJob:
+        return FullExtractPsqlJob(source, request, limit)
 
     def all_between_dates(self, source: PostgreSQLDataSource, request: RetrivalRequest, start_date: datetime, end_date: datetime) -> DateRangePsqlJob:
         raise NotImplementedError()

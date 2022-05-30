@@ -15,7 +15,7 @@ class JobFactory(ABC):
     def source(self) -> type[Source]:
         pass
 
-    def all_data(self, source: Source) -> FullExtractJob:
+    def all_data(self, source: Source, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
         pass
 
     def all_between_dates(self, source: Source, request: RetrivalRequest, start_date: datetime, end_date: datetime) -> DateRangeJob:
@@ -32,6 +32,7 @@ class JobFactory(ABC):
             for entity_name in request.entity_names:
                 grouped_facts[data_source.job_group_key()][entity_name] = facts[entity_name]
 
+        print(grouped_facts)
         return CombineFactualJob(
             jobs=[
                 self._facts(facts=grouped_facts[job_key], requests=requests)

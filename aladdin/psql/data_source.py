@@ -1,13 +1,13 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
 from dataclasses import dataclass
 from typing import Callable
-from datetime import timedelta
-from redis.asyncio import Redis
 
 from aladdin.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aladdin.codable import Codable
-from aladdin.model import EntityDataSource, SqlEntityDataSource
-from aladdin.enricher import FileCacheEnricher, RedisLockEnricher, SqlDatabaseEnricher, Enricher
-
+if TYPE_CHECKING:
+    from aladdin.entity_data_source import EntityDataSource
+    from aladdin.enricher import Enricher
 
 @dataclass
 class PostgreSQLConfig(Codable):
@@ -25,6 +25,10 @@ class PostgreSQLConfig(Codable):
         os.environ["PSQL_DATABASE"] = url
         return PostgreSQLConfig(env_var="PSQL_DATABASE")
 
+    @staticmethod
+    def localhost(db: str) -> "PostgreSQLConfig":
+        return PostgreSQLConfig.from_url(f"postgresql://localhost/{db}")
+
     def table(self, table: str, mapping_keys: dict[str, str] | None = None) -> "PostgreSQLDataSource":
         return PostgreSQLDataSource(
             config=self,
@@ -32,19 +36,13 @@ class PostgreSQLConfig(Codable):
             mapping_keys=mapping_keys or {}
         )
 
-    def data_enricher(self, name: str, sql: str, redis_lock: Redis, values: dict | None = None) -> Enricher:
-        from pathlib import Path
-        return FileCacheEnricher(
-            timedelta(days=1),
-            file=Path(f"./cache/{name}.parquet"),
-            enricher=RedisLockEnricher(
-                name,
-                SqlDatabaseEnricher(self.url, sql, values),
-                redis_lock
-            )
-        )
+    def data_enricher(self, sql: str, values: dict | None = None) -> Enricher:
+        from aladdin.enricher import SqlDatabaseEnricher
+
+        return SqlDatabaseEnricher(self.url, sql, values)
 
     def entity_source(self, timestamp_column: str, sql: Callable[[str], str]) -> EntityDataSource:
+        from aladdin.model import SqlEntityDataSource
         return SqlEntityDataSource(sql, self.url, timestamp_column)
 
 @dataclass

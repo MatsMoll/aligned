@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from aladdin.derivied_feature import DerivedFeature
 
-from aladdin.feature import Feature
+from aladdin.feature import Feature, EventTimestamp
 from aladdin.data_source.batch_data_source import BatchDataSource
 from aladdin.request.retrival_request import RetrivalRequest
 from aladdin.codable import Codable
@@ -17,6 +17,7 @@ class CompiledFeatureView(Codable):
     entities: set[Feature]
     features: set[Feature]
     derived_features: set[DerivedFeature]
+    event_timestamp: EventTimestamp
 
     @property
     def full_schema(self) -> set[Feature]:
@@ -25,7 +26,6 @@ class CompiledFeatureView(Codable):
     @property
     def entitiy_names(self) -> set[str]:
         return {entity.name for entity in self.entities}
-
     
     @property
     def request_all(self) -> RetrivalRequest:
@@ -33,16 +33,51 @@ class CompiledFeatureView(Codable):
             feature_view_name=self.name,
             entities=self.entities,
             features=self.features,
-            derived_features=self.derived_features
+            derived_features=self.derived_features,
+            event_timestamp=self.event_timestamp,
+            core_features=self.features.union(self.entities),
+            intermediate_features=set()
         )
 
     def request_for(self, feature_names: set[str]) -> RetrivalRequest:
-        print(feature_names)
+        
+        features = {feature for feature in self.features if feature.name in feature_names}
+        core_features = {feature for feature in self.features if feature.name in feature_names}.union(self.entities)
+        intermediate_features = set()
+        derived_features = {feature for feature in self.derived_features if feature.name in feature_names}
+
+        def dependent_features_for(feature: DerivedFeature) -> tuple[set[Feature], set[Feature]]:
+            core_features = set()
+            intermediate_features = set()
+
+            for dep_ref in feature.depending_on:
+                if dep_ref.is_derivied:
+                    print(dep_ref)
+                    dep_feature = [feat for feat in self.derived_features if feat.name == dep_ref.name][0]
+                    intermediate_features.add(dep_feature)
+                    core, intermediate = dependent_features_for(dep_feature)
+                    core_features.update(core)
+                    intermediate_features.update(intermediate)
+                else:
+                    dep_feature = [feat for feat in self.features.union(self.entities) if feat.name == dep_ref.name][0]
+                    core_features.add(dep_feature)
+
+            return core_features, intermediate_features
+                    
+        for dep_feature in derived_features:
+            core, intermediate = dependent_features_for(dep_feature)
+            core_features.update(core)
+            intermediate_features.update(intermediate)
+
+        intermediate_features = intermediate_features - derived_features
         return RetrivalRequest(
             feature_view_name=self.name,
             entities=self.entities,
-            features={feature for feature in self.features if feature.name in feature_names},
-            derived_features={feature for feature in self.derived_features if feature.name in feature_names}
+            features=features,
+            derived_features=derived_features,
+            event_timestamp=self.event_timestamp,
+            core_features=core_features,
+            intermediate_features=intermediate_features
         )
 
     def __hash__(self) -> int:

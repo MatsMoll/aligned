@@ -1,20 +1,10 @@
-from dataclasses import dataclass
 from datetime import datetime, timedelta
-from math import fabs
 from typing import Callable
 from pandas import DataFrame
-from aladdin.feature_types import FeatureFactory, FeatureReferancable
 
-
+from aladdin.feature_types import FeatureReferancable
+from aladdin.entity_data_source import EntityDataSource
 from aladdin.request.retrival_request import RetrivalRequest
-
-class EntityDataSource:
-
-    async def all_in_range(self, start_date: datetime, end_date: datetime) -> DataFrame:
-        pass
-
-    async def last(self, days: int, hours: int, seconds: int) -> DataFrame:
-        pass
 
 
 class SqlEntityDataSource(EntityDataSource):

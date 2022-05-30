@@ -1,13 +1,11 @@
 from abc import ABC, abstractproperty
-from dataclasses import dataclass
 from typing import TypeVar, Callable
 from aladdin.derivied_feature import DerivedFeature
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
-from aladdin.data_source.batch_data_source import BatchDataSource
-from aladdin.data_source.stream_data_source import StreamDataSource
-from aladdin.feature import Feature
+from aladdin.feature import Feature, EventTimestamp as EventTimestampFeature
 from aladdin.feature_types import EventTimestamp, Entity, FeatureFactory, TransformationFactory
 from aladdin.request.retrival_request import RetrivalRequest
+from aladdin.feature_view.feature_view_metadata import FeatureViewMetadata
 
 # Enables code compleation in the select method
 FVType = TypeVar("FVType")
@@ -22,13 +20,7 @@ class FeatureSelectable:
     def select_all(cls: type[FVType]) -> RetrivalRequest:
         pass
 
-@dataclass
-class FeatureViewMetadata:
-    name: str
-    description: str
-    tags: dict[str, str]
-    batch_source: BatchDataSource
-    stream_source: StreamDataSource | None = None
+
 
 
 class FeatureView(ABC, FeatureSelectable):
@@ -46,22 +38,39 @@ class FeatureView(ABC, FeatureSelectable):
     def compile(cls) -> CompiledFeatureView:
         features: list[Feature] = []
         metadata = cls().metadata
-        event_timestamp: tuple[str, EventTimestamp] | None = None
+        event_timestamp: EventTimestampFeature | None = None
         entities: list[Feature] = []
         transformations: list[DerivedFeature] = []
         var_names = [name for name in cls().__dir__() if not name.startswith("_")]
         for var_name in var_names:
             feature = getattr(cls, var_name)
 
-            if isinstance(feature, TransformationFactory):  
+            if isinstance(feature, TransformationFactory): 
+                if event_timestamp is None:
+                    raise Exception(f"Set EventTimestamp above the feature {var_name} in {cls.__name__}")
+
                 feature.name = var_name
                 feature.feature_view = metadata.name
+                tran = feature.transformation([
+                    (
+                        metadata, 
+                        RetrivalRequest(
+                            feature_view_name=metadata.name,
+                            entities=set(entities),
+                            features=set(features),
+                            derived_features=set(transformations),
+                            event_timestamp=event_timestamp,
+                            core_features=set(features),
+                            intermediate_features=set()
+                        )
+                    )
+                ])
                 transformations.append(
                     DerivedFeature(
                         name=var_name,
                         dtype=feature.feature._dtype,
                         depending_on=[feature.feature_referance() for feature in feature.using_features],
-                        transformation=feature.transformation
+                        transformation=tran
                     )
                 )
                 continue
@@ -75,13 +84,13 @@ class FeatureView(ABC, FeatureSelectable):
                 if event_timestamp is not None:
                     raise Exception(f"Can only have one EventTimestamp for each FeatureViewDefinition. Check that this is the case for {cls.__name__}")
                 features.append(feature.feature(var_name))
-                event_timestamp = (var_name, feature)
+                event_timestamp = feature.event_timestamp_feature(var_name)
             else:
                 features.append(feature.feature(var_name))
 
         if not entities:
             raise ValueError(f"FeatureView {metadata.name} must contain at least one Entity")
-            
+
         if event_timestamp is None:
             raise Exception(f"A EventTimestamp is needed for {cls.__name__}")
 
@@ -94,6 +103,7 @@ class FeatureView(ABC, FeatureSelectable):
             entities=set(entities),
             features=set(features),
             derived_features=set(transformations),
+            event_timestamp=event_timestamp
         )
 
 
