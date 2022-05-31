@@ -11,10 +11,7 @@ class RetrivalRequest(Codable):
     entities: set[Feature]
     features: set[Feature]
     derived_features: set[DerivedFeature]
-    event_timestamp: EventTimestamp
-
-    core_features: set[Feature]
-    intermediate_features: set[DerivedFeature]
+    event_timestamp: EventTimestamp | None
 
 
     @property
@@ -22,11 +19,11 @@ class RetrivalRequest(Codable):
         return [feature.name for feature in self.features]
 
     def derived_feature_map(self) -> dict[str, DerivedFeature]:
-        return {feature.name: feature for feature in self.derived_features.union(self.intermediate_features)}
+        return {feature.name: feature for feature in self.derived_features}
 
     @property
     def all_required_features(self) -> set[Feature]:
-        return self.core_features
+        return self.features
 
     @property
     def all_required_feature_names(self) -> set[str]:
@@ -47,9 +44,9 @@ class RetrivalRequest(Codable):
     def derived_features_order(self) -> list[set[DerivedFeature]]:
         from collections import defaultdict
         feature_deps = defaultdict(set)
-        feature_orders = []
+        feature_orders: list[set] = []
         feature_map = self.derived_feature_map()
-        features = self.derived_features.union(self.intermediate_features)
+        features = self.derived_features
 
         for feature in features:
             for dep_ref in feature.depending_on:

@@ -32,13 +32,11 @@ class JobFactory(ABC):
             for entity_name in request.entity_names:
                 grouped_facts[data_source.job_group_key()][entity_name] = facts[entity_name]
 
-        print(grouped_facts)
         return CombineFactualJob(
             jobs=[
                 self._facts(facts=grouped_facts[job_key], requests=requests)
                 for job_key, requests in grouped_requests.items()
             ], 
-            requested_features=set(),
             combined_requests=[]
         )
 

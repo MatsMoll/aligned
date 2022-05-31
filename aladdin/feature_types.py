@@ -396,7 +396,6 @@ class Split(TransformationFactory):
     @property
     def method(self) -> Callable[[DataFrame], Series]:
         async def met(df: DataFrame) -> Series:
-            print(df[self.feature.name])
             return df[self.feature.name].str.split(pat=self.pattern, n=self.max_splits)
         return met
 

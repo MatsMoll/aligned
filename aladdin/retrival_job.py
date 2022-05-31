@@ -35,7 +35,7 @@ class SingleSourceRetrivalJob(RetrivalJob):
             for feature in feature_round:
                 df[feature.name] = await feature.transformation.transform(df[feature.depending_on_names])
 
-        return df[list(self.request.all_feature_names.union(self.request.entity_names))]
+        return df
 
     async def ensure_types(self, df: DataFrame) -> DataFrame:
         for feature in self.request.all_required_features:
@@ -86,11 +86,11 @@ class FactualRetrivalJob(RetrivalJob):
                     if feature.depending_on_views - {request.feature_view_name}:
                         combined_views.append(feature)
                         continue
-                    print(df.columns)
+
                     df[feature.name] = await feature.transformation.transform(df[feature.depending_on_names])
             all_features = all_features.union(request.all_feature_names).union(request.entity_names)
 
-        return df[list(all_features)]
+        return df
 
     async def ensure_types(self, df: DataFrame) -> DataFrame:
         for request in self.requests:
@@ -128,7 +128,6 @@ class FactualRetrivalJob(RetrivalJob):
 class CombineFactualJob(RetrivalJob):
 
     jobs: list[RetrivalJob]
-    requested_features: set[str]
     combined_requests: list[RetrivalRequest]
 
     async def combine_data(self, df: DataFrame) -> DataFrame:
@@ -142,11 +141,23 @@ class CombineFactualJob(RetrivalJob):
         import pandas as pd
         dfs = await asyncio.gather(*[job.to_df() for job in self.jobs])
         df = pd.concat(dfs, axis=1)
-        df = await self.combine_data(df)
-        if self.requested_features:
-            return df[list(self.requested_features)]
+        return await self.combine_data(df)
+
+    async def to_arrow(self) -> DataFrame:
+        return await super().to_arrow()
+
+@dataclass
+class FilterJob(RetrivalJob):
+
+    include_features: set[str]
+    job: RetrivalJob
+
+    async def to_df(self) -> DataFrame:
+        df = await self.job.to_df()
+        if self.include_features:
+            return df[list(self.include_features)]
         else:
             return df
-
+    
     async def to_arrow(self) -> DataFrame:
         return await super().to_arrow()

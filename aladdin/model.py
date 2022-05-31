@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Callable
+from typing import Callable, Iterable
 from pandas import DataFrame
 
 from aladdin.feature_types import FeatureReferancable
@@ -38,7 +38,7 @@ class SqlEntityDataSource(EntityDataSource):
             now
         )
 
-class ModelFeatures:
+class ModelService:
     feature_refs: set[str]
     target_refs: set[str] | None
     name: str | None
@@ -51,10 +51,17 @@ class ModelFeatures:
         self.feature_refs = set()
         self.target_refs = set()
         for request in features:
-            self.feature_refs.update({
-                f"{request.feature_view_name}:{feature}" 
-                for feature in request.all_feature_names
-            })
+            if isinstance(request, list):
+                for sub_request in request:
+                    self.feature_refs.update({
+                        f"{sub_request.feature_view_name}:{feature}" 
+                        for feature in sub_request.all_feature_names
+                    })
+            else:
+                self.feature_refs.update({
+                    f"{request.feature_view_name}:{feature}" 
+                    for feature in request.all_feature_names
+                })
         for request in (targets or []):
             if isinstance(targets, FeatureReferancable):
                 self.target_refs = [f"{target}" for target in targets]

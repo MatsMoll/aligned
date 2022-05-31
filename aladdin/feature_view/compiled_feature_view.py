@@ -34,16 +34,12 @@ class CompiledFeatureView(Codable):
             entities=self.entities,
             features=self.features,
             derived_features=self.derived_features,
-            event_timestamp=self.event_timestamp,
-            core_features=self.features.union(self.entities),
-            intermediate_features=set()
+            event_timestamp=self.event_timestamp
         )
 
     def request_for(self, feature_names: set[str]) -> RetrivalRequest:
         
-        features = {feature for feature in self.features if feature.name in feature_names}
-        core_features = {feature for feature in self.features if feature.name in feature_names}.union(self.entities)
-        intermediate_features = set()
+        features = {feature for feature in self.features if feature.name in feature_names}.union(self.entities)
         derived_features = {feature for feature in self.derived_features if feature.name in feature_names}
 
         def dependent_features_for(feature: DerivedFeature) -> tuple[set[Feature], set[Feature]]:
@@ -52,11 +48,10 @@ class CompiledFeatureView(Codable):
 
             for dep_ref in feature.depending_on:
                 if dep_ref.is_derivied:
-                    print(dep_ref)
                     dep_feature = [feat for feat in self.derived_features if feat.name == dep_ref.name][0]
                     intermediate_features.add(dep_feature)
                     core, intermediate = dependent_features_for(dep_feature)
-                    core_features.update(core)
+                    features.update(core)
                     intermediate_features.update(intermediate)
                 else:
                     dep_feature = [feat for feat in self.features.union(self.entities) if feat.name == dep_ref.name][0]
@@ -64,20 +59,17 @@ class CompiledFeatureView(Codable):
 
             return core_features, intermediate_features
                     
-        for dep_feature in derived_features:
+        for dep_feature in derived_features.copy():
             core, intermediate = dependent_features_for(dep_feature)
-            core_features.update(core)
-            intermediate_features.update(intermediate)
+            features.update(core)
+            derived_features.update(intermediate)
 
-        intermediate_features = intermediate_features - derived_features
         return RetrivalRequest(
             feature_view_name=self.name,
             entities=self.entities,
             features=features,
             derived_features=derived_features,
-            event_timestamp=self.event_timestamp,
-            core_features=core_features,
-            intermediate_features=intermediate_features
+            event_timestamp=self.event_timestamp
         )
 
     def __hash__(self) -> int:

@@ -5,11 +5,12 @@ from aladdin.feature_source import BatchFeatureSource, FeatureSource
 from aladdin.feature_view.feature_view import FeatureView
 from aladdin.online_source import OnlineSource
 from aladdin.feature_view.combined_view import CombinedFeatureView, CompiledCombinedFeatureView
+from aladdin.model import ModelService
 
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.repo_definition import RepoDefinition
 from aladdin.request.retrival_request import RetrivalRequest
-from aladdin.retrival_job import RetrivalJob
+from aladdin.retrival_job import FilterJob, RetrivalJob
 
 @dataclass
 class RawStringFeatureRequest:
@@ -27,6 +28,10 @@ class RawStringFeatureRequest:
             grouped[feature_view].add(feature)
         return grouped
 
+    @property
+    def feature_names(self) -> set[str]:
+        return {RawStringFeatureRequest.unpack_feature(feature)[1] for feature in self.features}
+
     @staticmethod
     def unpack_feature(feature: str) -> tuple[str, str]:
         splits = feature.split(":")
@@ -40,7 +45,7 @@ class FeatureStore:
     feature_source: FeatureSource
     feature_views: dict[str, CompiledFeatureView]
     combined_feature_views: dict[str, CompiledCombinedFeatureView]
-    model_requests: dict[str, list[RetrivalRequest]]
+    model_requests: dict[str, tuple[list[RetrivalRequest], set[str]]]
 
     @property
     def all_models(self) -> list[str]:
@@ -51,7 +56,7 @@ class FeatureStore:
         self.feature_source = feature_source
         self.combined_feature_views = {fv.name: fv for fv in combined_feature_views}
         self.feature_views = {fv.name: fv for fv in feature_views}
-        self.model_requests = {name: self.requests_for(RawStringFeatureRequest(model)) for name, model in models.items()}
+        self.model_requests = {name: (self.requests_for(RawStringFeatureRequest(model)), RawStringFeatureRequest(model).feature_names) for name, model in models.items()}
 
 
     @staticmethod
@@ -67,18 +72,26 @@ class FeatureStore:
 
     def features_for(self, facts: dict[str, list], features: list[str]) -> RetrivalJob:
         feature_request = RawStringFeatureRequest(features=set(features))
+        entities = set()
         requests = self.requests_for(feature_request)
         feature_names = set()
         for feature_set in feature_request.grouped_features.values():
             feature_names.update(feature_set)
         for request in requests:
             feature_names.update(request.entity_names)
-        return self.feature_source.features_for(facts, requests, feature_names)
+            entities.update(request.entity_names)
+        
+        return FilterJob(
+            feature_request.feature_names.union(entities),
+            self.feature_source.features_for(facts, requests)
+        )
 
     def model(self, name: str) -> "OfflineModelStore":
+        requests, features = self.model_requests[name]
         return OfflineModelStore(
             self.feature_source,
-            self.model_requests[name]
+            requests,
+            features
         )
 
     def requests_for(self, feature_request: RawStringFeatureRequest) -> list[RetrivalRequest]:
@@ -107,6 +120,11 @@ class FeatureStore:
         compiled_view = type(feature_view).compile()
         self.combined_feature_views[compiled_view.name] = compiled_view
 
+    def add_model_service(self, service: ModelService):
+        print(service.feature_refs)
+        request = RawStringFeatureRequest(service.feature_refs)
+        self.model_requests[service.name] = (self.requests_for(request), request.feature_names)
+
     def all_for(self, view: str, limit: int | None = None) -> RetrivalJob:
         return self.feature_source.all_for(
             self.feature_views[view].request_all,
@@ -118,6 +136,7 @@ class OfflineModelStore:
 
     source: FeatureSource
     requests: set[RetrivalRequest]
+    features_to_include: set[str]
 
     def features_for(self, facts: dict[str, list]) -> RetrivalJob:
 
@@ -125,8 +144,11 @@ class OfflineModelStore:
         for request in self.requests:
             feature_names.update(request.all_feature_names)
             feature_names.update(request.entity_names)
-            
-        return self.source.features_for(facts, self.requests, feature_names)
+        
+        return FilterJob(
+            self.features_to_include,
+            self.source.features_for(facts, self.requests)
+        )
 
     async def write(self, values: dict[str]):
         pass

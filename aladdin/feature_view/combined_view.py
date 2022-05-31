@@ -31,7 +31,32 @@ class CompiledCombinedFeatureView(Codable):
     
     @property
     def request_all(self) -> RetrivalRequest:
-        return list(self.feature_referances.values())[0]
+        requests = {}
+        entities = set()
+        for sub_requests in self.feature_referances.values():
+            for request in sub_requests:
+                entities.update(request.entities)
+                if request.feature_view_name not in requests:
+                    requests[request.feature_view_name] = RetrivalRequest(
+                        feature_view_name=request.feature_view_name,
+                        entities=request.entities,
+                        features=set(),
+                        derived_features=set(),
+                        event_timestamp=request.event_timestamp
+                    )
+                requests[request.feature_view_name].derived_features.update(request.derived_features)
+                requests[request.feature_view_name].features.update(request.features)
+                requests[request.feature_view_name].entities.update(request.entities)
+        
+        requests[self.name] = RetrivalRequest(
+            feature_view_name=self.name,
+            entities=entities,
+            features=set(),
+            derived_features=self.features,
+            event_timestamp=None
+        )
+
+        return list(requests.values())
 
     def requests_for(self, feature_names: set[str]) -> list[RetrivalRequest]:
         dependent_views: dict[str, RetrivalRequest] = {}
@@ -39,6 +64,7 @@ class CompiledCombinedFeatureView(Codable):
         for feature in feature_names:
             if feature not in self.feature_referances.keys():
                 raise ValueError(f"Invalid feature {feature} in {self.name}")
+                
             requests = self.feature_referances[feature]
             for request in requests:
                 if request.feature_view_name not in dependent_views:
@@ -57,8 +83,9 @@ class CompiledCombinedFeatureView(Codable):
         dependent_views[self.name] = RetrivalRequest( # Add the request we want
             feature_view_name=self.name,
             entities=all_entities,
-            features=[],
-            derived_features=[feature for feature in self.features if feature.name in feature_names]
+            features=set(),
+            derived_features=[feature for feature in self.features if feature.name in feature_names],
+            event_timestamp=None
         )
 
         return list(dependent_views.values())

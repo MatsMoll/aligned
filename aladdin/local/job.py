@@ -72,8 +72,6 @@ class LocalFileFactualJob(FactualRetrivalJob):
             entity_names = request.entity_names
             all_names = request.all_required_feature_names.union(entity_names)
             request_features = self.source.feature_identifier_for(all_names)
-
-            print(df[self.source.feature_identifier_for(entity_names)])
             
             mask = pd.Series.repeat(pd.Series([True]), df.shape[0]).reset_index(drop=True)
             set_mask = pd.Series.repeat(pd.Series([True]), result.shape[0]).reset_index(drop=True)
@@ -82,15 +80,11 @@ class LocalFileFactualJob(FactualRetrivalJob):
                 mask = mask & (df[entity_source_name].isin(self.facts[entity]))
 
                 set_mask = set_mask & (pd.Series(self.facts[entity]).isin(df[entity_source_name]))
-
-            print(mask.sum())
-            print(set_mask.sum())
             
             feature_df = df.loc[mask, request_features]
             feature_df.rename(columns={org_name: wanted_name for org_name, wanted_name in  zip(request_features, all_names)}, inplace=True)
             result.loc[set_mask, list(all_names)] = feature_df.reset_index(drop=True)
 
-        print(result)
         return result
 
     async def to_arrow(self) -> pd.DataFrame:

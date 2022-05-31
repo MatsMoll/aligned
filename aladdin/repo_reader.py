@@ -3,7 +3,7 @@ from importlib import import_module
 from typing import Any
 from inspect import isclass, getmro
 
-from aladdin.model import ModelFeatures
+from aladdin.model import ModelService
 from aladdin.online_source import BatchOnlineSource
 from aladdin.repo_definition import RepoDefinition
 
@@ -87,7 +87,7 @@ class RepoReader:
 
                 obj = getattr(module, attribute)
 
-                if isinstance(obj, ModelFeatures):
+                if isinstance(obj, ModelService):
                     model_name = obj.name or attribute
                     repo.models[model_name] = obj.feature_refs
                 else:

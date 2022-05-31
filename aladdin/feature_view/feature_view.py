@@ -59,9 +59,7 @@ class FeatureView(ABC, FeatureSelectable):
                             entities=set(entities),
                             features=set(features),
                             derived_features=set(transformations),
-                            event_timestamp=event_timestamp,
-                            core_features=set(features),
-                            intermediate_features=set()
+                            event_timestamp=event_timestamp
                         )
                     )
                 ])
