@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta
-from typing import Callable, Iterable
+from typing import Callable
 from pandas import DataFrame
 
 from aladdin.feature_types import FeatureReferancable
 from aladdin.entity_data_source import EntityDataSource
-from aladdin.request.retrival_request import RetrivalRequest
+from aladdin.request.retrival_request import RetrivalRequest, FeatureRequest
 
 
 class SqlEntityDataSource(EntityDataSource):
@@ -45,23 +45,16 @@ class ModelService:
     entity_source: SqlEntityDataSource | None
 
 
-    def __init__(self, features: list[RetrivalRequest], targets: list[RetrivalRequest] | list[FeatureReferancable] | None = None, name: str | None = None, entity_source: SqlEntityDataSource | None = None) -> None:
+    def __init__(self, features: list[FeatureRequest], targets: list[RetrivalRequest] | list[FeatureReferancable] | None = None, name: str | None = None, entity_source: SqlEntityDataSource | None = None) -> None:
         self.name = name
         self.entity_source = entity_source
         self.feature_refs = set()
         self.target_refs = set()
         for request in features:
-            if isinstance(request, list):
-                for sub_request in request:
-                    self.feature_refs.update({
-                        f"{sub_request.feature_view_name}:{feature}" 
-                        for feature in sub_request.all_feature_names
-                    })
-            else:
-                self.feature_refs.update({
-                    f"{request.feature_view_name}:{feature}" 
-                    for feature in request.all_feature_names
-                })
+            self.feature_refs.update({
+                f"{request.name}:{feature}" 
+                for feature in request.features_to_include
+            })
         for request in (targets or []):
             if isinstance(targets, FeatureReferancable):
                 self.target_refs = [f"{target}" for target in targets]

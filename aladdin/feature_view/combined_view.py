@@ -1,13 +1,14 @@
 from abc import ABC, abstractproperty
-from collections import defaultdict
 from dataclasses import dataclass
 import re
+
+from sqlalchemy import all_
 from aladdin import FeatureView
 from aladdin.derivied_feature import DerivedFeature
 from aladdin.feature import Feature
 from aladdin.feature_types import TransformationFactory
 from aladdin.feature_view.feature_view import CompiledFeatureView
-from aladdin.request.retrival_request import RetrivalRequest
+from aladdin.request.retrival_request import RetrivalRequest, FeatureRequest
 from aladdin.codable import Codable
 from aladdin.feature_view.feature_view import FeatureSelectable, FVType
 from aladdin.feature_types import FeatureFactory
@@ -30,7 +31,7 @@ class CompiledCombinedFeatureView(Codable):
     feature_referances: dict[str, list[RetrivalRequest]]
     
     @property
-    def request_all(self) -> RetrivalRequest:
+    def request_all(self) -> FeatureRequest:
         requests = {}
         entities = set()
         for sub_requests in self.feature_referances.values():
@@ -56,15 +57,19 @@ class CompiledCombinedFeatureView(Codable):
             event_timestamp=None
         )
 
-        return list(requests.values())
+        return FeatureRequest(
+            self.name,
+            features_to_include={feature.name for feature in self.features.union(entities)},
+            needed_requests=list(requests.values())
+        )
 
-    def requests_for(self, feature_names: set[str]) -> list[RetrivalRequest]:
+    def requests_for(self, feature_names: set[str]) -> FeatureRequest:
         dependent_views: dict[str, RetrivalRequest] = {}
         all_entities = set()
         for feature in feature_names:
             if feature not in self.feature_referances.keys():
                 raise ValueError(f"Invalid feature {feature} in {self.name}")
-                
+
             requests = self.feature_referances[feature]
             for request in requests:
                 if request.feature_view_name not in dependent_views:
@@ -72,7 +77,8 @@ class CompiledCombinedFeatureView(Codable):
                         feature_view_name=request.feature_view_name,
                         entities=request.entities,
                         features=set(),
-                        derived_features=set()
+                        derived_features=set(),
+                        event_timestamp=None
                     )
                     all_entities.update(request.entities)
                 current = dependent_views[request.feature_view_name]
@@ -87,8 +93,12 @@ class CompiledCombinedFeatureView(Codable):
             derived_features=[feature for feature in self.features if feature.name in feature_names],
             event_timestamp=None
         )
-
-        return list(dependent_views.values())
+        
+        return FeatureRequest(
+            self.name,
+            features_to_include=feature_names,
+            needed_requests=list(dependent_views.values())
+        )
 
     def __hash__(self) -> int:
         return hash(self.name)

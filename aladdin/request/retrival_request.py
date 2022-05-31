@@ -23,7 +23,7 @@ class RetrivalRequest(Codable):
 
     @property
     def all_required_features(self) -> set[Feature]:
-        return self.features
+        return self.features - self.entities
 
     @property
     def all_required_feature_names(self) -> set[str]:
@@ -72,20 +72,8 @@ class RetrivalRequest(Codable):
         
         return feature_orders
 
-            
-
-        
-
-
-
 @dataclass
 class FeatureRequest(Codable):
-    features: set[str]
+    name: str
+    features_to_include: set[str]
     needed_requests: list[RetrivalRequest]
-
-    
-    def core_requests_given(self, sources: dict[str, BatchDataSource]) -> dict[BatchDataSource, RetrivalRequest]:
-        return {sources[request.feature_view_name]: request for request in self.needed_requests if request.feature_view_name in sources}
-
-    def combined_requests_given(self, sources: dict[str, BatchDataSource]) -> list[RetrivalRequest]:
-        return [request for request in self.needed_requests if request.feature_view_name not in sources]

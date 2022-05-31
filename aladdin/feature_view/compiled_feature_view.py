@@ -3,7 +3,7 @@ from aladdin.derivied_feature import DerivedFeature
 
 from aladdin.feature import Feature, EventTimestamp
 from aladdin.data_source.batch_data_source import BatchDataSource
-from aladdin.request.retrival_request import RetrivalRequest
+from aladdin.request.retrival_request import RetrivalRequest, FeatureRequest
 from aladdin.codable import Codable
 
 @dataclass
@@ -28,16 +28,22 @@ class CompiledFeatureView(Codable):
         return {entity.name for entity in self.entities}
     
     @property
-    def request_all(self) -> RetrivalRequest:
-        return RetrivalRequest(
-            feature_view_name=self.name,
-            entities=self.entities,
-            features=self.features,
-            derived_features=self.derived_features,
-            event_timestamp=self.event_timestamp
+    def request_all(self) -> FeatureRequest:
+        return FeatureRequest(
+            self.name,
+            {feature.name for feature in self.full_schema},
+            needed_requests=[
+                RetrivalRequest(
+                    feature_view_name=self.name,
+                    entities=self.entities,
+                    features=self.features,
+                    derived_features=self.derived_features,
+                    event_timestamp=self.event_timestamp
+                )
+            ]
         )
 
-    def request_for(self, feature_names: set[str]) -> RetrivalRequest:
+    def request_for(self, feature_names: set[str]) -> FeatureRequest:
         
         features = {feature for feature in self.features if feature.name in feature_names}.union(self.entities)
         derived_features = {feature for feature in self.derived_features if feature.name in feature_names}
@@ -64,12 +70,18 @@ class CompiledFeatureView(Codable):
             features.update(core)
             derived_features.update(intermediate)
 
-        return RetrivalRequest(
-            feature_view_name=self.name,
-            entities=self.entities,
-            features=features,
-            derived_features=derived_features,
-            event_timestamp=self.event_timestamp
+        return FeatureRequest(
+            self.name,
+            feature_names,
+            needed_requests=[
+                RetrivalRequest(
+                    feature_view_name=self.name,
+                    entities=self.entities,
+                    features=features,
+                    derived_features=derived_features,
+                    event_timestamp=self.event_timestamp
+                )
+            ]
         )
 
     def __hash__(self) -> int:
