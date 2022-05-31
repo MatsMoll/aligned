@@ -72,6 +72,27 @@ class RetrivalRequest(Codable):
         
         return feature_orders
 
+
+    @staticmethod
+    def combine(requests: list["RetrivalRequest"]) -> list["RetrivalRequest"]:
+        grouped_requests = {}
+        entities = set()
+        for request in requests:
+            entities.update(request.entities)
+            if request.feature_view_name not in requests:
+                grouped_requests[request.feature_view_name] = RetrivalRequest(
+                    feature_view_name=request.feature_view_name,
+                    entities=request.entities,
+                    features=set(),
+                    derived_features=set(),
+                    event_timestamp=request.event_timestamp
+                )
+            grouped_requests[request.feature_view_name].derived_features.update(request.derived_features)
+            grouped_requests[request.feature_view_name].features.update(request.features)
+            grouped_requests[request.feature_view_name].entities.update(request.entities)
+        return list(grouped_requests.values())
+
+
 @dataclass
 class FeatureRequest(Codable):
     name: str

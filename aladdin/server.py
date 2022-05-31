@@ -7,18 +7,14 @@ class FastAPIServer:
 
     @staticmethod
     def model_path(name: str, feature_store: FeatureStore, app: FastAPI):
-        requests, features = feature_store.model_requests[name]
+        feature_request = feature_store.model_requests[name]
 
         entities: set[Feature] = set()
-        for request in requests:
-            if isinstance(request, list):
-                for sub_request in request:
-                    entities.update(sub_request.entities)
-            else:
-                entities.update(request.entities)
+        for request in feature_request.needed_requests:
+            entities.update(request.entities)
 
         required_features = entities.copy()
-        for request in requests:
+        for request in feature_request.needed_requests:
             if isinstance(request, list):
                 for sub_request in request:
                     required_features.update(sub_request.all_required_features)

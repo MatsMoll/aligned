@@ -110,7 +110,7 @@ class FeatureStore:
         return FeatureRequest(
             "some_name",
             feature_request.feature_names,
-            requests
+            RetrivalRequest.combine(requests)
         )
 
     def add_feature_view(self, feature_view: FeatureView):
@@ -140,11 +140,6 @@ class OfflineModelStore:
     request: FeatureRequest
 
     def features_for(self, facts: dict[str, list]) -> RetrivalJob:
-
-        feature_names = set()
-        for request in self.request.needed_requests:
-            feature_names.update(request.all_feature_names)
-            feature_names.update(request.entity_names)
         
         return FilterJob(
             self.request.features_to_include,
