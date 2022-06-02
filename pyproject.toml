@@ -30,3 +30,11 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 aladdin = 'aladdin.cli:cli'
+
+[tool.black]
+line-length = 110
+skip-string-normalization = true
+
+[tool.isort]
+profile = "black"
+line_length = 110

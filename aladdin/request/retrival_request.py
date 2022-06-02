@@ -1,8 +1,9 @@
-from aladdin.codable import Codable
-from aladdin.data_source.batch_data_source import BatchDataSource
-from aladdin.feature import Feature, EventTimestamp
-from aladdin.derivied_feature import DerivedFeature
 from dataclasses import dataclass
+
+from aladdin.codable import Codable
+from aladdin.derivied_feature import DerivedFeature
+from aladdin.feature import EventTimestamp, Feature
+
 
 @dataclass
 class RetrivalRequest(Codable):
@@ -12,7 +13,6 @@ class RetrivalRequest(Codable):
     features: set[Feature]
     derived_features: set[DerivedFeature]
     event_timestamp: EventTimestamp | None
-
 
     @property
     def feature_names(self) -> list[str]:
@@ -43,6 +43,7 @@ class RetrivalRequest(Codable):
 
     def derived_features_order(self) -> list[set[DerivedFeature]]:
         from collections import defaultdict
+
         feature_deps = defaultdict(set)
         feature_orders: list[set] = []
         feature_map = self.derived_feature_map()
@@ -52,7 +53,7 @@ class RetrivalRequest(Codable):
             for dep_ref in feature.depending_on:
                 if dep := feature_map.get(dep_ref.name):
                     feature_deps[feature.name].add(dep)
-        
+
         def depths(feature: DerivedFeature) -> int:
             if feature.name not in feature_deps or not feature_deps[feature.name]:
                 return 0
@@ -69,27 +70,29 @@ class RetrivalRequest(Codable):
             while depth >= len(feature_orders):
                 feature_orders.append(set())
             feature_orders[depth].add(feature_map[feature.name])
-        
+
         return feature_orders
 
-
     @staticmethod
-    def combine(requests: list["RetrivalRequest"]) -> list["RetrivalRequest"]:
-        grouped_requests = {}
+    def combine(requests: list['RetrivalRequest']) -> list['RetrivalRequest']:
+        grouped_requests: dict[str, RetrivalRequest] = {}
         entities = set()
         for request in requests:
             entities.update(request.entities)
-            if request.feature_view_name not in requests:
-                grouped_requests[request.feature_view_name] = RetrivalRequest(
-                    feature_view_name=request.feature_view_name,
+            fv_name = request.feature_view_name
+            if fv_name not in grouped_requests:
+                grouped_requests[fv_name] = RetrivalRequest(
+                    feature_view_name=fv_name,
                     entities=request.entities,
-                    features=set(),
-                    derived_features=set(),
-                    event_timestamp=request.event_timestamp
+                    features=request.features,
+                    derived_features=request.derived_features,
+                    event_timestamp=request.event_timestamp,
                 )
-            grouped_requests[request.feature_view_name].derived_features.update(request.derived_features)
-            grouped_requests[request.feature_view_name].features.update(request.features)
-            grouped_requests[request.feature_view_name].entities.update(request.entities)
+            else:
+                grouped_requests[fv_name].derived_features.update(request.derived_features)
+                grouped_requests[fv_name].features.update(request.features)
+                grouped_requests[fv_name].entities.update(request.entities)
+
         return list(grouped_requests.values())
 
 

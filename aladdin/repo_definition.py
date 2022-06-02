@@ -1,10 +1,31 @@
-from pathlib import Path
-from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
-from aladdin.feature_view.combined_view import CompiledCombinedFeatureView
-from aladdin.codable import Codable
+import logging
 from dataclasses import dataclass
+from pathlib import Path
 
+from aladdin.codable import Codable
+from aladdin.feature_view.combined_view import CompiledCombinedFeatureView
+from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
+from aladdin.local.source import FileReference
 from aladdin.online_source import OnlineSource
+from aladdin.repo_reader import RepoReader
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class RepoReference:
+    env_var_name: str
+    repo_paths: dict[str, FileReference]
+
+    @property
+    def selected(self) -> str:
+        import os
+
+        return os.environ[self.env_var_name]
+
+    @property
+    def selected_file(self) -> FileReference | None:
+        return self.repo_paths.get(self.selected)
 
 
 @dataclass
@@ -14,14 +35,22 @@ class RepoDefinition(Codable):
     models: dict[str, list[str]]
     online_source: OnlineSource
 
+    @staticmethod
+    async def from_file(file: FileReference) -> 'RepoDefinition':
+        repo = await file.read()
+        return RepoDefinition.from_json(repo)
 
     @staticmethod
-    def from_url(url: str) -> "RepoDefinition":
-        if url.startswith("s3:"):
-            raise NotImplementedError()
-        
-        path = Path(url)
-        if not path.is_file():
-            raise ValueError(f"Path is not a local file: {url}")
-        
-        return RepoDefinition.from_json(path.read_text())
+    async def from_path(path: str) -> 'RepoDefinition':
+        repo_def: RepoDefinition = None
+        if reference := RepoReader.reference_from_path(Path(path)):
+            if file := reference.selected_file:
+                logger.info(f"Loading repo from configuration '{reference.selected}'")
+                repo_def = await RepoDefinition.from_file(file)
+            else:
+                logger.info(f"Invalid repo configuration '{reference.selected}'")
+
+        if repo_def is None:
+            logger.info('Generating repo definition')
+            repo_def = RepoReader.definition_from_path(dir)
+        return repo_def

@@ -1,16 +1,22 @@
 from abc import ABC, abstractmethod, abstractproperty
 from collections import defaultdict
-from typing import TypeVar
-from aladdin.data_source.batch_data_source import BatchDataSource
-from aladdin.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, CombineFactualJob, RetrivalJob
-from aladdin.request.retrival_request import RetrivalRequest
 from datetime import datetime
+from typing import TypeVar
 
+from aladdin.data_source.batch_data_source import BatchDataSource
+from aladdin.request.retrival_request import RetrivalRequest
+from aladdin.retrival_job import (
+    CombineFactualJob,
+    DateRangeJob,
+    FactualRetrivalJob,
+    FullExtractJob,
+    RetrivalJob,
+)
 
-Source = TypeVar("Source", bound=BatchDataSource)
+Source = TypeVar('Source', bound=BatchDataSource)
+
 
 class JobFactory(ABC):
-
     @abstractproperty
     def source(self) -> type[Source]:
         pass
@@ -18,7 +24,13 @@ class JobFactory(ABC):
     def all_data(self, source: Source, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
         pass
 
-    def all_between_dates(self, source: Source, request: RetrivalRequest, start_date: datetime, end_date: datetime) -> DateRangeJob:
+    def all_between_dates(
+        self,
+        source: Source,
+        request: RetrivalRequest,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> DateRangeJob:
         pass
 
     def facts(self, facts: dict[str, list], sources: dict[Source, RetrivalRequest]) -> RetrivalJob:
@@ -36,8 +48,8 @@ class JobFactory(ABC):
             jobs=[
                 self._facts(facts=grouped_facts[job_key], requests=requests)
                 for job_key, requests in grouped_requests.items()
-            ], 
-            combined_requests=[]
+            ],
+            combined_requests=[],
         )
 
     @abstractmethod

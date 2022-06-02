@@ -1,8 +1,9 @@
 from datetime import datetime
+
 from pandas import DataFrame
 
-class EntityDataSource:
 
+class EntityDataSource:
     async def all_in_range(self, start_date: datetime, end_date: datetime) -> DataFrame:
         pass
 

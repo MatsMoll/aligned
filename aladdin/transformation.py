@@ -1,10 +1,10 @@
-from pandas import DataFrame, Series # type: ignore
-from aladdin.codable import Codable
 from dataclasses import dataclass
-from aladdin.feature import FeatureType
-from typing import Optional
-from mashumaro.types import SerializableType
 
+from mashumaro.types import SerializableType
+from pandas import DataFrame, Series  # type: ignore
+
+from aladdin.codable import Codable
+from aladdin.feature import FeatureType
 from aladdin.psql.data_source import PostgreSQLConfig
 
 
@@ -17,38 +17,33 @@ class Transformation(Codable, SerializableType):
 
     def _serialize(self):
         return self.to_dict()
-    
+
     @classmethod
     def _deserialize(cls, value: dict[str]) -> 'Transformation':
-        name_type = value["name"]
-        del value["name"]
+        name_type = value['name']
+        del value['name']
         data_class = SupportedTransformations.shared().types[name_type]
         return data_class.from_dict(value)
-
 
 
 class SupportedTransformations:
 
     types: dict[str, type[Transformation]]
 
-    _shared: Optional["SupportedTransformations"] = None
+    _shared: 'SupportedTransformations' | None = None
 
     def __init__(self):
         self.types = {}
         from aladdin.feature_types import CustomTransformationV2
-        
-        for tran_type in [
-            Equals,
-            CustomTransformationV2,
-            TimeSeriesTransformation
-        ]:
+
+        for tran_type in [Equals, CustomTransformationV2, TimeSeriesTransformation]:
             self.add(tran_type)
 
     def add(self, transformation: type[Transformation]):
         self.types[transformation.name] = transformation
 
     @classmethod
-    def shared(cls) -> "SupportedTransformations":
+    def shared(cls) -> 'SupportedTransformations':
         if cls._shared:
             return cls._shared
         cls._shared = SupportedTransformations()
@@ -61,8 +56,8 @@ class Equals(Transformation):
     key: str
     value: str
 
-    name: str = "equals" 
-    dtype: FeatureType = FeatureType("").bool
+    name: str = 'equals'
+    dtype: FeatureType = FeatureType('').bool
 
     def __init__(self, key: str, value: str) -> None:
         self.key = key
@@ -81,15 +76,15 @@ class TimeSeriesTransformation(Transformation):
     config: PostgreSQLConfig
     event_timestamp_column: str
 
-    dtype: FeatureType = FeatureType("").int64
-    name: str = "ts_transform"
+    dtype: FeatureType = FeatureType('').int64
+    name: str = 'ts_transform'
 
     async def transform(self, df: DataFrame) -> Series:
         fact_df = df[[self.event_timestamp_column, self.field_name]]
-        fact_df["row_id"] = list(range(1, fact_df.shape[0] + 1))
+        fact_df['row_id'] = list(range(1, fact_df.shape[0] + 1))
 
         values = []
-        columns = ",".join(list(fact_df.columns))
+        columns = ','.join(list(fact_df.columns))
         for _, row in fact_df.iterrows():
             row_values = []
             for column, value in row.items():
@@ -97,9 +92,9 @@ class TimeSeriesTransformation(Transformation):
                     row_values.append(f"'{value}'::timestamp with time zone")
                 else:
                     row_values.append(f"'{value}'")
-            values.append(",".join(row_values))
-        
-        sql_values = "(" + "),\n    (".join(values) + ")"
+            values.append(','.join(row_values))
+
+        sql_values = '(' + '),\n    ('.join(values) + ')'
         sql = f"""
 WITH entities (
     {columns}
@@ -116,4 +111,4 @@ LEFT JOIN {self.table_name} t ON
 GROUP BY et.row_id;
 """
         data = await self.config.data_enricher(sql).load()
-        return data[f"{self.field_name}_value"]
+        return data[f'{self.field_name}_value']

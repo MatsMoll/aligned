@@ -1,15 +1,17 @@
-from aladdin.feature import Feature, FeatureReferance, FeatureType, Constraint
+from aladdin.feature import Constraint, Feature, FeatureReferance, FeatureType
 from aladdin.transformation import Transformation
+
 
 class DerivedFeature(Feature):
 
     depending_on: set[FeatureReferance]
     transformation: Transformation
 
-    def __init__(self, 
+    def __init__(
+        self,
         name: str,
         dtype: FeatureType,
-        depending_on: set[FeatureReferance], 
+        depending_on: set[FeatureReferance],
         transformation: Transformation,
         description: str | None = None,
         is_target: bool = False,

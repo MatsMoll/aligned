@@ -1,18 +1,22 @@
 from dataclasses import dataclass
-from aladdin.redis.config import RedisConfig
-from aladdin.retrival_job import FactualRetrivalJob
-from aladdin.request.retrival_request import RetrivalRequest
-from aladdin.feature import Feature
+
 import pandas as pd
 
+from aladdin.feature import Feature
+from aladdin.redis.config import RedisConfig
+from aladdin.request.retrival_request import RetrivalRequest
+from aladdin.retrival_job import FactualRetrivalJob
+
+
 def key(request: RetrivalRequest, entity: str, feature: Feature) -> str:
-    return f"{request.feature_view_name}:{entity}:{feature.name}"
+    return f'{request.feature_view_name}:{entity}:{feature.name}'
+
 
 @dataclass
 class FactualRedisJob(FactualRetrivalJob):
 
     config: RedisConfig
-    requests: set[RetrivalRequest]
+    requests: list[RetrivalRequest]
     facts: dict[str, list]
 
     async def _to_df(self) -> pd.DataFrame:
@@ -24,16 +28,25 @@ class FactualRedisJob(FactualRetrivalJob):
                 columns.add(feature)
 
         result_df = pd.DataFrame(self.facts)
-        
+
         for request in self.requests:
-            entity_ids = result_df[request.entity_names]
-            entities = [":".join(entity_ids) for _, entity_ids in entity_ids.iterrows()]
+            entity_ids = result_df[list(request.entity_names)]
+            mask = ~entity_ids.isna().any(axis=1)
+            entities = [':'.join(entity_ids) for _, entity_ids in entity_ids.loc[mask].iterrows()]
             for feature in request.all_features:
                 # Fetch one column at a time
-                keys = list()
+                keys = []
                 for entity in entities:
                     keys.append(key(request, entity, feature))
                 result = await redis.mget(keys)
-                result_df[feature.name] = result
+                result_df.loc[mask, feature.name] = result
 
         return result_df
+
+    async def to_df(self) -> pd.DataFrame:
+        df = await self._to_df()
+        df = await self.ensure_types(df)
+        return await self.fill_missing(df)
+
+    async def to_arrow(self) -> pd.DataFrame:
+        return await super().to_arrow()

@@ -1,19 +1,14 @@
 from abc import ABC, abstractproperty
 from dataclasses import dataclass
-import re
+from typing import Callable
 
-from sqlalchemy import all_
 from aladdin import FeatureView
+from aladdin.codable import Codable
 from aladdin.derivied_feature import DerivedFeature
 from aladdin.feature import Feature
-from aladdin.feature_types import TransformationFactory
-from aladdin.feature_view.feature_view import CompiledFeatureView
-from aladdin.request.retrival_request import RetrivalRequest, FeatureRequest
-from aladdin.codable import Codable
-from aladdin.feature_view.feature_view import FeatureSelectable, FVType
-from aladdin.feature_types import FeatureFactory
-
-from typing import Callable
+from aladdin.feature_types import FeatureFactory, TransformationFactory
+from aladdin.feature_view.feature_view import CompiledFeatureView, FeatureSelectable, FVType
+from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
 
 
 @dataclass
@@ -27,7 +22,7 @@ class CombinedFeatureViewMetadata:
 @dataclass
 class CompiledCombinedFeatureView(Codable):
     name: str
-    features: set[DerivedFeature] # FIXME: Should combine this and feature_referances into one class.
+    features: set[DerivedFeature]  # FIXME: Should combine this and feature_referances into one class.
     feature_referances: dict[str, list[RetrivalRequest]]
 
     @property
@@ -41,7 +36,7 @@ class CompiledCombinedFeatureView(Codable):
     @property
     def entity_names(self) -> set[str]:
         return {feature.name for feature in self.entity_features}
-    
+
     @property
     def request_all(self) -> FeatureRequest:
         requests = {}
@@ -55,24 +50,24 @@ class CompiledCombinedFeatureView(Codable):
                         entities=request.entities,
                         features=set(),
                         derived_features=set(),
-                        event_timestamp=request.event_timestamp
+                        event_timestamp=request.event_timestamp,
                     )
                 requests[request.feature_view_name].derived_features.update(request.derived_features)
                 requests[request.feature_view_name].features.update(request.features)
                 requests[request.feature_view_name].entities.update(request.entities)
-        
+
         requests[self.name] = RetrivalRequest(
             feature_view_name=self.name,
             entities=entities,
             features=set(),
             derived_features=self.features,
-            event_timestamp=None
+            event_timestamp=None,
         )
 
         return FeatureRequest(
             self.name,
             features_to_include={feature.name for feature in self.features.union(entities)},
-            needed_requests=RetrivalRequest.combine(list(requests.values()))
+            needed_requests=RetrivalRequest.combine(list(requests.values())),
         )
 
     def requests_for(self, feature_names: set[str]) -> FeatureRequest:
@@ -83,7 +78,7 @@ class CompiledCombinedFeatureView(Codable):
                 continue
 
             if feature not in self.feature_referances.keys():
-                raise ValueError(f"Invalid feature {feature} in {self.name}")
+                raise ValueError(f'Invalid feature {feature} in {self.name}')
 
             requests = self.feature_referances[feature]
             for request in requests:
@@ -93,39 +88,40 @@ class CompiledCombinedFeatureView(Codable):
                         entities=request.entities,
                         features=set(),
                         derived_features=set(),
-                        event_timestamp=None
+                        event_timestamp=None,
                     )
                 current = dependent_views[request.feature_view_name]
                 current.derived_features = current.derived_features.union(request.derived_features)
                 current.features = current.features.union(request.features)
                 dependent_views[request.feature_view_name] = current
 
-        dependent_views[self.name] = RetrivalRequest( # Add the request we want
+        dependent_views[self.name] = RetrivalRequest(  # Add the request we want
             feature_view_name=self.name,
             entities=self.entity_features,
             features=set(),
             derived_features=[feature for feature in self.features if feature.name in feature_names],
-            event_timestamp=None
+            event_timestamp=None,
         )
-        
+
         return FeatureRequest(
             self.name,
             features_to_include=feature_names,
-            needed_requests=list(dependent_views.values())
+            needed_requests=list(dependent_views.values()),
         )
 
     def __hash__(self) -> int:
         return hash(self.name)
 
+
 class CombinedFeatureView(ABC, FeatureSelectable):
-    
     @abstractproperty
     def metadata(self) -> CombinedFeatureViewMetadata:
         pass
 
-
     @staticmethod
-    def _needed_features(depending_on: set[Feature], feature_views: dict[str, CompiledFeatureView]) -> list[RetrivalRequest]:
+    def _needed_features(
+        depending_on: set[Feature], feature_views: dict[str, CompiledFeatureView]
+    ) -> list[RetrivalRequest]:
 
         feature_refs: dict[CompiledFeatureView, set[str]] = {}
 
@@ -135,35 +131,38 @@ class CombinedFeatureView(ABC, FeatureSelectable):
 
         return [
             feature_view.request_for(features).needed_requests[0]
-            for feature_view, features
-            in feature_refs.items()
+            for feature_view, features in feature_refs.items()
         ]
-    
+
     @classmethod
     def compile(cls) -> CompiledCombinedFeatureView:
         transformations: set[DerivedFeature] = set()
         metadata = cls().metadata
-        var_names = [name for name in cls().__dir__() if not name.startswith("_")]
+        var_names = [name for name in cls().__dir__() if not name.startswith('_')]
 
         requests: dict[str, list[RetrivalRequest]] = {}
         feature_view_deps: dict[str, CompiledFeatureView] = {}
-        
+
         for var_name in var_names:
             feature = getattr(cls, var_name)
             if isinstance(feature, FeatureView):
                 feature_view_deps[feature.metadata.name] = feature.compile()
             if isinstance(feature, TransformationFactory):
                 feature.feature_view = metadata.name
-                feature.name = var_name # Needed in some cases for later inferance and features
-                requests[var_name] = CombinedFeatureView._needed_features(feature.using_features, feature_view_deps)
+                feature.name = var_name  # Needed in some cases for later inferance and features
+                requests[var_name] = CombinedFeatureView._needed_features(
+                    feature.using_features, feature_view_deps
+                )
 
-                sources = [(feature_view_deps[request.feature_view_name], request) for request in requests[var_name]]
+                sources = [
+                    (feature_view_deps[request.feature_view_name], request) for request in requests[var_name]
+                ]
                 tran = feature.transformation(sources)
                 derived = DerivedFeature(
                     name=var_name,
                     dtype=feature.feature._dtype,
                     depending_on=[feature.feature_referance() for feature in feature.using_features],
-                    transformation=tran
+                    transformation=tran,
                 )
                 transformations.add(derived)
 
@@ -174,7 +173,9 @@ class CombinedFeatureView(ABC, FeatureSelectable):
         )
 
     @classmethod
-    def select(cls: type[FVType], features: Callable[[type[FVType]], list[FeatureFactory]]) -> RetrivalRequest:
+    def select(
+        cls: type[FVType], features: Callable[[type[FVType]], list[FeatureFactory]]
+    ) -> RetrivalRequest:
         view = cls.compile()
         names = features(cls)
         return view.request_for({feature.name for feature in names if feature.name})

@@ -1,65 +1,96 @@
 from dataclasses import dataclass
+from datetime import datetime
 from io import StringIO
-
-from sqlalchemy import all_
-from aladdin.request.retrival_request import RetrivalRequest
-from aladdin.retrival_job import FactualRetrivalJob, FullExtractJob
-from aladdin.s3.storage import FileStorage, HttpStorage
-from aladdin.feature import Feature
-from aladdin.local.source import FileSource
 
 import pandas as pd
 
-from aladdin.storage import Storage
+from aladdin.data_source.batch_data_source import ColumnFeatureMappable
+from aladdin.feature import Feature
+from aladdin.local.source import FileReference
+from aladdin.request.retrival_request import RetrivalRequest
+from aladdin.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob
+
 
 @dataclass
-class LocalFileFullJob(FullExtractJob):
+class FileFullJob(FullExtractJob):
 
-    source: FileSource
+    source: FileReference
     request: RetrivalRequest
     limit: int | None
 
-    @property
-    def storage(self) -> Storage:
-        if self.source.path.startswith("http"):
-            return HttpStorage()
-        else:
-            return FileStorage()
-
     async def _to_df(self) -> pd.DataFrame:
-        content = await self.storage.read(self.source.path)
-        file = StringIO(str(content, "utf-8"))
+        content = await self.source.read()
+        file = StringIO(str(content, 'utf-8'))
         entity_names = self.request.entity_names
         all_names = list(self.request.all_required_feature_names.union(entity_names))
-        request_features = self.source.feature_identifier_for(all_names)
+
+        request_features = all_names
+        if isinstance(self.source, ColumnFeatureMappable):
+            request_features = self.source.feature_identifier_for(all_names)
+
         df = pd.read_csv(file)
-        df.rename(columns={org_name: wanted_name for org_name, wanted_name in  zip(request_features, all_names)}, inplace=True)
+        df.rename(
+            columns={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)},
+            inplace=True,
+        )
 
         if self.limit and df.shape[0] > self.limit:
-            return df.iloc[:self.limit]
+            return df.iloc[: self.limit]
         else:
             return df
 
     async def to_arrow(self) -> pd.DataFrame:
         return await super().to_arrow()
 
+
 @dataclass
-class LocalFileFactualJob(FactualRetrivalJob):
-    
-    source: FileSource
+class FileDateJob(DateRangeJob):
+
+    source: FileReference
+    request: RetrivalRequest
+    start_date: datetime
+    end_date: datetime
+
+    async def _to_df(self) -> pd.DataFrame:
+        content = await self.source.read()
+        file = StringIO(str(content, 'utf-8'))
+        entity_names = self.request.entity_names
+        all_names = list(self.request.all_required_feature_names.union(entity_names))
+
+        request_features = all_names
+        if isinstance(self.source, ColumnFeatureMappable):
+            request_features = self.source.feature_identifier_for(all_names)
+
+        df = pd.read_csv(file)
+        df.rename(
+            columns={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)},
+            inplace=True,
+        )
+
+        event_timestamp_column = self.request.event_timestamp.name
+        # Making sure it is in the correct format
+        df[event_timestamp_column] = pd.to_datetime(
+            df[event_timestamp_column], infer_datetime_format=True, utc=True
+        )
+
+        start_date_ts = pd.to_datetime(self.start_date, utc=True)
+        end_date_ts = pd.to_datetime(self.end_date, utc=True)
+        return df.loc[df[event_timestamp_column].between(start_date_ts, end_date_ts)]
+
+    async def to_arrow(self) -> pd.DataFrame:
+        return await super().to_arrow()
+
+
+@dataclass
+class FileFactualJob(FactualRetrivalJob):
+
+    source: FileReference
     requests: set[RetrivalRequest]
     facts: dict[str, list]
 
-    @property
-    def storage(self) -> Storage:
-        if self.source.path.startswith("http"):
-            return HttpStorage()
-        else:
-            return FileStorage()
-
     async def _to_df(self) -> pd.DataFrame:
-        content = await self.storage.read(self.source.path)
-        file = StringIO(str(content, "utf-8"))
+        content = await self.source.read()
+        file = StringIO(str(content, 'utf-8'))
         df = pd.read_csv(file)
         all_features: set[Feature] = set()
         for request in self.requests:
@@ -71,8 +102,11 @@ class LocalFileFactualJob(FactualRetrivalJob):
         for request in self.requests:
             entity_names = request.entity_names
             all_names = request.all_required_feature_names.union(entity_names)
-            request_features = self.source.feature_identifier_for(all_names)
-            
+
+            request_features = all_names
+            if isinstance(self.source, ColumnFeatureMappable):
+                request_features = self.source.feature_identifier_for(all_names)
+
             mask = pd.Series.repeat(pd.Series([True]), df.shape[0]).reset_index(drop=True)
             set_mask = pd.Series.repeat(pd.Series([True]), result.shape[0]).reset_index(drop=True)
             for entity in entity_names:
@@ -80,9 +114,12 @@ class LocalFileFactualJob(FactualRetrivalJob):
                 mask = mask & (df[entity_source_name].isin(self.facts[entity]))
 
                 set_mask = set_mask & (pd.Series(self.facts[entity]).isin(df[entity_source_name]))
-            
+
             feature_df = df.loc[mask, request_features]
-            feature_df.rename(columns={org_name: wanted_name for org_name, wanted_name in  zip(request_features, all_names)}, inplace=True)
+            feature_df.rename(
+                columns={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)},
+                inplace=True,
+            )
             result.loc[set_mask, list(all_names)] = feature_df.reset_index(drop=True)
 
         return result

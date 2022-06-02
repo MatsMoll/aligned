@@ -1,12 +1,13 @@
 from dataclasses import dataclass
-from typing import Callable
 from datetime import timedelta
-from aladdin import RedisConfig
+from typing import Callable
 
-from aladdin.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
+from aladdin import RedisConfig
 from aladdin.codable import Codable
-from aladdin.model import EntityDataSource, SqlEntityDataSource
+from aladdin.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aladdin.enricher import Enricher
+from aladdin.model import EntityDataSource, SqlEntityDataSource
+
 
 @dataclass
 class RedshiftSQLConfig(Codable):
@@ -16,37 +17,33 @@ class RedshiftSQLConfig(Codable):
     @property
     def url(self) -> str:
         import os
+
         return os.environ[self.env_var]
 
     @staticmethod
-    def from_url(url: str) -> "RedshiftSQLConfig":
+    def from_url(url: str) -> 'RedshiftSQLConfig':
         import os
-        os.environ["REDSHIFT_DATABASE"] = url.replace("redshift:", "postgresql:")
-        return RedshiftSQLConfig(env_var="REDSHIFT_DATABASE")
 
-    def table(self, table: str, mapping_keys: dict[str, str] | None = None) -> "RedshiftSQLDataSource":
-        return RedshiftSQLDataSource(
-            config=self,
-            table=table,
-            mapping_keys=mapping_keys or {}
-        )
+        os.environ['REDSHIFT_DATABASE'] = url.replace('redshift:', 'postgresql:')
+        return RedshiftSQLConfig(env_var='REDSHIFT_DATABASE')
+
+    def table(self, table: str, mapping_keys: dict[str, str] | None = None) -> 'RedshiftSQLDataSource':
+        return RedshiftSQLDataSource(config=self, table=table, mapping_keys=mapping_keys or {})
 
     def data_enricher(self, name: str, sql: str, redis: RedisConfig, values: dict | None = None) -> Enricher:
         from pathlib import Path
+
         from aladdin.enricher import FileCacheEnricher, RedisLockEnricher, SqlDatabaseEnricher
 
         return FileCacheEnricher(
             timedelta(days=1),
-            file=Path(f"./cache/{name}.parquet"),
-            enricher=RedisLockEnricher(
-                name,
-                SqlDatabaseEnricher(self.url, sql, values),
-                redis
-            )
+            file=Path(f'./cache/{name}.parquet'),
+            enricher=RedisLockEnricher(name, SqlDatabaseEnricher(self.url, sql, values), redis),
         )
 
     def entity_source(self, timestamp_column: str, sql: Callable[[str], str]) -> EntityDataSource:
         return SqlEntityDataSource(sql, self.url, timestamp_column)
+
 
 @dataclass
 class RedshiftSQLDataSource(BatchDataSource, ColumnFeatureMappable):
@@ -55,7 +52,7 @@ class RedshiftSQLDataSource(BatchDataSource, ColumnFeatureMappable):
     table: str
     mapping_keys: dict[str, str]
 
-    type_name = "redshift"
+    type_name = 'redshift'
 
     def job_group_key(self) -> str:
         return self.config.env_var

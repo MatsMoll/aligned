@@ -1,27 +1,30 @@
 from abc import ABC, abstractmethod
-from aladdin.feature import Feature
-from aladdin.codable import Codable
+
 from mashumaro.types import SerializableType
-from typing import Optional
+
+from aladdin.codable import Codable
+from aladdin.feature import Feature
+
 
 class BatchDataSourceFactory:
 
-    supported_data_sources: dict[str, type["BatchDataSource"]]
+    supported_data_sources: dict[str, type['BatchDataSource']]
 
-    _shared: Optional["BatchDataSourceFactory"] = None
+    _shared: 'BatchDataSourceFactory' | None = None
 
     def __init__(self):
-        from aladdin.psql.data_source import PostgreSQLDataSource
         from aladdin.local.source import FileSource
+        from aladdin.psql.data_source import PostgreSQLDataSource
         from aladdin.s3.config import AwsS3DataSource
+
         self.supported_data_sources = {
             PostgreSQLDataSource.type_name: PostgreSQLDataSource,
             FileSource.type_name: FileSource,
-            AwsS3DataSource.type_name: AwsS3DataSource
+            AwsS3DataSource.type_name: AwsS3DataSource,
         }
 
     @classmethod
-    def shared(cls) -> "BatchDataSourceFactory":
+    def shared(cls) -> 'BatchDataSourceFactory':
         if cls._shared:
             return cls._shared
         cls._shared = BatchDataSourceFactory()
@@ -30,11 +33,12 @@ class BatchDataSourceFactory:
 
 class BatchDataSource(ABC, Codable, SerializableType):
     """
-    A definition to where a specific pice of data can be found. 
+    A definition to where a specific pice of data can be found.
     E.g: A database table, a file, a web service, etc.
 
     Ths can thereafter be combined with other BatchDataSources in order to create a rich dataset.
     """
+
     type_name: str
 
     @abstractmethod
@@ -46,13 +50,17 @@ class BatchDataSource(ABC, Codable, SerializableType):
 
     def __hash__(self) -> int:
         return hash(self.job_group_key())
-    
+
     @classmethod
     def _deserialize(cls, value: dict[str]) -> 'BatchDataSource':
-        name_type = value["type_name"]
+        name_type = value['type_name']
         if name_type not in BatchDataSourceFactory.shared().supported_data_sources:
-            raise ValueError(f"Unknown batch data source id: '{name_type}'.\nRemember to add the data source to the BatchDataSourceFactory.supported_data_sources if it is a custom type.")
-        del value["type_name"]
+            raise ValueError(
+                f"Unknown batch data source id: '{name_type}'.\nRemember to add the"
+                ' data source to the BatchDataSourceFactory.supported_data_sources if'
+                ' it is a custom type.'
+            )
+        del value['type_name']
         data_class = BatchDataSourceFactory.shared().supported_data_sources[name_type]
         return data_class.from_dict(value)
 

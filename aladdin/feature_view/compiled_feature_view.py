@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-from aladdin.derivied_feature import DerivedFeature
 
-from aladdin.feature import Feature, EventTimestamp
-from aladdin.data_source.batch_data_source import BatchDataSource
-from aladdin.request.retrival_request import RetrivalRequest, FeatureRequest
 from aladdin.codable import Codable
+from aladdin.data_source.batch_data_source import BatchDataSource
+from aladdin.derivied_feature import DerivedFeature
+from aladdin.feature import EventTimestamp, Feature
+from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
+
 
 @dataclass
 class CompiledFeatureView(Codable):
@@ -26,7 +27,7 @@ class CompiledFeatureView(Codable):
     @property
     def entitiy_names(self) -> set[str]:
         return {entity.name for entity in self.entities}
-    
+
     @property
     def request_all(self) -> FeatureRequest:
         return FeatureRequest(
@@ -38,17 +39,21 @@ class CompiledFeatureView(Codable):
                     entities=self.entities,
                     features=self.features,
                     derived_features=self.derived_features,
-                    event_timestamp=self.event_timestamp
+                    event_timestamp=self.event_timestamp,
                 )
-            ]
+            ],
         )
 
     def request_for(self, feature_names: set[str]) -> FeatureRequest:
-        
-        features = {feature for feature in self.features if feature.name in feature_names}.union(self.entities)
+
+        features = {feature for feature in self.features if feature.name in feature_names}.union(
+            self.entities
+        )
         derived_features = {feature for feature in self.derived_features if feature.name in feature_names}
 
-        def dependent_features_for(feature: DerivedFeature) -> tuple[set[Feature], set[Feature]]:
+        def dependent_features_for(
+            feature: DerivedFeature,
+        ) -> tuple[set[Feature], set[Feature]]:
             core_features = set()
             intermediate_features = set()
 
@@ -60,11 +65,13 @@ class CompiledFeatureView(Codable):
                     features.update(core)
                     intermediate_features.update(intermediate)
                 else:
-                    dep_feature = [feat for feat in self.features.union(self.entities) if feat.name == dep_ref.name][0]
+                    dep_feature = [
+                        feat for feat in self.features.union(self.entities) if feat.name == dep_ref.name
+                    ][0]
                     core_features.add(dep_feature)
 
             return core_features, intermediate_features
-                    
+
         for dep_feature in derived_features.copy():
             core, intermediate = dependent_features_for(dep_feature)
             features.update(core)
@@ -79,9 +86,9 @@ class CompiledFeatureView(Codable):
                     entities=self.entities,
                     features=features,
                     derived_features=derived_features,
-                    event_timestamp=self.event_timestamp
+                    event_timestamp=self.event_timestamp,
                 )
-            ]
+            ],
         )
 
     def __hash__(self) -> int:

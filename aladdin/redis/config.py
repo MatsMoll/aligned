@@ -1,14 +1,19 @@
-from redis.asyncio import Redis
+import logging
 from dataclasses import dataclass
-from aladdin.codable import Codable
 
-from aladdin.online_source import OnlineSource
-from aladdin.feature_source import FeatureSource
-
-from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
-from aladdin.retrival_job import RetrivalJob
-from aladdin.request.retrival_request import RetrivalRequest
 import pandas as pd
+from redis.asyncio import Redis, StrictRedis
+
+from aladdin.codable import Codable
+from aladdin.feature import FeatureType
+from aladdin.feature_source import FeatureSource, WritableFeatureSource
+from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
+from aladdin.online_source import OnlineSource
+from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
+from aladdin.retrival_job import RetrivalJob
+
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class RedisConfig(Codable):
@@ -18,72 +23,102 @@ class RedisConfig(Codable):
     @property
     def url(self) -> str:
         import os
+
         return os.environ[self.env_var]
 
     @staticmethod
-    def from_url(url: str) -> "RedisConfig":
+    def from_url(url: str) -> 'RedisConfig':
         import os
-        os.environ["REDIS_URL"] = url
-        return RedisConfig(env_var="REDIS_URL")
+
+        os.environ['REDIS_URL'] = url
+        return RedisConfig(env_var='REDIS_URL')
 
     @staticmethod
-    def localhost() -> "RedisConfig":
+    def localhost() -> 'RedisConfig':
         import os
-        os.environ["REDIS_URL"] = "redis://localhost:6379"
-        return RedisConfig(env_var="REDIS_URL")
 
-    def redis(self) -> "Redis":
+        os.environ['REDIS_URL'] = 'redis://localhost:6379'
+        return RedisConfig(env_var='REDIS_URL')
+
+    def redis(self) -> 'Redis':
         global _redis
         try:
             return _redis
         except NameError:
-            _redis = Redis.from_url(self.url)
+            _redis = StrictRedis.from_url(self.url, decode_responses=True)
             return _redis
 
-    def online_source(self) -> "RedisOnlineSource":
+    def online_source(self) -> 'RedisOnlineSource':
         return RedisOnlineSource(config=self)
+
 
 @dataclass
 class RedisOnlineSource(OnlineSource):
 
     config: RedisConfig
-    source_type = "redis"
+    source_type = 'redis'
 
-    def feature_source(self, feature_views: set[CompiledFeatureView]) -> "RedisSource":
+    def feature_source(self, feature_views: set[CompiledFeatureView]) -> 'RedisSource':
         return RedisSource(self.config)
 
+
 @dataclass
-class RedisSource(FeatureSource):
+class RedisSource(FeatureSource, WritableFeatureSource):
 
     config: RedisConfig
 
-    async def store(self, job: RetrivalJob, requests: set[RetrivalRequest]) -> None:
+    def all_for(self, request: FeatureRequest, limit: int | None = None) -> RetrivalJob:
+        raise NotImplementedError()
+
+    def features_for(self, facts: dict[str, list], request: FeatureRequest) -> RetrivalJob:
+        from aladdin.redis.job import FactualRedisJob
+
+        return FactualRedisJob(self.config, request.needed_requests, facts)
+
+    async def write(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
         from aladdin.redis.job import key
 
         redis = self.config.redis()
         data = await job.to_df()
 
+        logger.info(f'Writing {data.shape} features to redis')
         async with redis.pipeline(transaction=True) as pipe:
-            for _, row in data.iterrows():
-                # Run one query per row
-                for request in requests:
-                    entity_ids = row[request.entity_names]
-                    entity_id = ":".join([str(entity_id) for entity_id in entity_ids])
-                    if not entity_id:
-                        continue
-
-                    for feature in request.all_features:
+            for request in requests:
+                for feature in request.all_features:
+                    values = data[list(request.entity_names) + [feature.name]]
+                    for _, row in values.iterrows():
                         value = row[feature.name]
-                        if value and not pd.isnull(value):
-                            if feature.dtype == bool:
-                                # Redis do not support bools
-                                value = int(value)
-                            feature_key = key(request, entity_id, feature)
-                            pipe.set(feature_key, value)
+                        if pd.isna(value):
+                            continue
 
-            await pipe.execute()
+                        if feature.dtype == FeatureType('').bool:
+                            # Redis do not support bools
+                            value = int(value)
+                        elif feature.dtype == FeatureType('').datetime:
+                            value = value.timestamp()
+                        entity_id = row[list(request.all_feature_names)]
+                        feature_key = key(request, entity_id, feature)
+                        pipe.set(feature_key, value)
+                    await pipe.execute()
+                    logger.info(f'Wrote {feature.name}')
 
+            # for _, row in data.iterrows():
+            #     # Run one query per row
+            #     for request in requests:
+            #         entity_ids = row[list(request.entity_names)]
+            #         entity_id = ':'.join([str(entity_id) for entity_id in entity_ids])
+            #         if not entity_id:
+            #             continue
 
-    def features_for(self, facts: dict[str, list], requests: set[RetrivalRequest]) -> RetrivalJob:
-        from aladdin.redis.job import FactualRedisJob
-        return FactualRedisJob(self.config, requests, facts)
+            #         for feature in request.all_features:
+            #             value = row[feature.name]
+            #             if value and not pd.isnull(value):
+            #                 if feature.dtype == FeatureType('').bool:
+            #                     # Redis do not support bools
+            #                     value = int(value)
+            #                 elif feature.dtype == FeatureType('').datetime:
+            #                     value = value.timestamp()
+            #                 feature_key = key(request, entity_id, feature)
+            #                 pipe.set(feature_key, value)
+
+            # await pipe.execute()
