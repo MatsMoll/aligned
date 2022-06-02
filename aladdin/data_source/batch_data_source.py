@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from mashumaro.types import SerializableType
 
@@ -10,9 +11,9 @@ class BatchDataSourceFactory:
 
     supported_data_sources: dict[str, type['BatchDataSource']]
 
-    _shared: 'BatchDataSourceFactory' | None = None
+    _shared: Optional['BatchDataSourceFactory'] = None
 
-    def __init__(self):
+    def __init__(self) -> None:
         from aladdin.local.source import FileSource
         from aladdin.psql.data_source import PostgreSQLDataSource
         from aladdin.s3.config import AwsS3DataSource
@@ -45,14 +46,14 @@ class BatchDataSource(ABC, Codable, SerializableType):
     def job_group_key(self) -> str:
         pass
 
-    def _serialize(self):
+    def _serialize(self) -> dict:
         return self.to_dict()
 
     def __hash__(self) -> int:
         return hash(self.job_group_key())
 
     @classmethod
-    def _deserialize(cls, value: dict[str]) -> 'BatchDataSource':
+    def _deserialize(cls, value: dict) -> 'BatchDataSource':
         name_type = value['type_name']
         if name_type not in BatchDataSourceFactory.shared().supported_data_sources:
             raise ValueError(

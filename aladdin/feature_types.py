@@ -4,7 +4,7 @@ from datetime import timedelta
 from typing import Any, Callable, TypeVar
 
 import numpy as np
-from pandas import DataFrame, Series  # type: ignore
+from pandas import DataFrame, Series
 
 from aladdin.feature import Constraint
 from aladdin.feature import EventTimestamp as EventTimestampFeature
@@ -16,19 +16,33 @@ from aladdin.transformation import TimeSeriesTransformation, Transformation
 
 class FeatureReferancable:
 
-    name: str | None
-    feature_view: str | None
+    _name: str | None
+    _feature_view: str | None
+
+    @property
+    def name(self) -> str:
+        if not self._name:
+            raise ValueError('Name is not set')
+        return self._name
+
+    @property
+    def feature_view(self) -> str:
+        if not self._feature_view:
+            raise ValueError('Feature view is not set')
+        return self._feature_view
 
     @abstractproperty
     def _dtype(self) -> FeatureType:
         pass
 
     def feature_referance(self) -> FeatureReferance:
+        if not self.name or not self.feature_view:
+            raise ValueError('name and feature_view must be set')
         return FeatureReferance(
             name=self.name,
             feature_view=self.feature_view,
             dtype=self._dtype,
-            is_derivied=(not isinstance(self, FeatureFactory)),
+            is_derivied=(not isinstance(self, FeatureReferancable)),
         )
 
 
@@ -50,10 +64,10 @@ class Transformable(FeatureReferancable):
 
         return CustomTransformation(using_features or [self], self, sub_tran)
 
-    def __eq__(self, __o: object) -> 'Equals':
+    def __eq__(self, __o: object) -> 'Equals':  # type: ignore
         return Equals(__o, self)
 
-    def __ne__(self, __o: object) -> 'NotEquals':
+    def __ne__(self, __o: object) -> 'NotEquals':  # type: ignore
         return NotEquals(__o, self)
 
     def __lt__(self, value: object) -> 'LowerThen':
@@ -84,8 +98,7 @@ class FeatureFactory(ABC, Transformable):
 
     _labels: dict[str, str] | None = None
     _description: str | None = None
-    name: str | None = None
-    feature_view: str | None = None
+
     constraints: set[Constraint] = set()
 
     @abstractproperty
@@ -93,7 +106,7 @@ class FeatureFactory(ABC, Transformable):
         pass
 
     def feature(self, name: str) -> Feature:
-        self.name = name
+        self._name = name
         return Feature(
             name,
             dtype=self._dtype,
@@ -103,11 +116,13 @@ class FeatureFactory(ABC, Transformable):
         )
 
     def labels(self: FeatureTypeVar, labels: dict[str, str]) -> FeatureTypeVar:
-        self._labels = labels
+        if isinstance(self, FeatureFactory):
+            self._labels = labels
         return self
 
     def description(self: FeatureTypeVar, description: str) -> FeatureTypeVar:
-        self._description = description
+        if isinstance(self, FeatureFactory):
+            self._description = description
         return self
 
     def count(self) -> 'TimeSeriesTransformationFactory':
@@ -124,14 +139,14 @@ class FeatureFactory(ABC, Transformable):
 class CustomTransformationV2(Transformation):
 
     method: bytes
-    dtype: FeatureType | None = None  # Should be something else
+    dtype: FeatureType
     name: str = 'custom_transformation'
 
     @staticmethod
-    def with_method(method: Callable[[DataFrame], Series]) -> 'CustomTransformationV2':
+    def with_method(method: Callable[[DataFrame], Series], dtype: FeatureType) -> 'CustomTransformationV2':
         import dill
 
-        return CustomTransformationV2(method=dill.dumps(method))
+        return CustomTransformationV2(method=dill.dumps(method), dtype=dtype)
 
     async def transform(self, df: DataFrame) -> Series:
         import dill
@@ -142,26 +157,21 @@ class CustomTransformationV2(Transformation):
 
 class TransformationFactory(ABC, Transformable):
 
-    using_features: list[FeatureFactory]
-    feature: FeatureFactory
-    name: str | None
-    feature_view: str | None
+    using_features: list[FeatureReferancable]
+    feature: FeatureReferancable
 
     @property
     def _dtype(self) -> FeatureType:
         return self.feature._dtype
 
     def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
-        return CustomTransformationV2.with_method(method=self.method)
+        return CustomTransformationV2.with_method(method=self.method, dtype=self._dtype)
 
     @property
     def using_feature_names(self) -> list[str]:
-        return [
-            feature.name if isinstance(feature, FeatureReferancable) else feature
-            for feature in self.using_features
-        ]
+        return [feature.name for feature in self.using_features]
 
-    def __init__(self, using_features: list[str | FeatureReferancable], feature: FeatureFactory) -> None:
+    def __init__(self, using_features: list[FeatureReferancable], feature: FeatureReferancable) -> None:
         self.using_features = using_features
         self.feature = feature
 
@@ -170,19 +180,21 @@ class TransformationFactory(ABC, Transformable):
         pass
 
     def labels(self: FeatureTypeVar, labels: dict[str, str]) -> FeatureTypeVar:
-        self.feature._labels = labels
+        if isinstance(self, TransformationFactory) and isinstance(self.feature, FeatureFactory):
+            self.feature._labels = labels
         return self
 
     def description(self: FeatureTypeVar, description: str) -> FeatureTypeVar:
-        self.feature._description = description
+        if isinstance(self, TransformationFactory) and isinstance(self.feature, FeatureFactory):
+            self.feature._description = description
         return self
 
 
 class CustomTransformation(TransformationFactory, Transformable):
     def __init__(
         self,
-        using_features: list[str | FeatureFactory],
-        feature: FeatureFactory,
+        using_features: list[FeatureReferancable],
+        feature: FeatureReferancable,
         transformation: Callable[[DataFrame], Series],
     ) -> None:
         self.using_features = using_features
@@ -195,60 +207,60 @@ class CustomTransformation(TransformationFactory, Transformable):
 
 
 class Float(FeatureFactory):
-    _dtype = FeatureType.float
+    _dtype = FeatureType('').float
 
     def __init__(self, labels: dict[str, str] | None = None):
         self._labels = labels
 
-    def log1p(self, using: str) -> 'LogTransform':
+    def log1p(self, using: FeatureReferancable) -> 'LogTransform':
         return LogTransform(using)
 
 
 class Double(FeatureFactory):
-    _dtype = FeatureType.double
+    _dtype = FeatureType('').double
 
 
 class Int32(FeatureFactory):
-    _dtype = FeatureType.int32
+    _dtype = FeatureType('').int32
 
 
 class Int64(FeatureFactory):
-    _dtype = FeatureType.int64
+    _dtype = FeatureType('').int64
 
 
 class String(FeatureFactory):
-    _dtype = FeatureType.string
+    _dtype = FeatureType('').string
 
     def split(self, pattern: str, max_splits: int | None = None) -> 'Split':
         return Split(pattern, self, max_splits)
 
 
 class UUID(FeatureFactory):
-    _dtype = FeatureType.uuid
+    _dtype = FeatureType('').uuid
 
 
 class Bool(FeatureFactory):
-    _dtype = FeatureType.bool
+    _dtype = FeatureType('').bool
 
 
 class Array(FeatureFactory):
-    _dtype = FeatureType.array
+    _dtype = FeatureType('').array
 
 
 class Entity(FeatureFactory):
 
-    dtype: FeatureFactory
+    dtype: FeatureReferancable
 
-    def __init__(self, dtype: FeatureFactory):
+    def __init__(self, dtype: FeatureReferancable):
         self.dtype = dtype
 
     @property
-    def _dtype(self) -> type:
+    def _dtype(self) -> FeatureType:
         return self.dtype._dtype
 
 
 class CreatedAtTimestamp(FeatureFactory):
-    _dtype = FeatureType.datetime
+    _dtype = FeatureType('').datetime
 
 
 class EventTimestamp(FeatureFactory):
@@ -258,10 +270,10 @@ class EventTimestamp(FeatureFactory):
     def __init__(self, max_join_with: timedelta):
         self.max_join_with = max_join_with
 
-    _dtype = FeatureType.datetime
+    _dtype = FeatureType('').datetime
 
     def event_timestamp_feature(self, name: str) -> EventTimestampFeature:
-        self.name = name
+        self._name = name
         return EventTimestampFeature(
             name=name,
             ttl=self.max_join_with.seconds,
@@ -272,10 +284,10 @@ class EventTimestamp(FeatureFactory):
 
 class Ratio(TransformationFactory):
 
-    numerator: FeatureFactory
-    denumerator: FeatureFactory
+    numerator: FeatureReferancable
+    denumerator: FeatureReferancable
 
-    def __init__(self, numerator: FeatureFactory, denumerator: FeatureFactory) -> None:
+    def __init__(self, numerator: FeatureReferancable, denumerator: FeatureReferancable) -> None:
         super().__init__([numerator, denumerator], Float())
         self.numerator = numerator
         self.denumerator = denumerator
@@ -301,9 +313,9 @@ class Ratio(TransformationFactory):
 class Contains(TransformationFactory):
 
     text: str
-    in_feature: FeatureFactory
+    in_feature: FeatureReferancable
 
-    def __init__(self, text: str, in_feature: FeatureFactory) -> None:
+    def __init__(self, text: str, in_feature: FeatureReferancable) -> None:
         super().__init__([in_feature], Bool())
         self.in_feature = in_feature
         self.text = text
@@ -319,7 +331,7 @@ class Contains(TransformationFactory):
 class Equals(TransformationFactory):
 
     value: Any
-    in_feature: FeatureFactory
+    in_feature: FeatureReferancable
 
     def __init__(self, value: Any, in_feature: FeatureReferancable) -> None:
         super().__init__([in_feature], Bool())
@@ -337,7 +349,7 @@ class Equals(TransformationFactory):
 class NotEquals(TransformationFactory):
 
     value: Any
-    in_feature: FeatureFactory
+    in_feature: FeatureReferancable
 
     def __init__(self, value: Any, in_feature: FeatureReferancable) -> None:
         super().__init__([in_feature], Bool())
@@ -355,7 +367,7 @@ class NotEquals(TransformationFactory):
 class GreaterThen(TransformationFactory):
 
     value: Any
-    in_feature: FeatureFactory
+    in_feature: FeatureReferancable
 
     def __init__(self, value: Any, in_feature: FeatureReferancable) -> None:
         super().__init__([in_feature], Bool())
@@ -373,7 +385,7 @@ class GreaterThen(TransformationFactory):
 class GreaterThenOrEqual(TransformationFactory):
 
     value: Any
-    in_feature: FeatureFactory
+    in_feature: FeatureReferancable
 
     def __init__(self, value: Any, in_feature: FeatureReferancable) -> None:
         super().__init__([in_feature], Bool())
@@ -391,7 +403,7 @@ class GreaterThenOrEqual(TransformationFactory):
 class LowerThen(TransformationFactory):
 
     value: Any
-    in_feature: FeatureFactory
+    in_feature: FeatureReferancable
 
     def __init__(self, value: Any, in_feature: FeatureReferancable) -> None:
         super().__init__([in_feature], Bool())
@@ -409,7 +421,7 @@ class LowerThen(TransformationFactory):
 class LowerThenOrEqual(TransformationFactory):
 
     value: Any
-    in_feature: FeatureFactory
+    in_feature: FeatureReferancable
 
     def __init__(self, value: Any, in_feature: FeatureReferancable) -> None:
         super().__init__([in_feature], Bool())
@@ -427,7 +439,7 @@ class LowerThenOrEqual(TransformationFactory):
 class Split(TransformationFactory):
 
     pattern: str
-    feature: FeatureFactory
+    feature: FeatureReferancable
     max_splits: int | None
 
     def __init__(self, pattern: str, feature: FeatureReferancable, max_splits: int | None = None) -> None:
@@ -447,7 +459,7 @@ class Split(TransformationFactory):
 class ArrayIndex(TransformationFactory):
 
     index: int
-    feature: FeatureFactory
+    feature: FeatureReferancable
 
     def __init__(self, index: int, feature: FeatureReferancable) -> None:
         super().__init__([feature], Bool())
@@ -465,9 +477,9 @@ class ArrayIndex(TransformationFactory):
 class DateComponent(TransformationFactory):
 
     component: str
-    from_feature: FeatureFactory
+    from_feature: FeatureReferancable
 
-    def __init__(self, component: str, from_feature: FeatureFactory) -> None:
+    def __init__(self, component: str, from_feature: FeatureReferancable) -> None:
         super().__init__([from_feature], Int32())
         self.from_feature = from_feature
         self.component = component
@@ -493,10 +505,10 @@ class DateComponent(TransformationFactory):
 
 class DifferanceBetween(TransformationFactory):
 
-    first_feature: FeatureFactory
-    second_feature: FeatureFactory
+    first_feature: FeatureReferancable
+    second_feature: FeatureReferancable
 
-    def __init__(self, first_feature: FeatureFactory, second_feature: FeatureFactory) -> None:
+    def __init__(self, first_feature: FeatureReferancable, second_feature: FeatureReferancable) -> None:
         super().__init__([first_feature, second_feature], Float())
         self.first_feature = first_feature
         self.second_feature = second_feature
@@ -511,10 +523,10 @@ class DifferanceBetween(TransformationFactory):
 
 class AdditionBetween(TransformationFactory):
 
-    first_feature: FeatureFactory
-    second_feature: FeatureFactory
+    first_feature: FeatureReferancable
+    second_feature: FeatureReferancable
 
-    def __init__(self, first_feature: FeatureFactory, second_feature: FeatureFactory) -> None:
+    def __init__(self, first_feature: FeatureReferancable, second_feature: FeatureReferancable) -> None:
         super().__init__([first_feature, second_feature], Float())
         self.first_feature = first_feature
         self.second_feature = second_feature
@@ -529,10 +541,10 @@ class AdditionBetween(TransformationFactory):
 
 class TimeDifferance(TransformationFactory):
 
-    first_feature: FeatureFactory
-    second_feature: FeatureFactory
+    first_feature: FeatureReferancable
+    second_feature: FeatureReferancable
 
-    def __init__(self, first_feature: FeatureFactory, second_feature: FeatureFactory) -> None:
+    def __init__(self, first_feature: FeatureReferancable, second_feature: FeatureReferancable) -> None:
         super().__init__([first_feature, second_feature], Float())
         self.first_feature = first_feature
         self.second_feature = second_feature
@@ -560,9 +572,9 @@ class TimeDifferance(TransformationFactory):
 
 class LogTransform(TransformationFactory):
 
-    feature: FeatureFactory
+    feature: FeatureReferancable
 
-    def __init__(self, feature: FeatureFactory) -> None:
+    def __init__(self, feature: FeatureReferancable) -> None:
         super().__init__([feature], Float())
         self.feature = feature
 
@@ -587,11 +599,11 @@ class LogTransform(TransformationFactory):
 @dataclass
 class TimeSeriesTransformationFactory(TransformationFactory):
 
-    field: FeatureFactory
+    field: FeatureReferancable
     agg_method: str
-    feature: FeatureFactory = Int64()
+    feature: FeatureReferancable = Int64()
 
-    using_features = []
+    using_features: list[FeatureReferancable] = []
 
     def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
         from aladdin.psql.data_source import PostgreSQLDataSource
@@ -605,8 +617,8 @@ class TimeSeriesTransformationFactory(TransformationFactory):
 
         et = request.event_timestamp  # Veeeeery hacky
         etf = EventTimestamp(timedelta(seconds=et.ttl))
-        etf.name = et.name
-        etf.feature_view = request.feature_view_name
+        etf._name = et.name
+        etf._feature_view = request.feature_view_name
         self.using_features = [self.field, etf]
 
         source = metadata.batch_source

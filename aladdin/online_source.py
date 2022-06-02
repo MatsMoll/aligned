@@ -1,6 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Any
 
 from mashumaro.types import SerializableType
 
@@ -17,7 +18,7 @@ class OnlineSourceFactory:
 
     _shared: 'OnlineSourceFactory' | None = None
 
-    def __init__(self):
+    def __init__(self) -> None:
         from aladdin.redis.config import RedisOnlineSource
 
         self.supported_sources = {
@@ -47,14 +48,14 @@ class OnlineSource(ABC, Codable, SerializableType):
     def feature_source(self, feature_views: set[CompiledFeatureView]) -> FeatureSource:
         pass
 
-    def _serialize(self):
+    def _serialize(self) -> dict:
         return self.to_dict()
 
     def __hash__(self) -> int:
         return hash(self.source_type)
 
     @classmethod
-    def _deserialize(cls, value: dict[str]) -> 'OnlineSource':
+    def _deserialize(cls, value: dict[str, Any]) -> 'OnlineSource':
         try:
             name_type = value['source_type']
 

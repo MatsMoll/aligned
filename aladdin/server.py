@@ -8,7 +8,7 @@ from aladdin.feature_store import FeatureStore
 
 class FastAPIServer:
     @staticmethod
-    def feature_view_path(name: str, feature_store: FeatureStore, app: FastAPI):
+    def feature_view_path(name: str, feature_store: FeatureStore, app: FastAPI) -> None:
 
         feature_view = feature_store.feature_views[name]
         required_features: set[Feature] = feature_view.entities.union(feature_view.features)
@@ -35,11 +35,11 @@ class FastAPIServer:
         }
 
         @app.post(f'/feature_view/{name}/write', openapi_extra=write_api_schema)
-        async def write(feature_values: dict):
+        async def write(feature_values: dict) -> None:
             await feature_store.feature_view(name).write(feature_values)
 
     @staticmethod
-    def model_path(name: str, feature_store: FeatureStore, app: FastAPI):
+    def model_path(name: str, feature_store: FeatureStore, app: FastAPI) -> None:
         feature_request = feature_store.model_requests[name]
 
         entities: set[Feature] = set()
@@ -122,7 +122,7 @@ class FastAPIServer:
         host: str | None = None,
         port: int | None = None,
         workers: int | None = None,
-    ):
+    ) -> None:
         import uvicorn
         from fastapi import FastAPI
 

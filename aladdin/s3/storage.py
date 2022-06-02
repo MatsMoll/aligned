@@ -40,7 +40,7 @@ class FileStorage(Storage):
         return Path(path).read_bytes()
 
     async def write(self, path: str, content: bytes) -> None:
-        return Path(path).write_bytes(content)
+        Path(path).write_bytes(content)
 
 
 @dataclass

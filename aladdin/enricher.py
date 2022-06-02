@@ -13,18 +13,18 @@ class Enricher(ABC, SerializableType):
 
     name: str
 
-    def _serialize(self):
+    def _serialize(self) -> dict:
         return self.to_dict()
 
     @classmethod
-    def _deserialize(cls, value: dict[str]) -> 'Enricher':
+    def _deserialize(cls, value: dict) -> 'Enricher':
         name_type = value['name']
         del value['name']
         data_class = SupportedEnrichers.shared().types[name_type]
         return data_class.from_dict(value)
 
     def lock(self, lock_name: str, redis_config: RedisConfig) -> 'Enricher':
-        return RedisLockEnricher(lock_name=lock_name, config=redis_config)
+        return RedisLockEnricher(lock_name=lock_name, enricher=self, config=redis_config)
 
     def cache(self, ttl: timedelta, cache_key: str) -> 'Enricher':
         return FileCacheEnricher(ttl, Path(f'./cache/{cache_key}'), self)
@@ -40,14 +40,15 @@ class SupportedEnrichers:
 
     _shared: 'SupportedEnrichers' | None = None
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.types = {}
 
-        for enrich_type in [RedisLockEnricher, FileCacheEnricher, SqlDatabaseEnricher]:
+        default_types: list[type[Enricher]] = [RedisLockEnricher, FileCacheEnricher, SqlDatabaseEnricher]
+        for enrich_type in default_types:
             self.add(enrich_type)
 
-    def add(self, transformation: type[Enricher]):
-        self.types[transformation.name] = transformation
+    def add(self, enrich_type: type[Enricher]) -> None:
+        self.types[enrich_type.name] = enrich_type
 
     @classmethod
     def shared(cls) -> 'SupportedEnrichers':
@@ -83,7 +84,7 @@ class FileCacheEnricher(Enricher):
     enricher: Enricher
     name: str = 'file_cache'
 
-    async def load(self):
+    async def load(self) -> None:
         import os
 
         should_load = False

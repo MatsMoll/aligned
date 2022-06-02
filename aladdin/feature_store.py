@@ -2,6 +2,7 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Any
 
 from aladdin.feature_source import BatchFeatureSource, FeatureSource, WritableFeatureSource
 from aladdin.feature_view.combined_view import CombinedFeatureView, CompiledCombinedFeatureView
@@ -58,7 +59,7 @@ class FeatureStore:
         self,
         feature_views: set[CompiledFeatureView],
         combined_feature_views: set[CompiledCombinedFeatureView],
-        models: dict[str, list[str]],
+        models: dict[str, set[str]],
         feature_source: FeatureSource,
     ) -> None:
         self.feature_source = feature_source
@@ -80,7 +81,8 @@ class FeatureStore:
 
     @staticmethod
     async def from_dir(path: str) -> 'FeatureStore':
-        return FeatureStore.from_definition(RepoDefinition.from_path(path))
+        repo_def = await RepoDefinition.from_path(path)
+        return FeatureStore.from_definition(repo_def)
 
     def features_for(self, facts: dict[str, list], features: list[str]) -> RetrivalJob:
         feature_request = RawStringFeatureRequest(features=set(features))
@@ -122,17 +124,17 @@ class FeatureStore:
         view = self.feature_views[view]
         return FeatureViewStore(self.feature_source, view)
 
-    def add_feature_view(self, feature_view: FeatureView):
+    def add_feature_view(self, feature_view: FeatureView) -> None:
         compiled_view = type(feature_view).compile()
         self.feature_views[compiled_view.name] = compiled_view
         if isinstance(self.feature_source, BatchFeatureSource):
             self.feature_source.sources[compiled_view.name] = compiled_view.batch_data_source
 
-    def add_combined_feature_view(self, feature_view: CombinedFeatureView):
+    def add_combined_feature_view(self, feature_view: CombinedFeatureView) -> None:
         compiled_view = type(feature_view).compile()
         self.combined_feature_views[compiled_view.name] = compiled_view
 
-    def add_model_service(self, service: ModelService):
+    def add_model_service(self, service: ModelService) -> None:
         request = RawStringFeatureRequest(service.feature_refs)
         self.model_requests[service.name] = self.requests_for(request)
 
@@ -153,7 +155,7 @@ class OfflineModelStore:
             self.source.features_for(facts, self.request),
         )
 
-    async def write(self, values: dict[str]):
+    async def write(self, values: dict[str, Any]) -> None:
         pass
 
 
@@ -174,7 +176,7 @@ class FeatureViewStore:
         start_date = end_date - timedelta(days=days, minutes=minutes, seconds=seconds)
         return self.between(start_date, end_date)
 
-    async def write(self, values: dict[str]):
+    async def write(self, values: dict[str, Any]) -> None:
         if not isinstance(self.source, WritableFeatureSource):
             logger.info('Feature Source is not writable')
             return

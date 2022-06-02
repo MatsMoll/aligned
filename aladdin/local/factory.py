@@ -4,14 +4,14 @@ from aladdin.job_factory import JobFactory
 from aladdin.local.job import FileDateJob, FileFactualJob, FileFullJob
 from aladdin.local.source import FileSource
 from aladdin.request.retrival_request import RetrivalRequest
-from aladdin.retrival_job import RetrivalJob
+from aladdin.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob
 
 
 class LocalFileJobFactory(JobFactory):
 
     source = FileSource
 
-    def all_data(self, source: FileSource, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+    def all_data(self, source: FileSource, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
         return FileFullJob(source, request, limit)
 
     def all_between_dates(
@@ -20,10 +20,12 @@ class LocalFileJobFactory(JobFactory):
         request: RetrivalRequest,
         start_date: datetime,
         end_date: datetime,
-    ) -> RetrivalJob:
+    ) -> DateRangeJob:
         return FileDateJob(source=source, request=request, start_date=start_date, end_date=end_date)
 
-    def _facts(self, facts: dict[str, list], requests: dict[FileSource, RetrivalRequest]) -> RetrivalJob:
+    def _facts(
+        self, facts: dict[str, list], requests: dict[FileSource, RetrivalRequest]
+    ) -> FactualRetrivalJob:
         if len(requests.keys()) != 1:
             raise ValueError(f'Only able to load one {self.source} at a time')
 

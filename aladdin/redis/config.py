@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass
 
 import pandas as pd
-from redis.asyncio import Redis, StrictRedis
+from redis.asyncio import Redis, StrictRedis  # type: ignore
 
 from aladdin.codable import Codable
 from aladdin.feature import FeatureType
@@ -40,13 +40,13 @@ class RedisConfig(Codable):
         os.environ['REDIS_URL'] = 'redis://localhost:6379'
         return RedisConfig(env_var='REDIS_URL')
 
-    def redis(self) -> 'Redis':
+    def redis(self) -> Redis:
         global _redis
         try:
-            return _redis
+            return _redis  # type: ignore
         except NameError:
-            _redis = StrictRedis.from_url(self.url, decode_responses=True)
-            return _redis
+            _redis = StrictRedis.from_url(self.url, decode_responses=True)  # type: ignore
+            return _redis  # type: ignore
 
     def online_source(self) -> 'RedisOnlineSource':
         return RedisOnlineSource(config=self)

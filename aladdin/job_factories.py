@@ -3,7 +3,7 @@ from aladdin.job_factory import JobFactory
 custom_factories: set[JobFactory] = set()
 
 
-def get_factories() -> set[JobFactory]:
+def get_factories() -> dict[str, JobFactory]:
     from aladdin.local.factory import LocalFileJobFactory
     from aladdin.psql.factory import PostgresJobFactory
     from aladdin.redshift.factory import RedshiftJobFactory

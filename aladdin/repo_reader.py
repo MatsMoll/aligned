@@ -17,7 +17,7 @@ def imports_for(file_path: Path) -> set[str]:
             for line in lines
             if line.startswith('import ') or (line.startswith('from ') and ' import ' in line)
         }
-        import_set = set()
+        import_set: set[str] = set()
         for line in import_lines:
             tokens = line.split(' ')
             index = tokens.index('import')
@@ -42,7 +42,7 @@ def super_classes_in(obj: Any) -> set[str]:
     return super_class_names
 
 
-def python_files(repo_path: Path, ignore_path: Path | None = None) -> set[Path]:
+def python_files(repo_path: Path, ignore_path: Path | None = None) -> list[Path]:
     files = {
         path.resolve() for path in repo_path.glob('**/*.py') if path.is_file() and '__init__.py' != path.name
     }
@@ -66,7 +66,7 @@ class RepoReader:
     """
 
     @staticmethod
-    def definition_from_path(repo_path: Path) -> 'RepoDefinition':
+    def definition_from_path(repo_path: Path) -> RepoDefinition:
         repo = RepoDefinition(
             feature_views=set(),
             combined_feature_views=set(),
@@ -104,7 +104,7 @@ class RepoReader:
         return repo
 
     @staticmethod
-    def reference_from_path(repo_path: Path) -> RepoReference | None:
+    def reference_from_path(repo_path: Path) -> RepoReference:
         for py_file in python_files(repo_path):
             imports = imports_for(py_file)
 
@@ -123,4 +123,4 @@ class RepoReader:
 
                 if isinstance(obj, RepoReference):
                     return obj
-        return None
+        raise ValueError('No reference found')

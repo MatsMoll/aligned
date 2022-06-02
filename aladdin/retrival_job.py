@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TypeVar
+from typing import Generic, TypeVar
 
 from pandas import DataFrame
 
@@ -26,7 +26,7 @@ class RetrivalJob(ABC):
 Source = TypeVar('Source', bound=BatchDataSource)
 
 
-class SingleSourceRetrivalJob(RetrivalJob):
+class SingleSourceRetrivalJob(RetrivalJob, Generic[Source]):
     source: Source
     request: RetrivalRequest
 
@@ -75,11 +75,11 @@ class DateRangeJob(SingleSourceRetrivalJob):
 
 class FactualRetrivalJob(RetrivalJob):
 
-    requests: set[RetrivalRequest]
+    requests: list[RetrivalRequest]
     facts: dict[str, list]
 
     async def compute_derived_featuers(self, df: DataFrame) -> DataFrame:
-        all_features = set()
+        all_features: set[str] = set()
         combined_views: list[DerivedFeature] = []
         for request in self.requests:
             for feature_round in request.derived_features_order():

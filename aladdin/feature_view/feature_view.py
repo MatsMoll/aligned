@@ -51,8 +51,8 @@ class FeatureView(ABC, FeatureSelectable):
                 if event_timestamp is None:
                     raise Exception(f'Set EventTimestamp above the feature {var_name} in' f' {cls.__name__}')
 
-                feature.name = var_name
-                feature.feature_view = metadata.name
+                feature._name = var_name
+                feature._feature_view = metadata.name
                 tran = feature.transformation(
                     [
                         (
@@ -71,7 +71,7 @@ class FeatureView(ABC, FeatureSelectable):
                     DerivedFeature(
                         name=var_name,
                         dtype=feature.feature._dtype,
-                        depending_on=[feature.feature_referance() for feature in feature.using_features],
+                        depending_on={feature.feature_referance() for feature in feature.using_features},
                         transformation=tran,
                     )
                 )
@@ -79,7 +79,7 @@ class FeatureView(ABC, FeatureSelectable):
             elif not isinstance(feature, FeatureFactory):
                 continue
 
-            feature.feature_view = metadata.name
+            feature._feature_view = metadata.name
             if isinstance(feature, Entity):
                 entities.append(feature.feature(var_name))
             elif isinstance(feature, EventTimestamp):
@@ -116,10 +116,10 @@ class FeatureView(ABC, FeatureSelectable):
     def select(
         cls: type[FVType], features: Callable[[type[FVType]], list[FeatureFactory]]
     ) -> RetrivalRequest:
-        view = cls.compile()
+        view: CompiledFeatureView = cls.compile()  # type: ignore
         names = features(cls)
         return view.request_for({feature.name for feature in names if feature.name})
 
     @classmethod
     def select_all(cls: type[FVType]) -> RetrivalRequest:
-        return cls.compile().request_all
+        return cls.compile().request_all  # type: ignore

@@ -6,7 +6,7 @@ from aladdin import FeatureView
 from aladdin.codable import Codable
 from aladdin.derivied_feature import DerivedFeature
 from aladdin.feature import Feature
-from aladdin.feature_types import FeatureFactory, TransformationFactory
+from aladdin.feature_types import FeatureFactory, FeatureReferancable, TransformationFactory
 from aladdin.feature_view.feature_view import CompiledFeatureView, FeatureSelectable, FVType
 from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
 
@@ -120,7 +120,7 @@ class CombinedFeatureView(ABC, FeatureSelectable):
 
     @staticmethod
     def _needed_features(
-        depending_on: set[Feature], feature_views: dict[str, CompiledFeatureView]
+        depending_on: list[FeatureReferancable], feature_views: dict[str, CompiledFeatureView]
     ) -> list[RetrivalRequest]:
 
         feature_refs: dict[CompiledFeatureView, set[str]] = {}
@@ -148,8 +148,8 @@ class CombinedFeatureView(ABC, FeatureSelectable):
             if isinstance(feature, FeatureView):
                 feature_view_deps[feature.metadata.name] = feature.compile()
             if isinstance(feature, TransformationFactory):
-                feature.feature_view = metadata.name
-                feature.name = var_name  # Needed in some cases for later inferance and features
+                feature._feature_view = metadata.name
+                feature._name = var_name  # Needed in some cases for later inferance and features
                 requests[var_name] = CombinedFeatureView._needed_features(
                     feature.using_features, feature_view_deps
                 )
@@ -161,7 +161,7 @@ class CombinedFeatureView(ABC, FeatureSelectable):
                 derived = DerivedFeature(
                     name=var_name,
                     dtype=feature.feature._dtype,
-                    depending_on=[feature.feature_referance() for feature in feature.using_features],
+                    depending_on={feature.feature_referance() for feature in feature.using_features},
                     transformation=tran,
                 )
                 transformations.add(derived)

@@ -72,8 +72,10 @@ class FeatureType(Codable):
             'array': list,
         }[self.name]
 
-    def __eq__(self, other: 'FeatureType') -> bool:
-        return self.name == other.name
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, FeatureType):
+            return self.name == other.name
+        return False
 
     @property
     def string(self) -> 'FeatureType':

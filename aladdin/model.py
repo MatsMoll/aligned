@@ -45,8 +45,15 @@ class SqlEntityDataSource(EntityDataSource):
 class ModelService:
     feature_refs: set[str]
     target_refs: set[str] | None
-    name: str | None
+
+    _name: str | None
     entity_source: SqlEntityDataSource | None
+
+    @property
+    def name(self) -> str:
+        if not self._name:
+            raise ValueError('Model name is not set')
+        return self._name
 
     def __init__(
         self,
@@ -55,7 +62,7 @@ class ModelService:
         name: str | None = None,
         entity_source: SqlEntityDataSource | None = None,
     ) -> None:
-        self.name = name
+        self._name = name
         self.entity_source = entity_source
         self.feature_refs = set()
         self.target_refs = set()

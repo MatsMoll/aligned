@@ -2,9 +2,10 @@ import asyncio
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Coroutine
 
 import click
-from pytz import utc
+from pytz import utc  # type: ignore
 
 from aladdin.feature_source import WritableFeatureSource
 from aladdin.online_source import BatchOnlineSource
@@ -12,7 +13,7 @@ from aladdin.repo_definition import RepoDefinition
 from aladdin.repo_reader import RepoReader
 
 
-def sync(method):
+def sync(method: Coroutine) -> Any:
     return asyncio.get_event_loop().run_until_complete(method)
 
 
@@ -24,7 +25,7 @@ def make_tzaware(t: datetime) -> datetime:
         return t
 
 
-def load_envs(path: Path):
+def load_envs(path: Path) -> None:
     if path.is_file():
         import os
 
@@ -38,23 +39,8 @@ def load_envs(path: Path):
         click.echo(f'No env file found at {path}')
 
 
-async def repo_for(dir: Path) -> RepoDefinition:
-    repo_def: RepoDefinition = None
-    if reference := RepoReader.reference_from_path(dir):
-        if file := reference.selected_file:
-            click.echo(f"Loading repo from configuration '{reference.selected}'")
-            repo_def = await RepoDefinition.from_file(file)
-        else:
-            click.echo(f"Invalid repo configuration '{reference.selected}'")
-
-    if repo_def is None:
-        click.echo('Generating repo definition')
-        repo_def = RepoReader.definition_from_path(dir)
-    return repo_def
-
-
 @click.group()
-def cli():
+def cli() -> None:
     pass
 
 
@@ -69,11 +55,10 @@ def cli():
     default='.env',
     help='The path to env variables',
 )
-def apply_command(repo_path: str, env_file):
+def apply_command(repo_path: str, env_file: str) -> None:
     """
     Create or update a feature store deployment
     """
-    from aladdin.repo_reader import RepoReader
 
     dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
     load_envs(dir / env_file)
@@ -98,11 +83,10 @@ def apply_command(repo_path: str, env_file):
     default='.env',
     help='The path to env variables',
 )
-def plan_command(repo_path: str, env_file: str):
+def plan_command(repo_path: str, env_file: str) -> None:
     """
     Prints the plan for updating the feature store file
     """
-    from aladdin.repo_reader import RepoReader
 
     dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
     sys.path.append(str(dir))
@@ -138,7 +122,7 @@ def plan_command(repo_path: str, env_file: str):
     default='.env',
     help='The path to env variables',
 )
-def serve_command(repo_path: str, host: str, port: int, workers: int, env_file: str):
+def serve_command(repo_path: str, host: str, port: int, workers: int, env_file: str) -> None:
     """
     Starts a API serving the feature store
     """
@@ -148,7 +132,7 @@ def serve_command(repo_path: str, host: str, port: int, workers: int, env_file: 
     dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
     load_envs(dir / env_file)
     sys.path.append(str(dir))
-    repo_def = sync(repo_for(dir))
+    repo_def = sync(RepoDefinition.from_path(dir.as_uri()))
 
     store = FeatureStore.from_definition(repo_def)
     FastAPIServer.run(store, host, port, workers)
@@ -173,7 +157,7 @@ def serve_command(repo_path: str, host: str, port: int, workers: int, env_file: 
     '--view',
     help='The feature view to materialize',
 )
-def materialize_command(repo_path: str, env_file: str, days: str, view: str):
+def materialize_command(repo_path: str, env_file: str, days: str, view: str) -> None:
     """
     Materializes the feature store
     """
@@ -183,24 +167,24 @@ def materialize_command(repo_path: str, env_file: str, days: str, view: str):
     load_envs(dir / env_file)
 
     sys.path.append(str(dir))
-    repo_def = sync(repo_for(dir))
+    repo_def = sync(RepoDefinition.from_path(dir.as_uri()))
     store = FeatureStore.from_definition(repo_def)
     batch_store = FeatureStore.from_definition(repo_def)
-    batch_store.feature_source = BatchOnlineSource().feature_source(list(store.feature_views.values()))
+    batch_store.feature_source = BatchOnlineSource().feature_source(set(store.feature_views.values()))
 
     if not isinstance(store.feature_source, WritableFeatureSource):
         raise ValueError('Batch feature sources are not supported for materialization')
 
-    days = int(days)
+    number_of_days = int(days)
     views = [view] if view else list(store.feature_views.keys())
 
-    click.echo(f'Materializing the last {days} days')
+    click.echo(f'Materializing the last {number_of_days} days')
     for feature_view in views:
         fv_store = batch_store.feature_view(feature_view)
         click.echo(f'Materializing {feature_view}')
         sync(
             store.feature_source.write(
-                fv_store.previous(days=days), fv_store.view.request_all.needed_requests
+                fv_store.previous(days=number_of_days), fv_store.view.request_all.needed_requests
             )
         )
 

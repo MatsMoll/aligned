@@ -42,7 +42,7 @@ class AwsS3Config(Codable, S3ConfigProtocol):
         return os.environ[self.region_env]
 
     def file_at(self, path: str, mapping_keys: dict[str, str] | None = None) -> 'AwsS3DataSource':
-        return AwsS3DataSource(config=self, path=path, mapping_keys=mapping_keys)
+        return AwsS3DataSource(config=self, path=path, mapping_keys=mapping_keys or {})
 
 
 @dataclass

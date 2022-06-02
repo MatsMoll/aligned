@@ -32,7 +32,7 @@ class RepoReference:
 class RepoDefinition(Codable):
     feature_views: set[CompiledFeatureView]
     combined_feature_views: set[CompiledCombinedFeatureView]
-    models: dict[str, list[str]]
+    models: dict[str, set[str]]
     online_source: OnlineSource
 
     @staticmethod
@@ -42,15 +42,14 @@ class RepoDefinition(Codable):
 
     @staticmethod
     async def from_path(path: str) -> 'RepoDefinition':
-        repo_def: RepoDefinition = None
-        if reference := RepoReader.reference_from_path(Path(path)):
-            if file := reference.selected_file:
-                logger.info(f"Loading repo from configuration '{reference.selected}'")
-                repo_def = await RepoDefinition.from_file(file)
-            else:
-                logger.info(f"Invalid repo configuration '{reference.selected}'")
-
-        if repo_def is None:
+        dir_path = Path(path)
+        if not (reference := RepoReader.reference_from_path(dir_path)):
             logger.info('Generating repo definition')
-            repo_def = RepoReader.definition_from_path(dir)
-        return repo_def
+            return RepoReader.definition_from_path(dir_path)
+
+        if file := reference.selected_file:
+            logger.info(f"Loading repo from configuration '{reference.selected}'")
+            return await RepoDefinition.from_file(file)
+        else:
+            logger.info('Generating repo definition')
+            return RepoReader.definition_from_path(dir_path)

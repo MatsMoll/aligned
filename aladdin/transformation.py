@@ -1,7 +1,8 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from mashumaro.types import SerializableType
-from pandas import DataFrame, Series  # type: ignore
+from pandas import DataFrame, Series
 
 from aladdin.codable import Codable
 from aladdin.feature import FeatureType
@@ -15,11 +16,11 @@ class Transformation(Codable, SerializableType):
     async def transform(self, df: DataFrame) -> Series:
         pass
 
-    def _serialize(self):
+    def _serialize(self) -> dict:
         return self.to_dict()
 
     @classmethod
-    def _deserialize(cls, value: dict[str]) -> 'Transformation':
+    def _deserialize(cls, value: dict) -> 'Transformation':
         name_type = value['name']
         del value['name']
         data_class = SupportedTransformations.shared().types[name_type]
@@ -30,16 +31,16 @@ class SupportedTransformations:
 
     types: dict[str, type[Transformation]]
 
-    _shared: 'SupportedTransformations' | None = None
+    _shared: Optional['SupportedTransformations'] = None
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.types = {}
         from aladdin.feature_types import CustomTransformationV2
 
         for tran_type in [Equals, CustomTransformationV2, TimeSeriesTransformation]:
             self.add(tran_type)
 
-    def add(self, transformation: type[Transformation]):
+    def add(self, transformation: type[Transformation]) -> None:
         self.types[transformation.name] = transformation
 
     @classmethod

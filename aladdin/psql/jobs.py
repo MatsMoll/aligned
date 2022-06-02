@@ -1,4 +1,5 @@
 import logging
+from abc import abstractproperty
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -20,8 +21,9 @@ class SQLQuery:
 
 
 class PostgreSQLRetrivalJob(RetrivalJob):
-
-    config: PostgreSQLConfig
+    @abstractproperty
+    def config(self) -> PostgreSQLConfig:
+        pass
 
     async def fetch_data(self) -> DataFrame:
         sql_request = self.build_request()
@@ -120,10 +122,10 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
 
     config: PostgreSQLConfig
     sources: dict[str, PostgreSQLDataSource]
-    requests: set[RetrivalRequest]
+    requests: list[RetrivalRequest]
     facts: dict[str, list]
 
-    def dtype_to_sql_type(self, dtype: type) -> str:
+    def dtype_to_sql_type(self, dtype: object) -> str:
         if isinstance(dtype, str):
             return dtype
         if dtype == FeatureType('').string:
@@ -139,8 +141,8 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
         from jinja2 import BaseLoader, Environment
 
         template = Environment(loader=BaseLoader()).from_string(self.__sql_template())
-        template_context = {}
-        final_select_names = set()
+        template_context: dict[str, Any] = {}
+        final_select_names: set[str] = set()
         entity_types: dict[str, str] = {}
         for request in self.requests:
             final_select_names = final_select_names.union(request.all_required_feature_names)
@@ -157,7 +159,7 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
         # + 1 is needed as 0 is evaluated for null
         fact_df['row_id'] = list(range(1, number_of_values + 1))
 
-        entity_types = [
+        entity_type_list = [
             self.dtype_to_sql_type(entity_types.get(entity, FeatureType('').int32))
             for entity in fact_df.columns
         ]
@@ -170,7 +172,7 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
                 row_placeholders.append(
                     {
                         'value': value,  # Could in theory lead to SQL injection (?)
-                        'dtype': entity_types[column_index],
+                        'dtype': entity_type_list[column_index],
                     }
                 )
                 if fact_df.columns[column_index] not in all_entities:

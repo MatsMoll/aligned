@@ -494,6 +494,14 @@ anyio = ">=3.4.0,<5"
 full = ["itsdangerous", "jinja2", "python-multipart", "pyyaml", "requests"]
 
 [[package]]
+name = "types-redis"
+version = "4.2.6"
+description = "Typing stubs for redis"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "typing-extensions"
 version = "4.2.0"
 description = "Backported and Experimental Type Hints for Python 3.7+"
@@ -531,7 +539,7 @@ aws = ["aioaws"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "6460b5b52ab888c25113b6f11d3382f57b79e8b6b8fd2ed817c1bcb8f1bd6154"
+content-hash = "2cfcdc72ce737c79aceb7307314d1c99a7599ba88f4db148266d8fb60866382c"
 
 [metadata.files]
 aioaws = [
@@ -999,6 +1007,10 @@ sqlalchemy = [
 starlette = [
     {file = "starlette-0.19.1-py3-none-any.whl", hash = "sha256:5a60c5c2d051f3a8eb546136aa0c9399773a689595e099e0877704d5888279bf"},
     {file = "starlette-0.19.1.tar.gz", hash = "sha256:c6d21096774ecb9639acad41b86b7706e52ba3bf1dc13ea4ed9ad593d47e24c7"},
+]
+types-redis = [
+    {file = "types-redis-4.2.6.tar.gz", hash = "sha256:d6adc77185cf40b300816767a64c0ee9ee0b21dc174e8e5c23b7e83d43189cb8"},
+    {file = "types_redis-4.2.6-py3-none-any.whl", hash = "sha256:1136af954ade0be33b487f440c8cbcbee29f089a83e685484ec91f363c6c69fe"},
 ]
 typing-extensions = [
     {file = "typing_extensions-4.2.0-py3-none-any.whl", hash = "sha256:6657594ee297170d19f67d55c05852a874e7eb634f4f753dbd667855e07c1708"},
