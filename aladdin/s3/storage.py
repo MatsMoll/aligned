@@ -21,7 +21,7 @@ class AwsS3Storage(Storage):
         from httpx import AsyncClient
 
         async with AsyncClient() as client:
-            s3_client = S3Client(client, self)
+            s3_client = S3Client(client, self.config.s3_config)
             url = s3_client.signed_download_url(path)
             response = await client.get(url)
             return response.content
@@ -30,7 +30,7 @@ class AwsS3Storage(Storage):
         from httpx import AsyncClient
 
         async with AsyncClient() as client:
-            s3_client = S3Client(client, self)
+            s3_client = S3Client(client, self.config.s3_config)
             await s3_client.upload(path, content)
 
 

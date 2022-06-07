@@ -4,6 +4,8 @@ from io import StringIO
 from pandas import DataFrame
 
 from aladdin.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
+from aladdin.feature_store import FeatureStore
+from aladdin.repo_definition import RepoDefinition
 from aladdin.s3.storage import FileStorage, HttpStorage
 from aladdin.storage import Storage
 
@@ -14,6 +16,10 @@ class FileReference:
 
     async def write(self, content: bytes) -> None:
         raise NotImplementedError()
+
+    async def feature_store(self) -> FeatureStore:
+        file = await self.read()
+        return FeatureStore.from_definition(RepoDefinition.from_json(file))
 
 
 @dataclass

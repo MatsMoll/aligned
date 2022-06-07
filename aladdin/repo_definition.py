@@ -1,13 +1,19 @@
+from __future__ import annotations
+
 import logging
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from aladdin.codable import Codable
 from aladdin.feature_view.combined_view import CompiledCombinedFeatureView
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
-from aladdin.local.source import FileReference
 from aladdin.online_source import OnlineSource
+
+if TYPE_CHECKING:
+    from aladdin.local.source import FileReference
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,12 +42,12 @@ class RepoDefinition(Codable):
     online_source: OnlineSource
 
     @staticmethod
-    async def from_file(file: FileReference) -> 'RepoDefinition':
+    async def from_file(file: FileReference) -> RepoDefinition:
         repo = await file.read()
         return RepoDefinition.from_json(repo)
 
     @staticmethod
-    async def from_path(path: str) -> 'RepoDefinition':
+    async def from_path(path: str) -> RepoDefinition:
         from aladdin.repo_reader import RepoReader
 
         dir_path = Path.cwd() if path == '.' else Path(path).absolute()
