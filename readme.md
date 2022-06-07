@@ -19,17 +19,21 @@ class Match(FeatureView):
         batch_source=...
     )
 
+    # -- Raw data
+
     home_team = Entity(dtype=String())
     away_team = Entity(dtype=String())
 
     date = EventTimestamp(max_join_with=timedelta(days=365))
 
-    is_liverpool = (home_team == "Liverpool").description("If the home team is Liverpool")
-
+    half_time_score = String()
     full_time_score = (String()
         .description("the scores at full time, in the format 'home-away'. E.g: '2-1'"))
 
-    half_time_score = String()
+
+    # -- Transformed features
+
+    is_liverpool = (home_team == "Liverpool").description("If the home team is Liverpool")
 
     score_as_array = full_time_score.split("-")
 
@@ -105,6 +109,8 @@ Here can you define which features should be exposed.
 match_model = ModelService(
     features=[
         Match.select_all(),
+
+        # Select features with code completion
         LocationFeatures.select(lambda view: [
             view.distance_to_match,
             view.duration_to_match
@@ -130,10 +136,10 @@ df = await store.all_for("match", limit=2000).to_df()
 
 ```python
 df = await store.features_for({
-    "team_1": ["Crystal Palace FC"],
-    "team_2": ["Everton FC"]
+    "home_team": ["Man City", "Leeds"],
+    "away_team": ["Liverpool", "Arsenal"],
 }, features=[
-    "match:half_time_team_1_score",
+    "match:home_team_score",
     "match:is_liverpool",
 
     "other_features:distance_traveled",
@@ -147,8 +153,8 @@ Selecting features for a model is super simple.
 
 ```python
 df = await store.model("test_model").features_for({
-    "team_1": ["Man City", "Leeds"],
-    "team_2": ["Liverpool", "Arsenal"],
+    "home_team": ["Man City", "Leeds"],
+    "away_team": ["Liverpool", "Arsenal"],
 }).to_df()
 ```
 
@@ -158,9 +164,36 @@ If you want to only select features for a specific feature view, then this is al
 
 ```python
 prev_30_days = await store.feature_view("match").previous(days=30).to_df()
-samle_of_20 = await store.feature_view("match").all(limit=20).to_df()
+sample_of_20 = await store.feature_view("match").all(limit=20).to_df()
 ```
 
 ## Data quality
 Aladdin will make sure all the different features gets formatted as the correct datatype.
 In this way will there be no incorrect format, value type errors.
+
+## Feature Server
+
+This expectes that you either run the command in your feature store repo, or have a file with a `RepoReference` instance.
+You can also setup an online source like Redis, for faster storage.
+
+```python
+redis = RedisConfig.localhost()
+
+aws_bucket = AwsS3Config(...)
+
+repo_files = RepoReference(
+    env_var_name="ENVIRONMENT",
+    repo_paths={
+        "production": aws_bucket.file_at("feature-store/production.json"),
+        "shadow": aws_bucket.file_at("feature-store/shadow.json"),
+        "staging": aws_bucket.file_at("feature-store/staging.json")
+        # else generate the feature store from the current dir
+    }
+)
+
+# Use redis as the online source, if not running localy
+if repo_files.selected != "local":
+    online_source = redis.online_source()
+```
+
+Then run `aladdin serve`, and a FastAPI server will start. Here can you push new features, which then transforms and stores the features, or just fetch them.
