@@ -85,6 +85,9 @@ class SomeFeatures(FeatureView):
         batch_source=my_db.table("local_features")
     )
 
+    # Some features
+    ...
+
 class AwsFeatures(FeatureView):
 
     metadata = FeatureViewMetadata(
@@ -92,6 +95,9 @@ class AwsFeatures(FeatureView):
         description="...",
         batch_source=aws_bucket.file_at("path/to/file.parquet")
     )
+
+    # Some features
+    ...
 ```
 
 ## Model Service
@@ -127,13 +133,15 @@ This can easily be done with Aladdin's `DataEnricher`s.
 my_db = PostgreSQLConfig.localhost()
 redis = RedisConfig.localhost()
 
-user_location = (my_db.data_enricher( # Fetch all user locations
+user_location = my_db.data_enricher( # Fetch all user locations
     sql="SELECT * FROM user_location"
+).cache( # Cache them for one day
+    ttl=timedelta(days=1),
+    cache_key="user_location_cache"
+).lock( # Make sure only one processer fetches the data at a time
+    lock_name="user_location_lock",
+    redis_config=redis
 )
-# Cache them for one day
-.cache(ttl=timedelta(days=1), cache_key="user_location")
-# Make sure only one processer fetches the file at a time
-.lock(lock_name="user_location", redis_config=redis))
 
 
 async def distance_to_users(df: DataFrame) -> Series:
