@@ -19,20 +19,17 @@ class Match(FeatureView):
         batch_source=...
     )
 
-    # -- Raw data
-
+    # Raw data
     home_team = Entity(dtype=String())
     away_team = Entity(dtype=String())
 
     date = EventTimestamp(max_join_with=timedelta(days=365))
 
     half_time_score = String()
-    full_time_score = (String()
-        .description("the scores at full time, in the format 'home-away'. E.g: '2-1'"))
+    full_time_score = String().description("the scores at full time, in the format 'home-away'. E.g: '2-1'")
 
 
-    # -- Transformed features
-
+    # Transformed features
     is_liverpool = (home_team == "Liverpool").description("If the home team is Liverpool")
 
     score_as_array = full_time_score.split("-")
@@ -117,6 +114,41 @@ match_model = ModelService(
         ]),
     ]
 )
+```
+
+
+## Data Enrichers
+
+In manny cases will extra data be needed in order to generate some features.
+We therefore need some way of enriching the data.
+This can easily be done with Aladdin's `DataEnricher`s.
+
+```python
+my_db = PostgreSQLConfig.localhost()
+redis = RedisConfig.localhost()
+
+user_location = (my_db.data_enricher( # Fetch all user locations
+    sql="SELECT * FROM user_location"
+)
+# Cache them for one day
+.cache(ttl=timedelta(days=1), cache_key="user_location")
+# Make sure only one processer fetches the file at a time
+.lock(lock_name="user_location", redis_config=redis))
+
+
+async def distance_to_users(df: DataFrame) -> Series:
+    user_location_df = await user_location.load()
+    ...
+    return distances
+
+class SomeFeatures(FeatureView):
+
+    metadata = FeatureViewMetadata(...)
+
+    latitude = Float()
+    longitude = Float()
+
+    distance_to_users = Float().transformed(distance_to_users, using_features=[latitude, longitude])
 ```
 
 
