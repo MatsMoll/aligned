@@ -66,6 +66,7 @@ class RedisOnlineSource(OnlineSource):
 class RedisSource(FeatureSource, WritableFeatureSource):
 
     config: RedisConfig
+    batch_size = 1_000_000
 
     def all_for(self, request: FeatureRequest, limit: int | None = None) -> RetrivalJob:
         raise NotImplementedError()
@@ -80,45 +81,34 @@ class RedisSource(FeatureSource, WritableFeatureSource):
 
         redis = self.config.redis()
         data = await job.to_df()
-
         logger.info(f'Writing {data.shape} features to redis')
         async with redis.pipeline(transaction=True) as pipe:
-            for request in requests:
-                for feature in request.all_features:
-                    values = data[list(request.entity_names) + [feature.name]]
-                    for _, row in values.iterrows():
+
+            written_count = 0
+            for _, row in data.iterrows():
+                # Run one query per row
+                for request in requests:
+                    entity_ids = row[list(request.entity_names)]
+                    entity_id = ':'.join([str(entity_id) for entity_id in entity_ids])
+                    if not entity_id:
+                        continue
+
+                    for feature in request.all_features:
                         value = row[feature.name]
-                        if pd.isna(value):
-                            continue
+                        if value and not pd.isnull(value):
+                            if feature.dtype == FeatureType('').bool:
+                                # Redis do not support bools
+                                value = int(value)
+                            elif feature.dtype == FeatureType('').datetime:
+                                value = value.timestamp()
 
-                        if feature.dtype == FeatureType('').bool:
-                            # Redis do not support bools
-                            value = int(value)
-                        elif feature.dtype == FeatureType('').datetime:
-                            value = value.timestamp()
-                        entity_id = row[list(request.all_feature_names)]
-                        feature_key = key(request, entity_id, feature)
-                        pipe.set(feature_key, value)
+                            string_value = f'{value}'
+
+                            feature_key = key(request, entity_id, feature)
+                            pipe.set(feature_key, string_value)
+                            written_count += 1
+
+                if written_count % self.batch_size == 0:
                     await pipe.execute()
-                    logger.info(f'Wrote {feature.name}')
-
-            # for _, row in data.iterrows():
-            #     # Run one query per row
-            #     for request in requests:
-            #         entity_ids = row[list(request.entity_names)]
-            #         entity_id = ':'.join([str(entity_id) for entity_id in entity_ids])
-            #         if not entity_id:
-            #             continue
-
-            #         for feature in request.all_features:
-            #             value = row[feature.name]
-            #             if value and not pd.isnull(value):
-            #                 if feature.dtype == FeatureType('').bool:
-            #                     # Redis do not support bools
-            #                     value = int(value)
-            #                 elif feature.dtype == FeatureType('').datetime:
-            #                     value = value.timestamp()
-            #                 feature_key = key(request, entity_id, feature)
-            #                 pipe.set(feature_key, value)
-
-            # await pipe.execute()
+                    logger.info(f'Written {written_count} rows')
+            await pipe.execute()

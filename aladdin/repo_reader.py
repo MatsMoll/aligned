@@ -44,7 +44,9 @@ def super_classes_in(obj: Any) -> set[str]:
 
 def python_files(repo_path: Path, ignore_path: Path | None = None) -> list[Path]:
     files = {
-        path.resolve() for path in repo_path.glob('**/*.py') if path.is_file() and '__init__.py' != path.name
+        path.resolve()
+        for path in repo_path.resolve().glob('**/*.py')
+        if path.is_file() and '__init__.py' != path.name
     }
     if ignore_path:
         ignore_files = {
@@ -91,7 +93,7 @@ class RepoReader:
                 obj = getattr(module, attribute)
 
                 if isinstance(obj, ModelService):
-                    model_name = obj.name or attribute
+                    model_name = obj._name or attribute
                     repo.models[model_name] = obj.feature_refs
                 elif isinstance(obj, OnlineSource):
                     repo.online_source = obj

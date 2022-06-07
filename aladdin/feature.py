@@ -53,8 +53,6 @@ class FeatureType(Codable):
 
     @property
     def pandas_type(self) -> type:
-        from uuid import UUID
-
         import numpy as np
 
         return {
@@ -68,7 +66,7 @@ class FeatureType(Codable):
             'datetime': np.datetime64,
             'time': np.datetime64,
             'timedelta': np.timedelta64,
-            'uuid': UUID,
+            'uuid': str,
             'array': list,
         }[self.name]
 

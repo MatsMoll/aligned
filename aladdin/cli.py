@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -8,7 +9,6 @@ import click
 from pytz import utc  # type: ignore
 
 from aladdin.feature_source import WritableFeatureSource
-from aladdin.online_source import BatchOnlineSource
 from aladdin.repo_definition import RepoDefinition
 from aladdin.repo_reader import RepoReader
 
@@ -132,7 +132,7 @@ def serve_command(repo_path: str, host: str, port: int, workers: int, env_file: 
     dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
     load_envs(dir / env_file)
     sys.path.append(str(dir))
-    repo_def = sync(RepoDefinition.from_path(dir.as_uri()))
+    repo_def = sync(RepoDefinition.from_path(repo_path))
 
     store = FeatureStore.from_definition(repo_def)
     FastAPIServer.run(store, host, port, workers)
@@ -167,10 +167,9 @@ def materialize_command(repo_path: str, env_file: str, days: str, view: str) -> 
     load_envs(dir / env_file)
 
     sys.path.append(str(dir))
-    repo_def = sync(RepoDefinition.from_path(dir.as_uri()))
+    repo_def = sync(RepoDefinition.from_path(repo_path))
     store = FeatureStore.from_definition(repo_def)
-    batch_store = FeatureStore.from_definition(repo_def)
-    batch_store.feature_source = BatchOnlineSource().feature_source(set(store.feature_views.values()))
+    batch_store = store.offline_store()
 
     if not isinstance(store.feature_source, WritableFeatureSource):
         raise ValueError('Batch feature sources are not supported for materialization')
@@ -190,4 +189,5 @@ def materialize_command(repo_path: str, env_file: str, days: str, view: str) -> 
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO, format='{asctime} {message}', style='{')
     cli()

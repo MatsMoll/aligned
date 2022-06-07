@@ -1,7 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
 
 from mashumaro.types import SerializableType
 
@@ -16,7 +16,7 @@ class OnlineSourceFactory:
 
     supported_sources: dict[str, type['OnlineSource']]
 
-    _shared: 'OnlineSourceFactory' | None = None
+    _shared: Optional['OnlineSourceFactory'] = None
 
     def __init__(self) -> None:
         from aladdin.redis.config import RedisOnlineSource

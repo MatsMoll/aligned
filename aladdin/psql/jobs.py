@@ -120,10 +120,13 @@ class DateRangePsqlJob(PostgreSQLRetrivalJob, DateRangeJob):
 @dataclass
 class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
 
-    config: PostgreSQLConfig
     sources: dict[str, PostgreSQLDataSource]
     requests: list[RetrivalRequest]
     facts: dict[str, list]
+
+    @property
+    def config(self) -> PostgreSQLConfig:
+        return list(self.sources.values())[0].config
 
     def dtype_to_sql_type(self, dtype: object) -> str:
         if isinstance(dtype, str):

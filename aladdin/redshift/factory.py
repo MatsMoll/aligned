@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from aladdin.job_factory import JobFactory
-from aladdin.psql.data_source import PostgreSQLConfig
 from aladdin.psql.jobs import DateRangePsqlJob, FactPsqlJob, FullExtractPsqlJob
 from aladdin.redshift.data_source import RedshiftSQLDataSource
 from aladdin.request.retrival_request import RetrivalRequest
@@ -30,16 +29,8 @@ class RedshiftJobFactory(JobFactory):
         facts: dict[str, list],
         requests: dict[RedshiftSQLDataSource, RetrivalRequest],
     ) -> FactPsqlJob:
-        for data_source in requests.keys():
-            if not isinstance(data_source, RedshiftSQLDataSource):
-                raise ValueError(f'Only {self.source} is supported, recived: {data_source}')
-            config = data_source.config
-
         # Group based on config
         return FactPsqlJob(
-            # Reusing the config as a psql config
-            # As redshift is a fork from psql
-            config=PostgreSQLConfig(config.env_var, schema=config.schema),
             facts=facts,
             sources={request.feature_view_name: source for source, request in requests.items()},
             requests=list(requests.values()),

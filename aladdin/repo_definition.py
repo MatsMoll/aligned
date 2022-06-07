@@ -1,4 +1,5 @@
 import logging
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -7,7 +8,6 @@ from aladdin.feature_view.combined_view import CompiledCombinedFeatureView
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.local.source import FileReference
 from aladdin.online_source import OnlineSource
-from aladdin.repo_reader import RepoReader
 
 logger = logging.getLogger(__name__)
 
@@ -42,14 +42,17 @@ class RepoDefinition(Codable):
 
     @staticmethod
     async def from_path(path: str) -> 'RepoDefinition':
-        dir_path = Path(path)
-        if not (reference := RepoReader.reference_from_path(dir_path)):
-            logger.info('Generating repo definition')
-            return RepoReader.definition_from_path(dir_path)
+        from aladdin.repo_reader import RepoReader
 
-        if file := reference.selected_file:
-            logger.info(f"Loading repo from configuration '{reference.selected}'")
-            return await RepoDefinition.from_file(file)
-        else:
-            logger.info('Generating repo definition')
-            return RepoReader.definition_from_path(dir_path)
+        dir_path = Path.cwd() if path == '.' else Path(path).absolute()
+
+        with suppress(ValueError):
+            reference = RepoReader.reference_from_path(dir_path)
+            if file := reference.selected_file:
+                logger.info(f"Loading repo from configuration '{reference.selected}'")
+                return await RepoDefinition.from_file(file)
+            else:
+                logger.info('Found no configuration')
+
+        logger.info('Generating repo definition')
+        return RepoReader.definition_from_path(dir_path)

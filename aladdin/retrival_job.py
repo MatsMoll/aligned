@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from abc import ABC, abstractmethod
 from contextlib import suppress
 from dataclasses import dataclass
@@ -11,6 +12,8 @@ from aladdin.data_source.batch_data_source import BatchDataSource
 from aladdin.derivied_feature import DerivedFeature
 from aladdin.feature import FeatureType
 from aladdin.request.retrival_request import RetrivalRequest
+
+logger = logging.getLogger(__name__)
 
 
 class RetrivalJob(ABC):
@@ -100,14 +103,22 @@ class FactualRetrivalJob(RetrivalJob):
                 with suppress(AttributeError):
                     df.loc[mask, feature.name] = df.loc[mask, feature.name].str.strip('"')
 
-                if feature.dtype == FeatureType('').datetime:
-                    import pandas as pd
+                try:
+                    if feature.dtype == FeatureType('').datetime:
+                        import pandas as pd
 
-                    df[feature.name] = pd.to_datetime(df[feature.name], infer_datetime_format=True, utc=True)
-                elif feature.dtype == FeatureType('').datetime or feature.dtype == FeatureType('').string:
+                        df[feature.name] = pd.to_datetime(
+                            df[feature.name], infer_datetime_format=True, utc=True
+                        )
+                    elif feature.dtype == FeatureType('').datetime or feature.dtype == FeatureType('').string:
+                        continue
+                    else:
+                        df.loc[mask, feature.name] = df.loc[mask, feature.name].astype(
+                            feature.dtype.pandas_type
+                        )
+                except ValueError as error:
+                    logger.info(f'Unable to ensure type for {feature.name}, error: {error}')
                     continue
-                else:
-                    df.loc[mask, feature.name] = df.loc[mask, feature.name].astype(feature.dtype.pandas_type)
         return df
 
     async def fill_missing(self, df: DataFrame) -> DataFrame:

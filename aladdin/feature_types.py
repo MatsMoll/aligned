@@ -42,7 +42,7 @@ class FeatureReferancable:
             name=self.name,
             feature_view=self.feature_view,
             dtype=self._dtype,
-            is_derivied=(not isinstance(self, FeatureReferancable)),
+            is_derivied=isinstance(self, TransformationFactory),
         )
 
 
@@ -52,13 +52,11 @@ class Transformable(FeatureReferancable):
         transformation: Callable[[DataFrame], Series],
         using_features: list[FeatureReferancable] | None = None,
     ) -> 'TransformationFactory':
-        return CustomTransformation(using_features or [self], self, transformation)
+        import asyncio
 
-    def transformed_sync(
-        self,
-        transformation: Callable[[DataFrame], Series],
-        using_features: list[FeatureReferancable] | None = None,
-    ) -> 'TransformationFactory':
+        if asyncio.iscoroutinefunction(transformation):
+            return CustomTransformation(using_features or [self], self, transformation)
+
         async def sub_tran(df: DataFrame) -> Series:
             return transformation(df)
 
@@ -126,13 +124,13 @@ class FeatureFactory(ABC, Transformable):
         return self
 
     def count(self) -> 'TimeSeriesTransformationFactory':
-        return TimeSeriesTransformationFactory(self, 'COUNT')
+        return TimeSeriesTransformationFactory(self, 'COUNT', [])
 
     def sum(self) -> 'TimeSeriesTransformationFactory':
-        return TimeSeriesTransformationFactory(self, 'SUM')
+        return TimeSeriesTransformationFactory(self, 'SUM', [])
 
     def mean(self) -> 'TimeSeriesTransformationFactory':
-        return TimeSeriesTransformationFactory(self, 'AVG')
+        return TimeSeriesTransformationFactory(self, 'AVG', [])
 
 
 @dataclass
@@ -443,7 +441,7 @@ class Split(TransformationFactory):
     max_splits: int | None
 
     def __init__(self, pattern: str, feature: FeatureReferancable, max_splits: int | None = None) -> None:
-        super().__init__([feature], Bool())
+        super().__init__([feature], Array())
         self.pattern = pattern
         self.max_splits = max_splits
         self.feature = feature
@@ -601,9 +599,8 @@ class TimeSeriesTransformationFactory(TransformationFactory):
 
     field: FeatureReferancable
     agg_method: str
+    using_features: list[FeatureReferancable]
     feature: FeatureReferancable = Int64()
-
-    using_features: list[FeatureReferancable] = []
 
     def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
         from aladdin.psql.data_source import PostgreSQLDataSource

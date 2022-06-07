@@ -9,6 +9,7 @@ from aladdin.feature_view.combined_view import CombinedFeatureView, CompiledComb
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.feature_view.feature_view import FeatureView
 from aladdin.model import ModelService
+from aladdin.online_source import BatchOnlineSource
 from aladdin.repo_definition import RepoDefinition
 from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
 from aladdin.retrival_job import FilterJob, RetrivalJob
@@ -57,25 +58,34 @@ class FeatureStore:
 
     def __init__(
         self,
-        feature_views: set[CompiledFeatureView],
-        combined_feature_views: set[CompiledCombinedFeatureView],
-        models: dict[str, set[str]],
+        feature_views: dict[str, CompiledFeatureView],
+        combined_feature_views: dict[str, CompiledCombinedFeatureView],
+        models: dict[str, FeatureRequest],
         feature_source: FeatureSource,
     ) -> None:
         self.feature_source = feature_source
-        self.combined_feature_views = {fv.name: fv for fv in combined_feature_views}
-        self.feature_views = {fv.name: fv for fv in feature_views}
-        self.model_requests = {
-            name: self.requests_for(RawStringFeatureRequest(model)) for name, model in models.items()
-        }
+        self.combined_feature_views = combined_feature_views
+        self.feature_views = feature_views
+        self.model_requests = models
+
+    @staticmethod
+    def experimantal() -> 'FeatureStore':
+        return FeatureStore.from_definition(RepoDefinition(set(), set(), {}, BatchOnlineSource()))
 
     @staticmethod
     def from_definition(repo: RepoDefinition, feature_source: FeatureSource | None = None) -> 'FeatureStore':
         source = feature_source or repo.online_source.feature_source(repo.feature_views)
+        feature_views = {fv.name: fv for fv in repo.feature_views}
+        combined_feature_views = {fv.name: fv for fv in repo.combined_feature_views}
         return FeatureStore(
-            feature_views=repo.feature_views,
-            combined_feature_views=repo.combined_feature_views,
-            models=repo.models,
+            feature_views=feature_views,
+            combined_feature_views=combined_feature_views,
+            models={
+                name: FeatureStore._requests_for(
+                    RawStringFeatureRequest(model), feature_views, combined_feature_views
+                )
+                for name, model in repo.models.items()
+            },
             feature_source=source,
         )
 
@@ -100,25 +110,33 @@ class FeatureStore:
             self.feature_source.features_for(facts, requests),
         )
 
-    def model(self, name: str) -> 'OfflineModelStore':
+    def model(self, name: str) -> 'ModelFeatureStore':
         request = self.model_requests[name]
-        return OfflineModelStore(self.feature_source, request)
+        return ModelFeatureStore(self.feature_source, request)
 
-    def requests_for(self, feature_request: RawStringFeatureRequest) -> FeatureRequest:
+    @staticmethod
+    def _requests_for(
+        feature_request: RawStringFeatureRequest,
+        feature_views: dict[str, CompiledFeatureView],
+        combined_feature_views: dict[str, CompiledCombinedFeatureView],
+    ) -> FeatureRequest:
         features = feature_request.grouped_features
         requests: list[RetrivalRequest] = []
         for feature_view_name in feature_request.feature_view_names:
-            if feature_view_name in self.combined_feature_views:
-                cfv = self.combined_feature_views[feature_view_name]
+            if feature_view_name in combined_feature_views:
+                cfv = combined_feature_views[feature_view_name]
                 requests.extend(cfv.requests_for(features[feature_view_name]).needed_requests)
             else:
-                feature_view = self.feature_views[feature_view_name]
+                feature_view = feature_views[feature_view_name]
                 requests.extend(feature_view.request_for(features[feature_view_name]).needed_requests)
         return FeatureRequest(
             'some_name',
             feature_request.feature_names,
             RetrivalRequest.combine(requests),
         )
+
+    def requests_for(self, feature_request: RawStringFeatureRequest) -> FeatureRequest:
+        return FeatureStore._requests_for(feature_request, self.feature_views, self.combined_feature_views)
 
     def feature_view(self, view: str) -> 'FeatureViewStore':
         view = self.feature_views[view]
@@ -141,22 +159,30 @@ class FeatureStore:
     def all_for(self, view: str, limit: int | None = None) -> RetrivalJob:
         return self.feature_source.all_for(self.feature_views[view].request_all, limit)
 
+    def offline_store(self) -> 'FeatureStore':
+        return FeatureStore(
+            feature_views=self.feature_views,
+            combined_feature_views=self.combined_feature_views,
+            models=self.model_requests,
+            feature_source=BatchOnlineSource().feature_source(set(self.feature_views.values())),
+        )
+
 
 @dataclass
-class OfflineModelStore:
+class ModelFeatureStore:
 
     source: FeatureSource
     request: FeatureRequest
 
-    def features_for(self, facts: dict[str, list]) -> RetrivalJob:
+    def features_for(self, entities: dict[str, list]) -> RetrivalJob:
 
         return FilterJob(
             self.request.features_to_include,
-            self.source.features_for(facts, self.request),
+            self.source.features_for(entities, self.request),
         )
 
     async def write(self, values: dict[str, Any]) -> None:
-        pass
+        raise NotImplementedError()
 
 
 @dataclass

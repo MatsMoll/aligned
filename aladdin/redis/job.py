@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from aladdin.feature import Feature
+from aladdin.feature import Feature, FeatureType
 from aladdin.redis.config import RedisConfig
 from aladdin.request.retrival_request import RetrivalRequest
 from aladdin.retrival_job import FactualRetrivalJob
@@ -39,13 +39,30 @@ class FactualRedisJob(FactualRetrivalJob):
                 for entity in entities:
                     keys.append(key(request, entity, feature))
                 result = await redis.mget(keys)
-                result_df.loc[mask, feature.name] = result
+                result_series = pd.Series(result)
+                set_mask = mask.copy()
+                result_value_mask = result_series.notna()
+                set_mask[mask] = set_mask[mask] & (result_value_mask)
+
+                if feature.dtype == FeatureType('').datetime:
+                    dates = pd.to_datetime(result_series[result_value_mask], unit='s', utc=True)
+                    result_df.loc[set_mask, feature.name] = dates
+                elif feature.dtype == FeatureType('').int32 or FeatureType('').int64:
+                    result_df.loc[set_mask, feature.name] = (
+                        result_series[result_value_mask]
+                        .str.split('.', n=1)
+                        .str[0]
+                        .astype(feature.dtype.pandas_type)
+                    )
+                else:
+                    result_df.loc[set_mask, feature.name] = result_series[result_value_mask].astype(
+                        feature.dtype.pandas_type
+                    )
 
         return result_df
 
     async def to_df(self) -> pd.DataFrame:
         df = await self._to_df()
-        df = await self.ensure_types(df)
         return await self.fill_missing(df)
 
     async def to_arrow(self) -> pd.DataFrame:

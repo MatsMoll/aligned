@@ -29,15 +29,9 @@ class PostgresJobFactory(JobFactory):
         facts: dict[str, list],
         requests: dict[PostgreSQLDataSource, RetrivalRequest],
     ) -> FactPsqlJob:
-        for data_source in requests.keys():
-            if not isinstance(data_source, PostgreSQLDataSource):
-                raise ValueError(f'Only {self.source} is supported, recived: {data_source}')
-            config = data_source.config
-
         # Group based on config
         return FactPsqlJob(
-            config=config,
-            facts=facts,
             sources={request.feature_view_name: source for source, request in requests.items()},
             requests=list(requests.values()),
+            facts=facts,
         )

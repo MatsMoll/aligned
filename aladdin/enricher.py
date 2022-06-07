@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Optional
 
 from mashumaro.types import SerializableType
 from pandas import DataFrame
@@ -38,7 +39,7 @@ class SupportedEnrichers:
 
     types: dict[str, type[Enricher]]
 
-    _shared: 'SupportedEnrichers' | None = None
+    _shared: Optional['SupportedEnrichers'] = None
 
     def __init__(self) -> None:
         self.types = {}

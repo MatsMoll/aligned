@@ -110,9 +110,10 @@ class FileFactualJob(FactualRetrivalJob):
             mask = pd.Series.repeat(pd.Series([True]), df.shape[0]).reset_index(drop=True)
             set_mask = pd.Series.repeat(pd.Series([True]), result.shape[0]).reset_index(drop=True)
             for entity in entity_names:
-                entity_source_name = entity
+                entity
                 if isinstance(self.source, ColumnFeatureMappable):
-                    entity = self.source.feature_identifier_for([entity])[0]
+                    entity_source_name = self.source.feature_identifier_for([entity])[0]
+
                 mask = mask & (df[entity_source_name].isin(self.facts[entity]))
 
                 set_mask = set_mask & (pd.Series(self.facts[entity]).isin(df[entity_source_name]))

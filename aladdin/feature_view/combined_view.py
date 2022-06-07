@@ -2,12 +2,11 @@ from abc import ABC, abstractproperty
 from dataclasses import dataclass
 from typing import Callable
 
-from aladdin import FeatureView
 from aladdin.codable import Codable
 from aladdin.derivied_feature import DerivedFeature
 from aladdin.feature import Feature
 from aladdin.feature_types import FeatureFactory, FeatureReferancable, TransformationFactory
-from aladdin.feature_view.feature_view import CompiledFeatureView, FeatureSelectable, FVType
+from aladdin.feature_view.feature_view import CompiledFeatureView, FeatureSelectable, FeatureView, FVType
 from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
 
 
