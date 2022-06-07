@@ -137,6 +137,8 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
             return 'uuid'
         if dtype == FeatureType('').int32 or dtype == FeatureType('').int64:
             return 'integer'
+        if dtype == FeatureType('').datetime:
+            return 'TIMESTAMP WITH TIME ZONE'
         return 'uuid'
 
     def build_request(self) -> SQLQuery:
@@ -145,8 +147,8 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
 
         template = Environment(loader=BaseLoader()).from_string(self.__sql_template())
         template_context: dict[str, Any] = {}
-        final_select_names: set[str] = set()
-        entity_types: dict[str, str] = {}
+        final_select_names: set[str] = {'event_timestamp'}
+        entity_types: dict[str, FeatureType] = {'event_timestamp': FeatureType('').datetime}
         for request in self.requests:
             final_select_names = final_select_names.union(request.all_required_feature_names)
             final_select_names = final_select_names.union(
@@ -199,9 +201,11 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
 
             entities = list(request.entity_names)
             entity_db_name = source.feature_identifier_for(entities)
+            event_timestamp_column = source.feature_identifier_for([request.event_timestamp.name])[0]
 
             join_conditions = [
-                f'ta.{entity_db_name} = entities.{entity}'
+                f'ta.{entity_db_name} = entities.{entity} AND '
+                f'entities.event_timestamp < ta.{event_timestamp_column}'
                 for entity, entity_db_name in zip(entities, entity_db_name)
             ]
             table_name = source.table
@@ -210,7 +214,7 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
         template_context['selects'] = list(final_select_names)
         template_context['tables'] = tables
         template_context['joins'] = [
-            f'INNER JOIN {feature_view}_cte ON {feature_view}_cte.row_id =' ' entities.row_id'
+            f'INNER JOIN {feature_view}_cte ON {feature_view}_cte.row_id = entities.row_id'
             for feature_view in feature_view_names
         ]
         template_context['values'] = query_values

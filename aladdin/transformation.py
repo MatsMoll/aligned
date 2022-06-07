@@ -81,7 +81,18 @@ class TimeSeriesTransformation(Transformation):
     name: str = 'ts_transform'
 
     async def transform(self, df: DataFrame) -> Series:
-        fact_df = df[[self.event_timestamp_column, self.field_name]]
+        import numpy as np
+
+        org_facts = df[[self.event_timestamp_column, self.field_name]]
+        ret_data = Series(np.repeat(np.nan, org_facts.shape[0]))
+
+        mask = org_facts.notna().all(axis=1)
+
+        fact_df = org_facts.loc[mask]
+
+        if fact_df.empty:
+            return ret_data
+
         fact_df['row_id'] = list(range(1, fact_df.shape[0] + 1))
 
         values = []
@@ -112,4 +123,6 @@ LEFT JOIN {self.table_name} t ON
 GROUP BY et.row_id;
 """
         data = await self.config.data_enricher(sql).load()
-        return data[f'{self.field_name}_value']
+
+        ret_data[mask] = data[f'{self.field_name}_value']
+        return ret_data

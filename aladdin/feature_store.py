@@ -51,6 +51,7 @@ class FeatureStore:
     feature_views: dict[str, CompiledFeatureView]
     combined_feature_views: dict[str, CompiledCombinedFeatureView]
     model_requests: dict[str, FeatureRequest]
+    event_timestamp_column = 'event_timestamp'
 
     @property
     def all_models(self) -> list[str]:
@@ -69,7 +70,7 @@ class FeatureStore:
         self.model_requests = models
 
     @staticmethod
-    def experimantal() -> 'FeatureStore':
+    def experimental() -> 'FeatureStore':
         return FeatureStore.from_definition(RepoDefinition(set(), set(), {}, BatchOnlineSource()))
 
     @staticmethod
@@ -94,20 +95,24 @@ class FeatureStore:
         repo_def = await RepoDefinition.from_path(path)
         return FeatureStore.from_definition(repo_def)
 
-    def features_for(self, facts: dict[str, list], features: list[str]) -> RetrivalJob:
+    def features_for(self, entities: dict[str, list], features: list[str]) -> RetrivalJob:
+
+        if self.event_timestamp_column not in entities:
+            raise ValueError(f'Missing {self.event_timestamp_column} in entities')
+
         feature_request = RawStringFeatureRequest(features=set(features))
-        entities = set()
+        entities_names: set[str] = set(entities.keys())
         requests = self.requests_for(feature_request)
         feature_names = set()
         for feature_set in feature_request.grouped_features.values():
-            feature_names.update(feature_set)
+            feature_names.update(feature_set.union({self.event_timestamp_column}))
         for request in requests.needed_requests:
             feature_names.update(request.entity_names)
-            entities.update(request.entity_names)
+            entities_names.update(request.entity_names)
 
         return FilterJob(
-            feature_request.feature_names.union(entities),
-            self.feature_source.features_for(facts, requests),
+            feature_request.feature_names.union(entities_names),
+            self.feature_source.features_for(entities, requests),
         )
 
     def model(self, name: str) -> 'ModelFeatureStore':

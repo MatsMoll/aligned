@@ -1,9 +1,15 @@
 from fastapi import FastAPI, HTTPException
 from numpy import nan
+from pydantic import BaseModel
 
 from aladdin.feature import Feature
 from aladdin.feature_source import WritableFeatureSource
 from aladdin.feature_store import FeatureStore
+
+
+class APIFeatureRequest(BaseModel):
+    entities: dict[str, list]
+    features: list[str]
 
 
 class FastAPIServer:
@@ -54,46 +60,49 @@ class FastAPIServer:
             else:
                 required_features.update(request.all_required_features)
 
+        properties = {
+            entity.name: {
+                'type': 'array',
+                'items': {'type': entity.dtype.name},
+            }
+            for entity in entities
+        }
+        properties['event_timestamp'] = {'type': 'array', 'items': {'type': 'string'}}
+
         featch_api_schema = {
             'requestBody': {
                 'content': {
                     'application/json': {
                         'schema': {
-                            'required': [entity.name for entity in entities],
+                            'required': [entity.name for entity in entities] + ['event_timestamp'],
                             'type': 'object',
-                            'properties': {
-                                entity.name: {
-                                    'type': 'array',
-                                    'items': {'type': entity.dtype.name},
-                                }
-                                for entity in entities
-                            },
+                            'properties': properties,
                         }
                     }
                 },
                 'required': True,
             },
         }
-        write_api_schema = {
-            'requestBody': {
-                'content': {
-                    'application/json': {
-                        'schema': {
-                            'required': [feature.name for feature in required_features],
-                            'type': 'object',
-                            'properties': {
-                                feature.name: {
-                                    'type': 'array',
-                                    'items': {'type': feature.dtype.name},
-                                }
-                                for feature in required_features
-                            },
-                        }
-                    }
-                },
-                'required': True,
-            },
-        }
+        # write_api_schema = {
+        #     'requestBody': {
+        #         'content': {
+        #             'application/json': {
+        #                 'schema': {
+        #                     'required': [feature.name for feature in required_features],
+        #                     'type': 'object',
+        #                     'properties': {
+        #                         feature.name: {
+        #                             'type': 'array',
+        #                             'items': {'type': feature.dtype.name},
+        #                         }
+        #                         for feature in required_features
+        #                     },
+        #                 }
+        #             }
+        #         },
+        #         'required': True,
+        #     },
+        # }
 
         # Using POST as this can have a body with the fact / entity table
         @app.post(f'/model/{name}', openapi_extra=featch_api_schema)
@@ -106,15 +115,15 @@ class FastAPIServer:
             df.replace(nan, value=None, inplace=True)
             return df.to_dict('list')
 
-        @app.post(f'/model/{name}/write', openapi_extra=write_api_schema)
-        async def write_model(feature_values: dict) -> dict:
-            missing_features = {
-                entity.name for entity in required_features if entity.name not in feature_values
-            }
-            if missing_features:
-                raise HTTPException(status_code=400, detail=f'Missing feature values {missing_features}')
+        # @app.post(f'/model/{name}/write', openapi_extra=write_api_schema)
+        # async def write_model(feature_values: dict) -> dict:
+        #     missing_features = {
+        #         entity.name for entity in required_features if entity.name not in feature_values
+        #     }
+        #     if missing_features:
+        #         raise HTTPException(status_code=400, detail=f'Missing feature values {missing_features}')
 
-            await feature_store.model(name).write(feature_values)
+        #     await feature_store.model(name).write(feature_values)
 
     @staticmethod
     def run(
@@ -135,5 +144,14 @@ class FastAPIServer:
         if isinstance(feature_store.feature_source, WritableFeatureSource):
             for feature_view in feature_store.feature_views.keys():
                 FastAPIServer.feature_view_path(feature_view, feature_store, app)
+
+        @app.post('/features')
+        async def features(payload: APIFeatureRequest) -> dict:
+            df = await feature_store.features_for(
+                payload.entities,
+                features=payload.features,
+            ).to_df()
+            df.replace(nan, value=None, inplace=True)
+            return df.to_dict('list')
 
         uvicorn.run(app, host=host or '127.0.0.1', port=port or 8000, workers=workers or workers)

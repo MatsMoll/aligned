@@ -12,7 +12,7 @@ class RetrivalRequest(Codable):
     entities: set[Feature]
     features: set[Feature]
     derived_features: set[DerivedFeature]
-    event_timestamp: EventTimestamp | None
+    event_timestamp: EventTimestamp
 
     @property
     def feature_names(self) -> list[str]:

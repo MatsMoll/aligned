@@ -35,7 +35,9 @@ class JobFactory(ABC):
 
     def facts(self, facts: dict[str, list], sources: dict[Source, RetrivalRequest]) -> RetrivalJob:
         grouped_requests: dict[str, dict[Source, RetrivalRequest]] = defaultdict(dict)
-        grouped_facts: dict[str, dict[str, list]] = defaultdict(dict)
+        grouped_facts: dict[str, dict[str, list]] = defaultdict(
+            lambda: {'event_timestamp': facts['event_timestamp']} if 'event_timestamp' in facts else {}
+        )
         for data_source in list(sources.keys()):
             if data_source.type_name != self.source.type_name:
                 continue

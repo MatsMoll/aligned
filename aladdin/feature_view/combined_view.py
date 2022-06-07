@@ -87,7 +87,7 @@ class CompiledCombinedFeatureView(Codable):
                         entities=request.entities,
                         features=set(),
                         derived_features=set(),
-                        event_timestamp=None,
+                        event_timestamp=request.event_timestamp,
                     )
                 current = dependent_views[request.feature_view_name]
                 current.derived_features = current.derived_features.union(request.derived_features)
