@@ -1,6 +1,6 @@
 [[package]]
 name = "aioaws"
-version = "0.13"
+version = "0.12"
 description = "Data validation and settings management using python 3.6 type hinting"
 category = "main"
 optional = true
@@ -9,8 +9,8 @@ python-versions = ">=3.8"
 [package.dependencies]
 aiofiles = ">=0.5.0"
 cryptography = ">=3.1.1"
-httpx = ">=0.21.0"
-pydantic = ">=1.8.2"
+httpx = ">=0.18.2"
+pydantic = ">=1.7.4"
 
 [[package]]
 name = "aiofiles"
@@ -516,12 +516,12 @@ redis = ["redis"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "61306a477060153360003f0c7dbbd9d63ccd8ae4a252838c0923ecd4ac2eed7d"
+content-hash = "ca6d10dd278df8ef57acaef2a806173890ab0050c41731b1fdf85473d303ec8c"
 
 [metadata.files]
 aioaws = [
-    {file = "aioaws-0.13-py3-none-any.whl", hash = "sha256:4b43c3ed4e6686dc9ff87eaf15bd95a017a75db16f35aad85b44579c943e6b30"},
-    {file = "aioaws-0.13.tar.gz", hash = "sha256:0228106e973d51625d4d5fd8e61c1cd8d7f695525ca5f89cc5c610c3f50c8bb8"},
+    {file = "aioaws-0.12-py3-none-any.whl", hash = "sha256:d8eb82ba0a02666e367b4fc426d89cf96796c9c155ea4d9a0c00297f6c99e467"},
+    {file = "aioaws-0.12.tar.gz", hash = "sha256:5521f7ed6ca5ac12ea50fc6de706c3b2b04e7754f0735c31f32ce7ed17d80581"},
 ]
 aiofiles = [
     {file = "aiofiles-0.8.0-py3-none-any.whl", hash = "sha256:7a973fc22b29e9962d0897805ace5856e6a566ab1f0c8e5c91ff6c866519c937"},
