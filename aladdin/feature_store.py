@@ -138,6 +138,9 @@ class FeatureStore:
                 requests.extend(sub_requests)
                 entity_names.update(sub_requests[0].entity_names)
 
+        if len(requests) > 1:
+            entity_names.add('event_timestamp')
+
         return FeatureRequest(
             'some_name',
             feature_request.feature_names.union(entity_names),
@@ -184,6 +187,9 @@ class ModelFeatureStore:
     request: FeatureRequest
 
     def features_for(self, entities: dict[str, list]) -> RetrivalJob:
+
+        if 'event_timestamp' not in entities:
+            raise ValueError('Missing event_timestamp in entities')
 
         return FilterJob(
             self.request.features_to_include,
