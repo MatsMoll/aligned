@@ -7,20 +7,21 @@ authors = ["Mats E. Mollestad <mats@mollestad.no>"]
 [tool.poetry.dependencies]
 python = "^3.10"
 click = "^8.1.3"
-pandas = "^1.4.2"
-asyncpg = "^0.24.0"
+pandas = "^1.3.1"
 fastapi = "^0.77.1"
 uvicorn = "^0.17.6"
-redis = "^4.3.1"
+redis = {version = "^4.3.1", optional = true}
 mashumaro = "^3.0.1"
 dill = "^0.3.4"
-aioaws = {version="^0.13", optional=true}
-databases = {extras = ["asyncpg"], version = "^0.5.5"}
+aioaws = {version = "^0.13", optional = true}
+databases = {extras = ["asyncpg"], version = "^0.5.5", optional = true}
 pyarrow = "^8.0.0"
 Jinja2 = "^3.1.2"
 
 [tool.poetry.extras]
-aws = ["aioaws"]
+aws = ["aioaws", "databases"]
+psql = ["databases"]
+redis = ["redis"]
 
 [tool.poetry.dev-dependencies]
 types-redis = "^4.2.6"
