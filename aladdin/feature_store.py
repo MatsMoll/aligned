@@ -127,16 +127,20 @@ class FeatureStore:
     ) -> FeatureRequest:
         features = feature_request.grouped_features
         requests: list[RetrivalRequest] = []
+        entity_names = set()
         for feature_view_name in feature_request.feature_view_names:
             if feature_view_name in combined_feature_views:
                 cfv = combined_feature_views[feature_view_name]
                 requests.extend(cfv.requests_for(features[feature_view_name]).needed_requests)
             else:
                 feature_view = feature_views[feature_view_name]
-                requests.extend(feature_view.request_for(features[feature_view_name]).needed_requests)
+                sub_requests = feature_view.request_for(features[feature_view_name]).needed_requests
+                requests.extend(sub_requests)
+                entity_names.update(sub_requests[0].entity_names)
+
         return FeatureRequest(
             'some_name',
-            feature_request.feature_names,
+            feature_request.feature_names.union(entity_names),
             RetrivalRequest.combine(requests),
         )
 
