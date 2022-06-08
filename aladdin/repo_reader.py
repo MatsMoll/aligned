@@ -111,7 +111,7 @@ class RepoReader:
             imports = imports_for(py_file)
 
             module_path = path_to_py_module(py_file, repo_path)
-            if module_path.startswith('aladdin'):
+            if module_path.startswith('aladdin') or module_path.startswith('.'):
                 # Skip aladdin modules
                 continue
 
