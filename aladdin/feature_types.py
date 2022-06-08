@@ -188,6 +188,14 @@ class TransformationFactory(ABC, Transformable):
         return self
 
 
+class CategoricalEncodable(FeatureReferancable):
+    def one_hot_encode(self, labels: list[Any]) -> list['Equals']:
+        return [self == label for label in labels]
+
+    def label_encoding(self, labels: list[str]) -> 'LabelEncoding':
+        return LabelEncoding({label: index for index, label in enumerate(labels)}, self)
+
+
 class CustomTransformation(TransformationFactory, Transformable):
     def __init__(
         self,
@@ -226,7 +234,7 @@ class Int64(FeatureFactory):
     _dtype = FeatureType('').int64
 
 
-class String(FeatureFactory):
+class String(FeatureFactory, CategoricalEncodable):
     _dtype = FeatureType('').string
 
     def split(self, pattern: str, max_splits: int | None = None) -> 'Split':
@@ -336,12 +344,32 @@ class Equals(TransformationFactory):
         self.value = value
         self.in_feature = in_feature
 
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import Equals as EqualTransformation
+
+        return EqualTransformation(self.in_feature.name, self.value)
+
     @property
     def method(self) -> Callable[[DataFrame], Series]:
-        async def equals(df: DataFrame) -> Series:
-            return df[self.in_feature.name] == self.value
+        raise NotImplementedError()
 
-        return equals
+
+class LabelEncoding(TransformationFactory):
+
+    encodings: dict[str, int]
+    in_feature: FeatureReferancable
+
+    def __init__(self, labels: dict[str, int], in_feature: FeatureReferancable) -> None:
+        super().__init__([in_feature], Int32())
+        self.in_feature = in_feature
+        self.encodings = labels
+
+    @property
+    def method(self) -> Callable[[DataFrame], Series]:
+        async def label_encoding(df: DataFrame) -> Series:
+            return df[self.in_feature.name].map(self.encodings)
+
+        return label_encoding
 
 
 class NotEquals(TransformationFactory):

@@ -14,7 +14,7 @@ class APIFeatureRequest(BaseModel):
 
 class FastAPIServer:
     @staticmethod
-    def feature_view_path(name: str, feature_store: FeatureStore, app: FastAPI) -> None:
+    def feature_view_path(name: str, feature_store: FeatureStore, app: FastAPI, can_write: bool) -> None:
 
         feature_view = feature_store.feature_views[name]
         required_features: set[Feature] = feature_view.entities.union(feature_view.features)
@@ -40,9 +40,17 @@ class FastAPIServer:
             },
         }
 
-        @app.post(f'/feature_view/{name}/write', openapi_extra=write_api_schema)
-        async def write(feature_values: dict) -> None:
-            await feature_store.feature_view(name).write(feature_values)
+        @app.post(f'/feature_view/{name}/all')
+        async def all(limit: int | None = None) -> dict:
+            df = await feature_store.feature_view(name).all(limit=limit).to_df()
+            df.replace(nan, value=None, inplace=True)
+            return df.to_dict('list')
+
+        if can_write:
+
+            @app.post(f'/feature_view/{name}/write', openapi_extra=write_api_schema)
+            async def write(feature_values: dict) -> None:
+                await feature_store.feature_view(name).write(feature_values)
 
     @staticmethod
     def model_path(name: str, feature_store: FeatureStore, app: FastAPI) -> None:
@@ -141,9 +149,10 @@ class FastAPIServer:
         for model in feature_store.all_models:
             FastAPIServer.model_path(model, feature_store, app)
 
-        if isinstance(feature_store.feature_source, WritableFeatureSource):
-            for feature_view in feature_store.feature_views.keys():
-                FastAPIServer.feature_view_path(feature_view, feature_store, app)
+        can_write_to_store = isinstance(feature_store.feature_source, WritableFeatureSource)
+
+        for feature_view in feature_store.feature_views.keys():
+            FastAPIServer.feature_view_path(feature_view, feature_store, app, can_write_to_store)
 
         @app.post('/features')
         async def features(payload: APIFeatureRequest) -> dict:
