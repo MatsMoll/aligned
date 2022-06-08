@@ -9,21 +9,24 @@ from aladdin.repo_definition import RepoDefinition, RepoReference
 
 
 def imports_for(file_path: Path) -> set[str]:
-    with open(file_path) as file:
-        raw_file = file.read()
-        lines = raw_file.split('\n')
-        import_lines = {
-            line
-            for line in lines
-            if line.startswith('import ') or (line.startswith('from ') and ' import ' in line)
-        }
-        import_set: set[str] = set()
-        for line in import_lines:
-            tokens = line.split(' ')
-            index = tokens.index('import')
-            imports = tokens[index:]
-            import_set = import_set.union({obj.replace(',', '') for obj in imports})
-        return import_set
+    try:
+        with open(file_path) as file:
+            raw_file = file.read()
+            lines = raw_file.split('\n')
+            import_lines = {
+                line
+                for line in lines
+                if line.startswith('import ') or (line.startswith('from ') and ' import ' in line)
+            }
+            import_set: set[str] = set()
+            for line in import_lines:
+                tokens = line.split(' ')
+                index = tokens.index('import')
+                imports = tokens[index:]
+                import_set = import_set.union({obj.replace(',', '') for obj in imports})
+            return import_set
+    except UnicodeDecodeError:
+        return set()
 
 
 def super_classes_in(obj: Any) -> set[str]:
