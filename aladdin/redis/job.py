@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
 
 from aladdin.feature import Feature, FeatureType
@@ -38,6 +39,12 @@ class FactualRedisJob(FactualRetrivalJob):
                 keys = []
                 for entity in entities:
                     keys.append(key(request, entity, feature))
+
+                # If there is no entities, set feature to None
+                if not entities:
+                    result_df[feature.name] = np.nan
+                    continue
+
                 result = await redis.mget(keys)
                 result_series = pd.Series(result)
                 set_mask = mask.copy()
