@@ -1,3 +1,4 @@
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Optional
 
@@ -24,6 +25,10 @@ class Transformation(Codable, SerializableType):
         name_type = value['name']
         del value['name']
         data_class = SupportedTransformations.shared().types[name_type]
+        with suppress(AttributeError):
+            if data_class.dtype:
+                del value['dtype']
+
         return data_class.from_dict(value)
 
 
