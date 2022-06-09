@@ -126,8 +126,12 @@ def serve_command(repo_path: str, host: str, port: int, workers: int, env_file: 
     """
     Starts a API serving the feature store
     """
+    import logging
+
     from aladdin.feature_store import FeatureStore
     from aladdin.server import FastAPIServer
+
+    logging.basicConfig(level=logging.INFO)
 
     dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
     load_envs(dir / env_file)
