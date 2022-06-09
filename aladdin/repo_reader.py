@@ -1,3 +1,4 @@
+import logging
 from importlib import import_module
 from inspect import getmro, isclass
 from pathlib import Path
@@ -6,6 +7,8 @@ from typing import Any
 from aladdin.model import ModelService
 from aladdin.online_source import BatchOnlineSource, OnlineSource
 from aladdin.repo_definition import RepoDefinition, RepoReference
+
+logger = logging.getLogger(__name__)
 
 
 def imports_for(file_path: Path) -> set[str]:
@@ -26,6 +29,7 @@ def imports_for(file_path: Path) -> set[str]:
                 import_set = import_set.union({obj.replace(',', '') for obj in imports})
             return import_set
     except UnicodeDecodeError:
+        logger.error(f'Unable to read file: {file_path.as_uri()}')
         return set()
 
 
