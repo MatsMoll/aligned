@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -52,13 +51,15 @@ class RepoDefinition(Codable):
 
         dir_path = Path.cwd() if path == '.' else Path(path).absolute()
 
-        with suppress(ValueError):
+        try:
             reference = RepoReader.reference_from_path(dir_path)
             if file := reference.selected_file:
                 logger.info(f"Loading repo from configuration '{reference.selected}'")
                 return await RepoDefinition.from_file(file)
             else:
                 logger.info('Found no configuration')
+        except ValueError as error:
+            logger.error(f'Error when loadin repo: {error}')
 
         logger.info('Generating repo definition')
         return RepoReader.definition_from_path(dir_path)
