@@ -1,18 +1,23 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 from abc import ABC, abstractmethod
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 from pandas import DataFrame
 
 from aladdin.data_source.batch_data_source import BatchDataSource
 from aladdin.derivied_feature import DerivedFeature
 from aladdin.feature import FeatureType
-from aladdin.local.source import FileReference
 from aladdin.request.retrival_request import RetrivalRequest
+
+if TYPE_CHECKING:
+    from aladdin.local.source import FileReference
+
 
 logger = logging.getLogger(__name__)
 

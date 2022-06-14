@@ -24,6 +24,7 @@ class AwsS3Storage(Storage):
             s3_client = S3Client(client, self.config.s3_config)
             url = s3_client.signed_download_url(path)
             response = await client.get(url)
+            response.raise_for_status()
             return response.content
 
     async def write(self, path: str, content: bytes) -> None:
