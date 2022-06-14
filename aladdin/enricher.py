@@ -1,20 +1,23 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING
 
 from mashumaro.types import SerializableType
 from pandas import DataFrame
 
-from aladdin.redis.config import RedisConfig
+if TYPE_CHECKING:
+    from aladdin.redis.config import RedisConfig
 
 
 class StatisticEricher:
-    def std(self, columns: set[str]) -> 'Enricher':
+    def std(self, columns: set[str]) -> Enricher:
         raise NotImplementedError()
 
-    def mean(self, columns: set[str]) -> 'Enricher':
+    def mean(self, columns: set[str]) -> Enricher:
         raise NotImplementedError()
 
 
@@ -26,16 +29,16 @@ class Enricher(ABC, SerializableType):
         return self.to_dict()
 
     @classmethod
-    def _deserialize(cls, value: dict) -> 'Enricher':
+    def _deserialize(cls, value: dict) -> Enricher:
         name_type = value['name']
         del value['name']
         data_class = SupportedEnrichers.shared().types[name_type]
         return data_class.from_dict(value)
 
-    def lock(self, lock_name: str, redis_config: RedisConfig) -> 'Enricher':
+    def lock(self, lock_name: str, redis_config: RedisConfig) -> Enricher:
         return RedisLockEnricher(lock_name=lock_name, enricher=self, config=redis_config)
 
-    def cache(self, ttl: timedelta, cache_key: str) -> 'Enricher':
+    def cache(self, ttl: timedelta, cache_key: str) -> Enricher:
         return FileCacheEnricher(ttl, Path(f'./cache/{cache_key}'), self)
 
     @abstractmethod
@@ -47,7 +50,7 @@ class SupportedEnrichers:
 
     types: dict[str, type[Enricher]]
 
-    _shared: Optional['SupportedEnrichers'] = None
+    _shared: SupportedEnrichers | None = None
 
     def __init__(self) -> None:
         self.types = {}
@@ -60,7 +63,7 @@ class SupportedEnrichers:
         self.types[enrich_type.name] = enrich_type
 
     @classmethod
-    def shared(cls) -> 'SupportedEnrichers':
+    def shared(cls) -> SupportedEnrichers:
         if cls._shared:
             return cls._shared
         cls._shared = SupportedEnrichers()

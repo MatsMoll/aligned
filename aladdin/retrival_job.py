@@ -35,6 +35,11 @@ class RetrivalJob(ABC):
         import io
 
         df = await self.to_df()
+        # FIXME: Should be included into the feast lib, as a conveniance and reduce user error
+        for col in df.columns:  # Can't input UUID's, so need to convert all ids to strings
+            if '_id' in col:
+                df[col] = df[col].astype(str)
+
         data_bytes = io.BytesIO()
         df.to_parquet(data_bytes)  # write to BytesIO buffer
         data_bytes.seek(0)
