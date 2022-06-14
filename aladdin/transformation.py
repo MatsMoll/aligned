@@ -42,7 +42,12 @@ class SupportedTransformations:
         self.types = {}
         from aladdin.feature_types import CustomTransformationV2
 
-        for tran_type in [Equals, CustomTransformationV2, TimeSeriesTransformation]:
+        for tran_type in [
+            Equals,
+            CustomTransformationV2,
+            TimeSeriesTransformation,
+            StandardScalingTransformation,
+        ]:
             self.add(tran_type)
 
     def add(self, transformation: type[Transformation]) -> None:
@@ -131,3 +136,17 @@ GROUP BY et.row_id;
 
         ret_data[mask] = data[f'{self.field_name}_value']
         return ret_data
+
+
+@dataclass
+class StandardScalingTransformation(Transformation):
+
+    mean: float
+    std: float
+    key: str
+
+    name = 'standard_scaling'
+    dtype = FeatureType('').float
+
+    async def transform(self, df: DataFrame) -> Series:
+        return (df[self.key] - self.mean) / self.std

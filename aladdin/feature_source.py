@@ -16,6 +16,13 @@ class FeatureSource:
     def features_for(self, facts: dict[str, list], request: FeatureRequest) -> RetrivalJob:
         raise NotImplementedError()
 
+
+class WritableFeatureSource:
+    async def write(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+        raise NotImplementedError()
+
+
+class RangeFeatureSource:
     def all_for(self, request: FeatureRequest, limit: int | None = None) -> RetrivalJob:
         raise NotImplementedError()
 
@@ -23,13 +30,8 @@ class FeatureSource:
         raise NotImplementedError()
 
 
-class WritableFeatureSource:
-    async def write(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
-        raise NotImplementedError()
-
-
 @dataclass
-class BatchFeatureSource(FeatureSource):
+class BatchFeatureSource(FeatureSource, RangeFeatureSource):
 
     job_factories: dict[str, JobFactory]
     sources: dict[str, BatchDataSource]

@@ -10,6 +10,14 @@ from pandas import DataFrame
 from aladdin.redis.config import RedisConfig
 
 
+class StatisticEricher:
+    def std(self, columns: set[str]) -> 'Enricher':
+        raise NotImplementedError()
+
+    def mean(self, columns: set[str]) -> 'Enricher':
+        raise NotImplementedError()
+
+
 class Enricher(ABC, SerializableType):
 
     name: str

@@ -11,13 +11,17 @@ from aladdin.feature import EventTimestamp as EventTimestampFeature
 from aladdin.feature import Feature, FeatureReferance, FeatureType
 from aladdin.feature_view.feature_view_metadata import FeatureViewMetadata
 from aladdin.request.retrival_request import RetrivalRequest
-from aladdin.transformation import TimeSeriesTransformation, Transformation
+from aladdin.transformation import StandardScalingTransformation, TimeSeriesTransformation, Transformation
 
 
 class FeatureReferancable:
 
     _name: str | None
     _feature_view: str | None
+
+    @property
+    def is_derived(self) -> bool:
+        return isinstance(self, TransformationFactory)
 
     @property
     def name(self) -> str:
@@ -42,7 +46,7 @@ class FeatureReferancable:
             name=self.name,
             feature_view=self.feature_view,
             dtype=self._dtype,
-            is_derivied=isinstance(self, TransformationFactory),
+            is_derivied=self.is_derived,
         )
 
 
@@ -212,25 +216,30 @@ class CustomTransformation(TransformationFactory, Transformable):
         return self._method
 
 
-class Float(FeatureFactory):
+class NumericalTransformable(FeatureReferancable):
+    def log1p(self) -> 'LogTransform':
+        return LogTransform(self)
+
+    def standard_scaled(self) -> 'StandardScalingTransformationFactory':
+        return StandardScalingTransformationFactory(self, using_features=[self])
+
+
+class Float(FeatureFactory, NumericalTransformable):
     _dtype = FeatureType('').float
 
     def __init__(self, labels: dict[str, str] | None = None):
         self._labels = labels
 
-    def log1p(self, using: FeatureReferancable) -> 'LogTransform':
-        return LogTransform(using)
 
-
-class Double(FeatureFactory):
+class Double(FeatureFactory, NumericalTransformable):
     _dtype = FeatureType('').double
 
 
-class Int32(FeatureFactory):
+class Int32(FeatureFactory, NumericalTransformable):
     _dtype = FeatureType('').int32
 
 
-class Int64(FeatureFactory):
+class Int64(FeatureFactory, NumericalTransformable):
     _dtype = FeatureType('').int64
 
 
@@ -657,6 +666,46 @@ class TimeSeriesTransformationFactory(TransformationFactory):
             config=source.config,
             event_timestamp_column=request.event_timestamp.name,
         )
+
+    @property
+    def method(self) -> Callable[[DataFrame], Series]:
+        raise NotImplementedError()
+
+
+@dataclass
+class StandardScalingTransformationFactory(TransformationFactory):
+
+    field: FeatureReferancable
+
+    using_features: list[FeatureReferancable]
+
+    feature: FeatureReferancable = Float()
+
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        import asyncio
+
+        from aladdin.enricher import StatisticEricher
+
+        if self.field.is_derived:
+            raise ValueError('Standard scaling is not supported for derived features yet')
+
+        assert self.name is not None
+
+        if len(sources) != 1:
+            raise ValueError('Expected one source')
+
+        metadata, request = sources[0]
+
+        if not isinstance(metadata.batch_source, StatisticEricher):
+            raise ValueError('The data source needs to conform to StatisticEricher')
+
+        std_enricher = metadata.batch_source.std(columns={self.field.name})
+        mean_enricher = metadata.batch_source.mean(columns={self.field.name})
+
+        std, mean = asyncio.get_event_loop().run_until_complete(
+            asyncio.gather(std_enricher.load(), mean_enricher.load())
+        )
+        return StandardScalingTransformation(mean, std, self.field.name)
 
     @property
     def method(self) -> Callable[[DataFrame], Series]:

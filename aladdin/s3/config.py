@@ -31,6 +31,10 @@ class AwsS3Config(Codable):
     def file_at(self, path: str, mapping_keys: dict[str, str] | None = None) -> 'AwsS3DataSource':
         return AwsS3DataSource(config=self, path=path, mapping_keys=mapping_keys or {})
 
+    @property
+    def storage(self) -> Storage:
+        return AwsS3Storage(self)
+
 
 @dataclass
 class AwsS3DataSource(BatchDataSource, ColumnFeatureMappable, FileReference):
@@ -46,7 +50,7 @@ class AwsS3DataSource(BatchDataSource, ColumnFeatureMappable, FileReference):
 
     @property
     def storage(self) -> Storage:
-        return AwsS3Storage(self.config)
+        return self.config.storage
 
     async def read(self) -> bytes:
         return await self.storage.read(self.path)

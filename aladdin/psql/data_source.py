@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Callable
 
 from aladdin.codable import Codable
 from aladdin.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
+from aladdin.enricher import SqlDatabaseEnricher, StatisticEricher
 
 if TYPE_CHECKING:
     from aladdin.enricher import Enricher
@@ -48,7 +49,7 @@ class PostgreSQLConfig(Codable):
 
 
 @dataclass
-class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable):
+class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher):
 
     config: PostgreSQLConfig
     table: str
@@ -61,3 +62,11 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable):
 
     def __hash__(self) -> int:
         return hash(self.table)
+
+    def mean(self, columns: set[str]) -> Enricher:
+        sql_columns = ', '.join([f'AVG({column}) AS {column}' for column in columns])
+        return SqlDatabaseEnricher(self.config.url, f'SELECT {sql_columns} FROM {self.table}')
+
+    def std(self, columns: set[str]) -> Enricher:
+        sql_columns = ', '.join([f'STDDEV({column}) AS {column}' for column in columns])
+        return SqlDatabaseEnricher(self.config.url, f'SELECT {sql_columns} FROM {self.table}')

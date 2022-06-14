@@ -11,6 +11,7 @@ from pandas import DataFrame
 from aladdin.data_source.batch_data_source import BatchDataSource
 from aladdin.derivied_feature import DerivedFeature
 from aladdin.feature import FeatureType
+from aladdin.local.source import FileReference
 from aladdin.request.retrival_request import RetrivalRequest
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,16 @@ class RetrivalJob(ABC):
     @abstractmethod
     async def to_arrow(self) -> DataFrame:
         pass
+
+    async def as_dataset(self, file: FileReference) -> DataFrame:
+        import io
+
+        df = await self.to_df()
+        data_bytes = io.BytesIO()
+        df.to_parquet(data_bytes)  # write to BytesIO buffer
+        data_bytes.seek(0)
+        await file.write(data_bytes.getvalue())
+        return df
 
 
 Source = TypeVar('Source', bound=BatchDataSource)

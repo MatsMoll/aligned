@@ -4,7 +4,12 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-from aladdin.feature_source import BatchFeatureSource, FeatureSource, WritableFeatureSource
+from aladdin.feature_source import (
+    BatchFeatureSource,
+    FeatureSource,
+    RangeFeatureSource,
+    WritableFeatureSource,
+)
 from aladdin.feature_view.combined_view import CombinedFeatureView, CompiledCombinedFeatureView
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.feature_view.feature_view import FeatureView
@@ -168,9 +173,6 @@ class FeatureStore:
         request = RawStringFeatureRequest(service.feature_refs)
         self.model_requests[service.name] = self.requests_for(request)
 
-    def all_for(self, view: str, limit: int | None = None) -> RetrivalJob:
-        return self.feature_source.all_for(self.feature_views[view].request_all, limit)
-
     def offline_store(self) -> 'FeatureStore':
         return FeatureStore(
             feature_views=self.feature_views,
@@ -207,9 +209,13 @@ class FeatureViewStore:
     view: CompiledFeatureView
 
     def all(self, limit: int | None = None) -> RetrivalJob:
+        if not isinstance(self.source, RangeFeatureSource):
+            raise ValueError('The source needs to conform to RangeFeatureSource')
         return self.source.all_for(self.view.request_all, limit)
 
     def between(self, start_date: datetime, end_date: datetime) -> RetrivalJob:
+        if not isinstance(self.source, RangeFeatureSource):
+            raise ValueError('The source needs to conform to RangeFeatureSource')
         return self.source.all_between(start_date, end_date, self.view.request_all)
 
     def previous(self, days: int = 0, minutes: int = 0, seconds: int = 0) -> RetrivalJob:
