@@ -205,7 +205,7 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
 
             join_conditions = [
                 f'ta.{entity_db_name} = entities.{entity} AND '
-                f'entities.event_timestamp < ta.{event_timestamp_column}'
+                f'entities.event_timestamp >= ta.{event_timestamp_column}'
                 for entity, entity_db_name in zip(entities, entity_db_name)
             ]
             table_name = source.table
@@ -231,7 +231,7 @@ WITH entities (
 ) AS (
 VALUES {% for row in values %}
     ({% for value in row %}
-        {% if value.value %}'{{value.value}}'::{{value.dtype}}{% else %}null{% endif %}
+        {% if value.value %}'{{value.value}}'::{{value.dtype}}{% else %}null::{{value.dtype}}{% endif %}
         {% if loop.last %}{% else %},{% endif %}{% endfor %}){% if loop.last %}{% else %},{% endif %}
 {% endfor %}
 ),

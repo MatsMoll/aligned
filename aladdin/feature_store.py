@@ -141,7 +141,8 @@ class FeatureStore:
                 feature_view = feature_views[feature_view_name]
                 sub_requests = feature_view.request_for(features[feature_view_name]).needed_requests
                 requests.extend(sub_requests)
-                entity_names.update(sub_requests[0].entity_names)
+                for request in sub_requests:
+                    entity_names.update(request.entity_names)
 
         if len(requests) > 1:
             entity_names.add('event_timestamp')
