@@ -234,14 +234,20 @@ class FeatureViewStore:
         from aladdin.local.job import FileFullJob
         from aladdin.local.source import LiteralReference
 
+        # As it is a feature view should it only contain one request
         request = self.view.request_all.needed_requests[0]
         df = DataFrame(values)
 
+        if request.entity_names - set(df.columns):
+            missing = request.entity_names - set(df.columns)
+            raise ValueError(f'Missing entities: {missing}')
+
         if request.all_required_feature_names - set(df.columns):
             missing = request.all_required_feature_names - set(df.columns)
-            raise ValueError(
-                f'Missing some required features: {request.all_required_feature_names},'
-                f' missing: {missing}'
+            logger.info(
+                'Some features is missing.',
+                f'Will fill values with None, but it could be a potential problem: {missing}',
             )
+            df[list(missing)] = None
 
         await self.source.write(FileFullJob(LiteralReference(df), request, limit=None), [request])

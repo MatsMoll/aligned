@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import FastAPI, HTTPException
 from numpy import nan
 from pydantic import BaseModel
@@ -40,7 +42,7 @@ class FastAPIServer:
             },
         }
 
-        @app.post(f'/feature_view/{name}/all')
+        @app.post(f'/feature-view/{name}/all')
         async def all(limit: int | None = None) -> dict:
             df = await feature_store.feature_view(name).all(limit=limit).to_df()
             df.replace(nan, value=None, inplace=True)
@@ -48,7 +50,7 @@ class FastAPIServer:
 
         if can_write:
 
-            @app.post(f'/feature_view/{name}/write', openapi_extra=write_api_schema)
+            @app.post(f'/feature-view/{name}/write', openapi_extra=write_api_schema)
             async def write(feature_values: dict) -> None:
                 await feature_store.feature_view(name).write(feature_values)
 
@@ -118,6 +120,13 @@ class FastAPIServer:
             missing_entities = {entity.name for entity in entities if entity.name not in entity_values}
             if missing_entities:
                 raise HTTPException(status_code=400, detail=f'Missing entity values {missing_entities}')
+
+            entity_values['event_timestamp'] = [
+                datetime.fromtimestamp(value)
+                if isinstance(value, (float, int))
+                else datetime.fromisoformat(value)
+                for value in entity_values['event_timestamp']
+            ]
 
             df = await feature_store.model(name).features_for(entity_values).to_df()
             df.replace(nan, value=None, inplace=True)
