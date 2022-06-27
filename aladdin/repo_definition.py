@@ -46,7 +46,7 @@ class RepoDefinition(Codable):
         return RepoDefinition.from_json(repo)
 
     @staticmethod
-    async def from_path(path: str) -> RepoDefinition:
+    async def from_reference_at_path(path: str) -> RepoDefinition:
         from aladdin.repo_reader import RepoReader
 
         dir_path = Path.cwd() if path == '.' else Path(path).absolute()
@@ -62,4 +62,11 @@ class RepoDefinition(Codable):
             logger.error(f'Error when loadin repo: {error}')
 
         logger.info('Generating repo definition')
+        return RepoReader.definition_from_path(dir_path)
+
+    @staticmethod
+    def from_path(path: str) -> RepoDefinition:
+        from aladdin.repo_reader import RepoReader
+
+        dir_path = Path.cwd() if path == '.' else Path(path).absolute()
         return RepoReader.definition_from_path(dir_path)

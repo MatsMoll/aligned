@@ -96,9 +96,42 @@ class FeatureStore:
         )
 
     @staticmethod
-    async def from_dir(path: str) -> 'FeatureStore':
-        repo_def = await RepoDefinition.from_path(path)
+    async def from_reference_at_path(path: str = '.') -> 'FeatureStore':
+        """Looks for a file reference struct, and loads the associated repo.
+
+        This can be used for changing which feature store definitions
+        to read based on defined enviroment variables.
+
+        If you rather want to generate a feature store based on a dir,
+        then consider using `FeatureStore.from_dir(...)` instead.
+
+        Args:
+            path (str, optional): The path of the dir to search. Defaults to ".".
+
+        Returns:
+            FeatureStore: A feature store based on the feature references
+        """
+        repo_def = await RepoDefinition.from_reference_at_path(path)
         return FeatureStore.from_definition(repo_def)
+
+    @staticmethod
+    async def from_dir(path: str = '.') -> 'FeatureStore':
+        """Reads and generates a feature store based on the given directory's content.
+
+        This will read the feature views, services etc in a given repo and generate a feature store.
+        This can be used for fast development purposes.
+
+        If you rather want a more flexible deployable solution.
+        Consider using `FeatureStore.from_reference_at_path(...)` which will can read an existing
+        generated file from differnet storages, based on an enviroment variable.
+
+        Args:
+            path (str, optional): the directory to read from. Defaults to ".".
+
+        Returns:
+            FeatureStore: The generated feature store
+        """
+        return FeatureStore.from_definition(RepoDefinition.from_path(path))
 
     def features_for(self, entities: dict[str, list], features: list[str]) -> RetrivalJob:
 

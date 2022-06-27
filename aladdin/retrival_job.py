@@ -14,6 +14,7 @@ from aladdin.data_source.batch_data_source import BatchDataSource
 from aladdin.derivied_feature import DerivedFeature
 from aladdin.feature import FeatureType
 from aladdin.request.retrival_request import RetrivalRequest
+from aladdin.split_strategy import SplitDataSet, SplitStrategy
 
 if TYPE_CHECKING:
     from aladdin.local.source import FileReference
@@ -45,6 +46,21 @@ class RetrivalJob(ABC):
         data_bytes.seek(0)
         await file.write(data_bytes.getvalue())
         return df
+
+    def split_with(self, strategy: SplitStrategy, target_column: str) -> SplitJob:
+        return SplitJob(self, target_column, strategy)
+
+
+@dataclass
+class SplitJob:
+
+    job: RetrivalJob
+    target_column: str
+    strategy: SplitStrategy
+
+    async def use_pandas(self) -> SplitDataSet[DataFrame]:
+        data = await self.job.to_df()
+        return self.strategy.split_pandas(data, self.target_column)
 
 
 Source = TypeVar('Source', bound=BatchDataSource)
