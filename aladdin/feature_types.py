@@ -148,7 +148,7 @@ class CustomTransformationV2(Transformation):
     def with_method(method: Callable[[DataFrame], Series], dtype: FeatureType) -> 'CustomTransformationV2':
         import dill
 
-        return CustomTransformationV2(method=dill.dumps(method), dtype=dtype)
+        return CustomTransformationV2(method=dill.dumps(method, recurse=True), dtype=dtype)
 
     async def transform(self, df: DataFrame) -> Series:
         import dill

@@ -96,8 +96,7 @@ class FileFactualJob(FactualRetrivalJob):
         for request in self.requests:
             all_features.update(request.all_required_features)
 
-        number_of_facts = len(list(self.facts.values())[0])
-        result = pd.DataFrame(index=range(number_of_facts))
+        result = pd.DataFrame(self.facts)
 
         for request in self.requests:
             entity_names = request.entity_names

@@ -136,7 +136,7 @@ def serve_command(repo_path: str, host: str, port: int, workers: int, env_file: 
     dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
     load_envs(dir / env_file)
     sys.path.append(str(dir))
-    repo_def = sync(RepoDefinition.from_path(repo_path))
+    repo_def = sync(RepoDefinition.from_reference_at_path(repo_path))
     store = FeatureStore.from_definition(repo_def)
     FastAPIServer.run(store, host, port, workers)
 
