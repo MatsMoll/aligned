@@ -14,6 +14,7 @@ jobs:
           overwrite-repository: true
           repository-url: https://test.pypi.org/legacy/
           token: ${{ secrets.TEST_PYPI_TOKEN }}
+          python-version: '3.10.0'
   build-and-publish:
     needs: build-and-publish-test
     runs-on: ubuntu-latest
@@ -21,3 +22,4 @@ jobs:
       - uses: snok/.github/workflows/publish@main
         with:
           token: ${{ secrets.PYPI_TOKEN }}
+          python-version: '3.10.0'
