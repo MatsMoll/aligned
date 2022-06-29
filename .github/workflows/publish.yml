@@ -1,8 +1,9 @@
 name: publish package
 
 on:
-  release:
-    types: [published, edited]
+  push:
+    branches:
+      - main
 
 jobs:
   build-and-publish-test:
