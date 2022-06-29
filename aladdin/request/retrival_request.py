@@ -12,7 +12,7 @@ class RetrivalRequest(Codable):
     entities: set[Feature]
     features: set[Feature]
     derived_features: set[DerivedFeature]
-    event_timestamp: EventTimestamp
+    event_timestamp: EventTimestamp | None
 
     @property
     def feature_names(self) -> list[str]:
@@ -101,3 +101,7 @@ class FeatureRequest(Codable):
     name: str
     features_to_include: set[str]
     needed_requests: list[RetrivalRequest]
+
+    @property
+    def needs_event_timestamp(self) -> bool:
+        return any(request.event_timestamp for request in self.needed_requests)

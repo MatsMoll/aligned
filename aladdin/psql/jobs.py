@@ -147,8 +147,11 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
 
         template = Environment(loader=BaseLoader()).from_string(self.__sql_template())
         template_context: dict[str, Any] = {}
-        final_select_names: set[str] = {'event_timestamp'}
-        entity_types: dict[str, FeatureType] = {'event_timestamp': FeatureType('').datetime}
+
+        final_select_names: set[str] = set()
+        entity_types: dict[str, FeatureType] = {}
+        has_event_timestamp = False
+
         for request in self.requests:
             final_select_names = final_select_names.union(request.all_required_feature_names)
             final_select_names = final_select_names.union(
@@ -156,6 +159,12 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
             )
             for entity in request.entities:
                 entity_types[entity.name] = entity.dtype
+            if request.event_timestamp:
+                has_event_timestamp = True
+
+        if has_event_timestamp:
+            final_select_names.add('event_timestamp')
+            entity_types['event_timestamp'] = FeatureType('').datetime
 
         # Need to replace nan as it will not be encoded
         fact_df = DataFrame(self.facts).replace(np.nan, None)
@@ -201,11 +210,14 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
 
             entities = list(request.entity_names)
             entity_db_name = source.feature_identifier_for(entities)
-            event_timestamp_column = source.feature_identifier_for([request.event_timestamp.name])[0]
+
+            event_timestamp_clause = ''
+            if request.event_timestamp:
+                event_timestamp_column = source.feature_identifier_for([request.event_timestamp.name])[0]
+                event_timestamp_clause = f'AND entities.event_timestamp >= ta.{event_timestamp_column}'
 
             join_conditions = [
-                f'ta.{entity_db_name} = entities.{entity} AND '
-                f'entities.event_timestamp >= ta.{event_timestamp_column}'
+                f'ta.{entity_db_name} = entities.{entity} {event_timestamp_clause}'
                 for entity, entity_db_name in zip(entities, entity_db_name)
             ]
             table_name = source.table

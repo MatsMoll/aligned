@@ -34,7 +34,6 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
-*.csv
 tmp*
 
 # Installer logs
@@ -141,5 +140,3 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
-
-*/tests/*

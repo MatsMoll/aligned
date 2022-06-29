@@ -132,7 +132,7 @@ class Feature(Codable):
 @dataclass
 class EventTimestamp(Codable):
     name: str
-    ttl: int
+    ttl: int | None = None
     description: str | None = None
     tags: dict[str, str] | None = None
     dtype: FeatureType = FeatureType('').datetime

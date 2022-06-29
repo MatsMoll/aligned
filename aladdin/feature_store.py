@@ -135,12 +135,13 @@ class FeatureStore:
 
     def features_for(self, entities: dict[str, list], features: list[str]) -> RetrivalJob:
 
-        if self.event_timestamp_column not in entities:
-            raise ValueError(f'Missing {self.event_timestamp_column} in entities')
-
         feature_request = RawStringFeatureRequest(features=set(features))
         entities_names: set[str] = set(entities.keys())
         requests = self.requests_for(feature_request)
+
+        if requests.needs_event_timestamp and self.event_timestamp_column not in entities:
+            raise ValueError(f'Missing {self.event_timestamp_column} in entities')
+
         feature_names = set()
         for feature_set in feature_request.grouped_features.values():
             feature_names.update(feature_set.union({self.event_timestamp_column}))
@@ -169,16 +170,15 @@ class FeatureStore:
         for feature_view_name in feature_request.feature_view_names:
             if feature_view_name in combined_feature_views:
                 cfv = combined_feature_views[feature_view_name]
-                requests.extend(cfv.requests_for(features[feature_view_name]).needed_requests)
+                sub_requests = cfv.requests_for(features[feature_view_name])
+                requests.extend(sub_requests.needed_requests)
+
             else:
                 feature_view = feature_views[feature_view_name]
-                sub_requests = feature_view.request_for(features[feature_view_name]).needed_requests
-                requests.extend(sub_requests)
-                for request in sub_requests:
+                sub_requests = feature_view.request_for(features[feature_view_name])
+                requests.extend(sub_requests.needed_requests)
+                for request in sub_requests.needed_requests:
                     entity_names.update(request.entity_names)
-
-        if len(requests) > 1:
-            entity_names.add('event_timestamp')
 
         return FeatureRequest(
             'some_name',

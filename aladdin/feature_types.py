@@ -287,9 +287,9 @@ class CreatedAtTimestamp(FeatureFactory):
 
 class EventTimestamp(FeatureFactory):
 
-    max_join_with: timedelta
+    max_join_with: timedelta | None
 
-    def __init__(self, max_join_with: timedelta):
+    def __init__(self, max_join_with: timedelta | None = None):
         self.max_join_with = max_join_with
 
     _dtype = FeatureType('').datetime
@@ -298,7 +298,7 @@ class EventTimestamp(FeatureFactory):
         self._name = name
         return EventTimestampFeature(
             name=name,
-            ttl=self.max_join_with.seconds,
+            ttl=self.max_join_with.seconds if self.max_join_with else None,
             description=self._description,
             tags=self._labels,
         )

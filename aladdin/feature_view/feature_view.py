@@ -7,7 +7,7 @@ from aladdin.feature import Feature
 from aladdin.feature_types import Entity, EventTimestamp, FeatureFactory, TransformationFactory
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.feature_view.feature_view_metadata import FeatureViewMetadata
-from aladdin.request.retrival_request import RetrivalRequest
+from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
 
 # Enables code compleation in the select method
 FVType = TypeVar('FVType')
@@ -48,9 +48,6 @@ class FeatureView(ABC, FeatureSelectable):
             feature = getattr(cls, var_name)
 
             if isinstance(feature, TransformationFactory):
-                if event_timestamp is None:
-                    raise Exception(f'Set EventTimestamp above the feature {var_name} in' f' {cls.__name__}')
-
                 feature._name = var_name
                 feature._feature_view = metadata.name
                 tran = feature.transformation(
@@ -97,9 +94,6 @@ class FeatureView(ABC, FeatureSelectable):
         if not entities:
             raise ValueError(f'FeatureView {metadata.name} must contain at least one Entity')
 
-        if event_timestamp is None:
-            raise Exception(f'A EventTimestamp is needed for {cls.__name__}')
-
         return CompiledFeatureView(
             name=metadata.name,
             description=metadata.description,
@@ -113,13 +107,11 @@ class FeatureView(ABC, FeatureSelectable):
         )
 
     @classmethod
-    def select(
-        cls: type[FVType], features: Callable[[type[FVType]], list[FeatureFactory]]
-    ) -> RetrivalRequest:
+    def select(cls: type[FVType], features: Callable[[type[FVType]], list[FeatureFactory]]) -> FeatureRequest:
         view: CompiledFeatureView = cls.compile()  # type: ignore
         names = features(cls)
         return view.request_for({feature.name for feature in names if feature.name})
 
     @classmethod
-    def select_all(cls: type[FVType]) -> RetrivalRequest:
+    def select_all(cls: type[FVType]) -> FeatureRequest:
         return cls.compile().request_all  # type: ignore

@@ -18,7 +18,7 @@ class CompiledFeatureView(Codable):
     entities: set[Feature]
     features: set[Feature]
     derived_features: set[DerivedFeature]
-    event_timestamp: EventTimestamp
+    event_timestamp: EventTimestamp | None
 
     @property
     def full_schema(self) -> set[Feature]:
