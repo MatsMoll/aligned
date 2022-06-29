@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "aladdin"
-version = "0.1.0"
-description = ""
+name = "aladdinml"
+version = "0.0.1a"
+description = "A scalable feature store that makes it easy to productionise and manage ML and AI projects"
 authors = ["Mats E. Mollestad <mats@mollestad.no>"]
 
 [tool.poetry.dependencies]
@@ -14,13 +14,14 @@ redis = {version = "^4.3.1", optional = true}
 mashumaro = "^3.0.1"
 dill = "^0.3.4"
 aioaws = {version = "^0.12", optional = true}
-databases = {extras = ["asyncpg"], version = "^0.5.5", optional = true}
+databases = { version = "^0.5.5", optional = true}
+asyncpg = { version = "^0.25.0", optional = true}
 pyarrow = "^8.0.0"
 Jinja2 = "^3.1.2"
 
 [tool.poetry.extras]
 aws = ["aioaws", "databases"]
-psql = ["databases"]
+psql = ["databases", "asyncpg"]
 redis = ["redis"]
 
 [tool.poetry.dev-dependencies]

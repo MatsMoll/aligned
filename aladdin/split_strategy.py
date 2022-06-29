@@ -25,7 +25,7 @@ class SplitStrategy:
         pass
 
 
-class UniformSplitStrategy(SplitStrategy):
+class StrategicSplitStrategy(SplitStrategy):
 
     train_size_percentage: float
     test_size_percentage: float

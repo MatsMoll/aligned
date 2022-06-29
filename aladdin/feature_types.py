@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any, Callable, TypeVar
 
-import numpy as np
 from pandas import DataFrame, Series
 
 from aladdin.feature import Constraint
@@ -72,10 +71,10 @@ class Transformable(FeatureReferancable):
     def __ne__(self, __o: object) -> 'NotEquals':  # type: ignore
         return NotEquals(__o, self)
 
-    def __lt__(self, value: object) -> 'LowerThen':
+    def __lt__(self, value: float) -> 'LowerThen':
         return LowerThen(value, self)
 
-    def __le__(self, value: object) -> 'LowerThenOrEqual':
+    def __le__(self, value: float) -> 'LowerThenOrEqual':
         return LowerThenOrEqual(value, self)
 
     def __gt__(self, value: object) -> 'GreaterThen':
@@ -166,8 +165,11 @@ class TransformationFactory(ABC, Transformable):
     def _dtype(self) -> FeatureType:
         return self.feature._dtype
 
-    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
-        return CustomTransformationV2.with_method(method=self.method, dtype=self._dtype)
+    @abstractproperty
+    def transformation(  # type: ignore
+        self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]
+    ) -> Transformation:
+        pass
 
     @property
     def using_feature_names(self) -> list[str]:
@@ -176,10 +178,6 @@ class TransformationFactory(ABC, Transformable):
     def __init__(self, using_features: list[FeatureReferancable], feature: FeatureReferancable) -> None:
         self.using_features = using_features
         self.feature = feature
-
-    @abstractproperty
-    def method(self) -> Callable[[DataFrame], Series]:
-        pass
 
     def labels(self: FeatureTypeVar, labels: dict[str, str]) -> FeatureTypeVar:
         if isinstance(self, TransformationFactory) and isinstance(self.feature, FeatureFactory):
@@ -192,6 +190,15 @@ class TransformationFactory(ABC, Transformable):
         return self
 
 
+class DillTransformationFactory(TransformationFactory):
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        return CustomTransformationV2.with_method(method=self.method, dtype=self._dtype)
+
+    @abstractproperty
+    def method(self) -> Callable[[DataFrame], Series]:
+        pass
+
+
 class CategoricalEncodable(FeatureReferancable):
     def one_hot_encode(self, labels: list[Any]) -> list['Equals']:
         return [self == label for label in labels]
@@ -200,7 +207,7 @@ class CategoricalEncodable(FeatureReferancable):
         return LabelEncoding({label: index for index, label in enumerate(labels)}, self)
 
 
-class CustomTransformation(TransformationFactory, Transformable):
+class CustomTransformation(DillTransformationFactory, Transformable):
     def __init__(
         self,
         using_features: list[FeatureReferancable],
@@ -307,22 +314,10 @@ class Ratio(TransformationFactory):
         self.numerator = numerator
         self.denumerator = denumerator
 
-    @staticmethod
-    def ratio(numerator: str, denumirator: str, df: DataFrame) -> Series:
-        from numpy import nan
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import Ratio as RatioTransformation
 
-        mask = df[numerator].isna() | df[denumirator].isna() | df[denumirator] == 0
-        results = df[numerator].copy()
-        results.loc[mask] = nan
-        results.loc[~mask] = df.loc[~mask, numerator].astype(float) / df.loc[~mask, denumirator].astype(float)
-        return results
-
-    @property
-    def method(self) -> Callable[[DataFrame], Series]:
-        async def ratio(df: DataFrame) -> Series:
-            return Ratio.ratio(self.numerator.name, self.denumerator.name, df)
-
-        return ratio
+        return RatioTransformation(self.numerator.name, self.denumerator.name)
 
 
 class Contains(TransformationFactory):
@@ -335,12 +330,10 @@ class Contains(TransformationFactory):
         self.in_feature = in_feature
         self.text = text
 
-    @property
-    def method(self) -> Callable[[DataFrame], Series]:
-        async def contains(df: DataFrame) -> Series:
-            return df[self.in_feature.name].str.contains(self.text)
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import Contains as ContainsTransformation
 
-        return contains
+        return ContainsTransformation(self.in_feature.name, self.text)
 
 
 class Equals(TransformationFactory):
@@ -354,16 +347,12 @@ class Equals(TransformationFactory):
         self.in_feature = in_feature
 
     def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
-        from aladdin.transformation import Equals as EqualTransformation
+        from aladdin.transformation import Equals as EqualsTransformation
 
-        return EqualTransformation(self.in_feature.name, self.value)
-
-    @property
-    def method(self) -> Callable[[DataFrame], Series]:
-        raise NotImplementedError()
+        return EqualsTransformation(self.in_feature.name, self.value)
 
 
-class LabelEncoding(TransformationFactory):
+class LabelEncoding(DillTransformationFactory):
 
     encodings: dict[str, int]
     in_feature: FeatureReferancable
@@ -391,12 +380,10 @@ class NotEquals(TransformationFactory):
         self.value = value
         self.in_feature = in_feature
 
-    @property
-    def method(self) -> Callable[[DataFrame], Series]:
-        async def equals(df: DataFrame) -> Series:
-            return df[self.in_feature.name] != self.value
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import NotEquals as NotEqualsTransformation
 
-        return equals
+        return NotEqualsTransformation(self.in_feature.name, self.value)
 
 
 class GreaterThen(TransformationFactory):
@@ -409,12 +396,10 @@ class GreaterThen(TransformationFactory):
         self.value = value
         self.in_feature = in_feature
 
-    @property
-    def method(self) -> Callable[[DataFrame], Series]:
-        async def met(df: DataFrame) -> Series:
-            return df[self.in_feature.name] > self.value
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import GreaterThen as GreaterThenTransformation
 
-        return met
+        return GreaterThenTransformation(self.in_feature.name, self.value)
 
 
 class GreaterThenOrEqual(TransformationFactory):
@@ -427,51 +412,45 @@ class GreaterThenOrEqual(TransformationFactory):
         self.value = value
         self.in_feature = in_feature
 
-    @property
-    def method(self) -> Callable[[DataFrame], Series]:
-        async def met(df: DataFrame) -> Series:
-            return df[self.in_feature.name] >= self.value
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import GreaterThenOrEqual as GTETransformation
 
-        return met
+        return GTETransformation(self.in_feature.name, self.value)
 
 
 class LowerThen(TransformationFactory):
 
-    value: Any
+    value: float
     in_feature: FeatureReferancable
 
-    def __init__(self, value: Any, in_feature: FeatureReferancable) -> None:
+    def __init__(self, value: float, in_feature: FeatureReferancable) -> None:
         super().__init__([in_feature], Bool())
         self.value = value
         self.in_feature = in_feature
 
-    @property
-    def method(self) -> Callable[[DataFrame], Series]:
-        async def met(df: DataFrame) -> Series:
-            return df[self.in_feature.name] > self.value
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import LowerThen as LTTransformation
 
-        return met
+        return LTTransformation(self.in_feature.name, self.value)
 
 
 class LowerThenOrEqual(TransformationFactory):
 
-    value: Any
+    value: float
     in_feature: FeatureReferancable
 
-    def __init__(self, value: Any, in_feature: FeatureReferancable) -> None:
+    def __init__(self, value: float, in_feature: FeatureReferancable) -> None:
         super().__init__([in_feature], Bool())
         self.value = value
         self.in_feature = in_feature
 
-    @property
-    def method(self) -> Callable[[DataFrame], Series]:
-        async def met(df: DataFrame) -> Series:
-            return df[self.in_feature.name] >= self.value
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import LowerThenOrEqual as LTETransformation
 
-        return met
+        return LTETransformation(self.in_feature.name, self.value)
 
 
-class Split(TransformationFactory):
+class Split(DillTransformationFactory):
 
     pattern: str
     feature: FeatureReferancable
@@ -491,7 +470,7 @@ class Split(TransformationFactory):
         return met
 
 
-class ArrayIndex(TransformationFactory):
+class ArrayIndex(DillTransformationFactory):
 
     index: int
     feature: FeatureReferancable
@@ -519,23 +498,10 @@ class DateComponent(TransformationFactory):
         self.from_feature = from_feature
         self.component = component
 
-    @staticmethod
-    def date_component(component: str, feature: str, df: DataFrame) -> Series:
-        from numpy import nan
-        from pandas import to_datetime
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import DateComponent as DCTransformation
 
-        mask = df[feature].isna()
-        results = df[feature].copy()
-        results.loc[mask] = nan
-        results.loc[~mask] = getattr(to_datetime(df.loc[~mask, feature]).dt, component)
-        return results
-
-    @property
-    def method(self) -> Callable[[DataFrame], Series]:
-        async def date_component(df: DataFrame) -> Series:
-            return DateComponent.date_component(self.component, self.from_feature.name, df)
-
-        return date_component
+        return DCTransformation(self.from_feature.name, self.component)
 
 
 class DifferanceBetween(TransformationFactory):
@@ -548,12 +514,10 @@ class DifferanceBetween(TransformationFactory):
         self.first_feature = first_feature
         self.second_feature = second_feature
 
-    @property
-    def method(self) -> Callable[[DataFrame], Series]:
-        async def differance_between(df: DataFrame) -> Series:
-            return df[self.first_feature.name] - df[self.second_feature.name]
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import Subtraction
 
-        return differance_between
+        return Subtraction(self.first_feature.name, self.second_feature.name)
 
 
 class AdditionBetween(TransformationFactory):
@@ -566,12 +530,10 @@ class AdditionBetween(TransformationFactory):
         self.first_feature = first_feature
         self.second_feature = second_feature
 
-    @property
-    def method(self) -> Callable[[DataFrame], Series]:
-        async def differance_between(df: DataFrame) -> Series:
-            return df[self.first_feature.name] + df[self.second_feature.name]
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import Addition
 
-        return differance_between
+        return Addition(self.first_feature.name, self.second_feature.name)
 
 
 class TimeDifferance(TransformationFactory):
@@ -587,22 +549,10 @@ class TimeDifferance(TransformationFactory):
         assert first_feature._dtype == test
         assert second_feature._dtype == test
 
-    @staticmethod
-    def time_differance(first_feature: str, second_feature: str, df: DataFrame) -> Series:
-        mask = df[first_feature].isna() | df[second_feature].isna()
-        results = df[first_feature].copy()
-        results.loc[mask] = np.nan
-        results.loc[~mask] = (df.loc[~mask, first_feature] - df.loc[~mask, second_feature]) / np.timedelta64(
-            1, 's'
-        )
-        return results
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import TimeDifference as TDTransformation
 
-    @property
-    def method(self) -> Callable[[DataFrame], Series]:
-        async def time_differance(df: DataFrame) -> Series:
-            return TimeDifferance.time_differance(self.first_feature.name, self.second_feature.name, df)
-
-        return time_differance
+        return TDTransformation(self.first_feature.name, self.second_feature.name)
 
 
 class LogTransform(TransformationFactory):
@@ -613,22 +563,10 @@ class LogTransform(TransformationFactory):
         super().__init__([feature], Float())
         self.feature = feature
 
-    @staticmethod
-    def log_transform(feature: str, df: DataFrame) -> Series:
-        from numpy import nan
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import LogarithmOnePluss
 
-        mask = df[feature].isna()
-        results = df[feature].copy()
-        results.loc[mask] = nan
-        results.loc[~mask] = np.log1p(df.loc[~mask, feature])
-        return results
-
-    @property
-    def method(self) -> Callable[[DataFrame], Series]:
-        async def log_transform(df: DataFrame) -> Series:
-            return LogTransform.log_transform(self.feature.name, df)
-
-        return log_transform
+        return LogarithmOnePluss(self.feature.name)
 
 
 @dataclass
@@ -667,10 +605,6 @@ class TimeSeriesTransformationFactory(TransformationFactory):
             event_timestamp_column=request.event_timestamp.name,
         )
 
-    @property
-    def method(self) -> Callable[[DataFrame], Series]:
-        raise NotImplementedError()
-
 
 @dataclass
 class StandardScalingTransformationFactory(TransformationFactory):
@@ -694,7 +628,7 @@ class StandardScalingTransformationFactory(TransformationFactory):
         if len(sources) != 1:
             raise ValueError('Expected one source')
 
-        metadata, request = sources[0]
+        metadata, _ = sources[0]
 
         if not isinstance(metadata.batch_source, StatisticEricher):
             raise ValueError('The data source needs to conform to StatisticEricher')
@@ -706,7 +640,3 @@ class StandardScalingTransformationFactory(TransformationFactory):
             asyncio.gather(std_enricher.load(), mean_enricher.load())
         )
         return StandardScalingTransformation(mean, std, self.field.name)
-
-    @property
-    def method(self) -> Callable[[DataFrame], Series]:
-        raise NotImplementedError()
