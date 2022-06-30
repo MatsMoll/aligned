@@ -142,6 +142,7 @@ class FileCacheEnricher(Enricher):
 
         if should_load:
             data: DataFrame = await self.enricher.load()
+            file_uri.parent.mkdir(exist_ok=True, parents=True)
             data.to_parquet(file_uri)
         else:
             import pandas as pd
