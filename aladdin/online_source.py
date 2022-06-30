@@ -6,7 +6,7 @@ from typing import Any, Optional
 from mashumaro.types import SerializableType
 
 from aladdin.codable import Codable
-from aladdin.feature_source import FeatureSource
+from aladdin.feature_source import FeatureSource, InMemoryFeatureSource
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 
 logger = logging.getLogger(__name__)
@@ -88,3 +88,12 @@ class BatchOnlineSource(OnlineSource):
             get_factories(),
             sources={fv.name: fv.batch_data_source for fv in feature_views},
         )
+
+
+@dataclass
+class InMemoryOnlineSource(OnlineSource):
+
+    source_type: str = 'in-mem'
+
+    def feature_source(self, feature_views: set[CompiledFeatureView]) -> FeatureSource:
+        return InMemoryFeatureSource({})

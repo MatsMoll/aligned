@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from io import StringIO
+from pathlib import Path
 
 from pandas import DataFrame
 
 from aladdin.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
+from aladdin.enricher import Enricher, FileEnricher, FileStatEnricher, StatisticEricher
 from aladdin.feature_store import FeatureStore
 from aladdin.repo_definition import RepoDefinition
 from aladdin.s3.storage import FileStorage, HttpStorage
@@ -23,7 +25,7 @@ class FileReference:
 
 
 @dataclass
-class FileSource(BatchDataSource, ColumnFeatureMappable, FileReference):
+class FileSource(BatchDataSource, ColumnFeatureMappable, FileReference, StatisticEricher):
 
     path: str
     mapping_keys: dict[str, str]
@@ -52,6 +54,16 @@ class FileSource(BatchDataSource, ColumnFeatureMappable, FileReference):
 
     async def write(self, content: bytes) -> None:
         return await self.storage.write(self.path, content)
+
+    def std(self, columns: set[str]) -> Enricher:
+        return FileStatEnricher(
+            stat='std', columns=list(columns), enricher=FileEnricher(file=Path(self.path))
+        )
+
+    def mean(self, columns: set[str]) -> Enricher:
+        return FileStatEnricher(
+            stat='mean', columns=list(columns), enricher=FileEnricher(file=Path(self.path))
+        )
 
 
 @dataclass

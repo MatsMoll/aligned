@@ -1,6 +1,8 @@
 import pytest
 
 from aladdin import Entity, FeatureStore, FeatureView, FeatureViewMetadata, FileSource, Float, Int32, String
+from aladdin.online_source import InMemoryOnlineSource
+from aladdin.repo_definition import RepoDefinition
 
 
 class BreastDiagnoseFeatureView(FeatureView):
@@ -20,6 +22,7 @@ class BreastDiagnoseFeatureView(FeatureView):
     radius_mean = Float()
     radius_se = Float()
     radius_worst = Float()
+    scaled_mean_radius = radius_mean.standard_scaled()
 
     texture_mean = Float()
     texture_se = Float()
@@ -58,24 +61,42 @@ class BreastDiagnoseFeatureView(FeatureView):
     fractal_dimension_worst = Float()
 
 
-feature_view = BreastDiagnoseFeatureView()
-store = FeatureStore.experimental()
-store.add_feature_view(feature_view)
-
-
 @pytest.mark.asyncio
-async def test_all_features() -> None:
+async def test_standard_scaled_feature() -> None:
+    feature_view = BreastDiagnoseFeatureView()
+    store = FeatureStore.experimental()
+    store.add_feature_view(feature_view)
+
     features = await store.feature_view(feature_view.metadata.name).all().to_df()
 
     for feature in BreastDiagnoseFeatureView.select_all().features_to_include:
         assert feature in features.columns
 
-    assert 'is_malignant' in features.columns
-    assert not features['is_malignant'].isna().any()
-    assert 'diagnosis' in features.columns
-    assert 'scan_id' in features.columns
+    assert 'scaled_mean_radius' in features.columns
+    assert not features['scaled_mean_radius'].isna().any()
 
-    limit = 10
-    limit_features = await store.feature_view(feature_view.metadata.name).all(limit=limit).to_df()
 
-    assert limit_features.shape[0] == limit
+@pytest.mark.asyncio
+async def test_online_store_standard_scaling() -> None:
+    compiled_view = BreastDiagnoseFeatureView.compile()
+
+    definition = RepoDefinition(
+        feature_views={compiled_view},
+        combined_feature_views=set(),
+        models={},
+        online_source=InMemoryOnlineSource(),
+    )
+    store = FeatureStore.from_definition(definition)
+
+    await store.feature_view(compiled_view.name).write(
+        {
+            'radius_mean': [17.99, 14.127291739894552],
+            'scan_id': [10, 11],
+        }
+    )
+
+    stored = await store.features_for(
+        {'scan_id': [10, 11]}, features=[f'{compiled_view.name}:scaled_mean_radius']
+    ).to_df()
+
+    assert stored['scaled_mean_radius'].values == [1.096100, 0]

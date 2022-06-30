@@ -618,6 +618,8 @@ class StandardScalingTransformationFactory(TransformationFactory):
     def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
         import asyncio
 
+        import nest_asyncio
+
         from aladdin.enricher import StatisticEricher
 
         if self.field.is_derived:
@@ -636,7 +638,13 @@ class StandardScalingTransformationFactory(TransformationFactory):
         std_enricher = metadata.batch_source.std(columns={self.field.name})
         mean_enricher = metadata.batch_source.mean(columns={self.field.name})
 
-        std, mean = asyncio.get_event_loop().run_until_complete(
-            asyncio.gather(std_enricher.load(), mean_enricher.load())
-        )
-        return StandardScalingTransformation(mean, std, self.field.name)
+        async def compute() -> tuple[DataFrame, DataFrame]:
+            return await asyncio.gather(std_enricher.load(), mean_enricher.load())
+
+        try:
+            std, mean = asyncio.get_event_loop().run_until_complete(compute())
+        except RuntimeError:
+            nest_asyncio.apply()
+            std, mean = asyncio.get_event_loop().run_until_complete(compute())
+
+        return StandardScalingTransformation(mean[self.field.name], std[self.field.name], self.field.name)

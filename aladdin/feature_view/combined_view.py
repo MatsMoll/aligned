@@ -38,7 +38,7 @@ class CompiledCombinedFeatureView(Codable):
 
     @property
     def request_all(self) -> FeatureRequest:
-        requests = {}
+        requests: dict[str, RetrivalRequest] = {}
         entities = set()
         for sub_requests in self.feature_referances.values():
             for request in sub_requests:
@@ -175,9 +175,9 @@ class CombinedFeatureView(ABC, FeatureSelectable):
     def select(
         cls: type[FVType], features: Callable[[type[FVType]], list[FeatureFactory]]
     ) -> RetrivalRequest:
-        view = cls.compile()
+        view: CompiledCombinedFeatureView = cls.compile()
         names = features(cls)
-        return view.request_for({feature.name for feature in names if feature.name})
+        return view.requests_for({feature.name for feature in names if feature.name})
 
     @classmethod
     def select_all(cls: type[FVType]) -> RetrivalRequest:

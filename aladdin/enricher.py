@@ -89,6 +89,38 @@ class RedisLockEnricher(Enricher):
 
 
 @dataclass
+class FileEnricher(Enricher):
+
+    file: Path
+    name: str = 'file'
+
+    async def load(self) -> DataFrame:
+        import pandas as pd
+
+        if self.file.suffix == '.csv':
+            return pd.read_csv(self.file.absolute())
+        else:
+            return pd.read_parquet(self.file.absolute())
+
+
+@dataclass
+class FileStatEnricher(Enricher):
+
+    stat: str
+    columns: list[str]
+    enricher: Enricher
+
+    async def load(self) -> DataFrame:
+        data = await self.enricher.load()
+        if self.stat == 'mean':
+            return data[self.columns].mean()
+        elif self.stat == 'std':
+            return data[self.columns].std()
+        else:
+            raise ValueError(f'Not supporting stat: {self.stat}')
+
+
+@dataclass
 class FileCacheEnricher(Enricher):
 
     ttl: timedelta
@@ -96,7 +128,7 @@ class FileCacheEnricher(Enricher):
     enricher: Enricher
     name: str = 'file_cache'
 
-    async def load(self) -> None:
+    async def load(self) -> DataFrame:
         import os
 
         should_load = False
