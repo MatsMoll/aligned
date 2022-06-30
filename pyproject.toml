@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aladdinml"
-version = "0.0.3a"
+version = "0.0.4a"
 description = "A scalable feature store that makes it easy to productionise and manage ML and AI projects"
 authors = ["Mats E. Mollestad <mats@mollestad.no>"]
 license = "Apache-2.0"
@@ -61,6 +61,7 @@ redis = ["redis"]
 
 [tool.poetry.dev-dependencies]
 types-redis = "^4.2.6"
+pytest-mock = "^3.8.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

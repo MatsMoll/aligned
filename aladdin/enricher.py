@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -8,6 +9,8 @@ from typing import TYPE_CHECKING
 
 from mashumaro.types import SerializableType
 from pandas import DataFrame
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from aladdin.redis.config import RedisConfig
@@ -136,13 +139,16 @@ class FileCacheEnricher(Enricher):
         try:
             # Checks last modified metadata field
             modified_at = datetime.fromtimestamp(os.stat(file_uri).st_mtime)
-            should_load = modified_at < datetime.now() - self.ttl
+            compare = datetime.now() - self.ttl
+            should_load = modified_at < compare
+            logger.info(f'Refreshing cache as {compare} is higher then {modified_at}')
         except FileNotFoundError:
             should_load = True
 
         if should_load:
             data: DataFrame = await self.enricher.load()
             file_uri.parent.mkdir(exist_ok=True, parents=True)
+            logger.info(f'Storing cache at file {file_uri.as_uri()}')
             data.to_parquet(file_uri)
         else:
             import pandas as pd

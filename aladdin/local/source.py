@@ -65,6 +65,9 @@ class FileSource(BatchDataSource, ColumnFeatureMappable, FileReference, Statisti
             stat='mean', columns=list(columns), enricher=FileEnricher(file=Path(self.path))
         )
 
+    def enricher(self) -> Enricher:
+        return FileEnricher(file=Path(self.path))
+
 
 @dataclass
 class LiteralReference(FileReference):
