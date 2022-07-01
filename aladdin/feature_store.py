@@ -278,8 +278,10 @@ class FeatureViewStore:
         if request.all_required_feature_names - set(df.columns):
             missing = request.all_required_feature_names - set(df.columns)
             logger.info(
-                'Some features is missing.',
-                f'Will fill values with None, but it could be a potential problem: {missing}',
+                f"""
+Some features is missing.
+Will fill values with None, but it could be a potential problem: {missing}
+"""
             )
             df[list(missing)] = None
 

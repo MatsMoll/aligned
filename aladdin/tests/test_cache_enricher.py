@@ -15,8 +15,8 @@ async def test_cache_enricher(mocker) -> None:  # type: ignore
     expected = await source.load()
     assert file.equals(expected)
 
-    pandas_mock = mocker.patch('pandas.read_parquet', return_value=file)
+    pandas_mock = mocker.patch('pandas.read_parquet', return_value=file.iloc[0:3])
     new_file = await enricher.load()
 
-    assert file.equals(new_file)
+    assert file.iloc[0:3].equals(new_file)
     pandas_mock.assert_called_once()

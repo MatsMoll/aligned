@@ -132,26 +132,26 @@ class FileCacheEnricher(Enricher):
     name: str = 'file_cache'
 
     async def load(self) -> DataFrame:
-        import os
-
-        should_load = False
+        should_load_source = False
         file_uri = self.file.absolute()
         try:
             # Checks last modified metadata field
-            modified_at = datetime.fromtimestamp(os.stat(file_uri).st_mtime)
+            modified_at = datetime.fromtimestamp(file_uri.stat().st_mtime)
             compare = datetime.now() - self.ttl
-            should_load = modified_at < compare
-            logger.info(f'Refreshing cache as {compare} is higher then {modified_at}')
+            should_load_source = modified_at < compare
         except FileNotFoundError:
-            should_load = True
+            should_load_source = True
 
-        if should_load:
+        if should_load_source:
+            logger.info('Fetching from source')
             data: DataFrame = await self.enricher.load()
             file_uri.parent.mkdir(exist_ok=True, parents=True)
             logger.info(f'Storing cache at file {file_uri.as_uri()}')
             data.to_parquet(file_uri)
         else:
             import pandas as pd
+
+            logger.info('Loading cache')
 
             data = pd.read_parquet(file_uri)
         return data
