@@ -155,7 +155,7 @@ def serve_command(repo_path: str, host: str, port: int, workers: int, env_file: 
             },
             'loggers': {
                 # project
-                '*': {'handlers': [handler], 'level': 'INFO', 'propagate': True},
+                '': {'handlers': [handler], 'level': 'INFO', 'propagate': True},
             },
         }
     )
