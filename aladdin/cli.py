@@ -126,12 +126,39 @@ def serve_command(repo_path: str, host: str, port: int, workers: int, env_file: 
     """
     Starts a API serving the feature store
     """
-    import logging
+    from logging.config import dictConfig
 
     from aladdin.feature_store import FeatureStore
     from aladdin.server import FastAPIServer
 
-    logging.basicConfig(level=logging.INFO)
+    handler = 'console'
+    log_format = '%(levelname)s:\t\b%(asctime)s %(name)s:%(lineno)d [%(correlation_id)s] %(message)s'
+    dictConfig(
+        {
+            'version': 1,
+            'disable_existing_loggers': False,
+            'filters': {
+                'correlation_id': {
+                    '()': 'asgi_correlation_id.CorrelationIdFilter',
+                    'uuid_length': 16,
+                },
+            },
+            'formatters': {
+                'console': {'class': 'logging.Formatter', 'datefmt': '%H:%M:%S', 'format': log_format}
+            },
+            'handlers': {
+                'console': {
+                    'class': 'logging.StreamHandler',
+                    'filters': ['correlation_id'],
+                    'formatter': 'console',
+                }
+            },
+            'loggers': {
+                # project
+                '*': {'handlers': [handler], 'level': 'INFO', 'propagate': True},
+            },
+        }
+    )
 
     dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
     load_envs(dir / env_file)
