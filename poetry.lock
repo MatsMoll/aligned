@@ -38,6 +38,14 @@ test = ["coverage[toml] (>=4.5)", "hypothesis (>=4.0)", "pytest (>=7.0)", "pytes
 trio = ["trio (>=0.16)"]
 
 [[package]]
+name = "asgi-correlation-id"
+version = "3.0.0"
+description = "Middleware correlating project logs to individual requests"
+category = "main"
+optional = false
+python-versions = ">=3.7,<4.0"
+
+[[package]]
 name = "asgiref"
 version = "3.5.2"
 description = "ASGI specs, helper code, and adapters"
@@ -630,7 +638,7 @@ redis = ["redis"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "f59b6da7d25641ac594834030f728568784d354bb2e3986af033801eb833fb09"
+content-hash = "a8d6e94b4e69b2ca25845c6ec5d77fe615c21d8e7d7722d0b9b34315e7e83d51"
 
 [metadata.files]
 aioaws = [
@@ -644,6 +652,10 @@ aiofiles = [
 anyio = [
     {file = "anyio-3.6.1-py3-none-any.whl", hash = "sha256:cb29b9c70620506a9a8f87a309591713446953302d7d995344d0d7c6c0c9a7be"},
     {file = "anyio-3.6.1.tar.gz", hash = "sha256:413adf95f93886e442aea925f3ee43baa5a765a64a0f52c6081894f9992fdd0b"},
+]
+asgi-correlation-id = [
+    {file = "asgi-correlation-id-3.0.0.tar.gz", hash = "sha256:cbcf46e5d166d26998311899cd02779549d1a47fd9a9910cf1f87ffe64918fb0"},
+    {file = "asgi_correlation_id-3.0.0-py3-none-any.whl", hash = "sha256:0f5eb0602e5f199aa4c5f5ebeb72651c28a69961cfd886c1d87cb23df48fd00e"},
 ]
 asgiref = [
     {file = "asgiref-3.5.2-py3-none-any.whl", hash = "sha256:1d2880b792ae8757289136f1db2b7b99100ce959b2aa57fd69dab783d05afac4"},

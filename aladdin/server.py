@@ -150,9 +150,11 @@ class FastAPIServer:
         workers: int | None = None,
     ) -> None:
         import uvicorn
+        from asgi_correlation_id import CorrelationIdMiddleware
         from fastapi import FastAPI
+        from fastapi.middleware import Middleware
 
-        app = FastAPI()
+        app = FastAPI(middleware=[Middleware(CorrelationIdMiddleware)])
         app.docs_url = '/docs'
 
         for model in feature_store.all_models:
