@@ -533,7 +533,7 @@ class Contains(Transformation):
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna()),
-            transformation=lambda dfv: dfv[self.key].str.contains(self.value),
+            transformation=lambda dfv: dfv[self.key].astype('str').str.contains(self.value),
         )
 
     @staticmethod
