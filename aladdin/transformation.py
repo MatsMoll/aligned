@@ -9,7 +9,6 @@ from pandas import DataFrame, Series
 
 from aladdin.codable import Codable
 from aladdin.feature import FeatureType
-from aladdin.psql.data_source import PostgreSQLConfig
 
 
 @dataclass
@@ -72,6 +71,9 @@ class Transformation(Codable, SerializableType):
                 is_correct = np.all(output == test.output_series) | output.equals(test.output_series)
                 assert is_correct, f'Output for {test.transformation.__class__.__name__} is not correct.,'
                 '\nGot: {output},\nexpected: {test.output_series}'
+            elif test.transformation.dtype == FeatureType('').string:
+                expected = test.output_series
+                assert expected.equals(output)
             else:
                 expected = test.output_series.to_numpy()
                 output_np = output.to_numpy().astype('float')
@@ -93,7 +95,6 @@ class SupportedTransformations:
             Equals,
             NotEquals,
             CustomTransformationV2,
-            TimeSeriesTransformation,
             StandardScalingTransformation,
             Ratio,
             Contains,
@@ -108,6 +109,7 @@ class SupportedTransformations:
             Logarithm,
             LogarithmOnePluss,
             ToNumerical,
+            ReplaceStrings,
         ]:
             self.add(tran_type)
 
@@ -546,6 +548,39 @@ class Contains(Transformation):
 
 
 @dataclass
+class ReplaceStrings(Transformation):
+
+    key: str
+    values: dict[str, str]
+
+    name: str = 'replace'
+    dtype: FeatureType = FeatureType('').string
+
+    def __init__(self, key: str, values: dict[str, str]) -> None:
+        self.key = key
+        self.values = values
+
+    async def transform(self, df: DataFrame) -> Series:
+        temp_df = df[self.key].copy()
+        mask = ~(df[self.key].isna() | df[self.key].isnull())
+        temp_df.loc[~mask] = np.nan
+        for k, v in self.values.items():
+            temp_df.loc[mask] = temp_df.loc[mask].astype(str).str.replace(k, v)
+
+        return temp_df
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        from numpy import nan
+
+        return TransformationTestDefinition(
+            ReplaceStrings('x', {' ': '', '.': '', '10-20': '15'}),
+            input={'x': [' 20', '10 - 20', '.yeah', None]},
+            output=['20', '15', 'yeah', nan],
+        )
+
+
+@dataclass
 class Ratio(Transformation):
 
     numerator: str
@@ -579,64 +614,64 @@ class Ratio(Transformation):
         )
 
 
-@dataclass
-class TimeSeriesTransformation(Transformation):
+# @dataclass
+# class TimeSeriesTransformation(Transformation):
 
-    method: str
-    field_name: str
-    table_name: str
-    config: PostgreSQLConfig
-    event_timestamp_column: str
+#     method: str
+#     field_name: str
+#     table_name: str
+#     config: PostgreSQLConfig
+#     event_timestamp_column: str
 
-    dtype: FeatureType = FeatureType('').int64
-    name: str = 'ts_transform'
+#     dtype: FeatureType = FeatureType('').int64
+#     name: str = 'ts_transform'
 
-    async def transform(self, df: DataFrame) -> Series:
-        import numpy as np
+#     async def transform(self, df: DataFrame) -> Series:
+#         import numpy as np
 
-        org_facts = df[[self.event_timestamp_column, self.field_name]]
-        ret_data = Series(np.repeat(np.nan, org_facts.shape[0]))
+#         org_facts = df[[self.event_timestamp_column, self.field_name]]
+#         ret_data = Series(np.repeat(np.nan, org_facts.shape[0]))
 
-        mask = org_facts.notna().all(axis=1)
+#         mask = org_facts.notna().all(axis=1)
 
-        fact_df = org_facts.loc[mask]
+#         fact_df = org_facts.loc[mask]
 
-        if fact_df.empty:
-            return ret_data
+#         if fact_df.empty:
+#             return ret_data
 
-        fact_df['row_id'] = list(range(1, fact_df.shape[0] + 1))
+#         fact_df['row_id'] = list(range(1, fact_df.shape[0] + 1))
 
-        values = []
-        columns = ','.join(list(fact_df.columns))
-        for _, row in fact_df.iterrows():
-            row_values = []
-            for column, value in row.items():
-                if column == self.event_timestamp_column:
-                    row_values.append(f"'{value}'::timestamp with time zone")
-                else:
-                    row_values.append(f"'{value}'")
-            values.append(','.join(row_values))
+#         values = []
+#         columns = ','.join(list(fact_df.columns))
+#         for _, row in fact_df.iterrows():
+#             row_values = []
+#             for column, value in row.items():
+#                 if column == self.event_timestamp_column:
+#                     row_values.append(f"'{value}'::timestamp with time zone")
+#                 else:
+#                     row_values.append(f"'{value}'")
+#             values.append(','.join(row_values))
 
-        sql_values = '(' + '),\n    ('.join(values) + ')'
-        sql = f"""
-WITH entities (
-    {columns}
-) AS (
-VALUES
-    {sql_values}
-)
+#         sql_values = '(' + '),\n    ('.join(values) + ')'
+#         sql = f"""
+# WITH entities (
+#     {columns}
+# ) AS (
+# VALUES
+#     {sql_values}
+# )
 
-SELECT {self.method}(t.{self.field_name}) AS {self.field_name}_value, et.row_id
-FROM entities et
-LEFT JOIN {self.table_name} t ON
-    t.{self.field_name} = et.{self.field_name} AND
-    t.{self.event_timestamp_column} < et.{self.event_timestamp_column}
-GROUP BY et.row_id;
-"""
-        data = await self.config.data_enricher(sql).load()
+# SELECT {self.method}(t.{self.field_name}) AS {self.field_name}_value, et.row_id
+# FROM entities et
+# LEFT JOIN {self.table_name} t ON
+#     t.{self.field_name} = et.{self.field_name} AND
+#     t.{self.event_timestamp_column} < et.{self.event_timestamp_column}
+# GROUP BY et.row_id;
+# """
+#         data = await self.config.data_enricher(sql).load()
 
-        ret_data[mask] = data[f'{self.field_name}_value']
-        return ret_data
+#         ret_data[mask] = data[f'{self.field_name}_value']
+#         return ret_data
 
 
 @dataclass

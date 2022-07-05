@@ -10,7 +10,7 @@ from aladdin.feature import EventTimestamp as EventTimestampFeature
 from aladdin.feature import Feature, FeatureReferance, FeatureType
 from aladdin.feature_view.feature_view_metadata import FeatureViewMetadata
 from aladdin.request.retrival_request import RetrivalRequest
-from aladdin.transformation import StandardScalingTransformation, TimeSeriesTransformation, Transformation
+from aladdin.transformation import StandardScalingTransformation, Transformation
 
 
 class FeatureReferancable:
@@ -126,15 +126,6 @@ class FeatureFactory(ABC, Transformable):
             self._description = description
         return self
 
-    def count(self) -> 'TimeSeriesTransformationFactory':
-        return TimeSeriesTransformationFactory(self, 'COUNT', [])
-
-    def sum(self) -> 'TimeSeriesTransformationFactory':
-        return TimeSeriesTransformationFactory(self, 'SUM', [])
-
-    def mean(self) -> 'TimeSeriesTransformationFactory':
-        return TimeSeriesTransformationFactory(self, 'AVG', [])
-
 
 @dataclass
 class CustomTransformationV2(Transformation):
@@ -207,6 +198,11 @@ class CategoricalEncodable(FeatureReferancable):
         return LabelEncoding({label: index for index, label in enumerate(labels)}, self)
 
 
+class StringTransformable(FeatureReferancable):
+    def to_numerical(self) -> 'ToNumerical':
+        return ToNumerical(self)
+
+
 class CustomTransformation(DillTransformationFactory, Transformable):
     def __init__(
         self,
@@ -255,6 +251,9 @@ class String(FeatureFactory, CategoricalEncodable):
 
     def split(self, pattern: str, max_splits: int | None = None) -> 'Split':
         return Split(pattern, self, max_splits)
+
+    def replace(self, values: dict[str, str]) -> 'Replace':
+        return Replace(values, self)
 
 
 class UUID(FeatureFactory):
@@ -578,32 +577,63 @@ class TimeSeriesTransformationFactory(TransformationFactory):
     feature: FeatureReferancable = Int64()
 
     def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
-        from aladdin.psql.data_source import PostgreSQLDataSource
+        raise NotImplementedError()
+        # from aladdin.psql.data_source import PostgreSQLDataSource
 
-        assert self.name is not None
+        # assert self.name is not None
 
-        if len(sources) != 1:
-            raise ValueError('Expected one source')
+        # if len(sources) != 1:
+        #     raise ValueError('Expected one source')
 
-        metadata, request = sources[0]
+        # metadata, request = sources[0]
 
-        et = request.event_timestamp  # Veeeeery hacky
-        etf = EventTimestamp(timedelta(seconds=et.ttl))
-        etf._name = et.name
-        etf._feature_view = request.feature_view_name
-        self.using_features = [self.field, etf]
+        # et = request.event_timestamp  # Veeeeery hacky
+        # etf = EventTimestamp(timedelta(seconds=et.ttl))
+        # etf._name = et.name
+        # etf._feature_view = request.feature_view_name
+        # self.using_features = [self.field, etf]
 
-        source = metadata.batch_source
-        if not isinstance(source, PostgreSQLDataSource):
-            raise ValueError('Only PostgreSQLDataSource is supported')
+        # source = metadata.batch_source
+        # if not isinstance(source, PostgreSQLDataSource):
+        #     raise ValueError('Only PostgreSQLDataSource is supported')
 
-        return TimeSeriesTransformation(
-            method=self.agg_method,
-            field_name=self.field.name,
-            table_name=source.table,
-            config=source.config,
-            event_timestamp_column=request.event_timestamp.name,
-        )
+        # return TimeSeriesTransformation(
+        #     method=self.agg_method,
+        #     field_name=self.field.name,
+        #     table_name=source.table,
+        #     config=source.config,
+        #     event_timestamp_column=request.event_timestamp.name,
+        # )
+
+
+class Replace(TransformationFactory, StringTransformable):
+
+    values: dict[str, str]
+    feature: FeatureReferancable
+
+    def __init__(self, values: dict[str, str], feature: FeatureReferancable) -> None:
+        super().__init__([feature], String())
+        self.values = values
+        self.feature = feature
+
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import ReplaceStrings
+
+        return ReplaceStrings(self.feature.name, self.values)
+
+
+class ToNumerical(TransformationFactory):
+
+    feature: FeatureReferancable
+
+    def __init__(self, feature: FeatureReferancable) -> None:
+        super().__init__([feature], Float())
+        self.feature = feature
+
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import ToNumerical as ToNumericalTransformation
+
+        return ToNumericalTransformation(self.feature.name)
 
 
 @dataclass

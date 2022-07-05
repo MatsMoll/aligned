@@ -66,6 +66,8 @@ def apply_command(repo_path: str, env_file: str) -> None:
     repo_def = RepoReader.definition_from_path(dir)
     repo_ref = RepoReader.reference_from_path(dir)
 
+    click.echo(f'Updating file at: {repo_ref.selected}')
+
     if file := repo_ref.selected_file:
         sync(file.write(repo_def.to_json().encode('utf-8')))
     else:

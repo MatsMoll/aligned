@@ -40,12 +40,12 @@ class PostgreSQLConfig(Codable):
     def data_enricher(self, sql: str, values: dict | None = None) -> Enricher:
         from aladdin.enricher import SqlDatabaseEnricher
 
-        return SqlDatabaseEnricher(self.url, sql, values)
+        return SqlDatabaseEnricher(self.env_var, sql, values)
 
     def entity_source(self, timestamp_column: str, sql: Callable[[str], str]) -> EntityDataSource:
         from aladdin.model import SqlEntityDataSource
 
-        return SqlEntityDataSource(sql, self.url, timestamp_column)
+        return SqlEntityDataSource(sql, self.env_var, timestamp_column)
 
 
 @dataclass

@@ -2,8 +2,10 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from importlib import import_module
 from typing import Any
 
+from aladdin.enricher import Enricher
 from aladdin.feature_source import (
     BatchFeatureSource,
     FeatureSource,
@@ -15,7 +17,7 @@ from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.feature_view.feature_view import FeatureView
 from aladdin.model import ModelService
 from aladdin.online_source import BatchOnlineSource
-from aladdin.repo_definition import RepoDefinition
+from aladdin.repo_definition import EnricherReference, RepoDefinition
 from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
 from aladdin.retrival_job import FilterJob, RetrivalJob
 
@@ -79,10 +81,48 @@ class FeatureStore:
         return FeatureStore.from_definition(RepoDefinition(set(), set(), {}, BatchOnlineSource()))
 
     @staticmethod
+    def register_enrichers(enrichers: list[EnricherReference]) -> None:
+        from types import ModuleType
+
+        class DynamicEnricher(ModuleType):
+            def __init__(self, values: dict[str, Enricher]) -> None:
+                for key, item in values.items():
+                    self.__setattr__(key, item)
+
+        def set_module(path: str, module_class: DynamicEnricher) -> None:
+            import sys
+
+            components = path.split('.')
+            cum_path = ''
+
+            for component in components:
+                cum_path += f'.{component}'
+                if cum_path.startswith('.'):
+                    cum_path = cum_path[1:]
+
+                try:
+                    sys.modules[cum_path] = import_module(cum_path)
+                except Exception:
+                    sys.modules[cum_path] = module_class
+
+        grouped_enrichers: dict[str, list[EnricherReference]] = defaultdict(list)
+
+        for enricher in enrichers:
+            grouped_enrichers[enricher.module].append(enricher)
+
+        for module, values in grouped_enrichers.items():
+            set_module(
+                module, DynamicEnricher({enricher.attribute_name: enricher.enricher for enricher in values})
+            )
+
+    @staticmethod
     def from_definition(repo: RepoDefinition, feature_source: FeatureSource | None = None) -> 'FeatureStore':
         source = feature_source or repo.online_source.feature_source(repo.feature_views)
         feature_views = {fv.name: fv for fv in repo.feature_views}
         combined_feature_views = {fv.name: fv for fv in repo.combined_feature_views}
+
+        FeatureStore.register_enrichers(repo.enrichers)
+
         return FeatureStore(
             feature_views=feature_views,
             combined_feature_views=combined_feature_views,
@@ -167,11 +207,17 @@ class FeatureStore:
         features = feature_request.grouped_features
         requests: list[RetrivalRequest] = []
         entity_names = set()
+        needs_event_timestamp = False
+
         for feature_view_name in feature_request.feature_view_names:
             if feature_view_name in combined_feature_views:
                 cfv = combined_feature_views[feature_view_name]
                 sub_requests = cfv.requests_for(features[feature_view_name])
                 requests.extend(sub_requests.needed_requests)
+                for request in sub_requests.needed_requests:
+                    entity_names.update(request.entity_names)
+                    if request.event_timestamp:
+                        needs_event_timestamp = True
 
             else:
                 feature_view = feature_views[feature_view_name]
@@ -179,6 +225,11 @@ class FeatureStore:
                 requests.extend(sub_requests.needed_requests)
                 for request in sub_requests.needed_requests:
                     entity_names.update(request.entity_names)
+                    if request.event_timestamp:
+                        needs_event_timestamp = True
+
+        if needs_event_timestamp:
+            entity_names.add('event_timestamp')
 
         return FeatureRequest(
             'some_name',

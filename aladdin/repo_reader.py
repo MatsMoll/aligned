@@ -4,9 +4,10 @@ from inspect import getmro, isclass
 from pathlib import Path
 from typing import Any
 
+from aladdin.enricher import Enricher
 from aladdin.model import ModelService
 from aladdin.online_source import BatchOnlineSource, OnlineSource
-from aladdin.repo_definition import RepoDefinition, RepoReference
+from aladdin.repo_definition import EnricherReference, RepoDefinition, RepoReference
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +82,7 @@ class RepoReader:
             combined_feature_views=set(),
             models={},
             online_source=BatchOnlineSource(),
+            enrichers=[],
         )
 
         for py_file in python_files(repo_path):
@@ -107,6 +109,10 @@ class RepoReader:
                 if isinstance(obj, ModelService):
                     model_name = obj._name or attribute
                     repo.models[model_name] = obj.feature_refs
+                elif isinstance(obj, Enricher):
+                    repo.enrichers.append(
+                        EnricherReference(module=module_path, attribute_name=attribute, enricher=obj)
+                    )
                 elif isinstance(obj, OnlineSource):
                     repo.online_source = obj
                 else:

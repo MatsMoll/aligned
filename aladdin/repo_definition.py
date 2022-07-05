@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from aladdin.codable import Codable
+from aladdin.enricher import Enricher
 from aladdin.feature_view.combined_view import CompiledCombinedFeatureView
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.online_source import OnlineSource
@@ -34,11 +35,19 @@ class RepoReference:
 
 
 @dataclass
+class EnricherReference(Codable):
+    module: str
+    attribute_name: str
+    enricher: Enricher
+
+
+@dataclass
 class RepoDefinition(Codable):
     feature_views: set[CompiledFeatureView]
     combined_feature_views: set[CompiledCombinedFeatureView]
     models: dict[str, set[str]]
     online_source: OnlineSource
+    enrichers: list[EnricherReference]
 
     @staticmethod
     async def from_file(file: FileReference) -> RepoDefinition:

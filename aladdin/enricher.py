@@ -5,15 +5,14 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from mashumaro.types import SerializableType
 from pandas import DataFrame
 
-logger = logging.getLogger(__name__)
+from aladdin.codable import Codable
+from aladdin.redis.config import RedisConfig
 
-if TYPE_CHECKING:
-    from aladdin.redis.config import RedisConfig
+logger = logging.getLogger(__name__)
 
 
 class StatisticEricher:
@@ -24,7 +23,7 @@ class StatisticEricher:
         raise NotImplementedError()
 
 
-class Enricher(ABC, SerializableType):
+class Enricher(ABC, Codable, SerializableType):
 
     name: str
 
@@ -42,7 +41,7 @@ class Enricher(ABC, SerializableType):
         return RedisLockEnricher(lock_name=lock_name, enricher=self, config=redis_config)
 
     def cache(self, ttl: timedelta, cache_key: str) -> Enricher:
-        return FileCacheEnricher(ttl, Path(f'./cache/{cache_key}'), self)
+        return FileCacheEnricher(ttl.seconds, f'./cache/{cache_key}', self)
 
     @abstractmethod
     async def load(self) -> DataFrame:
@@ -126,18 +125,18 @@ class FileStatEnricher(Enricher):
 @dataclass
 class FileCacheEnricher(Enricher):
 
-    ttl: timedelta
-    file: Path
+    ttl_seconds: int
+    file_path: str
     enricher: Enricher
     name: str = 'file_cache'
 
     async def load(self) -> DataFrame:
         should_load_source = False
-        file_uri = self.file.absolute()
+        file_uri = Path(self.file_path).absolute()
         try:
             # Checks last modified metadata field
             modified_at = datetime.fromtimestamp(file_uri.stat().st_mtime)
-            compare = datetime.now() - self.ttl
+            compare = datetime.now() - timedelta(seconds=self.ttl_seconds)
             should_load_source = modified_at < compare
         except FileNotFoundError:
             should_load_source = True
@@ -162,18 +161,20 @@ class SqlDatabaseEnricher(Enricher):
 
     query: str
     values: dict | None
-    url: str
+    url_env: str
     name: str = 'sql'
 
-    def __init__(self, url: str, query: str, values: dict | None = None) -> None:
+    def __init__(self, url_env: str, query: str, values: dict | None = None) -> None:
         self.query = query
         self.values = values
-        self.url = url
+        self.url_env = url_env
 
     async def load(self) -> DataFrame:
+        import os
+
         from databases import Database
 
-        async with Database(self.url) as db:
+        async with Database(os.environ[self.url_env]) as db:
             records = await db.fetch_all(self.query, values=self.values)
         df = DataFrame.from_records([dict(record) for record in records])
         for name, dtype in df.dtypes.iteritems():
