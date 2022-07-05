@@ -30,7 +30,9 @@ class RedshiftSQLConfig(Codable):
     def table(self, table: str, mapping_keys: dict[str, str] | None = None) -> 'RedshiftSQLDataSource':
         return RedshiftSQLDataSource(config=self, table=table, mapping_keys=mapping_keys or {})
 
-    def data_enricher(self, name: str, sql: str, redis: RedisConfig, values: dict | None = None) -> Enricher:
+    def data_enricher(
+        self, name: str, sql: str, redis: RedisConfig, values: dict | None = None, lock_timeout: int = 60
+    ) -> Enricher:
         from pathlib import Path
 
         from aladdin.enricher import FileCacheEnricher, RedisLockEnricher, SqlDatabaseEnricher
@@ -38,7 +40,9 @@ class RedshiftSQLConfig(Codable):
         return FileCacheEnricher(
             timedelta(days=1),
             file=Path(f'./cache/{name}.parquet'),
-            enricher=RedisLockEnricher(name, SqlDatabaseEnricher(self.url, sql, values), redis),
+            enricher=RedisLockEnricher(
+                name, SqlDatabaseEnricher(self.url, sql, values), redis, timeout=lock_timeout
+            ),
         )
 
     def entity_source(self, timestamp_column: str, sql: Callable[[str], str]) -> EntityDataSource:

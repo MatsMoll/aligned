@@ -37,8 +37,8 @@ class Enricher(ABC, Codable, SerializableType):
         data_class = SupportedEnrichers.shared().types[name_type]
         return data_class.from_dict(value)
 
-    def lock(self, lock_name: str, redis_config: RedisConfig) -> Enricher:
-        return RedisLockEnricher(lock_name=lock_name, enricher=self, config=redis_config)
+    def lock(self, lock_name: str, redis_config: RedisConfig, timeout: int = 60) -> Enricher:
+        return RedisLockEnricher(lock_name=lock_name, enricher=self, config=redis_config, timeout=timeout)
 
     def cache(self, ttl: timedelta, cache_key: str) -> Enricher:
         return FileCacheEnricher(ttl, f'./cache/{cache_key}', self)
@@ -78,15 +78,17 @@ class RedisLockEnricher(Enricher):
     enricher: Enricher
     config: RedisConfig
     lock_name: str
+    timeout: int
     name: str = 'redis_lock'
 
-    def __init__(self, lock_name: str, enricher: Enricher, config: RedisConfig):
+    def __init__(self, lock_name: str, enricher: Enricher, config: RedisConfig, timeout: int):
         self.lock_name = lock_name
         self.config = config
         self.enricher = enricher
+        self.timeout = timeout
 
     async def load(self) -> DataFrame:
-        async with self.config.redis().lock(self.lock_name) as _:
+        async with self.config.redis().lock(self.lock_name, timeout=self.timeout) as _:
             return await self.enricher.load()
 
 
