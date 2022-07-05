@@ -41,7 +41,7 @@ class Enricher(ABC, Codable, SerializableType):
         return RedisLockEnricher(lock_name=lock_name, enricher=self, config=redis_config)
 
     def cache(self, ttl: timedelta, cache_key: str) -> Enricher:
-        return FileCacheEnricher(ttl.seconds, f'./cache/{cache_key}', self)
+        return FileCacheEnricher(ttl, f'./cache/{cache_key}', self)
 
     @abstractmethod
     async def load(self) -> DataFrame:
@@ -125,7 +125,7 @@ class FileStatEnricher(Enricher):
 @dataclass
 class FileCacheEnricher(Enricher):
 
-    ttl_seconds: int
+    ttl: timedelta
     file_path: str
     enricher: Enricher
     name: str = 'file_cache'
@@ -136,7 +136,7 @@ class FileCacheEnricher(Enricher):
         try:
             # Checks last modified metadata field
             modified_at = datetime.fromtimestamp(file_uri.stat().st_mtime)
-            compare = datetime.now() - timedelta(seconds=self.ttl_seconds)
+            compare = datetime.now() - self.ttl
             should_load_source = modified_at < compare
         except FileNotFoundError:
             should_load_source = True

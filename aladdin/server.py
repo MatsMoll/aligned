@@ -143,13 +143,7 @@ class FastAPIServer:
         #     await feature_store.model(name).write(feature_values)
 
     @staticmethod
-    def run(
-        feature_store: FeatureStore,
-        host: str | None = None,
-        port: int | None = None,
-        workers: int | None = None,
-    ) -> None:
-        import uvicorn
+    def app(feature_store: FeatureStore) -> FastAPI:
         from asgi_correlation_id import CorrelationIdMiddleware
         from fastapi import FastAPI
         from fastapi.middleware import Middleware
@@ -173,5 +167,18 @@ class FastAPIServer:
             ).to_df()
             df.replace(nan, value=None, inplace=True)
             return df.to_dict('list')
+
+        return app
+
+    @staticmethod
+    def run(
+        feature_store: FeatureStore,
+        host: str | None = None,
+        port: int | None = None,
+        workers: int | None = None,
+    ) -> None:
+        import uvicorn
+
+        app = FastAPIServer.app(feature_store)
 
         uvicorn.run(app, host=host or '127.0.0.1', port=port or 8000, workers=workers or workers)

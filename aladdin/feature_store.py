@@ -103,6 +103,7 @@ class FeatureStore:
                 try:
                     sys.modules[cum_path] = import_module(cum_path)
                 except Exception:
+                    logger.info(f'Setting enricher at {cum_path}')
                     sys.modules[cum_path] = module_class
 
         grouped_enrichers: dict[str, list[EnricherReference]] = defaultdict(list)
