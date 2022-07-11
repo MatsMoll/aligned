@@ -2,8 +2,6 @@ from abc import ABC, abstractproperty
 from typing import Callable, TypeVar
 
 from aladdin.derivied_feature import DerivedFeature
-from aladdin.feature import EventTimestamp as EventTimestampFeature
-from aladdin.feature import Feature
 from aladdin.feature_types import Entity, EventTimestamp, FeatureFactory, TransformationFactory
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.feature_view.feature_view_metadata import FeatureViewMetadata
@@ -38,33 +36,65 @@ class FeatureView(ABC, FeatureSelectable):
 
     @classmethod
     def compile(cls) -> CompiledFeatureView:
-        features: list[Feature] = []
         metadata = cls().metadata
-        event_timestamp: EventTimestampFeature | None = None
-        entities: list[Feature] = []
-        transformations: list[DerivedFeature] = []
         var_names = [name for name in cls().__dir__() if not name.startswith('_')]
+
+        view = CompiledFeatureView(
+            name=metadata.name,
+            description=metadata.description,
+            tags=metadata.tags,
+            batch_data_source=metadata.batch_source,
+            # stream_data_source=metadata.stream_data_source,
+            entities=set(),
+            features=set(),
+            derived_features=set(),
+            event_timestamp=None,
+        )
+
+        def add_sub_features(feature: TransformationFactory) -> None:
+
+            for sub_feature in feature.using_features:
+                if not isinstance(sub_feature, TransformationFactory) or sub_feature._name:
+                    continue
+
+                add_sub_features(sub_feature)
+
+                sub_feature._feature_view = metadata.name
+                tran = sub_feature.transformation(
+                    [
+                        (
+                            metadata,
+                            view.request_for({sub_feature.name}).needed_requests[0],
+                        )
+                    ]
+                )
+                view.derived_features.add(
+                    DerivedFeature(
+                        name=sub_feature.name,
+                        dtype=sub_feature.feature._dtype,
+                        depending_on={feat.feature_referance() for feat in sub_feature.using_features},
+                        transformation=tran,
+                    )
+                )
+
         for var_name in var_names:
             feature = getattr(cls, var_name)
 
             if isinstance(feature, TransformationFactory):
                 feature._name = var_name
                 feature._feature_view = metadata.name
+
+                add_sub_features(feature)
+
                 tran = feature.transformation(
                     [
                         (
                             metadata,
-                            RetrivalRequest(
-                                feature_view_name=metadata.name,
-                                entities=set(entities),
-                                features=set(features),
-                                derived_features=set(transformations),
-                                event_timestamp=event_timestamp,
-                            ),
+                            view.request_for({feature.name}).needed_requests[0],
                         )
                     ]
                 )
-                transformations.append(
+                view.derived_features.add(
                     DerivedFeature(
                         name=var_name,
                         dtype=feature.feature._dtype,
@@ -72,39 +102,30 @@ class FeatureView(ABC, FeatureSelectable):
                         transformation=tran,
                     )
                 )
+
                 continue
             elif not isinstance(feature, FeatureFactory):
                 continue
 
             feature._feature_view = metadata.name
             if isinstance(feature, Entity):
-                entities.append(feature.feature(var_name))
+                view.entities.add(feature.feature(var_name))
             elif isinstance(feature, EventTimestamp):
-                if event_timestamp is not None:
+                if view.event_timestamp is not None:
                     raise Exception(
                         'Can only have one EventTimestamp for each'
                         ' FeatureViewDefinition. Check that this is the case for'
                         f' {cls.__name__}'
                     )
-                features.append(feature.feature(var_name))
-                event_timestamp = feature.event_timestamp_feature(var_name)
+                view.features.add(feature.feature(var_name))
+                view.event_timestamp = feature.event_timestamp_feature(var_name)
             else:
-                features.append(feature.feature(var_name))
+                view.features.add(feature.feature(var_name))
 
-        if not entities:
+        if not view.entities:
             raise ValueError(f'FeatureView {metadata.name} must contain at least one Entity')
 
-        return CompiledFeatureView(
-            name=metadata.name,
-            description=metadata.description,
-            tags=metadata.tags,
-            batch_data_source=metadata.batch_source,
-            # stream_data_source=metadata.stream_data_source,
-            entities=set(entities),
-            features=set(features),
-            derived_features=set(transformations),
-            event_timestamp=event_timestamp,
-        )
+        return view
 
     @classmethod
     def select(cls: type[FVType], features: Callable[[type[FVType]], list[FeatureFactory]]) -> FeatureRequest:

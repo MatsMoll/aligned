@@ -110,6 +110,10 @@ class SupportedTransformations:
             LogarithmOnePluss,
             ToNumerical,
             ReplaceStrings,
+            IsIn,
+            And,
+            Or,
+            Inverse,
         ]:
             self.add(tran_type)
 
@@ -146,6 +150,90 @@ class Equals(Transformation):
             Equals('x', 'Test'),
             input={'x': ['Hello', 'Test', 'nah', 'test', 'Test']},
             output=[False, True, False, False, True],
+        )
+
+
+@dataclass
+class And(Transformation):
+
+    first_key: str
+    second_key: str
+
+    name: str = 'and'
+    dtype: FeatureType = FeatureType('').bool
+
+    def __init__(self, first_key: str, second_key: str) -> None:
+        self.first_key = first_key
+        self.second_key = second_key
+
+    async def transform(self, df: DataFrame) -> Series:
+        return gracefull_transformation(
+            df,
+            is_valid_mask=~(df[self.first_key].isnull() & df[self.second_key].isnull()),
+            transformation=lambda dfv: dfv[self.first_key] & dfv[self.second_key],
+        )
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            And('x', 'y'),
+            input={'x': [False, True, True, False, None], 'y': [True, False, True, False, False]},
+            output=[False, False, True, False, np.nan],
+        )
+
+
+@dataclass
+class Or(Transformation):
+
+    first_key: str
+    second_key: str
+
+    name: str = 'or'
+    dtype: FeatureType = FeatureType('').bool
+
+    def __init__(self, first_key: str, second_key: str) -> None:
+        self.first_key = first_key
+        self.second_key = second_key
+
+    async def transform(self, df: DataFrame) -> Series:
+        df[self.first_key].__invert__
+        return gracefull_transformation(
+            df,
+            is_valid_mask=~(df[self.first_key].isnull() & df[self.second_key].isnull()),
+            transformation=lambda dfv: dfv[self.first_key] | dfv[self.second_key],
+        )
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            And('x', 'y'),
+            input={'x': [False, True, True, False, None], 'y': [True, False, True, False, False]},
+            output=[True, True, True, False, np.nan],
+        )
+
+
+@dataclass
+class Inverse(Transformation):
+
+    key: str
+
+    name: str = 'inverse'
+    dtype: FeatureType = FeatureType('').bool
+
+    def __init__(self, key: str) -> None:
+        self.key = key
+
+    async def transform(self, df: DataFrame) -> Series:
+        return gracefull_transformation(
+            df, is_valid_mask=~(df[self.key].isnull()), transformation=lambda dfv: ~dfv[self.key]
+        )
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            Inverse('x'),
+            input={'x': [False, True, True, False, None]},
+            output=[True, True, False, True, np.nan],
         )
 
 
@@ -693,4 +781,25 @@ class StandardScalingTransformation(Transformation):
             StandardScalingTransformation(mean=1, std=0.5, key='x'),
             input={'x': [1, 1.5, 0.5, 1, 2, 3]},
             output=[0, 1, -1, 0, 2, 4],
+        )
+
+
+@dataclass
+class IsIn(Transformation):
+
+    values: list
+    key: str
+
+    name = 'isin'
+    dtype = FeatureType('').bool
+
+    async def transform(self, df: DataFrame) -> Series:
+        return df[self.key].isin(self.values)
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            IsIn(values=['hello', 'test'], key='x'),
+            input={'x': ['No', 'Hello', 'hello', 'test', 'nah', 'nehtest']},
+            output=[False, False, True, True, False, False],
         )

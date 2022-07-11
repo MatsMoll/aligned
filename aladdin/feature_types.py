@@ -2,6 +2,7 @@ from abc import ABC, abstractproperty
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any, Callable, TypeVar
+from uuid import uuid4
 
 from pandas import DataFrame, Series
 
@@ -15,8 +16,9 @@ from aladdin.transformation import StandardScalingTransformation, Transformation
 
 class FeatureReferancable:
 
-    _name: str | None
-    _feature_view: str | None
+    _name: str | None = None
+    _generated_name: str | None = None
+    _feature_view: str | None = None
 
     @property
     def is_derived(self) -> bool:
@@ -24,9 +26,9 @@ class FeatureReferancable:
 
     @property
     def name(self) -> str:
-        if not self._name:
-            raise ValueError('Name is not set')
-        return self._name
+        if not self._name and not self._generated_name:
+            self._generated_name = str(uuid4())
+        return self._name or self._generated_name  # type: ignore
 
     @property
     def feature_view(self) -> str:
@@ -90,6 +92,18 @@ class Transformable(FeatureReferancable):
 
     def __add__(self, other: FeatureReferancable) -> 'AdditionBetween':
         return AdditionBetween(self, other)
+
+    def __and__(self, other: FeatureReferancable) -> 'And':
+        return And(self, other)
+
+    def __or__(self, other: FeatureReferancable) -> 'Or':
+        return Or(self, other)
+
+    def __invert__(self) -> 'Inverse':
+        return Inverse(self)
+
+    def is_in(self, values: list) -> 'IsIn':
+        return IsIn(self, values)
 
 
 FeatureTypeVar = TypeVar('FeatureTypeVar')
@@ -678,3 +692,65 @@ class StandardScalingTransformationFactory(TransformationFactory):
             std, mean = asyncio.get_event_loop().run_until_complete(compute())
 
         return StandardScalingTransformation(mean[self.field.name], std[self.field.name], self.field.name)
+
+
+class IsIn(TransformationFactory):
+
+    feature: FeatureReferancable
+    values: list
+
+    def __init__(self, feature: FeatureReferancable, values: list) -> None:
+        super().__init__([feature], Bool())
+        self.values = values
+        self.feature = feature
+
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import IsIn as IsInTransformation
+
+        return IsInTransformation(self.values, self.feature.name)
+
+
+class And(TransformationFactory):
+
+    feature: FeatureReferancable
+    other_feature: FeatureReferancable
+
+    def __init__(self, feature: FeatureReferancable, other_feature: FeatureReferancable) -> None:
+        super().__init__([feature, other_feature], Bool())
+        self.feature = feature
+        self.other_feature = other_feature
+
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import And as AndTransformation
+
+        return AndTransformation(self.feature.name, self.other_feature.name)
+
+
+class Or(TransformationFactory):
+
+    feature: FeatureReferancable
+    other_feature: FeatureReferancable
+
+    def __init__(self, feature: FeatureReferancable, other_feature: FeatureReferancable) -> None:
+        super().__init__([feature, other_feature], Bool())
+        self.feature = feature
+        self.other_feature = other_feature
+
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import Or as OrTransformation
+
+        return OrTransformation(self.feature.name, self.other_feature.name)
+
+
+class Inverse(TransformationFactory):
+
+    feature: FeatureReferancable
+
+    def __init__(self, feature: FeatureReferancable) -> None:
+        super().__init__([feature], Bool())
+        self.feature = feature
+
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import Inverse as InverseTransformation
+
+        return InverseTransformation(self.feature.name)
