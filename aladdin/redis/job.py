@@ -31,9 +31,13 @@ class FactualRedisJob(FactualRetrivalJob):
         result_df = pd.DataFrame(self.facts)
 
         for request in self.requests:
+            # If using multiple entities, will this fail!
+            # Need to sort on something in order to fix the bug
             entity_ids = result_df[list(request.entity_names)]
             mask = ~entity_ids.isna().any(axis=1)
-            entities = [':'.join(entity_ids) for _, entity_ids in entity_ids.loc[mask].iterrows()]
+            entities = [
+                ':'.join([str(id) for id in entity_ids]) for _, entity_ids in entity_ids.loc[mask].iterrows()
+            ]
             for feature in request.all_features:
                 # Fetch one column at a time
                 keys = []
@@ -54,7 +58,7 @@ class FactualRedisJob(FactualRetrivalJob):
                 if feature.dtype == FeatureType('').datetime:
                     dates = pd.to_datetime(result_series[result_value_mask], unit='s', utc=True)
                     result_df.loc[set_mask, feature.name] = dates
-                elif feature.dtype == FeatureType('').int32 or FeatureType('').int64:
+                elif feature.dtype == FeatureType('').int32 or feature.dtype == FeatureType('').int64:
                     result_df.loc[set_mask, feature.name] = (
                         result_series[result_value_mask]
                         .str.split('.', n=1)

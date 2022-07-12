@@ -156,7 +156,7 @@ class FeatureStore:
         return FeatureStore.from_definition(repo_def)
 
     @staticmethod
-    async def from_dir(path: str = '.') -> 'FeatureStore':
+    def from_dir(path: str = '.') -> 'FeatureStore':
         """Reads and generates a feature store based on the given directory's content.
 
         This will read the feature views, services etc in a given repo and generate a feature store.
@@ -276,7 +276,7 @@ class ModelFeatureStore:
 
     def features_for(self, entities: dict[str, list]) -> RetrivalJob:
 
-        if 'event_timestamp' not in entities:
+        if self.request.needs_event_timestamp and 'event_timestamp' not in entities:
             raise ValueError('Missing event_timestamp in entities')
 
         return FilterJob(
