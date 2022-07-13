@@ -1,5 +1,6 @@
 import logging
 from dataclasses import dataclass
+from enum import Enum
 
 import pandas as pd
 from redis.asyncio import Redis, StrictRedis  # type: ignore
@@ -15,10 +16,23 @@ from aladdin.retrival_job import RetrivalJob
 logger = logging.getLogger(__name__)
 
 
+class RedisEvictionPolicy(Enum):
+    NO_EVICTION = 'noeviction'
+    ALL_KEYS_LRU = 'allkeys-lru'
+    ALL_KEYS_LFU = 'allkeys-lfu'
+    ALL_KEYS_RANDOM = 'allkeys-random'
+
+    VOLATILE_LRU = 'volatile-lru'
+    VOLATILE_FRU = 'volatile-fru'
+    VOLATILE_RANDOM = 'volatile-random'
+    VOLATILE_TTL = 'volatile-ttl'
+
+
 @dataclass
 class RedisConfig(Codable):
 
     env_var: str
+    _eviction_policy: RedisEvictionPolicy = RedisEvictionPolicy.NO_EVICTION
 
     @property
     def url(self) -> str:
@@ -40,12 +54,17 @@ class RedisConfig(Codable):
         os.environ['REDIS_URL'] = 'redis://localhost:6379'
         return RedisConfig(env_var='REDIS_URL')
 
-    def redis(self) -> Redis:
+    def eviction_policy(self, policy: RedisEvictionPolicy) -> 'RedisConfig':
+        self._eviction_policy = policy
+        return self
+
+    async def redis(self) -> Redis:
         global _redis
         try:
             return _redis  # type: ignore
         except NameError:
             _redis = StrictRedis.from_url(self.url, decode_responses=True)  # type: ignore
+            await _redis.config_set('maxmemory-policy', self._eviction_policy.value)  # type: ignore
             return _redis  # type: ignore
 
     def online_source(self) -> 'RedisOnlineSource':
@@ -79,7 +98,7 @@ class RedisSource(FeatureSource, WritableFeatureSource):
     async def write(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
         from aladdin.redis.job import key
 
-        redis = self.config.redis()
+        redis = await self.config.redis()
         data = await job.to_df()
         logger.info(f'Writing {data.shape} features to redis')
         async with redis.pipeline(transaction=True) as pipe:

@@ -153,7 +153,12 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
         has_event_timestamp = False
 
         for request in self.requests:
-            final_select_names = final_select_names.union(request.all_required_feature_names)
+            final_select_names = final_select_names.union(
+                {
+                    f'{request.feature_view_name}_cte.{feature}'
+                    for feature in request.all_required_feature_names
+                }
+            )
             final_select_names = final_select_names.union(
                 {f'entities.{entity}' for entity in request.entity_names}
             )
@@ -193,7 +198,7 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
                     all_entities.append(fact_df.columns[column_index])
             query_values.append(row_placeholders)
 
-        feature_view_names: list[str] = [source.table for source in self.sources.values()]
+        feature_view_names: list[str] = list(self.sources.keys())
         # Add the joins to the fact
 
         tables = []
@@ -220,8 +225,14 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
                 f'ta.{entity_db_name} = entities.{entity} {event_timestamp_clause}'
                 for entity, entity_db_name in zip(entities, entity_db_name)
             ]
-            table_name = source.table
-            tables.append({'name': table_name, 'joins': join_conditions, 'features': selects})
+            tables.append(
+                {
+                    'name': source.table,
+                    'joins': join_conditions,
+                    'features': selects,
+                    'fv': request.feature_view_name,
+                }
+            )
 
         template_context['selects'] = list(final_select_names)
         template_context['tables'] = tables
@@ -249,7 +260,7 @@ VALUES {% for row in values %}
 ),
 
 {% for table in tables %}
-    {{table.name}}_cte AS (
+    {{table.fv}}_cte AS (
         SELECT {{ table.features | join(', ') }}
         FROM entities
         LEFT JOIN {{table.name}} ta on {{ table.joins | join(' AND ') }}

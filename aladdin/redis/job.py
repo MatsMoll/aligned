@@ -21,7 +21,7 @@ class FactualRedisJob(FactualRetrivalJob):
     facts: dict[str, list]
 
     async def _to_df(self) -> pd.DataFrame:
-        redis = self.config.redis()
+        redis = await self.config.redis()
 
         columns = set()
         for request in self.requests:
