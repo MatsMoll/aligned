@@ -6,15 +6,15 @@ on:
       - main
 
 jobs:
-  build-and-publish-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: snok/.github/workflows/publish@main
-        with:
-          overwrite-repository: true
-          repository-url: https://test.pypi.org/legacy/
-          token: ${{ secrets.TEST_PYPI_TOKEN }}
-          python-version: '3.10.0'
+  # build-and-publish-test:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: snok/.github/workflows/publish@main
+  #       with:
+  #         overwrite-repository: true
+  #         repository-url: https://test.pypi.org/legacy/
+  #         token: ${{ secrets.TEST_PYPI_TOKEN }}
+  #         python-version: '3.10.0'
   build-and-publish:
     # needs: build-and-publish-test
     runs-on: ubuntu-latest

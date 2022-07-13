@@ -88,7 +88,7 @@ class RedisLockEnricher(Enricher):
         self.timeout = timeout
 
     async def load(self) -> DataFrame:
-        redis = await self.config.redis()
+        redis = self.config.redis()
         async with redis.lock(self.lock_name, timeout=self.timeout) as _:
             return await self.enricher.load()
 

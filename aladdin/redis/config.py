@@ -58,13 +58,12 @@ class RedisConfig(Codable):
         self._eviction_policy = policy
         return self
 
-    async def redis(self) -> Redis:
+    def redis(self) -> Redis:
         global _redis
         try:
             return _redis  # type: ignore
         except NameError:
             _redis = StrictRedis.from_url(self.url, decode_responses=True)  # type: ignore
-            await _redis.config_set('maxmemory-policy', self._eviction_policy.value)  # type: ignore
             return _redis  # type: ignore
 
     def online_source(self) -> 'RedisOnlineSource':
@@ -98,7 +97,7 @@ class RedisSource(FeatureSource, WritableFeatureSource):
     async def write(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
         from aladdin.redis.job import key
 
-        redis = await self.config.redis()
+        redis = self.config.redis()
         data = await job.to_df()
         logger.info(f'Writing {data.shape} features to redis')
         async with redis.pipeline(transaction=True) as pipe:
