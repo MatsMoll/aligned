@@ -49,6 +49,8 @@ class FeatureView(ABC, FeatureSelectable):
             features=set(),
             derived_features=set(),
             event_timestamp=None,
+            # created_at=datetime.utcnow(),
+            # prev_version=None
         )
 
         def add_sub_features(feature: TransformationFactory) -> None:

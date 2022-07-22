@@ -2,7 +2,7 @@ import math
 from dataclasses import dataclass
 from typing import Generic, TypeVar
 
-from pandas import DataFrame
+from pandas import DataFrame, concat
 
 DatasetType = TypeVar('DatasetType')
 
@@ -51,16 +51,20 @@ class StrategicSplitStrategy(SplitStrategy):
         for target in target_data.unique():
             sub_group = data.loc[target_data == target]
 
-            train = train.append(split(sub_group, 0, self.train_size_percentage))
-            test = test.append(
-                split(
-                    sub_group,
-                    self.train_size_percentage,
-                    self.train_size_percentage + self.test_size_percentage,
-                )
+            train = concat([train, split(sub_group, 0, self.train_size_percentage)], axis=0)
+            test = concat(
+                [
+                    test,
+                    split(
+                        sub_group,
+                        self.train_size_percentage,
+                        self.train_size_percentage + self.test_size_percentage,
+                    ),
+                ],
+                axis=0,
             )
-            develop = develop.append(
-                split(sub_group, self.train_size_percentage + self.test_size_percentage, 1)
+            develop = concat(
+                [develop, split(sub_group, self.train_size_percentage + self.test_size_percentage, 1)], axis=0
             )
 
         return SplitDataSet(

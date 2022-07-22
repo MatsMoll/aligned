@@ -1,14 +1,46 @@
 from dataclasses import dataclass
+from datetime import datetime
 
-from aladdin.codable import Codable
+# from aladdin.codable import Codable
 from aladdin.data_source.batch_data_source import BatchDataSource
 from aladdin.derivied_feature import DerivedFeature
 from aladdin.feature import EventTimestamp, Feature
 from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
 
+# from typing import Generic, Optional, TypeVar
+
+
+# class VersionableData(Codable):
+#     valid_from: datetime
+
+# VersionData = TypeVar("VersionData", bound=VersionableData)
+
+# @dataclass
+# class VersionedData(Generic[VersionData], Codable):
+
+#     identifier: str
+#     versions: list[VersionData]
+
+#     def __init__(self, identifier: str, versions: list[VersionData]) -> None:
+#         self.identifier = identifier
+#         self.versions = versions
+
+#     @property
+#     def latest(self) -> VersionData:
+#         return self.versions[0]
+
+#     def version_valid_at(self, timestamp: datetime) -> VersionData | None:
+#         for version in self.versions:
+#             if version.valid_from < timestamp:
+#                 return version
+#         return None
+
+#     def __hash__(self) -> int:
+#         return hash(self.identifier)
+
 
 @dataclass
-class CompiledFeatureView(Codable):
+class CompiledFeatureView:
     name: str
     description: str
     tags: dict[str, str]
@@ -19,6 +51,8 @@ class CompiledFeatureView(Codable):
     features: set[Feature]
     derived_features: set[DerivedFeature]
     event_timestamp: EventTimestamp | None
+
+    valid_from: datetime
 
     @property
     def full_schema(self) -> set[Feature]:
@@ -91,5 +125,37 @@ class CompiledFeatureView(Codable):
             ],
         )
 
+    # def version_at(self, timestamp: datetime) -> Optional["CompiledFeatureView"]:
+    #     if self.created_at < timestamp:
+    #         return self
+    #     if prev_version := self.prev_version:
+    #         return prev_version.version_at(timestamp)
+    #     else:
+    #         return None
+
     def __hash__(self) -> int:
         return hash(self.name)
+
+    def __eq__(self, other: object) -> bool:
+
+        if not isinstance(other, CompiledFeatureView):
+            return False
+
+        feature_difference = other.features.union(self.features) - other.features.intersection(self.features)
+        if feature_difference:
+            return False
+
+        derived_feature_difference = other.derived_features.union(
+            self.derived_features
+        ) - other.derived_features.intersection(self.derived_features)
+        if derived_feature_difference:
+            return False
+
+        entity_differance = other.entities.union(self.entities) - other.entities.intersection(self.entities)
+        if entity_differance:
+            return False
+
+        if self.event_timestamp != other.event_timestamp:
+            return False
+
+        return True

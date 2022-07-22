@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from io import StringIO
 from pathlib import Path
 
@@ -28,7 +28,7 @@ class FileReference:
 class FileSource(BatchDataSource, ColumnFeatureMappable, FileReference, StatisticEricher):
 
     path: str
-    mapping_keys: dict[str, str]
+    mapping_keys: dict[str, str] = field(default_factory=dict)
 
     type_name: str = 'local_file'
 

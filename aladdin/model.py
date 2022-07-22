@@ -22,11 +22,13 @@ class SqlEntityDataSource(EntityDataSource):
         self.timestamp_column = timestamp_column
 
     async def all_in_range(self, start_date: datetime, end_date: datetime) -> DataFrame:
+        import os
+
         query = self.sql(f'{self.timestamp_column} BETWEEN (:start_date) AND (:end_date)')
         from databases import Database
 
         try:
-            async with Database(self.url) as db:
+            async with Database(os.environ[self.url]) as db:
                 records = await db.fetch_all(
                     query=query, values={'start_date': start_date, 'end_date': end_date}
                 )

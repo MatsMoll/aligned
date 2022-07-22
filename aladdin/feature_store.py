@@ -284,9 +284,6 @@ class ModelFeatureStore:
             self.source.features_for(entities, self.request),
         )
 
-    async def write(self, values: dict[str, Any]) -> None:
-        raise NotImplementedError()
-
 
 @dataclass
 class FeatureViewStore:
@@ -308,6 +305,16 @@ class FeatureViewStore:
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(days=days, minutes=minutes, seconds=seconds)
         return self.between(start_date, end_date)
+
+    @property
+    def write_input(self) -> set[str]:
+        features = set()
+        for request in self.view.request_all.needed_requests:
+            features.update(request.all_required_feature_names)
+            features.update(request.entity_names)
+            if event_timestamp := request.event_timestamp:
+                features.add(event_timestamp.name)
+        return features
 
     async def write(self, values: dict[str, Any]) -> None:
         if not isinstance(self.source, WritableFeatureSource):

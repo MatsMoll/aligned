@@ -85,6 +85,8 @@ class RepoReader:
             enrichers=[],
         )
 
+        feature_view_names: dict[str, str] = {}
+
         for py_file in python_files(repo_path):
             imports = imports_for(py_file)
 
@@ -118,9 +120,27 @@ class RepoReader:
                 else:
                     classes = super_classes_in(obj)
                     if 'FeatureView' in classes:
-                        repo.feature_views.add(obj.compile())
+                        fv = obj.compile()
+                        if fv.name in feature_view_names:
+                            raise Exception(
+                                (
+                                    f'Duplicate feature view names: {fv.name},',
+                                    f' in {py_file}, and {feature_view_names[fv.name]}',
+                                )
+                            )
+                        feature_view_names[fv.name] = py_file.as_posix()
+                        repo.feature_views.add(fv)
                     elif 'CombinedFeatureView' in classes:
-                        repo.combined_feature_views.add(obj.compile())
+                        fv = obj.compile()
+                        if fv.name in feature_view_names:
+                            raise Exception(
+                                (
+                                    f'Duplicate feature view names: {fv.name},',
+                                    f' in {py_file}, and {feature_view_names[fv.name]}',
+                                )
+                            )
+                        feature_view_names[fv.name] = py_file.as_posix()
+                        repo.combined_feature_views.add(fv)
         return repo
 
     @staticmethod

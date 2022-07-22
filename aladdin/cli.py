@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -63,10 +64,13 @@ def apply_command(repo_path: str, env_file: str) -> None:
     dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
     load_envs(dir / env_file)
     sys.path.append(str(dir))
-    repo_def = RepoReader.definition_from_path(dir)
     repo_ref = RepoReader.reference_from_path(dir)
 
     click.echo(f'Updating file at: {repo_ref.selected}')
+
+    # old_def = sync(repo_ref.selected_file.feature_store())
+
+    repo_def = RepoReader.definition_from_path(dir)
 
     if file := repo_ref.selected_file:
         sync(file.write(repo_def.to_json().encode('utf-8')))
@@ -124,14 +128,19 @@ def plan_command(repo_path: str, env_file: str) -> None:
     default='.env',
     help='The path to env variables',
 )
-def serve_command(repo_path: str, host: str, port: int, workers: int, env_file: str) -> None:
+@click.option(
+    '--reload',
+    '-r',
+    default=False,
+    help='If the server should reload on dir changes',
+)
+def serve_command(repo_path: str, host: str, port: int, workers: int, env_file: str, reload: bool) -> None:
     """
     Starts a API serving the feature store
     """
     from logging.config import dictConfig
 
-    from aladdin.feature_store import FeatureStore
-    from aladdin.server import FastAPIServer
+    import uvicorn
 
     handler = 'console'
     log_format = '%(levelname)s:\t\b%(asctime)s %(name)s:%(lineno)d [%(correlation_id)s] %(message)s'
@@ -161,13 +170,20 @@ def serve_command(repo_path: str, host: str, port: int, workers: int, env_file: 
             },
         }
     )
-
+    os.environ['ALADDIN_ENABLE_SERVER'] = 'True'
+    # Needed in order to find the feature_store_location file
     dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
-    load_envs(dir / env_file)
     sys.path.append(str(dir))
-    repo_def = sync(RepoDefinition.from_reference_at_path(repo_path))
-    store = FeatureStore.from_definition(repo_def)
-    FastAPIServer.run(store, host, port, workers)
+    env_file_path = dir / env_file
+    load_envs(env_file_path)
+    uvicorn.run(
+        'feature_store_location:feature_server',
+        host=host or '127.0.0.1',
+        port=port or 8000,
+        workers=workers or workers,
+        reload=reload,
+        env_file=env_file_path,
+    )
 
 
 @cli.command('materialize')

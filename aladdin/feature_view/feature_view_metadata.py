@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from aladdin.data_source.batch_data_source import BatchDataSource
 from aladdin.data_source.stream_data_source import StreamDataSource
@@ -9,9 +9,9 @@ from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 class FeatureViewMetadata:
     name: str
     description: str
-    tags: dict[str, str]
     batch_source: BatchDataSource
     stream_source: StreamDataSource | None = None
+    tags: dict[str, str] = field(default_factory=dict)
 
     @staticmethod
     def from_compiled(view: CompiledFeatureView) -> 'FeatureViewMetadata':
