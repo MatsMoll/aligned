@@ -2,15 +2,19 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import pandas as pd
 from mashumaro.types import SerializableType
-from pandas import DataFrame
 
 from aladdin.codable import Codable
 from aladdin.redis.config import RedisConfig
+
+with suppress(ModuleNotFoundError):
+    import dask.dataframe as dd
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +48,11 @@ class Enricher(ABC, Codable, SerializableType):
         return FileCacheEnricher(ttl, f'./cache/{cache_key}', self)
 
     @abstractmethod
-    async def load(self) -> DataFrame:
+    async def load(self) -> pd.DataFrame:
+        pass
+
+    @abstractmethod
+    async def as_dask(self) -> dd.DataFrame:
         pass
 
 
@@ -87,10 +95,15 @@ class RedisLockEnricher(Enricher):
         self.enricher = enricher
         self.timeout = timeout
 
-    async def load(self) -> DataFrame:
+    async def load(self) -> pd.DataFrame:
         redis = self.config.redis()
         async with redis.lock(self.lock_name, timeout=self.timeout) as _:
             return await self.enricher.load()
+
+    async def as_dask(self) -> dd.DataFrame:
+        redis = self.config.redis()
+        async with redis.lock(self.lock_name, timeout=self.timeout) as _:
+            return await self.enricher.as_dask()
 
 
 @dataclass
@@ -99,13 +112,18 @@ class FileEnricher(Enricher):
     file: Path
     name: str = 'file'
 
-    async def load(self) -> DataFrame:
-        import pandas as pd
+    async def load(self) -> pd.DataFrame:
 
         if self.file.suffix == '.csv':
             return pd.read_csv(self.file.absolute())
         else:
             return pd.read_parquet(self.file.absolute())
+
+    async def as_dask(self) -> dd.DataFrame:
+        if self.file.suffix == '.csv':
+            return dd.read_csv(self.file.absolute())
+        else:
+            return dd.read_parquet(self.file.absolute())
 
 
 @dataclass
@@ -115,8 +133,17 @@ class FileStatEnricher(Enricher):
     columns: list[str]
     enricher: Enricher
 
-    async def load(self) -> DataFrame:
+    async def load(self) -> pd.DataFrame:
         data = await self.enricher.load()
+        if self.stat == 'mean':
+            return data[self.columns].mean()
+        elif self.stat == 'std':
+            return data[self.columns].std()
+        else:
+            raise ValueError(f'Not supporting stat: {self.stat}')
+
+    async def as_dask(self) -> dd.DataFrame:
+        data = await self.enricher.as_dask()
         if self.stat == 'mean':
             return data[self.columns].mean()
         elif self.stat == 'std':
@@ -133,29 +160,42 @@ class FileCacheEnricher(Enricher):
     enricher: Enricher
     name: str = 'file_cache'
 
-    async def load(self) -> DataFrame:
-        should_load_source = False
+    def is_out_of_date_cache(self) -> bool:
         file_uri = Path(self.file_path).absolute()
         try:
             # Checks last modified metadata field
             modified_at = datetime.fromtimestamp(file_uri.stat().st_mtime)
             compare = datetime.now() - self.ttl
-            should_load_source = modified_at < compare
+            return modified_at < compare
         except FileNotFoundError:
-            should_load_source = True
+            return True
 
-        if should_load_source:
+    async def load(self) -> pd.DataFrame:
+        file_uri = Path(self.file_path).absolute()
+
+        if self.is_out_of_date_cache():
             logger.info('Fetching from source')
-            data: DataFrame = await self.enricher.load()
+            data: pd.DataFrame = await self.enricher.load()
             file_uri.parent.mkdir(exist_ok=True, parents=True)
             logger.info(f'Storing cache at file {file_uri.as_uri()}')
             data.to_parquet(file_uri)
         else:
-            import pandas as pd
-
             logger.info('Loading cache')
-
             data = pd.read_parquet(file_uri)
+        return data
+
+    async def as_dask(self) -> dd.DataFrame:
+        file_uri = Path(self.file_path).absolute()
+
+        if self.is_out_of_date_cache():
+            logger.info('Fetching from source')
+            data: dd.DataFrame = await self.enricher.as_dask()
+            file_uri.parent.mkdir(exist_ok=True, parents=True)
+            logger.info(f'Storing cache at file {file_uri.as_uri()}')
+            data.to_parquet(file_uri)
+        else:
+            logger.info('Loading cache')
+            data = dd.read_parquet(file_uri)
         return data
 
 
@@ -172,15 +212,19 @@ class SqlDatabaseEnricher(Enricher):
         self.values = values
         self.url_env = url_env
 
-    async def load(self) -> DataFrame:
+    async def load(self) -> pd.DataFrame:
         import os
 
         from databases import Database
 
         async with Database(os.environ[self.url_env]) as db:
             records = await db.fetch_all(self.query, values=self.values)
-        df = DataFrame.from_records([dict(record) for record in records])
+        df = pd.DataFrame.from_records([dict(record) for record in records])
         for name, dtype in df.dtypes.iteritems():
             if dtype == 'object':  # Need to convert the databases UUID type
                 df[name] = df[name].astype('str')
         return df
+
+    async def as_dask(self) -> dd.DataFrame:
+        pdf = await self.load()
+        return dd.from_pandas(pdf)

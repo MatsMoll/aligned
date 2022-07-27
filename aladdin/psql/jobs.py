@@ -2,9 +2,10 @@ import logging
 from abc import abstractproperty
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, TypeVar
 
-from pandas import DataFrame
+import dask.dataframe as dd
+import pandas as pd
 
 from aladdin.feature import FeatureType
 from aladdin.psql.data_source import PostgreSQLConfig, PostgreSQLDataSource
@@ -12,6 +13,8 @@ from aladdin.request.retrival_request import RetrivalRequest
 from aladdin.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
 
 logger = logging.getLogger(__name__)
+
+GenericDataFrame = TypeVar('GenericDataFrame', pd.DataFrame, dd.DataFrame)
 
 
 @dataclass
@@ -25,27 +28,25 @@ class PostgreSQLRetrivalJob(RetrivalJob):
     def config(self) -> PostgreSQLConfig:
         pass
 
-    async def fetch_data(self) -> DataFrame:
+    def build_request(self) -> SQLQuery:
+        raise NotImplementedError()
+
+    async def _to_df(self) -> pd.DataFrame:
         sql_request = self.build_request()
         from databases import Database
 
         try:
             async with Database(self.config.url) as db:
                 records = await db.fetch_all(query=sql_request.sql, values=sql_request.values)
-                return DataFrame.from_records([dict(record) for record in records])
+                return pd.DataFrame.from_records([dict(record) for record in records])
         except Exception as error:
             logger.info(sql_request.sql)
             logger.error(error)
             raise error
 
-    def build_request(self) -> SQLQuery:
-        raise NotImplementedError()
-
-    async def _to_df(self) -> DataFrame:
-        return await self.fetch_data()
-
-    async def to_arrow(self) -> DataFrame:
-        return await super().to_arrow()
+    async def _to_dask(self) -> dd.DataFrame:
+        df = await self._to_df()
+        return dd.from_pandas(df)
 
 
 @dataclass
@@ -172,7 +173,7 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
             entity_types['event_timestamp'] = FeatureType('').datetime
 
         # Need to replace nan as it will not be encoded
-        fact_df = DataFrame(self.facts).replace(np.nan, None)
+        fact_df = pd.DataFrame(self.facts).replace(np.nan, None)
 
         number_of_values = max(len(values) for values in self.facts.values())
         # + 1 is needed as 0 is evaluated for null

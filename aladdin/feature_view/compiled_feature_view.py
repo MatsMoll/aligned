@@ -1,8 +1,10 @@
-from dataclasses import dataclass
-from datetime import datetime
+from dataclasses import dataclass, field
+
+from aladdin.codable import Codable
 
 # from aladdin.codable import Codable
 from aladdin.data_source.batch_data_source import BatchDataSource
+from aladdin.data_source.stream_data_source import StreamDataSource
 from aladdin.derivied_feature import DerivedFeature
 from aladdin.feature import EventTimestamp, Feature
 from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
@@ -40,19 +42,19 @@ from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
 
 
 @dataclass
-class CompiledFeatureView:
+class CompiledFeatureView(Codable):
     name: str
     description: str
     tags: dict[str, str]
     batch_data_source: BatchDataSource
-    # stream_data_source: StreamDataSource | None
 
     entities: set[Feature]
     features: set[Feature]
     derived_features: set[DerivedFeature]
-    event_timestamp: EventTimestamp | None
+    event_timestamp: EventTimestamp | None = field(default=None)
+    stream_data_source: StreamDataSource | None = field(default=None)
 
-    valid_from: datetime
+    # valid_from: datetime
 
     @property
     def full_schema(self) -> set[Feature]:
@@ -136,26 +138,27 @@ class CompiledFeatureView:
     def __hash__(self) -> int:
         return hash(self.name)
 
-    def __eq__(self, other: object) -> bool:
+    # def __eq__(self, other: object) -> bool:
 
-        if not isinstance(other, CompiledFeatureView):
-            return False
+    #     if not isinstance(other, CompiledFeatureView):
+    #         return False
 
-        feature_difference = other.features.union(self.features) - other.features.intersection(self.features)
-        if feature_difference:
-            return False
+    #     feature_difference = (other.features.union(self.features) -
+    # other.features.intersection(self.features))
+    #     if feature_difference:
+    #         return False
 
-        derived_feature_difference = other.derived_features.union(
-            self.derived_features
-        ) - other.derived_features.intersection(self.derived_features)
-        if derived_feature_difference:
-            return False
+    #     derived_feature_difference = other.derived_features.union(
+    #         self.derived_features
+    #     ) - other.derived_features.intersection(self.derived_features)
+    #     if derived_feature_difference:
+    #         return False
 
-        entity_differance = other.entities.union(self.entities) - other.entities.intersection(self.entities)
-        if entity_differance:
-            return False
+    #     entity_differance = other.entities.union(self.entities) - other.entities.intersection(self.entities)
+    #     if entity_differance:
+    #         return False
 
-        if self.event_timestamp != other.event_timestamp:
-            return False
+    #     if self.event_timestamp != other.event_timestamp:
+    #         return False
 
-        return True
+    #     return True

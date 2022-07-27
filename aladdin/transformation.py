@@ -1,14 +1,23 @@
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Optional
+from typing import Callable, Optional, TypeVar
 
 import numpy as np
+import pandas as pd
 from mashumaro.types import SerializableType
-from pandas import DataFrame, Series
 
 from aladdin.codable import Codable
 from aladdin.feature import FeatureType
+
+try:
+    import dask.dataframe as dd
+
+    GenericDataFrame = TypeVar('GenericDataFrame', pd.DataFrame, dd.DataFrame)
+    GenericSeries = TypeVar('GenericSeries', pd.Series, dd.Series)
+except ModuleNotFoundError:
+    GenericDataFrame = pd.DataFrame  # type: ignore
+    GenericSeries = pd.Series  # type: ignore
 
 
 @dataclass
@@ -18,18 +27,24 @@ class TransformationTestDefinition:
     output: list
 
     @property
-    def input_df(self) -> DataFrame:
-        return DataFrame(self.input)
+    def input_df(self) -> pd.DataFrame:
+        return pd.DataFrame(self.input)
 
     @property
-    def output_series(self) -> Series:
-        return Series(self.output)
+    def output_series(self) -> pd.Series:
+        return pd.Series(self.output)
 
 
 def gracefull_transformation(
-    df: DataFrame, is_valid_mask: Series, transformation: Callable[[DataFrame], Series]
-) -> Series:
-    result = Series(np.repeat(np.nan, repeats=is_valid_mask.shape[0]))
+    df: GenericDataFrame,
+    is_valid_mask: GenericSeries,
+    transformation: Callable[[GenericSeries], GenericSeries],
+) -> GenericSeries:
+    if isinstance(df, pd.DataFrame):
+        result = pd.Series(np.repeat(np.nan, repeats=is_valid_mask.shape[0]))
+    else:
+        result = dd.from_pandas(pd.Series(np.repeat(np.nan, repeats=is_valid_mask.shape[0])))
+
     result.loc[is_valid_mask] = transformation(df.loc[is_valid_mask])
     return result
 
@@ -38,7 +53,7 @@ class Transformation(Codable, SerializableType):
     name: str
     dtype: FeatureType
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         pass
 
     def _serialize(self) -> dict:
@@ -69,8 +84,10 @@ class Transformation(Codable, SerializableType):
             output = await test.transformation.transform(test.input_df)
             if test.transformation.dtype == FeatureType('').bool:
                 is_correct = np.all(output == test.output_series) | output.equals(test.output_series)
-                assert is_correct, f'Output for {test.transformation.__class__.__name__} is not correct.,'
-                '\nGot: {output},\nexpected: {test.output_series}'
+                assert is_correct, (
+                    f'Output for {test.transformation.__class__.__name__} is not correct.,'
+                    f'\nGot: {output},\nexpected: {test.output_series}'
+                )
             elif test.transformation.dtype == FeatureType('').string:
                 expected = test.output_series
                 assert expected.equals(output)
@@ -141,7 +158,7 @@ class Equals(Transformation):
         self.key = key
         self.value = value
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return df[self.key] == self.value
 
     @staticmethod
@@ -166,7 +183,7 @@ class And(Transformation):
         self.first_key = first_key
         self.second_key = second_key
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.first_key].isnull() & df[self.second_key].isnull()),
@@ -195,7 +212,7 @@ class Or(Transformation):
         self.first_key = first_key
         self.second_key = second_key
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         df[self.first_key].__invert__
         return gracefull_transformation(
             df,
@@ -223,7 +240,7 @@ class Inverse(Transformation):
     def __init__(self, key: str) -> None:
         self.key = key
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df, is_valid_mask=~(df[self.key].isnull()), transformation=lambda dfv: ~dfv[self.key]
         )
@@ -250,7 +267,7 @@ class NotEquals(Transformation):
         self.key = key
         self.value = value
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return df[self.key] != self.value
 
     @staticmethod
@@ -275,7 +292,7 @@ class GreaterThen(Transformation):
         self.key = key
         self.value = value
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna() | df[self.key].isnull()),
@@ -304,7 +321,7 @@ class GreaterThenOrEqual(Transformation):
         self.key = key
         self.value = value
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna() | df[self.key].isnull()),
@@ -335,7 +352,7 @@ class LowerThen(Transformation):
         self.key = key
         self.value = value
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna() | df[self.key].isnull()),
@@ -364,7 +381,7 @@ class LowerThenOrEqual(Transformation):
         self.key = key
         self.value = value
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna() | df[self.key].isnull()),
@@ -393,7 +410,7 @@ class Subtraction(Transformation):
         self.front = front
         self.behind = behind
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.front].isna() | df[self.behind].isna()),
@@ -424,7 +441,7 @@ class Addition(Transformation):
         self.front = front
         self.behind = behind
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.front].isna() | df[self.behind].isna()),
@@ -457,7 +474,7 @@ class TimeDifference(Transformation):
         self.behind = behind
         self.unit = unit
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.front].isna() | df[self.behind].isna()),
@@ -501,7 +518,7 @@ class Logarithm(Transformation):
     def __init__(self, key: str) -> None:
         self.key = key
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna() | (df[self.key] <= 0)),
@@ -528,7 +545,7 @@ class LogarithmOnePluss(Transformation):
     def __init__(self, key: str) -> None:
         self.key = key
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna() | (df[self.key] <= -1)),
@@ -557,7 +574,7 @@ class ToNumerical(Transformation):
     def __init__(self, key: str) -> None:
         self.key = key
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         from pandas import to_numeric
 
         return to_numeric(df[self.key], errors='coerce')
@@ -586,7 +603,7 @@ class DateComponent(Transformation):
         self.key = key
         self.component = component
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         from pandas import to_datetime
 
         return gracefull_transformation(
@@ -619,7 +636,7 @@ class Contains(Transformation):
         self.key = key
         self.value = value
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna()),
@@ -648,7 +665,7 @@ class ReplaceStrings(Transformation):
         self.key = key
         self.values = values
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         temp_df = df[self.key].copy()
         mask = ~(df[self.key].isna() | df[self.key].isnull())
         temp_df.loc[~mask] = np.nan
@@ -681,7 +698,7 @@ class Ratio(Transformation):
         self.numerator = numerator
         self.denumerator = denumerator
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(
@@ -714,7 +731,7 @@ class Ratio(Transformation):
 #     dtype: FeatureType = FeatureType('').int64
 #     name: str = 'ts_transform'
 
-#     async def transform(self, df: DataFrame) -> Series:
+#     async def transform(self, df: GenericDataFrame) -> GenericSeries:
 #         import numpy as np
 
 #         org_facts = df[[self.event_timestamp_column, self.field_name]]
@@ -772,7 +789,7 @@ class StandardScalingTransformation(Transformation):
     name = 'standard_scaling'
     dtype = FeatureType('').float
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return (df[self.key] - self.mean) / self.std
 
     @staticmethod
@@ -793,7 +810,7 @@ class IsIn(Transformation):
     name = 'isin'
     dtype = FeatureType('').bool
 
-    async def transform(self, df: DataFrame) -> Series:
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return df[self.key].isin(self.values)
 
     @staticmethod

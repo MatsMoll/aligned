@@ -1,6 +1,5 @@
 import logging
 from dataclasses import dataclass
-from enum import Enum
 
 import pandas as pd
 from redis.asyncio import Redis, StrictRedis  # type: ignore
@@ -16,23 +15,10 @@ from aladdin.retrival_job import RetrivalJob
 logger = logging.getLogger(__name__)
 
 
-class RedisEvictionPolicy(Enum):
-    NO_EVICTION = 'noeviction'
-    ALL_KEYS_LRU = 'allkeys-lru'
-    ALL_KEYS_LFU = 'allkeys-lfu'
-    ALL_KEYS_RANDOM = 'allkeys-random'
-
-    VOLATILE_LRU = 'volatile-lru'
-    VOLATILE_FRU = 'volatile-fru'
-    VOLATILE_RANDOM = 'volatile-random'
-    VOLATILE_TTL = 'volatile-ttl'
-
-
 @dataclass
 class RedisConfig(Codable):
 
     env_var: str
-    _eviction_policy: RedisEvictionPolicy = RedisEvictionPolicy.NO_EVICTION
 
     @property
     def url(self) -> str:
@@ -53,10 +39,6 @@ class RedisConfig(Codable):
 
         os.environ['REDIS_URL'] = 'redis://localhost:6379'
         return RedisConfig(env_var='REDIS_URL')
-
-    def eviction_policy(self, policy: RedisEvictionPolicy) -> 'RedisConfig':
-        self._eviction_policy = policy
-        return self
 
     def redis(self) -> Redis:
         global _redis

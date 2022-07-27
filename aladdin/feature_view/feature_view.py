@@ -44,13 +44,11 @@ class FeatureView(ABC, FeatureSelectable):
             description=metadata.description,
             tags=metadata.tags,
             batch_data_source=metadata.batch_source,
-            # stream_data_source=metadata.stream_data_source,
             entities=set(),
             features=set(),
             derived_features=set(),
             event_timestamp=None,
-            # created_at=datetime.utcnow(),
-            # prev_version=None
+            stream_data_source=metadata.stream_source,
         )
 
         def add_sub_features(feature: TransformationFactory) -> None:

@@ -1,9 +1,57 @@
+from abc import ABC
+from dataclasses import dataclass
+from typing import Optional
+
+from mashumaro.types import SerializableType
+
 from aladdin.codable import Codable
 
 
-class StreamDataSource(Codable):
+class StreamDataSourceFactory:
+
+    supported_data_sources: dict[str, type['StreamDataSource']]
+
+    _shared: Optional['StreamDataSourceFactory'] = None
+
+    def __init__(self) -> None:
+
+        self.supported_data_sources = {HttpStreamSource.name: HttpStreamSource}
+
+    @classmethod
+    def shared(cls) -> 'StreamDataSourceFactory':
+        if cls._shared:
+            return cls._shared
+        cls._shared = StreamDataSourceFactory()
+        return cls._shared
+
+
+class StreamDataSource(ABC, Codable, SerializableType):
     """
     Used to determend if an API call should be created, or if we should listen to a stream.
     """
 
-    pass
+    name: str
+
+    def _serialize(self) -> dict:
+        return self.to_dict()
+
+    @classmethod
+    def _deserialize(cls, value: dict) -> 'StreamDataSource':
+        name = value['name']
+        if name not in StreamDataSourceFactory.shared().supported_data_sources:
+            raise ValueError(
+                f"Unknown stream data source id: '{name}'.\nRemember to add the"
+                ' data source to the StreamDataSourceFactory.supported_data_sources if'
+                ' it is a custom type.'
+            )
+        del value['name']
+        data_class = StreamDataSourceFactory.shared().supported_data_sources[name]
+        return data_class.from_dict(value)
+
+
+@dataclass
+class HttpStreamSource(StreamDataSource):
+
+    topic_name: str
+
+    name: str = 'http'

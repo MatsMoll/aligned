@@ -1,14 +1,25 @@
 from dataclasses import dataclass
 from datetime import datetime
 from io import StringIO
+from typing import TypeVar
 
 import pandas as pd
 
 from aladdin.data_source.batch_data_source import ColumnFeatureMappable
 from aladdin.feature import Feature
-from aladdin.local.source import FileReference
+from aladdin.local.source import FileReference, FileSource
 from aladdin.request.retrival_request import RetrivalRequest
 from aladdin.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob
+
+try:
+    import dask.dataframe as dd
+
+    GenericDataFrame = TypeVar('GenericDataFrame', pd.DataFrame, dd.DataFrame)
+except ModuleNotFoundError:
+
+    import pandas as dd
+
+    GenericDataFrame = pd.DataFrame  # type: ignore
 
 
 @dataclass
@@ -18,9 +29,7 @@ class FileFullJob(FullExtractJob):
     request: RetrivalRequest
     limit: int | None
 
-    async def _to_df(self) -> pd.DataFrame:
-        content = await self.source.read()
-        file = StringIO(str(content, 'utf-8'))
+    def file_transformations(self, df: GenericDataFrame) -> GenericDataFrame:
         entity_names = self.request.entity_names
         all_names = list(self.request.all_required_feature_names.union(entity_names))
 
@@ -28,10 +37,8 @@ class FileFullJob(FullExtractJob):
         if isinstance(self.source, ColumnFeatureMappable):
             request_features = self.source.feature_identifier_for(all_names)
 
-        df = pd.read_csv(file)
-        df.rename(
+        df = df.rename(
             columns={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)},
-            inplace=True,
         )
 
         if self.limit and df.shape[0] > self.limit:
@@ -39,8 +46,23 @@ class FileFullJob(FullExtractJob):
         else:
             return df
 
-    async def to_arrow(self) -> pd.DataFrame:
-        return await super().to_arrow()
+    async def _to_df(self) -> pd.DataFrame:
+        content = await self.source.read()
+        file = StringIO(str(content, 'utf-8'))
+        df = pd.read_csv(file)
+        return self.file_transformations(df)
+
+    async def _to_dask(self) -> dd.DataFrame:
+        if not isinstance(self.source, FileSource):
+            raise ValueError("FileFullJob, can only handle FileSource's as source")
+
+        path = self.source.path
+        if path.endswith('.csv'):
+            df = dd.read_csv(path)
+        else:
+            df = dd.read_parquet(path)
+
+        return self.file_transformations(df)
 
 
 @dataclass
@@ -51,9 +73,8 @@ class FileDateJob(DateRangeJob):
     start_date: datetime
     end_date: datetime
 
-    async def _to_df(self) -> pd.DataFrame:
-        content = await self.source.read()
-        file = StringIO(str(content, 'utf-8'))
+    def file_transformations(self, df: GenericDataFrame) -> GenericDataFrame:
+
         entity_names = self.request.entity_names
         all_names = list(self.request.all_required_feature_names.union(entity_names))
 
@@ -61,7 +82,6 @@ class FileDateJob(DateRangeJob):
         if isinstance(self.source, ColumnFeatureMappable):
             request_features = self.source.feature_identifier_for(all_names)
 
-        df = pd.read_csv(file)
         df.rename(
             columns={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)},
             inplace=True,
@@ -77,8 +97,24 @@ class FileDateJob(DateRangeJob):
         end_date_ts = pd.to_datetime(self.end_date, utc=True)
         return df.loc[df[event_timestamp_column].between(start_date_ts, end_date_ts)]
 
-    async def to_arrow(self) -> pd.DataFrame:
-        return await super().to_arrow()
+    async def _to_df(self) -> pd.DataFrame:
+        content = await self.source.read()
+        file = StringIO(str(content, 'utf-8'))
+        df = pd.read_csv(file)
+
+        return self.file_transformations(df)
+
+    async def _to_dask(self) -> dd.DataFrame:
+        if not isinstance(self.source, FileSource):
+            raise ValueError("FileFullJob, can only handle FileSource's as source")
+
+        path = self.source.path
+        if path.endswith('.csv'):
+            df = dd.read_csv(path)
+        else:
+            df = dd.read_parquet(path)
+
+        return self.file_transformations(df)
 
 
 @dataclass
@@ -88,10 +124,7 @@ class FileFactualJob(FactualRetrivalJob):
     requests: list[RetrivalRequest]
     facts: dict[str, list]
 
-    async def _to_df(self) -> pd.DataFrame:
-        content = await self.source.read()
-        file = StringIO(str(content, 'utf-8'))
-        df = pd.read_csv(file)
+    def file_transformations(self, df: GenericDataFrame) -> GenericDataFrame:
         all_features: set[Feature] = set()
         for request in self.requests:
             all_features.update(request.all_required_features)
@@ -126,5 +159,20 @@ class FileFactualJob(FactualRetrivalJob):
 
         return result
 
-    async def to_arrow(self) -> pd.DataFrame:
-        return await super().to_arrow()
+    async def _to_df(self) -> pd.DataFrame:
+        content = await self.source.read()
+        file = StringIO(str(content, 'utf-8'))
+        df = pd.read_csv(file)
+        return self.file_transformations(df)
+
+    async def _to_dask(self) -> dd.DataFrame:
+        if not isinstance(self.source, FileSource):
+            raise ValueError("FileFullJob, can only handle FileSource's as source")
+
+        path = self.source.path
+        if path.endswith('.csv'):
+            df = dd.read_csv(path)
+        else:
+            df = dd.read_parquet(path)
+
+        return self.file_transformations(df)

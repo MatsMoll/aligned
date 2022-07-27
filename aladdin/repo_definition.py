@@ -43,11 +43,11 @@ class RepoReference:
     def selected_file(self) -> FileReference | None:
         return self.repo_paths.get(self.selected)
 
-    def feature_server(self) -> FastAPI | None:
+    def feature_server(self, online_source: OnlineSource) -> FastAPI | OnlineSource:
         import os
 
         if os.environ.get('ALADDIN_ENABLE_SERVER', 'False').lower() == 'false':
-            return None
+            return online_source
 
         from aladdin.server import FastAPIServer
 

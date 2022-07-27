@@ -8,6 +8,11 @@ from aladdin.redis.config import RedisConfig
 from aladdin.request.retrival_request import RetrivalRequest
 from aladdin.retrival_job import FactualRetrivalJob
 
+try:
+    import dask.dataframe as dd
+except ModuleNotFoundError:
+    import pandas as dd
+
 
 def key(request: RetrivalRequest, entity: str, feature: Feature) -> str:
     return f'{request.feature_view_name}:{entity}:{feature.name}'
@@ -73,8 +78,7 @@ class FactualRedisJob(FactualRetrivalJob):
         return result_df
 
     async def to_df(self) -> pd.DataFrame:
-        df = await self._to_df()
-        return await self.fill_missing(df)
+        return await self._to_df()
 
-    async def to_arrow(self) -> pd.DataFrame:
-        return await super().to_arrow()
+    async def _to_dask(self) -> dd.DataFrame:
+        return await self._to_df()

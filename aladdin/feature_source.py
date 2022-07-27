@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
@@ -11,6 +12,9 @@ from aladdin.data_source.batch_data_source import BatchDataSource
 from aladdin.job_factory import JobFactory
 from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
 from aladdin.retrival_job import FactualRetrivalJob
+
+with suppress(ModuleNotFoundError):
+    import dask.dataframe as dd
 
 if TYPE_CHECKING:
     from aladdin.retrival_job import RetrivalJob
@@ -115,8 +119,8 @@ class FactualInMemoryJob(FactualRetrivalJob):
     async def to_df(self) -> pd.DataFrame:
         return await self._to_df()
 
-    async def to_arrow(self) -> pd.DataFrame:
-        return await super().to_arrow()
+    async def _to_dask(self) -> dd.DataFrame:
+        return await self._to_df()
 
 
 @dataclass
