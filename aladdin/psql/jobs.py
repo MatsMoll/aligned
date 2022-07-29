@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, TypeVar
 
-import dask.dataframe as dd
 import pandas as pd
 
 from aladdin.feature import FeatureType
@@ -13,6 +12,11 @@ from aladdin.request.retrival_request import RetrivalRequest
 from aladdin.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
 
 logger = logging.getLogger(__name__)
+
+try:
+    import dask.dataframe as dd
+except ModuleNotFoundError:
+    import pandas as dd
 
 GenericDataFrame = TypeVar('GenericDataFrame', pd.DataFrame, dd.DataFrame)
 

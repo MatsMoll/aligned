@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aladdinml"
-version = "0.0.16a"
+version = "0.0.17a"
 description = "A scalable feature store that makes it easy to productionise and manage ML and AI projects"
 authors = ["Mats E. Mollestad <mats@mollestad.no>"]
 license = "Apache-2.0"
@@ -54,13 +54,14 @@ pyarrow = "^8.0.0"
 Jinja2 = "^3.1.2"
 nest-asyncio = "^1.5.5"
 asgi-correlation-id = { version = "^3.0.0", optional = true }
-dask = {version = "^2022.7.0", extras = ["dataframe"]}
+dask = {version = "^2022.7.0", extras = ["dataframe"], optional = true}
 
 [tool.poetry.extras]
 aws = ["aioaws", "databases"]
 psql = ["databases", "asyncpg"]
 redis = ["redis"]
 server = ["asgi-correlation-id", "fastapi", "uvicorn"]
+dask = ["dask"]
 
 [tool.poetry.dev-dependencies]
 types-redis = "^4.2.6"

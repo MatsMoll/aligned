@@ -1,5 +1,5 @@
 from abc import ABC
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 from mashumaro.types import SerializableType
@@ -53,5 +53,9 @@ class StreamDataSource(ABC, Codable, SerializableType):
 class HttpStreamSource(StreamDataSource):
 
     topic_name: str
+    mappings: dict[str, str] = field(default_factory=dict)
 
     name: str = 'http'
+
+    def map_values(self, mappings: dict[str, str]) -> 'HttpStreamSource':
+        return HttpStreamSource(topic_name=self.topic_name, mappings=self.mappings | mappings)

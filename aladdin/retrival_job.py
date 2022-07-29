@@ -88,7 +88,9 @@ class SingleSourceRetrivalJob(RetrivalJob, Generic[Source]):
             mask = ~df[feature.name].isnull()
 
             with suppress(AttributeError):
-                df.loc[mask, feature.name] = df.loc[mask, feature.name].str.strip('"')
+                df[feature.name] = df[feature.name].mask(
+                    ~mask, other=df.loc[mask, feature.name].str.strip('"')
+                )
 
             if feature.dtype == FeatureType('').datetime:
                 if isinstance(df, pd.DataFrame):
@@ -98,7 +100,10 @@ class SingleSourceRetrivalJob(RetrivalJob, Generic[Source]):
             elif feature.dtype == FeatureType('').datetime or feature.dtype == FeatureType('').string:
                 continue
             else:
-                df.loc[mask, feature.name] = df.loc[mask, feature.name].astype(feature.dtype.pandas_type)
+
+                df[feature.name] = df[feature.name].mask(
+                    ~mask, other=df.loc[mask, feature.name].astype(feature.dtype.pandas_type)
+                )
         return df
 
     @abstractmethod

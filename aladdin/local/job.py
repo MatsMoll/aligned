@@ -13,13 +13,10 @@ from aladdin.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJo
 
 try:
     import dask.dataframe as dd
-
-    GenericDataFrame = TypeVar('GenericDataFrame', pd.DataFrame, dd.DataFrame)
 except ModuleNotFoundError:
-
     import pandas as dd
 
-    GenericDataFrame = pd.DataFrame  # type: ignore
+GenericDataFrame = TypeVar('GenericDataFrame', pd.DataFrame, dd.DataFrame)
 
 
 @dataclass
@@ -151,9 +148,8 @@ class FileFactualJob(FactualRetrivalJob):
                 set_mask = set_mask & (pd.Series(self.facts[entity]).isin(df[entity_source_name]))
 
             feature_df = df.loc[mask, request_features]
-            feature_df.rename(
+            feature_df = feature_df.rename(
                 columns={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)},
-                inplace=True,
             )
             result.loc[set_mask, list(all_names)] = feature_df.reset_index(drop=True)
 

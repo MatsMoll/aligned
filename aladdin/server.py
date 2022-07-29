@@ -1,6 +1,8 @@
 import asyncio
 import logging
+from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from numpy import nan
@@ -20,17 +22,25 @@ class APIFeatureRequest(BaseModel):
     features: list[str]
 
 
+@dataclass
+class TopicInfo:
+    name: str
+    views: list[CompiledFeatureView]
+    mappings: dict[str, str]
+
+
 class FastAPIServer:
     @staticmethod
-    def write_to_topic_path(
-        topic_name: str, feature_store: FeatureStore, views: list[CompiledFeatureView], app: FastAPI
-    ) -> None:
+    def write_to_topic_path(topic: TopicInfo, feature_store: FeatureStore, app: FastAPI) -> None:
 
         required_features: set[Feature] = set()
-        for view in views:
+        for view in topic.views:
             required_features.update(view.entities.union(view.features))
 
-        view_names = [view.name for view in views]
+        view_names = [view.name for view in topic.views]
+        mappings: dict[str, list[str]] = {
+            output: input_path.split('.') for input_path, output in topic.mappings.items()
+        }
 
         write_api_schema = {
             'requestBody': {
@@ -53,8 +63,29 @@ class FastAPIServer:
             },
         }
 
-        @app.post(f'/topics/{topic_name}/write', openapi_extra=write_api_schema)
+        @app.post(f'/topics/{topic.name}/write', openapi_extra=write_api_schema)
         async def write(feature_values: dict) -> None:
+
+            for output_name, input_path in mappings.items():
+
+                if output_name in feature_values:
+                    continue
+
+                if len(input_path) == 1:
+                    feature_values[output_name] = feature_values[input_path[0]]
+                else:
+                    from functools import reduce
+
+                    def find_path_variable(values: dict, key: str) -> Any:
+                        return values.get(key, {})
+
+                    values = [
+                        # Select the value based on the key path given
+                        reduce(find_path_variable, input_path[1:], value)  # initial value
+                        for value in feature_values[input_path[0]]
+                    ]
+                    feature_values[output_name] = [value if value != {} else None for value in values]
+
             await asyncio.gather(
                 *[feature_store.feature_view(view_name).write(feature_values) for view_name in view_names]
             )
@@ -138,7 +169,7 @@ class FastAPIServer:
 
         can_write_to_store = isinstance(feature_store.feature_source, WritableFeatureSource)
 
-        topics: dict[str, list[CompiledFeatureView]] = {}
+        topics: dict[str, TopicInfo] = {}
 
         for feature_view in feature_store.feature_views.values():
             FastAPIServer.feature_view_path(feature_view.name, feature_store, app)
@@ -146,11 +177,23 @@ class FastAPIServer:
                 continue
 
             if isinstance(stream_source, HttpStreamSource):
-                topics[stream_source.topic_name] = topics.get(stream_source.topic_name, []) + [feature_view]
+                topic_name = stream_source.topic_name
+                if topic_name not in topics:
+                    topics[topic_name] = TopicInfo(
+                        name=topic_name, views=[feature_view], mappings=stream_source.mappings
+                    )
+                else:
+                    info = topics[topic_name]
+
+                    topics[topic_name] = TopicInfo(
+                        name=topic_name,
+                        views=info.views + [feature_view],
+                        mappings=info.mappings | stream_source.mappings,
+                    )
 
         if can_write_to_store:
-            for topic, views in topics.items():
-                FastAPIServer.write_to_topic_path(topic, feature_store, views, app)
+            for topic in topics.values():
+                FastAPIServer.write_to_topic_path(topic, feature_store, app)
         else:
             logger.info(
                 (
