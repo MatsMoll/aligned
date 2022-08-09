@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 from abc import ABC, abstractmethod
 from contextlib import suppress
 from dataclasses import dataclass
@@ -14,7 +15,7 @@ from aladdin.data_source.batch_data_source import BatchDataSource
 from aladdin.derivied_feature import DerivedFeature
 from aladdin.feature import FeatureType
 from aladdin.request.retrival_request import RetrivalRequest
-from aladdin.split_strategy import SplitDataSet, SplitStrategy
+from aladdin.split_strategy import SplitDataSet, SplitStrategy, TrainTestSet, TrainTestValidateSet
 
 try:
     import dask.dataframe as dd
@@ -28,6 +29,18 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+def split(data: pd.DataFrame, target_column: str, start_ratio: float, end_ratio: float) -> pd.Index:
+    index = pd.Index([], dtype=data.index.dtype)
+    for value in data[target_column].unique():
+        subset = data.loc[data[target_column] == value]
+        group_size = subset.shape[0]
+        start_index = math.floor(group_size * start_ratio)
+        end_index = math.floor(group_size * end_ratio)
+
+        index = index.append(subset.iloc[start_index:end_index].index)
+    return index
 
 
 class RetrivalJob(ABC):
@@ -54,8 +67,58 @@ class RetrivalJob(ABC):
         await file.write(data_bytes.getvalue())
         return df
 
-    def split_with(self, strategy: SplitStrategy, target_column: str) -> SplitJob:
-        return SplitJob(self, target_column, strategy)
+    def test_size(self, test_size: float, target_column: str) -> TrainTestSetJob:
+
+        return TrainTestSetJob(job=self, test_size=test_size, target_column=target_column)
+
+
+@dataclass
+class TrainTestSetJob:
+
+    job: RetrivalJob
+    test_size: float
+    target_column: str
+
+    async def use_df(self) -> TrainTestSet[pd.DataFrame]:
+
+        data = await self.job.to_df()
+
+        features = list(set(data.columns) - {self.target_column})
+
+        test_ratio_start = 1 - self.test_size
+        return TrainTestSet(
+            data=data,
+            features=features,
+            target=self.target_column,
+            train_index=split(data, self.target_column, 0, test_ratio_start),
+            test_index=split(data, self.target_column, test_ratio_start, 1),
+        )
+
+    def validation_size(self, validation_size: float) -> TrainTestValidateSetJob:
+        return TrainTestValidateSetJob(self, validation_size)
+
+
+@dataclass
+class TrainTestValidateSetJob:
+
+    job: TrainTestSetJob
+    validation_size: float
+
+    async def use_df(self) -> TrainTestValidateSet[pd.DataFrame]:
+        test_set = await self.job.use_df()
+
+        train_data = test_set.train
+
+        validation_ratio_start = 1 - 1 / (1 - self.job.test_size) * self.validation_size
+
+        return TrainTestValidateSet(
+            data=test_set.data,
+            features=test_set.features,
+            target=test_set.target,
+            train_index=split(train_data, test_set.target, 0, validation_ratio_start),
+            test_index=test_set.test_index,
+            validate_index=split(train_data, test_set.target, validation_ratio_start, 1),
+        )
 
 
 @dataclass
@@ -140,7 +203,6 @@ class FactualRetrivalJob(RetrivalJob):
     facts: dict[str, list]
 
     async def compute_derived_features(self, df: GenericDataFrame) -> GenericDataFrame:
-        all_features: set[str] = set()
         combined_views: list[DerivedFeature] = []
         for request in self.requests:
             for feature_round in request.derived_features_order():
@@ -150,7 +212,7 @@ class FactualRetrivalJob(RetrivalJob):
                         continue
 
                     df[feature.name] = await feature.transformation.transform(df[feature.depending_on_names])
-            all_features = all_features.union(request.all_feature_names).union(request.entity_names)
+                    df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
 
         return df
 
@@ -175,9 +237,10 @@ class FactualRetrivalJob(RetrivalJob):
                     elif feature.dtype == FeatureType('').datetime or feature.dtype == FeatureType('').string:
                         continue
                     else:
-                        df.loc[mask, feature.name] = df.loc[mask, feature.name].astype(
-                            feature.dtype.pandas_type
-                        )
+                        if feature.dtype.is_numeric:
+                            df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce')
+                        else:
+                            df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
                 except ValueError as error:
                     logger.info(f'Unable to ensure type for {feature.name}, error: {error}')
                     continue

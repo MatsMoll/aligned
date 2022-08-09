@@ -30,6 +30,10 @@ class FeatureType(Codable):
     name: str
 
     @property
+    def is_numeric(self) -> bool:
+        return self.name in {'bool', 'int32', 'int64', 'float', 'double'}  # Can be represented as an int
+
+    @property
     def python_type(self) -> type:
         from datetime import date, datetime, time, timedelta
         from uuid import UUID
@@ -61,7 +65,7 @@ class FeatureType(Codable):
             'int64': np.int64,
             'float': np.float64,
             'double': np.double,
-            'bool': np.bool8,
+            'bool': int,
             'date': np.datetime64,
             'datetime': np.datetime64,
             'time': np.datetime64,
@@ -128,6 +132,30 @@ class Feature(Codable):
     def __hash__(self) -> int:
         return hash(self.name)
 
+    def __str__(self) -> str:
+        value = f'{self.name} - {self.dtype.name}'
+        if self.description:
+            value += f' - {self.description}'
+        return value
+
+
+class CategoricalFeatureSummary(Codable):
+    missing_percentage: float
+    unique_values: int
+    type_value: str
+    values: list[str]
+    value_count: list[int]
+
+
+class NumericFeatureSummary(Codable):
+    missing_percentage: float
+    mean: float
+    std: float
+    lowest: float
+    highests: float
+    histogram_count: list[int]
+    histogram_splits: list[float]
+
 
 @dataclass
 class EventTimestamp(Codable):
@@ -139,6 +167,12 @@ class EventTimestamp(Codable):
 
     def __hash__(self) -> int:
         return hash(self.name)
+
+    def __str__(self) -> str:
+        value = f'{self.name} - {self.dtype.name}'
+        if self.description:
+            value += f' - {self.description}'
+        return value
 
 
 @dataclass

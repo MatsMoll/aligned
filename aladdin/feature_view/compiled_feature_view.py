@@ -138,6 +138,29 @@ class CompiledFeatureView(Codable):
     def __hash__(self) -> int:
         return hash(self.name)
 
+    def __str__(self) -> str:
+        entites = '\n'.join([str(entity) for entity in self.entities])
+        input_features = '\n'.join([str(features) for features in self.features])
+        transformed_features = '\n'.join([str(features) for features in self.derived_features])
+        string_representation = f"""
+{self.name}
+Description: {self.description}
+Tags: {self.tags}
+
+Entities:
+{entites}
+
+Event Timestamp:
+{self.event_timestamp}
+
+Input features:
+{input_features}
+
+Transformed features:
+{transformed_features}
+        """
+        return string_representation
+
     # def __eq__(self, other: object) -> bool:
 
     #     if not isinstance(other, CompiledFeatureView):

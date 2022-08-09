@@ -2,9 +2,95 @@ import math
 from dataclasses import dataclass
 from typing import Generic, TypeVar
 
-from pandas import DataFrame, concat
+from pandas import DataFrame, Index, concat
+from pandas.core.generic import NDFrame
 
-DatasetType = TypeVar('DatasetType')
+DatasetType = TypeVar('DatasetType', bound=NDFrame)
+
+
+@dataclass
+class TrainTestSet(Generic[DatasetType]):
+
+    data: DatasetType
+
+    features: list[str]
+    target: str
+
+    train_index: Index
+    test_index: Index
+
+    @property
+    def train(self) -> DatasetType:
+        return self.data.iloc[self.train_index]
+
+    @property
+    def train_input(self) -> DatasetType:
+        return self.train[self.features]
+
+    @property
+    def train_output(self) -> DatasetType:
+        return self.train[self.target]
+
+    @property
+    def test(self) -> DatasetType:
+        return self.data.iloc[self.test_index]
+
+    @property
+    def test_input(self) -> DatasetType:
+        return self.test[self.features]
+
+    @property
+    def test_output(self) -> DatasetType:
+        return self.test[self.target]
+
+
+@dataclass
+class TrainTestValidateSet(Generic[DatasetType]):
+
+    data: DatasetType
+
+    features: list[str]
+    target: str
+
+    train_index: Index
+    test_index: Index
+    validate_index: Index
+
+    @property
+    def train(self) -> DatasetType:
+        return self.data.iloc[self.train_index]
+
+    @property
+    def train_input(self) -> DatasetType:
+        return self.train[self.features]
+
+    @property
+    def train_output(self) -> DatasetType:
+        return self.train[self.target]
+
+    @property
+    def test(self) -> DatasetType:
+        return self.data.iloc[self.test_index]
+
+    @property
+    def test_input(self) -> DatasetType:
+        return self.test[self.features]
+
+    @property
+    def test_output(self) -> DatasetType:
+        return self.test[self.target]
+
+    @property
+    def validate(self) -> DatasetType:
+        return self.data.iloc[self.validate_index]
+
+    @property
+    def validate_input(self) -> DatasetType:
+        return self.validate[self.features]
+
+    @property
+    def validate_output(self) -> DatasetType:
+        return self.validate[self.target]
 
 
 @dataclass

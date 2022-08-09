@@ -28,6 +28,14 @@ class AwsS3Config(Codable):
             aws_s3_bucket=os.environ[self.bucket_env],
         )
 
+    @property
+    def url(self) -> str:
+        import os
+
+        region = os.environ[self.bucket_env]
+        bucket = os.environ[self.bucket_env]
+        return f'https://{region}.amazoneaws.com/{bucket}/'
+
     def file_at(self, path: str, mapping_keys: dict[str, str] | None = None) -> 'AwsS3DataSource':
         return AwsS3DataSource(config=self, path=path, mapping_keys=mapping_keys or {})
 
@@ -51,6 +59,10 @@ class AwsS3DataSource(BatchDataSource, ColumnFeatureMappable, FileReference):
     @property
     def storage(self) -> Storage:
         return self.config.storage
+
+    @property
+    def url(self) -> str:
+        return f'{self.config.url}{self.path}'
 
     async def read(self) -> bytes:
         return await self.storage.read(self.path)

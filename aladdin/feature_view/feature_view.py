@@ -1,7 +1,6 @@
 from abc import ABC, abstractproperty
 from typing import Callable, TypeVar
 
-from aladdin.derivied_feature import DerivedFeature
 from aladdin.feature_types import Entity, EventTimestamp, FeatureFactory, TransformationFactory
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.feature_view.feature_view_metadata import FeatureViewMetadata
@@ -60,20 +59,15 @@ class FeatureView(ABC, FeatureSelectable):
                 add_sub_features(sub_feature)
 
                 sub_feature._feature_view = metadata.name
-                tran = sub_feature.transformation(
-                    [
-                        (
-                            metadata,
-                            view.request_for({sub_feature.name}).needed_requests[0],
-                        )
-                    ]
-                )
                 view.derived_features.add(
-                    DerivedFeature(
+                    sub_feature.derived_feature(
                         name=sub_feature.name,
-                        dtype=sub_feature.feature._dtype,
-                        depending_on={feat.feature_referance() for feat in sub_feature.using_features},
-                        transformation=tran,
+                        sources=[
+                            (
+                                metadata,
+                                view.request_for({sub_feature.name}).needed_requests[0],
+                            )
+                        ],
                     )
                 )
 
@@ -86,20 +80,15 @@ class FeatureView(ABC, FeatureSelectable):
 
                 add_sub_features(feature)
 
-                tran = feature.transformation(
-                    [
-                        (
-                            metadata,
-                            view.request_for({feature.name}).needed_requests[0],
-                        )
-                    ]
-                )
                 view.derived_features.add(
-                    DerivedFeature(
-                        name=var_name,
-                        dtype=feature.feature._dtype,
-                        depending_on={feature.feature_referance() for feature in feature.using_features},
-                        transformation=tran,
+                    feature.derived_feature(
+                        name=feature.name,
+                        sources=[
+                            (
+                                metadata,
+                                view.request_for({feature.name}).needed_requests[0],
+                            )
+                        ],
                     )
                 )
 
