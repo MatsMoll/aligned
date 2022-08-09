@@ -144,28 +144,19 @@ class RepoReader:
         return repo
 
     @staticmethod
-    def reference_from_path(repo_path: Path) -> RepoReference:
-        for py_file in python_files(repo_path):
-            imports = imports_for(py_file)
+    def reference_from_path(repo_path: Path, file: Path) -> RepoReference:
 
-            module_path = path_to_py_module(py_file, repo_path)
-            if (
-                module_path.startswith('aladdin')
-                or module_path.startswith('.')
-                or module_path.startswith('heroku')
-                or module_path.endswith('__')
-            ):
-                # Skip aladdin modules
+        imports = imports_for(file)
+
+        module_path = path_to_py_module(file, repo_path)
+        module = import_module(module_path)
+
+        for attribute in dir(module):
+            if attribute in imports:
                 continue
 
-            module = import_module(module_path)
+            obj = getattr(module, attribute)
 
-            for attribute in dir(module):
-                if attribute in imports:
-                    continue
-
-                obj = getattr(module, attribute)
-
-                if isinstance(obj, RepoReference):
-                    return obj
+            if isinstance(obj, RepoReference):
+                return obj
         raise ValueError('No reference found')

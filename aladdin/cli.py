@@ -52,19 +52,25 @@ def cli() -> None:
     help='The path to the repo',
 )
 @click.option(
+    '--reference-file',
+    default='feature_store_location.py',
+    help='The path to a feature store reference file. Defining where to read and write the feature store',
+)
+@click.option(
     '--env-file',
     default='.env',
     help='The path to env variables',
 )
-def apply_command(repo_path: str, env_file: str) -> None:
+def apply_command(repo_path: str, reference_file: str, env_file: str) -> None:
     """
     Create or update a feature store deployment
     """
 
     dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
+    reference_file_path = Path(reference_file).absolute()
     load_envs(dir / env_file)
     sys.path.append(str(dir))
-    repo_ref = RepoReader.reference_from_path(dir)
+    repo_ref = RepoReader.reference_from_path(dir, reference_file_path)
 
     click.echo(f'Updating file at: {repo_ref.selected}')
 

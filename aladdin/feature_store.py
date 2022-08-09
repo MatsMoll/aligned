@@ -137,7 +137,9 @@ class FeatureStore:
         )
 
     @staticmethod
-    async def from_reference_at_path(path: str = '.') -> 'FeatureStore':
+    async def from_reference_at_path(
+        path: str = '.', reference_file: str = 'feature_store_location.py'
+    ) -> 'FeatureStore':
         """Looks for a file reference struct, and loads the associated repo.
 
         This can be used for changing which feature store definitions
@@ -152,7 +154,7 @@ class FeatureStore:
         Returns:
             FeatureStore: A feature store based on the feature references
         """
-        repo_def = await RepoDefinition.from_reference_at_path(path)
+        repo_def = await RepoDefinition.from_reference_at_path(path, reference_file)
         return FeatureStore.from_definition(repo_def)
 
     @staticmethod

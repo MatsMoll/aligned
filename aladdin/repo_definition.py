@@ -88,13 +88,14 @@ class RepoDefinition(Codable):
         return RepoDefinition.from_json(repo)
 
     @staticmethod
-    async def from_reference_at_path(path: str) -> RepoDefinition:
+    async def from_reference_at_path(repo_path: str, file_path: str) -> RepoDefinition:
         from aladdin.repo_reader import RepoReader
 
-        dir_path = Path.cwd() if path == '.' else Path(path).absolute()
+        dir_path = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
+        absolute_file_path = Path(file_path).absolute()
 
         try:
-            reference = RepoReader.reference_from_path(dir_path)
+            reference = RepoReader.reference_from_path(dir_path, absolute_file_path)
             if file := reference.selected_file:
                 logger.info(f"Loading repo from configuration '{reference.selected}'")
                 return await RepoDefinition.from_file(file)
