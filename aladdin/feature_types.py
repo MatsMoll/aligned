@@ -287,6 +287,12 @@ class String(FeatureFactory, CategoricalEncodable):
     def replace(self, values: dict[str, str]) -> 'Replace':
         return Replace(values, self)
 
+    def contains(self, value: str) -> 'Contains':
+        return Contains(value, self)
+
+    def ordinal_categories(self, orders: list[str]) -> 'Ordinal':
+        return Ordinal(orders, self)
+
 
 class UUID(FeatureFactory):
     _dtype = FeatureType('').uuid
@@ -350,6 +356,23 @@ class Ratio(TransformationFactory):
         from aladdin.transformation import Ratio as RatioTransformation
 
         return RatioTransformation(self.numerator.name, self.denumerator.name)
+
+
+class Ordinal(TransformationFactory):
+
+    orders: list[str]
+    in_feature: FeatureReferancable
+
+    def __init__(self, orders: list[str], in_feature: FeatureReferancable) -> None:
+        self.using_features = [in_feature]
+        self.feature = Int32()
+        self.orders = orders
+        self.in_feature = in_feature
+
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import Ordinal as OrdinalTransformation
+
+        return OrdinalTransformation(self.in_feature.name, self.orders)
 
 
 class Contains(TransformationFactory):

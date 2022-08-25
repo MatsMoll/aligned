@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import sys
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Coroutine
@@ -9,6 +10,8 @@ from typing import Any, Coroutine
 import click
 from pytz import utc  # type: ignore
 
+from aladdin.codable import Codable
+from aladdin.feature import Feature
 from aladdin.feature_source import WritableFeatureSource
 from aladdin.repo_definition import RepoDefinition
 from aladdin.repo_reader import RepoReader
@@ -240,6 +243,127 @@ def materialize_command(repo_path: str, env_file: str, days: str, view: str) -> 
                 fv_store.previous(days=number_of_days), fv_store.view.request_all.needed_requests
             )
         )
+
+
+@dataclass
+class CategoricalFeatureSummary(Codable):
+    missing_percentage: float
+    unique_values: int
+    values: list[str]
+    value_count: list[int]
+
+
+@dataclass
+class NumericFeatureSummary(Codable):
+    missing_percentage: float
+    mean: float | None
+    median: float | None
+    std: float | None
+    lowest: float | None
+    highests: float | None
+    histogram_count: list[int]
+    histogram_splits: list[float]
+
+
+@dataclass
+class ProfilingResult(Codable):
+    numeric_features: dict[str, NumericFeatureSummary]
+    categorical_features: dict[str, CategoricalFeatureSummary]
+
+
+@cli.command('profile')
+@click.option(
+    '--repo-path',
+    default='.',
+    help='The path to the repo',
+)
+@click.option(
+    '--reference-file',
+    default='feature_store_location.py',
+    help='The file defining where to read the feature store from',
+)
+@click.option('--output', default='profiling-result.json')
+@click.option('--dataset-size', default=10000)
+@click.option(
+    '--env-file',
+    default='.env',
+    help='The path to env variables',
+)
+def profile(repo_path: str, reference_file: str, env_file: str, output: str, dataset_size: int) -> None:
+    import numpy as np
+    from pandas import DataFrame
+
+    from aladdin import FeatureStore
+
+    # Make sure modules can be read, and that the env is set
+    dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
+    sys.path.append(str(dir))
+    env_file_path = dir / env_file
+    load_envs(env_file_path)
+
+    online_store: FeatureStore = sync(FeatureStore.from_reference_at_path(repo_path, reference_file))
+    feature_store = online_store.offline_store()
+
+    results = ProfilingResult(numeric_features={}, categorical_features={})
+
+    for feature_view_name in sorted(feature_store.feature_views.keys()):
+        click.echo(f'Profiling: {feature_view_name}')
+        feature_view = feature_store.feature_view(feature_view_name)
+        data_set: DataFrame = sync(feature_view.all(limit=dataset_size).to_df())
+
+        all_features: list[Feature] = list(feature_view.view.features) + list(
+            feature_view.view.derived_features
+        )
+        for feature in all_features:
+
+            data_slice = data_set[feature.name]
+
+            reference = f'{feature_view_name}:{feature.name}'
+
+            if (not feature.dtype.is_numeric) or feature.dtype.name == 'bool':
+                unique_values = data_slice.unique()
+                filter_unique_nan_values = [
+                    value
+                    for value in unique_values
+                    if not (str(value).lower() == 'nan' or str(value).lower() == 'nat')
+                ]
+
+                results.categorical_features[reference] = CategoricalFeatureSummary(
+                    missing_percentage=(data_slice.isna() | data_slice.isnull()).sum() / data_slice.shape[0],
+                    unique_values=unique_values.shape[0],
+                    values=[str(value) for value in filter_unique_nan_values],
+                    value_count=data_slice.value_counts()[filter_unique_nan_values].tolist(),
+                )
+            else:
+                description = data_slice.describe()
+                n_bins = np.min([50, len(data_slice.unique())])
+                max_value = description['max']
+                min_value = description['min']
+
+                if np.isnan(max_value):
+                    continue
+
+                width = (max_value - min_value) / n_bins
+
+                if width <= 0:
+                    histogram = [description['count']]
+                    cuts = []
+                else:
+                    cuts = np.arange(start=min_value, stop=max_value + width, step=width)
+                    histogram, _ = np.histogram(data_slice.values, cuts)
+
+                results.numeric_features[reference] = NumericFeatureSummary(
+                    missing_percentage=(data_slice.isna() | data_slice.isnull()).sum() / data_slice.shape[0],
+                    mean=description['mean'] if not np.isnan(description['mean']) else None,
+                    median=description['50%'] if not np.isnan(description['50%']) else None,
+                    std=description['std'] if not np.isnan(description['std']) else None,
+                    lowest=description['min'] if not np.isnan(description['min']) else None,
+                    highests=description['max'] if not np.isnan(description['max']) else None,
+                    histogram_count=list(histogram),
+                    histogram_splits=list(cuts),
+                )
+
+    Path(output).write_bytes(results.to_json().encode('utf-8'))
 
 
 if __name__ == '__main__':

@@ -276,7 +276,7 @@ class ModelFeatureStore:
     source: FeatureSource
     request: FeatureRequest
 
-    def features_for(self, entities: dict[str, list]) -> RetrivalJob:
+    def features_for(self, entities: dict[str, list]) -> FilterJob:
 
         if self.request.needs_event_timestamp and 'event_timestamp' not in entities:
             raise ValueError('Missing event_timestamp in entities')
@@ -295,7 +295,7 @@ class FeatureViewStore:
 
     def all(self, limit: int | None = None) -> RetrivalJob:
         if not isinstance(self.source, RangeFeatureSource):
-            raise ValueError('The source needs to conform to RangeFeatureSource')
+            raise ValueError(f'The source ({self.source}) needs to conform to RangeFeatureSource')
         return self.source.all_for(self.view.request_all, limit)
 
     def between(self, start_date: datetime, end_date: datetime) -> RetrivalJob:

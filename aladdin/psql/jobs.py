@@ -42,7 +42,10 @@ class PostgreSQLRetrivalJob(RetrivalJob):
         try:
             async with Database(self.config.url) as db:
                 records = await db.fetch_all(query=sql_request.sql, values=sql_request.values)
-                return pd.DataFrame.from_records([dict(record) for record in records])
+                df = pd.DataFrame.from_records([dict(record) for record in records])
+                object_mask = df.dtypes == 'object'
+                df.loc[:, object_mask] = df.loc[:, object_mask].astype(str)
+                return df
         except Exception as error:
             logger.info(sql_request.sql)
             logger.error(error)

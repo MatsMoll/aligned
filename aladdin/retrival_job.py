@@ -52,6 +52,10 @@ class RetrivalJob(ABC):
     async def to_dask(self) -> dd.DataFrame:
         pass
 
+    @abstractmethod
+    def cache_at(self, path: str) -> RetrivalJob:
+        pass
+
     async def as_dataset(self, file: FileReference) -> pd.DataFrame:
         import io
 
@@ -70,6 +74,59 @@ class RetrivalJob(ABC):
     def test_size(self, test_size: float, target_column: str) -> TrainTestSetJob:
 
         return TrainTestSetJob(job=self, test_size=test_size, target_column=target_column)
+
+
+class DerivedFeatureJob(RetrivalJob):
+    @abstractmethod
+    async def compute_derived_features(self, df: GenericDataFrame) -> GenericDataFrame:
+        pass
+
+    @abstractmethod
+    async def ensure_types(self, df: GenericDataFrame) -> GenericDataFrame:
+        pass
+
+    @abstractmethod
+    async def _to_df(self) -> pd.DataFrame:
+        pass
+
+    @abstractmethod
+    async def _to_dask(self) -> dd.DataFrame:
+        pass
+
+    async def to_df(self) -> pd.DataFrame:
+        df = await self._to_df()
+        df = await self.ensure_types(df)
+        return await self.compute_derived_features(df)
+
+    async def to_dask(self) -> dd.DataFrame:
+        df = await self._to_dask()
+        df = await self.ensure_types(df)
+        return await self.compute_derived_features(df)
+
+    def cache_at(self, path: str) -> RetrivalJob:
+        return FileCachedJob(path, self)
+
+
+@dataclass
+class FileCachedJob(RetrivalJob):
+
+    path: str
+    job: DerivedFeatureJob
+
+    async def to_df(self) -> pd.DataFrame:
+        try:
+            df = pd.read_parquet(self.path)
+        except FileNotFoundError:
+            df = await self.job._to_df()
+            df.to_parquet(self.path)
+        df = await self.job.ensure_types(df)
+        return await self.job.compute_derived_features(df)
+
+    async def to_dask(self) -> dd.DataFrame:
+        raise NotImplementedError()
+
+    def cache_at(self, path: str) -> RetrivalJob:
+        return self
 
 
 @dataclass
@@ -136,7 +193,7 @@ class SplitJob:
 Source = TypeVar('Source', bound=BatchDataSource)
 
 
-class SingleSourceRetrivalJob(RetrivalJob, Generic[Source]):
+class SingleSourceRetrivalJob(DerivedFeatureJob, Generic[Source]):
     source: Source
     request: RetrivalRequest
 
@@ -164,28 +221,11 @@ class SingleSourceRetrivalJob(RetrivalJob, Generic[Source]):
                 continue
             else:
 
-                df[feature.name] = df[feature.name].mask(
-                    ~mask, other=df.loc[mask, feature.name].astype(feature.dtype.pandas_type)
-                )
+                if feature.dtype.is_numeric:
+                    df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce')
+                else:
+                    df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
         return df
-
-    @abstractmethod
-    async def _to_df(self) -> pd.DataFrame:
-        pass
-
-    @abstractmethod
-    async def _to_dask(self) -> dd.DataFrame:
-        pass
-
-    async def to_df(self) -> pd.DataFrame:
-        df = await self._to_df()
-        df = await self.ensure_types(df)
-        return await self.compute_derived_features(df)
-
-    async def to_dask(self) -> dd.DataFrame:
-        df = await self._to_dask()
-        df = await self.ensure_types(df)
-        return await self.compute_derived_features(df)
 
 
 class FullExtractJob(SingleSourceRetrivalJob):
@@ -197,7 +237,7 @@ class DateRangeJob(SingleSourceRetrivalJob):
     end_date: datetime
 
 
-class FactualRetrivalJob(RetrivalJob):
+class FactualRetrivalJob(DerivedFeatureJob):
 
     requests: list[RetrivalRequest]
     facts: dict[str, list]
@@ -212,29 +252,30 @@ class FactualRetrivalJob(RetrivalJob):
                         continue
 
                     df[feature.name] = await feature.transformation.transform(df[feature.depending_on_names])
-                    df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
+                    if df.dtypes[feature.name] != feature.dtype.pandas_type:
+                        if feature.dtype.is_numeric:
+                            df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce')
+                        else:
+                            df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
 
         return df
 
     async def ensure_types(self, df: GenericDataFrame) -> GenericDataFrame:
         for request in self.requests:
             for feature in request.all_required_features:
-                mask = ~df[feature.name].isnull()
-                with suppress(AttributeError):
-                    df.loc[mask, feature.name] = df.loc[mask, feature.name].str.strip('"')
 
                 try:
                     if feature.dtype == FeatureType('').datetime:
 
                         if isinstance(df, pd.DataFrame):
                             df[feature.name] = pd.to_datetime(
-                                df[feature.name], infer_datetime_format=True, utc=True
+                                df[feature.name], infer_datetime_format=True, utc=True, errors='coerce'
                             )
                         else:
                             df[feature.name] = dd.to_datetime(
                                 df[feature.name], infer_datetime_format=True, utc=True
                             )
-                    elif feature.dtype == FeatureType('').datetime or feature.dtype == FeatureType('').string:
+                    elif feature.dtype == FeatureType('').string:
                         continue
                     else:
                         if feature.dtype.is_numeric:
@@ -245,24 +286,6 @@ class FactualRetrivalJob(RetrivalJob):
                     logger.info(f'Unable to ensure type for {feature.name}, error: {error}')
                     continue
         return df
-
-    @abstractmethod
-    async def _to_df(self) -> pd.DataFrame:
-        pass
-
-    @abstractmethod
-    async def _to_dask(self) -> dd.DataFrame:
-        pass
-
-    async def to_df(self) -> pd.DataFrame:
-        df = await self._to_df()
-        df = await self.ensure_types(df)
-        return await self.compute_derived_features(df)
-
-    async def to_dask(self) -> dd.DataFrame:
-        df = await self._to_dask()
-        df = await self.ensure_types(df)
-        return await self.compute_derived_features(df)
 
 
 @dataclass
@@ -287,6 +310,9 @@ class CombineFactualJob(RetrivalJob):
         df = dd.concat(dfs, axis=1)
         return await self.combine_data(df)
 
+    def cache_at(self, path: str) -> RetrivalJob:
+        return CombineFactualJob([job.cache_at(path) for job in self.jobs], self.combined_requests)
+
 
 @dataclass
 class FilterJob(RetrivalJob):
@@ -307,3 +333,7 @@ class FilterJob(RetrivalJob):
             return df[list(self.include_features)]
         else:
             return df
+
+    def cache_at(self, path: str) -> RetrivalJob:
+
+        return FilterJob(self.include_features, self.job.cache_at(path))

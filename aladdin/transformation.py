@@ -85,12 +85,15 @@ class Transformation(Codable, SerializableType):
             if test.transformation.dtype == FeatureType('').bool:
                 is_correct = np.all(output == test.output_series) | output.equals(test.output_series)
                 assert is_correct, (
-                    f'Output for {test.transformation.__class__.__name__} is not correct.,'
+                    f'Output for {cls.__name__} is not correct.,'
                     f'\nGot: {output},\nexpected: {test.output_series}'
                 )
             elif test.transformation.dtype == FeatureType('').string:
                 expected = test.output_series
-                assert expected.equals(output)
+                assert expected.equals(output), (
+                    f'Output for {cls.__name__} is not correct.,'
+                    f'\nGot: {output},\nexpected: {test.output_series}'
+                )
             else:
                 expected = test.output_series.to_numpy()
                 output_np = output.to_numpy().astype('float')
@@ -131,6 +134,7 @@ class SupportedTransformations:
             And,
             Or,
             Inverse,
+            Ordinal,
         ]:
             self.add(tran_type)
 
@@ -186,7 +190,7 @@ class And(Transformation):
     async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
-            is_valid_mask=~(df[self.first_key].isnull() & df[self.second_key].isnull()),
+            is_valid_mask=~(df[self.first_key].isnull() | df[self.second_key].isnull()),
             transformation=lambda dfv: dfv[self.first_key] & dfv[self.second_key],
         )
 
@@ -216,14 +220,14 @@ class Or(Transformation):
         df[self.first_key].__invert__
         return gracefull_transformation(
             df,
-            is_valid_mask=~(df[self.first_key].isnull() & df[self.second_key].isnull()),
+            is_valid_mask=~(df[self.first_key].isnull() | df[self.second_key].isnull()),
             transformation=lambda dfv: dfv[self.first_key] | dfv[self.second_key],
         )
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
-            And('x', 'y'),
+            Or('x', 'y'),
             input={'x': [False, True, True, False, None], 'y': [True, False, True, False, False]},
             output=[True, True, True, False, np.nan],
         )
@@ -242,7 +246,9 @@ class Inverse(Transformation):
 
     async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
-            df, is_valid_mask=~(df[self.key].isnull()), transformation=lambda dfv: ~dfv[self.key]
+            df,
+            is_valid_mask=~(df[self.key].isnull()),
+            transformation=lambda dfv: dfv[self.key] == False,  # noqa: E712
         )
 
     @staticmethod
@@ -250,7 +256,7 @@ class Inverse(Transformation):
         return TransformationTestDefinition(
             Inverse('x'),
             input={'x': [False, True, True, False, None]},
-            output=[True, True, False, True, np.nan],
+            output=[True, False, False, True, np.nan],
         )
 
 
@@ -653,6 +659,37 @@ class Contains(Transformation):
 
 
 @dataclass
+class Ordinal(Transformation):
+
+    key: str
+    orders: list[str]
+
+    @property
+    def orders_dict(self) -> dict[str, int]:
+        return {key: index for index, key in enumerate(self.orders)}
+
+    name: str = 'ordinal'
+    dtype: FeatureType = FeatureType('').int32
+
+    def __init__(self, key: str, orders: list[str]) -> None:
+        self.key = key
+        self.orders = orders
+
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+        return df[self.key].map(self.orders_dict)
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        from numpy import nan
+
+        return TransformationTestDefinition(
+            Ordinal('x', ['a', 'b', 'c', 'd']),
+            input={'x': ['a', 'b', 'a', None, 'd']},
+            output=[0, 1, 0, nan, 3],
+        )
+
+
+@dataclass
 class ReplaceStrings(Transformation):
 
     key: str
@@ -679,9 +716,9 @@ class ReplaceStrings(Transformation):
         from numpy import nan
 
         return TransformationTestDefinition(
-            ReplaceStrings('x', {' ': '', '.': '', '10-20': '15'}),
-            input={'x': [' 20', '10 - 20', '.yeah', None]},
-            output=['20', '15', 'yeah', nan],
+            ReplaceStrings('x', {r'20[\s]*-[\s]*10': '15', ' ': '', '.': '', '10-20': '15', '20\\+': '30'}),
+            input={'x': [' 20', '10 - 20', '.yeah', '20+', None, '20   - 10']},
+            output=['20', '15', 'yeah', '30', nan, '15'],
         )
 
 

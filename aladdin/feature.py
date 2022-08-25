@@ -139,24 +139,6 @@ class Feature(Codable):
         return value
 
 
-class CategoricalFeatureSummary(Codable):
-    missing_percentage: float
-    unique_values: int
-    type_value: str
-    values: list[str]
-    value_count: list[int]
-
-
-class NumericFeatureSummary(Codable):
-    missing_percentage: float
-    mean: float
-    std: float
-    lowest: float
-    highests: float
-    histogram_count: list[int]
-    histogram_splits: list[float]
-
-
 @dataclass
 class EventTimestamp(Codable):
     name: str
