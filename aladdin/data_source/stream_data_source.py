@@ -14,8 +14,12 @@ class StreamDataSourceFactory:
     _shared: Optional['StreamDataSourceFactory'] = None
 
     def __init__(self) -> None:
+        from aladdin.redis.config import RedisStreamSource
 
-        self.supported_data_sources = {HttpStreamSource.name: HttpStreamSource}
+        self.supported_data_sources = {
+            HttpStreamSource.name: HttpStreamSource,
+            RedisStreamSource.name: RedisStreamSource,
+        }
 
     @classmethod
     def shared(cls) -> 'StreamDataSourceFactory':
@@ -31,6 +35,7 @@ class StreamDataSource(ABC, Codable, SerializableType):
     """
 
     name: str
+    topic_name: str
 
     def _serialize(self) -> dict:
         return self.to_dict()

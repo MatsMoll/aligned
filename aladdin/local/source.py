@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass, field
 from io import StringIO
 from pathlib import Path
@@ -10,6 +11,8 @@ from aladdin.feature_store import FeatureStore
 from aladdin.repo_definition import RepoDefinition
 from aladdin.s3.storage import FileStorage, HttpStorage
 from aladdin.storage import Storage
+
+logger = logging.getLogger(__name__)
 
 
 class FileReference:

@@ -143,7 +143,14 @@ def plan_command(repo_path: str, env_file: str) -> None:
     default=False,
     help='If the server should reload on dir changes',
 )
-def serve_command(repo_path: str, host: str, port: int, workers: int, env_file: str, reload: bool) -> None:
+@click.option(
+    '--server-path',
+    default='feature_store_location:feature_server',
+    help='The path to the feature store server',
+)
+def serve_command(
+    repo_path: str, host: str, port: int, workers: int, env_file: str, reload: bool, server_path: str
+) -> None:
     """
     Starts a API serving the feature store
     """
@@ -186,13 +193,91 @@ def serve_command(repo_path: str, host: str, port: int, workers: int, env_file: 
     env_file_path = dir / env_file
     load_envs(env_file_path)
     uvicorn.run(
-        'feature_store_location:feature_server',
+        server_path,
         host=host or '127.0.0.1',
         port=port or 8000,
         workers=workers or workers,
         reload=reload,
         env_file=env_file_path,
     )
+
+
+@cli.command('serve-worker')
+@click.option(
+    '--repo-path',
+    default='.',
+    help='The path to the repo',
+)
+@click.option(
+    '--reference-file',
+    default='feature_store_location.py',
+    help='The path to a feature store reference file. Defining where to read and write the feature store',
+)
+@click.option(
+    '--workers',
+    '-w',
+    default=1,
+    help='The number of workers',
+)
+@click.option('--views', '-v', help='The views to run in a worker', multiple=True)
+@click.option(
+    '--env-file',
+    default='.env',
+    help='The path to env variables',
+)
+def serve_worker_command(
+    repo_path: str, reference_file: str, views: list[str], workers: int, env_file: str
+) -> None:
+    """
+    Starts a API serving the feature store
+    """
+    from logging.config import dictConfig
+
+    from aladdin.worker import start
+
+    handler = 'console'
+    log_format = '%(levelname)s:\t\b%(asctime)s %(name)s:%(lineno)d [%(correlation_id)s] %(message)s'
+    dictConfig(
+        {
+            'version': 1,
+            'disable_existing_loggers': False,
+            'filters': {
+                'correlation_id': {
+                    '()': 'asgi_correlation_id.CorrelationIdFilter',
+                    'uuid_length': 16,
+                },
+            },
+            'formatters': {
+                'console': {'class': 'logging.Formatter', 'datefmt': '%H:%M:%S', 'format': log_format}
+            },
+            'handlers': {
+                'console': {
+                    'class': 'logging.StreamHandler',
+                    'filters': ['correlation_id'],
+                    'formatter': 'console',
+                }
+            },
+            'loggers': {
+                # project
+                '': {'handlers': [handler], 'level': 'INFO', 'propagate': True},
+            },
+        }
+    )
+    # Needed in order to find the feature_store_location file
+    dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
+    reference_file_path = Path(reference_file).absolute()
+    sys.path.append(str(dir))
+    env_file_path = dir / env_file
+    load_envs(env_file_path)
+
+    repo_ref = RepoReader.reference_from_path(dir, reference_file_path)
+
+    if not repo_ref.selected_file:
+        raise ValueError('No selected feature store in the repo reference. Make sure the env var is set')
+
+    feature_store = sync(repo_ref.selected_file.feature_store())
+
+    sync(start(store=feature_store, feature_views_to_process=set(views)))
 
 
 @cli.command('materialize')

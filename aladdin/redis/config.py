@@ -1,10 +1,10 @@
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-import pandas as pd
 from redis.asyncio import Redis, StrictRedis  # type: ignore
 
 from aladdin.codable import Codable
+from aladdin.data_source.stream_data_source import StreamDataSource
 from aladdin.feature import FeatureType
 from aladdin.feature_source import FeatureSource, WritableFeatureSource
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
@@ -13,6 +13,9 @@ from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
 from aladdin.retrival_job import RetrivalJob
 
 logger = logging.getLogger(__name__)
+
+
+redis_manager: dict[str, StrictRedis] = {}
 
 
 @dataclass
@@ -41,15 +44,16 @@ class RedisConfig(Codable):
         return RedisConfig(env_var='REDIS_URL')
 
     def redis(self) -> Redis:
-        global _redis
-        try:
-            return _redis  # type: ignore
-        except NameError:
-            _redis = StrictRedis.from_url(self.url, decode_responses=True)  # type: ignore
-            return _redis  # type: ignore
+        if self.env_var not in redis_manager:
+            redis_manager[self.env_var] = StrictRedis.from_url(self.url, decode_responses=True)
+
+        return redis_manager[self.env_var]
 
     def online_source(self) -> 'RedisOnlineSource':
         return RedisOnlineSource(config=self)
+
+    def stream_source(self, topic_name: str) -> 'RedisStreamSource':
+        return RedisStreamSource(topic_name=topic_name, config=self)
 
 
 @dataclass
@@ -77,38 +81,55 @@ class RedisSource(FeatureSource, WritableFeatureSource):
         return FactualRedisJob(self.config, request.needed_requests, facts)
 
     async def write(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
-        from aladdin.redis.job import key
 
         redis = self.config.redis()
         data = await job.to_df()
-        logger.info(f'Writing {data.shape} features to redis')
+
         async with redis.pipeline(transaction=True) as pipe:
 
             written_count = 0
-            for _, row in data.iterrows():
-                # Run one query per row
-                for request in requests:
-                    entity_ids = row[list(request.entity_names)]
-                    entity_id = ':'.join([str(entity_id) for entity_id in entity_ids])
-                    if not entity_id:
+            # Run one query per row
+            for request in requests:
+                entity_ids = request.feature_view_name + ':' + data[sorted(request.entity_names)].sum(axis=1)
+
+                for feature in request.all_features:
+                    mask = ~data[feature.name].isnull()
+
+                    if feature.dtype == FeatureType('').bool:
+                        mask = mask | ~data[feature.name].isna()
+
+                    if mask.empty or (~mask).all():
                         continue
 
-                    for feature in request.all_features:
-                        value = row[feature.name]
-                        if value and not pd.isnull(value):
-                            if feature.dtype == FeatureType('').bool:
-                                # Redis do not support bools
-                                value = int(value)
-                            elif feature.dtype == FeatureType('').datetime:
-                                value = value.timestamp()
+                    redis_values = data.loc[mask, feature.name].copy()
 
-                            string_value = f'{value}'
+                    if feature.dtype == FeatureType('').bool:
+                        # Redis do not support bools
+                        redis_values = redis_values.astype(int)
+                    elif feature.dtype == FeatureType('').datetime:
+                        redis_values = redis_values.astype('int64') // 10**9
 
-                            feature_key = key(request, entity_id, feature)
-                            pipe.set(feature_key, string_value)
-                            written_count += 1
+                    redis_values = redis_values.astype(str)
 
-                if written_count % self.batch_size == 0:
-                    await pipe.execute()
-                    logger.info(f'Written {written_count} rows')
+                    feature_key = entity_ids.loc[mask] + ':' + feature.name
+                    for keys, value in zip(feature_key.values, redis_values.values):
+                        pipe.set(keys, value)
+                    written_count += 1
+
             await pipe.execute()
+
+
+@dataclass
+class RedisStreamSource(StreamDataSource):
+
+    topic_name: str
+    config: RedisConfig
+
+    mappings: dict[str, str] = field(default_factory=dict)
+
+    name: str = 'redis'
+
+    def map_values(self, mappings: dict[str, str]) -> 'RedisStreamSource':
+        return RedisStreamSource(
+            topic_name=self.topic_name, config=self.config, mappings=self.mappings | mappings
+        )

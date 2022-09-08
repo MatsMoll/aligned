@@ -319,6 +319,9 @@ class FeatureViewStore:
         return features
 
     async def write(self, values: dict[str, Any]) -> None:
+        await self.batch_write([values])
+
+    async def batch_write(self, values: list[dict[str, Any]]) -> None:
         if not isinstance(self.source, WritableFeatureSource):
             logger.info('Feature Source is not writable')
             return
@@ -330,7 +333,7 @@ class FeatureViewStore:
 
         # As it is a feature view should it only contain one request
         request = self.view.request_all.needed_requests[0]
-        df = DataFrame(values)
+        df = DataFrame.from_records(values)
 
         if request.entity_names - set(df.columns):
             missing = request.entity_names - set(df.columns)

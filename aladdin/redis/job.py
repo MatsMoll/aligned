@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from aladdin.feature import Feature, FeatureType
+from aladdin.feature import FeatureType
 from aladdin.redis.config import RedisConfig
 from aladdin.request.retrival_request import RetrivalRequest
 from aladdin.retrival_job import FactualRetrivalJob
@@ -12,10 +12,6 @@ try:
     import dask.dataframe as dd
 except ModuleNotFoundError:
     import pandas as dd
-
-
-def key(request: RetrivalRequest, entity: str, feature: Feature) -> str:
-    return f'{request.feature_view_name}:{entity}:{feature.name}'
 
 
 @dataclass
@@ -30,31 +26,25 @@ class FactualRedisJob(FactualRetrivalJob):
 
         columns = set()
         for request in self.requests:
-            for feature in request.all_feature_names:
-                columns.add(feature)
+            columns.update(request.all_feature_names)
 
         result_df = pd.DataFrame(self.facts)
 
         for request in self.requests:
             # If using multiple entities, will this fail!
             # Need to sort on something in order to fix the bug
-            entity_ids = result_df[list(request.entity_names)]
+            entity_ids = result_df[sorted(request.entity_names)]
             mask = ~entity_ids.isna().any(axis=1)
-            entities = [
-                ':'.join([str(id) for id in entity_ids]) for _, entity_ids in entity_ids.loc[mask].iterrows()
-            ]
+            entities = request.feature_view_name + ':' + entity_ids.loc[mask].astype(str).sum(axis=1)
             for feature in request.all_features:
-                # Fetch one column at a time
-                keys = []
-                for entity in entities:
-                    keys.append(key(request, entity, feature))
+                keys = entities + ':' + feature.name
 
                 # If there is no entities, set feature to None
-                if not entities:
+                if entities.empty:
                     result_df[feature.name] = np.nan
                     continue
 
-                result = await redis.mget(keys)
+                result = await redis.mget(keys.values)
                 result_series = pd.Series(result)
                 set_mask = mask.copy()
                 result_value_mask = result_series.notna()

@@ -48,11 +48,19 @@ class RetrivalRequest(Codable):
         feature_orders: list[set] = []
         feature_map = self.derived_feature_map()
         features = self.derived_features
+        dependent_features = self.derived_features.copy()
 
-        for feature in features:
+        while dependent_features:
+            feature = dependent_features.pop()
             for dep_ref in feature.depending_on:
+                if dep_ref.name == feature.name:
+                    continue
+
                 if dep := feature_map.get(dep_ref.name):
                     feature_deps[feature.name].add(dep)
+                    if dep.name not in feature_deps:
+                        dependent_features.add(dep)
+                        feature_map[dep.name] = dep
 
         def depths(feature: DerivedFeature) -> int:
             if feature.name not in feature_deps or not feature_deps[feature.name]:
