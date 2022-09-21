@@ -77,6 +77,10 @@ class OnlineSource(ABC, Codable, SerializableType):
 
 @dataclass
 class BatchOnlineSource(OnlineSource):
+    """
+    Setup the feature source based on the feature store information.
+    This is needed in order to make the queries more efficent.
+    """
 
     source_type = 'batch'
 

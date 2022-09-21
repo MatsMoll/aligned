@@ -15,7 +15,7 @@ from aladdin.online_source import OnlineSource
 if TYPE_CHECKING:
     from fastapi import FastAPI
 
-    from aladdin.local.source import FileReference
+    from aladdin.local.source import StorageFileReference
 
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ def get_event_loop() -> asyncio.AbstractEventLoop:
 @dataclass
 class RepoReference:
     env_var_name: str
-    repo_paths: dict[str, FileReference]
+    repo_paths: dict[str, StorageFileReference]
 
     @property
     def selected(self) -> str:
@@ -40,7 +40,7 @@ class RepoReference:
         return os.environ[self.env_var_name]
 
     @property
-    def selected_file(self) -> FileReference | None:
+    def selected_file(self) -> StorageFileReference | None:
         return self.repo_paths.get(self.selected)
 
     def feature_server(self, online_source: OnlineSource) -> FastAPI | OnlineSource:
@@ -83,7 +83,7 @@ class RepoDefinition(Codable):
     enrichers: list[EnricherReference] = field(default_factory=list)
 
     @staticmethod
-    async def from_file(file: FileReference) -> RepoDefinition:
+    async def from_file(file: StorageFileReference) -> RepoDefinition:
         repo = await file.read()
         return RepoDefinition.from_json(repo)
 

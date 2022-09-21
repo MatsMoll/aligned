@@ -4,21 +4,21 @@ from aladdin.job_factory import JobFactory
 from aladdin.local.job import FileDateJob, FileFactualJob, FileFullJob
 from aladdin.request.retrival_request import RetrivalRequest
 from aladdin.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob
-from aladdin.s3.config import AwsS3DataSource
+from aladdin.s3.config import AwsS3CsvDataSource
 
 
 class AwsS3JobFactory(JobFactory):
 
-    source = AwsS3DataSource
+    source = AwsS3CsvDataSource
 
     def all_data(
-        self, source: AwsS3DataSource, request: RetrivalRequest, limit: int | None
+        self, source: AwsS3CsvDataSource, request: RetrivalRequest, limit: int | None
     ) -> FullExtractJob:
         return FileFullJob(source, request, limit)
 
     def all_between_dates(
         self,
-        source: AwsS3DataSource,
+        source: AwsS3CsvDataSource,
         request: RetrivalRequest,
         start_date: datetime,
         end_date: datetime,
@@ -26,7 +26,7 @@ class AwsS3JobFactory(JobFactory):
         return FileDateJob(source=source, request=request, start_date=start_date, end_date=end_date)
 
     def _facts(
-        self, facts: dict[str, list], requests: dict[AwsS3DataSource, RetrivalRequest]
+        self, facts: dict[str, list], requests: dict[AwsS3CsvDataSource, RetrivalRequest]
     ) -> FactualRetrivalJob:
         if len(requests.keys()) != 1:
             raise ValueError(f'Only able to load one {self.source} at a time')

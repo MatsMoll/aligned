@@ -78,7 +78,9 @@ class FeatureStore:
 
     @staticmethod
     def experimental() -> 'FeatureStore':
-        return FeatureStore.from_definition(RepoDefinition(set(), set(), {}, BatchOnlineSource()))
+        from aladdin.online_source import BatchOnlineSource
+
+        return FeatureStore.from_definition(RepoDefinition(online_source=BatchOnlineSource()))
 
     @staticmethod
     def register_enrichers(enrichers: list[EnricherReference]) -> None:
@@ -318,10 +320,10 @@ class FeatureViewStore:
                 features.add(event_timestamp.name)
         return features
 
-    async def write(self, values: dict[str, Any]) -> None:
-        await self.batch_write([values])
+    async def write(self, values: dict[str, list[Any]]) -> None:
+        await self.batch_write(values)
 
-    async def batch_write(self, values: list[dict[str, Any]]) -> None:
+    async def batch_write(self, values: dict[str, list[Any]]) -> None:
         if not isinstance(self.source, WritableFeatureSource):
             logger.info('Feature Source is not writable')
             return
@@ -331,7 +333,7 @@ class FeatureViewStore:
         from aladdin.local.job import FileFullJob
         from aladdin.local.source import LiteralReference
 
-        # As it is a feature view should it only contain one request
+        # As it is a feature view, should it only contain one request
         request = self.view.request_all.needed_requests[0]
         df = DataFrame.from_records(values)
 

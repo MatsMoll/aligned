@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod, abstractproperty
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, Literal, TypeVar
 from uuid import uuid4
 
 from pandas import DataFrame, Series
@@ -68,6 +68,7 @@ class Transformable(FeatureReferancable):
 
         return CustomTransformation(using_features or [self], self, sub_tran)
 
+    # Comparable operators
     def __eq__(self, __o: object) -> 'Equals':  # type: ignore
         return Equals(__o, self)
 
@@ -86,6 +87,7 @@ class Transformable(FeatureReferancable):
     def __ge__(self, value: object) -> 'GreaterThenOrEqual':
         return GreaterThenOrEqual(value, self)
 
+    # Arithmetic Operators
     def __sub__(self, other: FeatureReferancable) -> 'Transformable':
         if self._dtype == FeatureType('').datetime:
             return TimeDifferance(self, other)
@@ -94,17 +96,52 @@ class Transformable(FeatureReferancable):
     def __add__(self, other: FeatureReferancable) -> 'AdditionBetween':
         return AdditionBetween(self, other)
 
+    def __truediv__(self, other: FeatureReferancable) -> 'Ratio':
+        return Ratio(self, other)
+
+    def __floordiv__(self, other: FeatureReferancable) -> 'Ratio':
+        raise NotImplementedError()
+
+    # Bool operators
     def __and__(self, other: FeatureReferancable) -> 'And':
         return And(self, other)
 
     def __or__(self, other: FeatureReferancable) -> 'Or':
         return Or(self, other)
 
+    def is_in(self, values: list) -> 'IsIn':
+        return IsIn(self, values)
+
+    # Single value operators
     def __invert__(self) -> 'Inverse':
         return Inverse(self)
 
-    def is_in(self, values: list) -> 'IsIn':
-        return IsIn(self, values)
+    def __abs__(self) -> 'FeatureReferancable':
+        raise NotImplementedError()
+
+    def __int__(self) -> 'FeatureReferancable':
+        raise NotImplementedError()
+
+    def __float__(self) -> 'FeatureReferancable':
+        raise NotImplementedError()
+
+    def __complex__(self) -> 'FeatureReferancable':
+        raise NotImplementedError()
+
+    def __round__(self) -> 'FeatureReferancable':
+        raise NotImplementedError()
+
+    def __trunc__(self) -> 'FeatureReferancable':
+        raise NotImplementedError()
+
+    def __ceil__(self) -> 'FeatureReferancable':
+        raise NotImplementedError()
+
+    def __floor__(self) -> 'FeatureReferancable':
+        raise NotImplementedError()
+
+    def fill_missing(self, strategy: Literal['mean', 'median']) -> 'Transformable':
+        return FillMissing(self, strategy)
 
 
 FeatureTypeVar = TypeVar('FeatureTypeVar')
@@ -533,6 +570,9 @@ class Split(DillTransformationFactory):
 
         return met
 
+    def index(self, index: int) -> 'ArrayIndex':
+        return ArrayIndex(index, self)
+
 
 class ArrayIndex(DillTransformationFactory):
 
@@ -817,3 +857,24 @@ class Inverse(TransformationFactory):
         from aladdin.transformation import Inverse as InverseTransformation
 
         return InverseTransformation(self.from_feature.name)
+
+
+class FillMissing(TransformationFactory):
+
+    from_feature: FeatureReferancable
+    strategy: Literal['mean', 'median']
+
+    def __init__(self, feature: FeatureReferancable, strategy: Literal['mean', 'median']) -> None:
+        self.from_feature = feature
+        self.using_features = [feature]
+        self.feature = {'string': String(), 'int32': Int32(), 'int64': Int64(), 'float': Float()}[
+            feature._dtype.name
+        ]
+        self.strategy = strategy
+
+    def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
+        from aladdin.transformation import FillMissingTransformation
+
+        return FillMissingTransformation(
+            key=self.from_feature.name, strategy=self.strategy, dtype=self.from_feature._dtype
+        )

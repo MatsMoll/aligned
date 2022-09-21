@@ -107,7 +107,7 @@ class RedisLockEnricher(Enricher):
 
 
 @dataclass
-class FileEnricher(Enricher):
+class CsvFileEnricher(Enricher):
 
     file: Path
     name: str = 'file'
@@ -127,7 +127,7 @@ class FileEnricher(Enricher):
 
 
 @dataclass
-class FileStatEnricher(Enricher):
+class LoadedStatEnricher(Enricher):
 
     stat: str
     columns: list[str]

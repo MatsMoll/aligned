@@ -14,6 +14,7 @@ import pandas as pd
 from aladdin.data_source.batch_data_source import BatchDataSource
 from aladdin.derivied_feature import DerivedFeature
 from aladdin.feature import FeatureType
+from aladdin.feature_view.feature_view import FeatureView
 from aladdin.request.retrival_request import RetrivalRequest
 from aladdin.split_strategy import SplitDataSet, SplitStrategy, TrainTestSet, TrainTestValidateSet
 
@@ -25,7 +26,7 @@ except ModuleNotFoundError:
     GenericDataFrame = pd.DataFrame  # type: ignore
 
 if TYPE_CHECKING:
-    from aladdin.local.source import FileReference
+    from aladdin.local.source import StorageFileReference
 
 
 logger = logging.getLogger(__name__)
@@ -56,7 +57,7 @@ class RetrivalJob(ABC):
     def cache_at(self, path: str) -> RetrivalJob:
         pass
 
-    async def as_dataset(self, file: FileReference) -> pd.DataFrame:
+    async def as_dataset(self, file: StorageFileReference) -> pd.DataFrame:
         import io
 
         df = await self.to_df()
@@ -74,6 +75,10 @@ class RetrivalJob(ABC):
     def test_size(self, test_size: float, target_column: str) -> TrainTestSetJob:
 
         return TrainTestSetJob(job=self, test_size=test_size, target_column=target_column)
+
+    def join(self, feature_view: FeatureView) -> RetrivalJob:
+
+        feature_view.compile().entitiy_names
 
 
 class DerivedFeatureJob(RetrivalJob):
@@ -105,6 +110,16 @@ class DerivedFeatureJob(RetrivalJob):
 
     def cache_at(self, path: str) -> RetrivalJob:
         return FileCachedJob(path, self)
+
+
+class LazyJoinJob(RetrivalJob):
+
+    original_job: RetrivalJob
+    view_to_join: FeatureView
+
+    def to_df(self) -> pd.DataFrame:
+        # original_df = await self.original_job.to_df()
+        self.view_to_join.compile().batch_data_source
 
 
 @dataclass
@@ -301,9 +316,19 @@ class CombineFactualJob(RetrivalJob):
         return df
 
     async def to_df(self) -> pd.DataFrame:
-        dfs = await asyncio.gather(*[job.to_df() for job in self.jobs])
-        df = pd.concat(dfs, axis=1)
-        return await self.combine_data(df)
+        job_count = len(self.jobs)
+        if job_count > 1:
+            dfs = await asyncio.gather(*[job.to_df() for job in self.jobs])
+            df = pd.concat(dfs, axis=1)
+            return await self.combine_data(df)
+        elif job_count == 1:
+            return await self.jobs[0].to_df()
+        else:
+            raise ValueError(
+                'Have no jobs to fetch. This is probably an internal error.\n'
+                'Please submit an issue, and describe how to reproduce it.\n'
+                'Or maybe even submit a PR'
+            )
 
     async def to_dask(self) -> dd.DataFrame:
         dfs = await asyncio.gather(*[job.to_dask() for job in self.jobs])

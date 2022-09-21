@@ -12,7 +12,9 @@ class BreastDiagnoseFeatureView(FeatureView):
         name='breast_features',
         description='Features defining a scan and diagnose of potential cancer cells',
         tags={},
-        batch_source=FileSource(path='test_data/data-with-datetime.csv', mapping_keys={'id': 'scan_id'}),
+        batch_source=FileSource.csv_at(
+            path='test_data/data-with-datetime.csv', mapping_keys={'id': 'scan_id'}
+        ),
     )
 
     scan_id = Entity(dtype=Int32())

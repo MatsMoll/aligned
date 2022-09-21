@@ -1,7 +1,7 @@
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Literal, Optional, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -135,6 +135,7 @@ class SupportedTransformations:
             Or,
             Inverse,
             Ordinal,
+            FillMissingTransformation,
         ]:
             self.add(tran_type)
 
@@ -856,4 +857,28 @@ class IsIn(Transformation):
             IsIn(values=['hello', 'test'], key='x'),
             input={'x': ['No', 'Hello', 'hello', 'test', 'nah', 'nehtest']},
             output=[False, False, True, True, False, False],
+        )
+
+
+@dataclass
+class FillMissingTransformation(Transformation):
+
+    key: str
+    strategy: Literal['mean', 'median']
+    dtype: FeatureType
+
+    name: str = 'fill_missing'
+
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+        if self.strategy == 'mean':
+            return df[self.key].fillna(df[self.key].mean())
+        else:
+            return df[self.key].fillna(df[self.key].median())
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            FillMissingTransformation('x', 'median', dtype=FeatureType('').int32),
+            input={'x': [1, 1, None, None, 3, 3, None, 4, 5, None]},
+            output=[1, 1, 3, 3, 3, 3, 3, 4, 5, 3],
         )

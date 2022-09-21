@@ -172,7 +172,6 @@ class FastAPIServer:
         topics: dict[str, TopicInfo] = {}
 
         for feature_view in feature_store.feature_views.values():
-            FastAPIServer.feature_view_path(feature_view.name, feature_store, app)
             if not (stream_source := feature_view.stream_data_source):
                 continue
 

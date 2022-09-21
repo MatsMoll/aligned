@@ -1,12 +1,14 @@
 import logging
 from dataclasses import dataclass, field
-from io import StringIO
 from pathlib import Path
+from typing import Literal
+from uuid import uuid4
 
-from pandas import DataFrame
+import pandas as pd
 
+from aladdin.codable import Codable
 from aladdin.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
-from aladdin.enricher import Enricher, FileEnricher, FileStatEnricher, StatisticEricher
+from aladdin.enricher import CsvFileEnricher, Enricher, LoadedStatEnricher, StatisticEricher
 from aladdin.feature_store import FeatureStore
 from aladdin.repo_definition import RepoDefinition
 from aladdin.s3.storage import FileStorage, HttpStorage
@@ -15,7 +17,21 @@ from aladdin.storage import Storage
 logger = logging.getLogger(__name__)
 
 
-class FileReference:
+class DataFileReference:
+    async def read_pandas(self) -> pd.DataFrame:
+        raise NotImplementedError()
+
+    async def read_dask(self) -> pd.DataFrame:
+        raise NotImplementedError()
+
+    async def write_pandas(self) -> None:
+        raise NotImplementedError()
+
+    async def write_dask(self) -> None:
+        raise NotImplementedError()
+
+
+class StorageFileReference:
     async def read(self) -> bytes:
         raise NotImplementedError()
 
@@ -28,12 +44,43 @@ class FileReference:
 
 
 @dataclass
-class FileSource(BatchDataSource, ColumnFeatureMappable, FileReference, StatisticEricher):
+class CsvConfig(Codable):
+    seperator: str = field(default=',')
+    compression: Literal['infer', 'gzip', 'bz2', 'zip', 'xz', 'zstd'] = field(default='infer')
+
+
+@dataclass
+class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher):
 
     path: str
     mapping_keys: dict[str, str] = field(default_factory=dict)
+    csv_config: CsvConfig = field(default_factory=CsvConfig())
 
-    type_name: str = 'local_file'
+    type_name: str = 'csv'
+
+    def job_group_key(self) -> str:
+        return f'{self.type_name}/{self.path}'
+
+    def __hash__(self) -> int:
+        return hash(self.job_group_key())
+
+    async def read_pandas(self) -> pd.DataFrame:
+        return pd.read_csv(self.path, sep=self.csv_config.seperator, compression=self.csv_config.compression)
+
+    def std(self, columns: set[str]) -> Enricher:
+        return LoadedStatEnricher(stat='std', columns=list(columns), enricher=self.enricher())
+
+    def mean(self, columns: set[str]) -> Enricher:
+        return LoadedStatEnricher(stat='mean', columns=list(columns), enricher=self.enricher())
+
+    def enricher(self) -> Enricher:
+        return CsvFileEnricher(file=Path(self.path))
+
+
+@dataclass
+class StorageFileSource(StorageFileReference):
+
+    path: str
 
     @property
     def storage(self) -> Storage:
@@ -42,15 +89,8 @@ class FileSource(BatchDataSource, ColumnFeatureMappable, FileReference, Statisti
         else:
             return FileStorage()
 
-    def job_group_key(self) -> str:
-        return f'{self.type_name}/{self.path}'
-
     def __hash__(self) -> int:
-        return hash(self.job_group_key())
-
-    @staticmethod
-    def from_path(path: str) -> 'FileSource':
-        return FileSource(path=path, mapping_keys={})
+        return hash(self.path)
 
     async def read(self) -> bytes:
         return await self.storage.read(self.path)
@@ -58,30 +98,26 @@ class FileSource(BatchDataSource, ColumnFeatureMappable, FileReference, Statisti
     async def write(self, content: bytes) -> None:
         return await self.storage.write(self.path, content)
 
-    def std(self, columns: set[str]) -> Enricher:
-        return FileStatEnricher(
-            stat='std', columns=list(columns), enricher=FileEnricher(file=Path(self.path))
-        )
 
-    def mean(self, columns: set[str]) -> Enricher:
-        return FileStatEnricher(
-            stat='mean', columns=list(columns), enricher=FileEnricher(file=Path(self.path))
-        )
+class FileSource:
+    @staticmethod
+    def from_path(path: str) -> 'StorageFileSource':
+        return StorageFileSource(path=path)
 
-    def enricher(self) -> Enricher:
-        return FileEnricher(file=Path(self.path))
+    @staticmethod
+    def csv_at(
+        path: str, mapping_keys: dict[str, str] | None = None, csv_config: CsvConfig | None = None
+    ) -> 'CsvFileSource':
+        return CsvFileSource(path, mapping_keys=mapping_keys or {}, csv_config=csv_config or CsvConfig())
 
 
 @dataclass
-class LiteralReference(FileReference):
+class LiteralReference(DataFileReference):
 
-    file: DataFrame
+    file: pd.DataFrame
 
-    async def read(self) -> bytes:
-        file = StringIO()
-        self.file.to_csv(file, index=False)
-        file.seek(0)
-        return file.read().encode('utf-8')
+    def job_group_key(self) -> str:
+        return str(uuid4())
 
-    async def write(self, content: bytes) -> None:
-        raise NotImplementedError()
+    async def read_pandas(self) -> pd.DataFrame:
+        return self.file

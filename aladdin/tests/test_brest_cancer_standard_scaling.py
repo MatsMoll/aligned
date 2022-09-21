@@ -11,7 +11,7 @@ class BreastDiagnoseFeatureView(FeatureView):
         name='breast_features',
         description='Features defining a scan and diagnose of potential cancer cells',
         tags={},
-        batch_source=FileSource(path='test_data/data.csv', mapping_keys={'id': 'scan_id'}),
+        batch_source=FileSource.csv_at(path='test_data/data.csv', mapping_keys={'id': 'scan_id'}),
     )
 
     scan_id = Entity(dtype=Int32())
@@ -99,4 +99,4 @@ async def test_online_store_standard_scaling() -> None:
         {'scan_id': [10, 11]}, features=[f'{compiled_view.name}:scaled_mean_radius']
     ).to_df()
 
-    assert stored['scaled_mean_radius'].values == [1.096100, 0]
+    assert ((stored['scaled_mean_radius'].values * 1000).astype(int) == [1096, 0]).all()

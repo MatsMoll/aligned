@@ -1,13 +1,12 @@
 from dataclasses import dataclass
 from datetime import datetime
-from io import StringIO
 from typing import TypeVar
 
 import pandas as pd
 
 from aladdin.data_source.batch_data_source import ColumnFeatureMappable
 from aladdin.feature import Feature
-from aladdin.local.source import FileReference, FileSource
+from aladdin.local.source import DataFileReference
 from aladdin.request.retrival_request import RetrivalRequest
 from aladdin.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob
 
@@ -22,7 +21,7 @@ GenericDataFrame = TypeVar('GenericDataFrame', pd.DataFrame, dd.DataFrame)
 @dataclass
 class FileFullJob(FullExtractJob):
 
-    source: FileReference
+    source: DataFileReference
     request: RetrivalRequest
     limit: int | None
 
@@ -44,28 +43,18 @@ class FileFullJob(FullExtractJob):
             return df
 
     async def _to_df(self) -> pd.DataFrame:
-        content = await self.source.read()
-        file = StringIO(str(content, 'utf-8'))
-        df = pd.read_csv(file)
-        return self.file_transformations(df)
+        file = await self.source.read_pandas()
+        return self.file_transformations(file)
 
     async def _to_dask(self) -> dd.DataFrame:
-        if not isinstance(self.source, FileSource):
-            raise ValueError("FileFullJob, can only handle FileSource's as source")
-
-        path = self.source.path
-        if path.endswith('.csv'):
-            df = dd.read_csv(path)
-        else:
-            df = dd.read_parquet(path)
-
-        return self.file_transformations(df)
+        file = await self.source.read_dask()
+        return self.file_transformations(file)
 
 
 @dataclass
 class FileDateJob(DateRangeJob):
 
-    source: FileReference
+    source: DataFileReference
     request: RetrivalRequest
     start_date: datetime
     end_date: datetime
@@ -95,29 +84,18 @@ class FileDateJob(DateRangeJob):
         return df.loc[df[event_timestamp_column].between(start_date_ts, end_date_ts)]
 
     async def _to_df(self) -> pd.DataFrame:
-        content = await self.source.read()
-        file = StringIO(str(content, 'utf-8'))
-        df = pd.read_csv(file)
-
-        return self.file_transformations(df)
+        file = await self.source.read_pandas()
+        return self.file_transformations(file)
 
     async def _to_dask(self) -> dd.DataFrame:
-        if not isinstance(self.source, FileSource):
-            raise ValueError("FileFullJob, can only handle FileSource's as source")
-
-        path = self.source.path
-        if path.endswith('.csv'):
-            df = dd.read_csv(path)
-        else:
-            df = dd.read_parquet(path)
-
-        return self.file_transformations(df)
+        file = await self.source.read_dask()
+        return self.file_transformations(file)
 
 
 @dataclass
 class FileFactualJob(FactualRetrivalJob):
 
-    source: FileReference
+    source: DataFileReference
     requests: list[RetrivalRequest]
     facts: dict[str, list]
 
@@ -156,19 +134,9 @@ class FileFactualJob(FactualRetrivalJob):
         return result
 
     async def _to_df(self) -> pd.DataFrame:
-        content = await self.source.read()
-        file = StringIO(str(content, 'utf-8'))
-        df = pd.read_csv(file)
-        return self.file_transformations(df)
+        file = await self.source.read_pandas()
+        return self.file_transformations(file)
 
     async def _to_dask(self) -> dd.DataFrame:
-        if not isinstance(self.source, FileSource):
-            raise ValueError("FileFullJob, can only handle FileSource's as source")
-
-        path = self.source.path
-        if path.endswith('.csv'):
-            df = dd.read_csv(path)
-        else:
-            df = dd.read_parquet(path)
-
-        return self.file_transformations(df)
+        file = await self.source.read_dask()
+        return self.file_transformations(file)

@@ -40,6 +40,11 @@ class RangeFeatureSource:
 
 @dataclass
 class BatchFeatureSource(FeatureSource, RangeFeatureSource):
+    """A factory for different type of jobs
+    This could either be a "fetch all", or "fetch features for ids"
+
+    This class will then know how to strucutre the query in the correct way
+    """
 
     job_factories: dict[str, JobFactory]
     sources: dict[str, BatchDataSource]
@@ -79,6 +84,22 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
 
 @dataclass
 class FactualInMemoryJob(FactualRetrivalJob):
+    """
+    A job using a in mem storage, aka a dict.
+
+    This will store the features in the following format:
+
+    values = {
+        "feature_view:entity-id:feature-name": value,
+
+        ...
+        "titanic_passenger:20:age": 22,
+        "titanic_passenger:21:age": 50,
+        ...
+        "titanic_passenger:20:class": "Eco",
+        "titanic_passenger:21:class": "VIP",
+    }
+    """
 
     values: dict[str, Any]
     requests: list[RetrivalRequest]
@@ -89,32 +110,26 @@ class FactualInMemoryJob(FactualRetrivalJob):
 
     async def _to_df(self) -> pd.DataFrame:
 
-        raise NotImplementedError()
-        # columns = set()
-        # for request in self.requests:
-        #     for feature in request.all_feature_names:
-        #         columns.add(feature)
+        columns = set()
+        for request in self.requests:
+            for feature in request.all_feature_names:
+                columns.add(feature)
 
-        # result_df = pd.DataFrame(self.facts)
+        result_df = pd.DataFrame(self.facts)
 
-        # for request in self.requests:
-        #     entity_ids = result_df[list(request.entity_names)]
-        #     mask = ~entity_ids.isna().any(axis=1)
-        #     entities = [
-        #         ':'.join([str(ent_id) for ent_id in entity_ids])
-        #         for _, entity_ids in entity_ids.loc[mask].iterrows()
-        #     ]
+        for request in self.requests:
+            entity_ids = result_df[list(request.entity_names)]
+            entities = entity_ids.sum(axis=1)
 
-        #     for feature in request.all_feature_names:
-        #         # if feature.name in request.entity_names:
-        #         #     continue
-        #         # Fetch one column at a time
-        #         for entity in entities:
-        #             dtype = result_df[list(request.entity_names)[0]].dtype
-        #             mask = result_df[list(request.entity_names)[0]].astype(str)
-        #             result_df.loc[mask, feature] = self.values.get(self.key(request, entity, feature))
+            for feature in request.all_feature_names:
+                # if feature.name in request.entity_names:
+                #     continue
+                # Fetch one column at a time
+                result_df[feature] = [
+                    self.values.get(self.key(request, entity, feature)) for entity in entities
+                ]
 
-        # return result_df
+        return result_df
 
     async def to_df(self) -> pd.DataFrame:
         return await self._to_df()
