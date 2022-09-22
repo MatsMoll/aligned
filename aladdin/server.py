@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from numpy import nan
 from pydantic import BaseModel
 
@@ -138,7 +138,7 @@ class FastAPIServer:
 
         # Using POST as this can have a body with the fact / entity table
         @app.post(f'/models/{name}', openapi_extra=featch_api_schema)
-        async def get_model(entity_values: dict) -> dict:
+        async def get_model(entity_values: dict) -> str:
             missing_entities = {entity.name for entity in entities if entity.name not in entity_values}
             if missing_entities:
                 raise HTTPException(status_code=400, detail=f'Missing entity values {missing_entities}')
@@ -152,8 +152,9 @@ class FastAPIServer:
                 ]
 
             df = await feature_store.model(name).features_for(entity_values).to_df()
-            df.replace(nan, value=None, inplace=True)
-            return df.to_dict('list')
+            orient = 'values'
+            body = ','.join([f'"{column}":{df[column].to_json(orient=orient)}' for column in df.columns])
+            return Response(content=f'{{{body}}}', media_type='application/json')
 
     @staticmethod
     def app(feature_store: FeatureStore) -> FastAPI:

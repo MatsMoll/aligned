@@ -31,7 +31,9 @@ class FactualRedisJob(FactualRetrivalJob):
                 if entity.dtype.is_numeric:
                     result_df[entity.name] = pd.to_numeric(result_df[entity.name], errors='coerce')
                 else:
-                    result_df[entity.name].convert_dtypes(infer_objects=False, convert_string=True)
+                    result_df[entity.name] = result_df[entity.name].convert_dtypes(
+                        infer_objects=False, convert_string=True
+                    )
 
         for request in self.requests:
             entity_ids = result_df[sorted(request.entity_names)]
