@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aladdinml"
-version = "0.0.18a"
+version = "0.0.19a"
 description = "A scalable feature store that makes it easy to productionise and manage ML and AI projects"
 authors = ["Mats E. Mollestad <mats@mollestad.no>"]
 license = "Apache-2.0"

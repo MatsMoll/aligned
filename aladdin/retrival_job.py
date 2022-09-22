@@ -322,7 +322,8 @@ class CombineFactualJob(RetrivalJob):
             df = pd.concat(dfs, axis=1)
             return await self.combine_data(df)
         elif job_count == 1:
-            return await self.jobs[0].to_df()
+            df = await self.jobs[0].to_df()
+            return await self.combine_data(df)
         else:
             raise ValueError(
                 'Have no jobs to fetch. This is probably an internal error.\n'
