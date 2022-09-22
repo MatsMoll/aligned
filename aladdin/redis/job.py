@@ -24,18 +24,26 @@ class FactualRedisJob(FactualRetrivalJob):
     async def _to_df(self) -> pd.DataFrame:
         redis = self.config.redis()
 
-        columns = set()
-        for request in self.requests:
-            columns.update(request.all_feature_names)
-
         result_df = pd.DataFrame(self.facts)
+
+        for request in self.requests:
+            for entity in request.entities:
+                if entity.dtype.is_numeric:
+                    result_df[entity.name] = pd.to_numeric(result_df[entity.name], errors='coerce')
+                else:
+                    result_df[entity.name] = (
+                        result_df[entity.name]
+                        .astype(entity.dtype.pandas_type)
+                        .mask(result_df[entity.name].isna())
+                    )
 
         for request in self.requests:
             # If using multiple entities, will this fail!
             # Need to sort on something in order to fix the bug
             entity_ids = result_df[sorted(request.entity_names)]
             mask = ~entity_ids.isna().any(axis=1)
-            entities = request.feature_view_name + ':' + entity_ids.loc[mask].astype(str).sum(axis=1)
+            entities = (request.feature_view_name + ':' + entity_ids.astype(str).sum(axis=1)).loc[mask]
+
             for feature in request.all_features:
                 keys = entities + ':' + feature.name
 
