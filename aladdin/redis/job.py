@@ -38,9 +38,12 @@ class FactualRedisJob(FactualRetrivalJob):
                     )
 
         for request in self.requests:
-            # If using multiple entities, will this fail!
-            # Need to sort on something in order to fix the bug
             entity_ids = result_df[sorted(request.entity_names)]
+            if entity_ids.empty:
+                for feature in request.all_features:
+                    result_df[feature.name] = np.nan
+                continue
+
             mask = ~entity_ids.isna().any(axis=1)
             entities = (request.feature_view_name + ':' + entity_ids.astype(str).sum(axis=1)).loc[mask]
 

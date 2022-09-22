@@ -10,32 +10,33 @@ from aladdin.redis.job import FactualRedisJob
 from aladdin.request.retrival_request import RetrivalRequest
 
 
+@pytest.fixture
+def retrival_request() -> RetrivalRequest:
+    return RetrivalRequest(
+        feature_view_name='test',
+        entities={
+            Feature(name='id_int', dtype=FeatureType('').int32),
+            Feature(name='id_str', dtype=FeatureType('').string),
+        },
+        features={
+            Feature(name='x', dtype=FeatureType('').int32),
+        },
+        derived_features=set(),
+        event_timestamp=None,
+    )
+
+
 @pytest.mark.asyncio
-async def test_factual_redis_job(mocker) -> None:  # type: ignore[no-untyped-def]
+async def test_factual_redis_job(mocker, retrival_request) -> None:  # type: ignore[no-untyped-def]
     values = ['20', '44']
     redis_values: Future = Future()
     redis_values.set_result(values)
 
     redis_mock = mocker.patch.object(StrictRedis, 'mget', return_value=redis_values)
 
-    feature_view_name = 'test'
-
     job = FactualRedisJob(
         RedisConfig.localhost(),
-        requests=[
-            RetrivalRequest(
-                feature_view_name=feature_view_name,
-                entities={
-                    Feature(name='id_int', dtype=FeatureType('').int32),
-                    Feature(name='id_str', dtype=FeatureType('').string),
-                },
-                features={
-                    Feature(name='x', dtype=FeatureType('').int32),
-                },
-                derived_features=set(),
-                event_timestamp=None,
-            )
-        ],
+        requests=[retrival_request],
         facts={'id_int': [1.0, 2.0, None, 4.0], 'id_str': ['a', 'b', 'c', None]},
     )
 
@@ -47,31 +48,16 @@ async def test_factual_redis_job(mocker) -> None:  # type: ignore[no-untyped-def
 
 
 @pytest.mark.asyncio
-async def test_factual_redis_job_int_as_str(mocker) -> None:  # type: ignore[no-untyped-def]
+async def test_factual_redis_job_int_as_str(mocker, retrival_request) -> None:  # type: ignore[no-untyped-def]
     values = ['20', '44']
     redis_values: Future = Future()
     redis_values.set_result(values)
 
     redis_mock = mocker.patch.object(StrictRedis, 'mget', return_value=redis_values)
 
-    feature_view_name = 'test'
-
     job = FactualRedisJob(
         RedisConfig.localhost(),
-        requests=[
-            RetrivalRequest(
-                feature_view_name=feature_view_name,
-                entities={
-                    Feature(name='id_int', dtype=FeatureType('').int32),
-                    Feature(name='id_str', dtype=FeatureType('').string),
-                },
-                features={
-                    Feature(name='x', dtype=FeatureType('').int32),
-                },
-                derived_features=set(),
-                event_timestamp=None,
-            )
-        ],
+        requests=[retrival_request],
         facts={'id_int': ['1', '2', None, '4'], 'id_str': ['a', 'b', 'c', None]},
     )
 
@@ -83,32 +69,35 @@ async def test_factual_redis_job_int_as_str(mocker) -> None:  # type: ignore[no-
 
 
 @pytest.mark.asyncio
-async def test_no_entities_job(mocker) -> None:  # type: ignore[no-untyped-def]
+async def test_nan_entities_job(mocker, retrival_request) -> None:  # type: ignore[no-untyped-def]
     values = ['20', '44']
     redis_values: Future = Future()
     redis_values.set_result(values)
 
     redis_mock = mocker.patch.object(StrictRedis, 'mget', return_value=redis_values)
 
-    feature_view_name = 'test'
+    job = FactualRedisJob(
+        RedisConfig.localhost(),
+        requests=[retrival_request],
+        facts={'id_int': [None, '4'], 'id_str': ['c', None]},
+    )
+
+    _ = await job.to_df()
+    redis_mock.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_no_entities_job(mocker, retrival_request) -> None:  # type: ignore[no-untyped-def]
+    values = ['20', '44']
+    redis_values: Future = Future()
+    redis_values.set_result(values)
+
+    redis_mock = mocker.patch.object(StrictRedis, 'mget', return_value=redis_values)
 
     job = FactualRedisJob(
         RedisConfig.localhost(),
-        requests=[
-            RetrivalRequest(
-                feature_view_name=feature_view_name,
-                entities={
-                    Feature(name='id_int', dtype=FeatureType('').int32),
-                    Feature(name='id_str', dtype=FeatureType('').string),
-                },
-                features={
-                    Feature(name='x', dtype=FeatureType('').int32),
-                },
-                derived_features=set(),
-                event_timestamp=None,
-            )
-        ],
-        facts={'id_int': [None, '4'], 'id_str': ['c', None]},
+        requests=[retrival_request],
+        facts={'id_int': [], 'id_str': []},
     )
 
     _ = await job.to_df()
