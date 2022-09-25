@@ -41,6 +41,18 @@ class FeatureReferancable:
     def _dtype(self) -> FeatureType:
         pass
 
+    def copy_dtype(self) -> 'FeatureReferancable':
+        values: dict[str, FeatureReferancable] = {
+            'string': String(),
+            'int32': Int32(),
+            'int64': Int64(),
+            'float': Float(),
+            'double': Double(),
+            'bool': Bool(),
+            'array': Array(),
+        }
+        return values[self._dtype.name]
+
     def feature_referance(self) -> FeatureReferance:
         if not self.name or not self.feature_view:
             raise ValueError('name and feature_view must be set')
@@ -57,16 +69,31 @@ class Transformable(FeatureReferancable):
         self,
         transformation: Callable[[DataFrame], Series],
         using_features: list[FeatureReferancable] | None = None,
+        as_dtype: FeatureReferancable | None = None,
     ) -> 'TransformationFactory':
+        """
+        Defines a custom python transformation
+
+        Args:
+            transformation (Callable[[DataFrame], Series]): The transformation to perform
+            using_features (list[FeatureReferancable] | None, optional):
+                The features that this feature depends on. Defaults to None.
+            as_dtype (FeatureReferancable | None, optional): The data type of the feature. Defaults to None.
+
+        Returns:
+            TransformationFactory: The transformed feature
+        """
         import asyncio
 
+        dtype = as_dtype or self.copy_dtype()
+
         if asyncio.iscoroutinefunction(transformation):
-            return CustomTransformation(using_features or [self], self, transformation)
+            return CustomTransformation(using_features or [self], dtype, transformation)
 
         async def sub_tran(df: DataFrame) -> Series:
             return transformation(df)
 
-        return CustomTransformation(using_features or [self], self, sub_tran)
+        return CustomTransformation(using_features or [self], dtype, sub_tran)
 
     # Comparable operators
     def __eq__(self, __o: object) -> 'Equals':  # type: ignore
