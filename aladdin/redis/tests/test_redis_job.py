@@ -102,3 +102,35 @@ async def test_no_entities_job(mocker, retrival_request) -> None:  # type: ignor
 
     _ = await job.to_df()
     redis_mock.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_factual_redis_job_int_entity(mocker) -> None:  # type: ignore[no-untyped-def]
+
+    retrival_request = RetrivalRequest(
+        feature_view_name='test',
+        entities={Feature(name='id_int', dtype=FeatureType('').int32)},
+        features={
+            Feature(name='x', dtype=FeatureType('').int32),
+        },
+        derived_features=set(),
+        event_timestamp=None,
+    )
+
+    values = ['20', '44', '55']
+    redis_values: Future = Future()
+    redis_values.set_result(values)
+
+    redis_mock = mocker.patch.object(StrictRedis, 'mget', return_value=redis_values)
+
+    job = FactualRedisJob(
+        RedisConfig.localhost(),
+        requests=[retrival_request],
+        facts={'id_int': [1.0, 2.0, 4.0, None]},
+    )
+
+    result = await job.to_df()
+    redis_mock.assert_called_once()
+    assert np.all(redis_mock.call_args[0][0] == ['test:1.0:x', 'test:2.0:x', 'test:4.0:x'])
+    x_result = [int(value) for value in values] + [0]
+    assert np.all(result['x'].fillna(0).values == x_result)

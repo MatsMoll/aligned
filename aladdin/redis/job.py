@@ -43,7 +43,11 @@ class FactualRedisJob(FactualRetrivalJob):
                 continue
 
             mask = ~entity_ids.isna().any(axis=1)
-            entities = (request.feature_view_name + ':' + entity_ids.astype(str).sum(axis=1)).loc[mask]
+            entities = (
+                request.feature_view_name
+                + ':'
+                + entity_ids.loc[mask].astype('string').sum(axis=1).astype('string')
+            )
 
             for feature in request.all_features:
                 keys = entities + ':' + feature.name
