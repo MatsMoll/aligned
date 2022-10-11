@@ -57,6 +57,10 @@ class TrainTestValidateSet(Generic[DatasetType]):
     validate_index: Index
 
     @property
+    def output(self) -> DatasetType:
+        return self.data[self.target]
+
+    @property
     def train(self) -> DatasetType:
         return self.data.iloc[self.train_index]
 

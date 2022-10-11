@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import math
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractproperty
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime
@@ -15,7 +14,7 @@ from aladdin.data_source.batch_data_source import BatchDataSource
 from aladdin.derivied_feature import DerivedFeature
 from aladdin.feature import FeatureType
 from aladdin.feature_view.feature_view import FeatureView
-from aladdin.request.retrival_request import RetrivalRequest
+from aladdin.request.retrival_request import RequestResult, RetrivalRequest
 from aladdin.split_strategy import SplitDataSet, SplitStrategy, TrainTestSet, TrainTestValidateSet
 
 try:
@@ -37,14 +36,21 @@ def split(data: pd.DataFrame, target_column: str, start_ratio: float, end_ratio:
     for value in data[target_column].unique():
         subset = data.loc[data[target_column] == value]
         group_size = subset.shape[0]
-        start_index = math.floor(group_size * start_ratio)
-        end_index = math.floor(group_size * end_ratio)
+        start_index = round(group_size * start_ratio)
+        end_index = round(group_size * end_ratio)
 
-        index = index.append(subset.iloc[start_index:end_index].index)
+        if end_index >= group_size:
+            index = index.append(subset.iloc[start_index:].index)
+        else:
+            index = index.append(subset.iloc[start_index:end_index].index)
     return index
 
 
 class RetrivalJob(ABC):
+    @abstractproperty
+    def request_result(self) -> RequestResult:
+        pass
+
     @abstractmethod
     async def to_df(self) -> pd.DataFrame:
         pass
@@ -112,21 +118,15 @@ class DerivedFeatureJob(RetrivalJob):
         return FileCachedJob(path, self)
 
 
-class LazyJoinJob(RetrivalJob):
-
-    original_job: RetrivalJob
-    view_to_join: FeatureView
-
-    def to_df(self) -> pd.DataFrame:
-        # original_df = await self.original_job.to_df()
-        self.view_to_join.compile().batch_data_source
-
-
 @dataclass
 class FileCachedJob(RetrivalJob):
 
     path: str
     job: DerivedFeatureJob
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.job.request_result
 
     async def to_df(self) -> pd.DataFrame:
         try:
@@ -151,11 +151,15 @@ class TrainTestSetJob:
     test_size: float
     target_column: str
 
+    @property
+    def request_result(self) -> RequestResult:
+        return self.job.request_result
+
     async def use_df(self) -> TrainTestSet[pd.DataFrame]:
 
         data = await self.job.to_df()
 
-        features = list(set(data.columns) - {self.target_column})
+        features = list({feature.name for feature in self.request_result.features} - {self.target_column})
 
         test_ratio_start = 1 - self.test_size
         return TrainTestSet(
@@ -175,6 +179,10 @@ class TrainTestValidateSetJob:
 
     job: TrainTestSetJob
     validation_size: float
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.job.request_result
 
     async def use_df(self) -> TrainTestValidateSet[pd.DataFrame]:
         test_set = await self.job.use_df()
@@ -200,6 +208,10 @@ class SplitJob:
     target_column: str
     strategy: SplitStrategy
 
+    @property
+    def request_result(self) -> RequestResult:
+        return self.job.request_result
+
     async def use_pandas(self) -> SplitDataSet[pd.DataFrame]:
         data = await self.job.to_df()
         return self.strategy.split_pandas(data, self.target_column)
@@ -211,6 +223,10 @@ Source = TypeVar('Source', bound=BatchDataSource)
 class SingleSourceRetrivalJob(DerivedFeatureJob, Generic[Source]):
     source: Source
     request: RetrivalRequest
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.request.request_result
 
     async def compute_derived_features(self, df: GenericDataFrame) -> GenericDataFrame:
         for feature_round in self.request.derived_features_order():
@@ -256,6 +272,10 @@ class FactualRetrivalJob(DerivedFeatureJob):
 
     requests: list[RetrivalRequest]
     facts: dict[str, list]
+
+    @property
+    def request_result(self) -> RequestResult:
+        return RequestResult.from_request_list(self.requests)
 
     async def compute_derived_features(self, df: GenericDataFrame) -> GenericDataFrame:
         combined_views: list[DerivedFeature] = []
@@ -309,6 +329,10 @@ class CombineFactualJob(RetrivalJob):
     jobs: list[RetrivalJob]
     combined_requests: list[RetrivalRequest]
 
+    @property
+    def request_result(self) -> RequestResult:
+        return RequestResult.from_request_list(self.combined_requests)
+
     async def combine_data(self, df: GenericDataFrame) -> GenericDataFrame:
         for request in self.combined_requests:
             for feature in request.derived_features:
@@ -345,6 +369,10 @@ class FilterJob(RetrivalJob):
 
     include_features: set[str]
     job: RetrivalJob
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.job.request_result.filter_features(self.include_features)
 
     async def to_df(self) -> pd.DataFrame:
         df = await self.job.to_df()

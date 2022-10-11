@@ -685,8 +685,8 @@ class Ordinal(Transformation):
 
         return TransformationTestDefinition(
             Ordinal('x', ['a', 'b', 'c', 'd']),
-            input={'x': ['a', 'b', 'a', None, 'd']},
-            output=[0, 1, 0, nan, 3],
+            input={'x': ['a', 'b', 'a', None, 'd', 'p']},
+            output=[0, 1, 0, nan, 3, nan],
         )
 
 

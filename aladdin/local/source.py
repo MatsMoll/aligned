@@ -68,10 +68,14 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher):
         return pd.read_csv(self.path, sep=self.csv_config.seperator, compression=self.csv_config.compression)
 
     def std(self, columns: set[str]) -> Enricher:
-        return LoadedStatEnricher(stat='std', columns=list(columns), enricher=self.enricher())
+        return LoadedStatEnricher(
+            stat='std', columns=list(columns), enricher=self.enricher(), mapping_keys=self.mapping_keys
+        )
 
     def mean(self, columns: set[str]) -> Enricher:
-        return LoadedStatEnricher(stat='mean', columns=list(columns), enricher=self.enricher())
+        return LoadedStatEnricher(
+            stat='mean', columns=list(columns), enricher=self.enricher(), mapping_keys=self.mapping_keys
+        )
 
     def enricher(self) -> Enricher:
         return CsvFileEnricher(file=Path(self.path))

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -132,22 +132,25 @@ class LoadedStatEnricher(Enricher):
     stat: str
     columns: list[str]
     enricher: Enricher
+    mapping_keys: dict[str, str] = field(default_factory=dict)
 
     async def load(self) -> pd.DataFrame:
         data = await self.enricher.load()
+        renamed = data.rename(columns=self.mapping_keys)
         if self.stat == 'mean':
-            return data[self.columns].mean()
+            return renamed[self.columns].mean()
         elif self.stat == 'std':
-            return data[self.columns].std()
+            return renamed[self.columns].std()
         else:
             raise ValueError(f'Not supporting stat: {self.stat}')
 
     async def as_dask(self) -> dd.DataFrame:
         data = await self.enricher.as_dask()
+        renamed = data.rename(columns=self.mapping_keys)
         if self.stat == 'mean':
-            return data[self.columns].mean()
+            return renamed[self.columns].mean()
         elif self.stat == 'std':
-            return data[self.columns].std()
+            return renamed[self.columns].std()
         else:
             raise ValueError(f'Not supporting stat: {self.stat}')
 

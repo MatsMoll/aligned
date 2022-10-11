@@ -18,6 +18,10 @@ class RetrivalRequest(Codable):
     def feature_names(self) -> list[str]:
         return [feature.name for feature in self.features]
 
+    @property
+    def request_result(self) -> 'RequestResult':
+        return RequestResult.from_request(self)
+
     def derived_feature_map(self) -> dict[str, DerivedFeature]:
         return {feature.name: feature for feature in self.derived_features}
 
@@ -105,7 +109,75 @@ class RetrivalRequest(Codable):
 
 
 @dataclass
+class RequestResult(Codable):
+
+    entities: set[Feature]
+    features: set[Feature]
+    event_timestamp: str | None
+
+    def filter_features(self, features_to_include: set[str]) -> 'RequestResult':
+        return RequestResult(
+            entities=self.entities,
+            features={feature for feature in self.features if feature.name in features_to_include},
+            event_timestamp=self.event_timestamp,
+        )
+
+    @staticmethod
+    def from_request(request: RetrivalRequest) -> 'RequestResult':
+        return RequestResult(
+            entities=request.entities,
+            features=request.all_features,
+            event_timestamp=request.event_timestamp.name if request.event_timestamp else None,
+        )
+
+    @staticmethod
+    def from_request_list(requests: list[RetrivalRequest]) -> 'RequestResult':
+        request_len = len(requests) > 1
+        if request_len == 0:
+            raise ValueError('Needs more then one request')
+        elif request_len > 1:
+            return RequestResult(
+                entities=set().union(*[request.entities for request in requests]),
+                features=set().union(*[request.all_features for request in requests]),
+                event_timestamp='event_timestamp'
+                if any(request.event_timestamp for request in requests)
+                else None,
+            )
+        else:
+            return RequestResult.from_request(requests[0])
+
+
+@dataclass
 class FeatureRequest(Codable):
+    """Representing a request of a set of features
+    This dataclass would be used to represent which
+    features to fetch for a given model.
+
+    It would therefore contain the different features that is for the endgoal.
+    But also which features that is needed in order to get the wanted features.
+
+    E.g:
+    Let's say we have the following feature view:
+
+    ```
+    class TitanicPassenger(FeatureView):
+
+        ... # The metadata and entity is unrelevent here
+
+        sex = String()
+        is_male, is_female = sex.one_hot_encode(["male", "female"])
+    ```
+
+    If we ask for only the feature `is_male` the this dataclass would contain
+
+    name = the name of the feature view it originates from, or some something random
+    features_to_include = {'is_male'}
+    needed_requests = [
+        features={'sex'}, # would fetch only the sex feature, as `is_male` relies on it
+        derived_features={'is_male'} # The feature to be computed
+    ]
+    """
+
     name: str
     features_to_include: set[str]
     needed_requests: list[RetrivalRequest]
@@ -113,3 +185,7 @@ class FeatureRequest(Codable):
     @property
     def needs_event_timestamp(self) -> bool:
         return any(request.event_timestamp for request in self.needed_requests)
+
+    @property
+    def request_result(self) -> RequestResult:
+        return RequestResult.from_request_list(self.needed_requests)
