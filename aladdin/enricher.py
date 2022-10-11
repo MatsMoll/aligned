@@ -19,11 +19,21 @@ with suppress(ModuleNotFoundError):
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class TimespanSelector(Codable):
+    timespand: timedelta
+    time_column: str
+
+
 class StatisticEricher:
-    def std(self, columns: set[str]) -> Enricher:
+    def std(
+        self, columns: set[str], time: TimespanSelector | None = None, limit: int | None = None
+    ) -> Enricher:
         raise NotImplementedError()
 
-    def mean(self, columns: set[str]) -> Enricher:
+    def mean(
+        self, columns: set[str], time: TimespanSelector | None = None, limit: int | None = None
+    ) -> Enricher:
         raise NotImplementedError()
 
 
@@ -107,23 +117,49 @@ class RedisLockEnricher(Enricher):
 
 
 @dataclass
+class CsvFileSelectedEnricher(Enricher):
+    file: Path
+    time: TimespanSelector | None = field(default=None)
+    limit: int | None = field(default=None)
+    name: str = 'selective_file'
+
+    async def load(self) -> pd.DataFrame:
+        dates_to_parse = None
+        if self.time:
+            dates_to_parse = [self.time.time_column]
+
+        if self.limit:
+            file = pd.read_csv(self.file.absolute(), nrows=self.limit, parse_dates=dates_to_parse)
+        else:
+            file = pd.read_csv(self.file.absolute(), nrows=self.limit, parse_dates=dates_to_parse)
+
+        if not self.time:
+            return file
+
+        date = datetime.now() - self.time.timespand
+        selector = file[self.time.time_column] >= date
+        return file.loc[selector]
+
+    async def as_dask(self) -> dd.DataFrame:
+        return dd.read_csv(self.file.absolute())
+
+
+@dataclass
 class CsvFileEnricher(Enricher):
 
     file: Path
     name: str = 'file'
 
-    async def load(self) -> pd.DataFrame:
+    def selector(
+        self, time: TimespanSelector | None = None, limit: int | None = None
+    ) -> CsvFileSelectedEnricher:
+        return CsvFileSelectedEnricher(self.file, time=time, limit=limit)
 
-        if self.file.suffix == '.csv':
-            return pd.read_csv(self.file.absolute())
-        else:
-            return pd.read_parquet(self.file.absolute())
+    async def load(self) -> pd.DataFrame:
+        return pd.read_csv(self.file.absolute())
 
     async def as_dask(self) -> dd.DataFrame:
-        if self.file.suffix == '.csv':
-            return dd.read_csv(self.file.absolute())
-        else:
-            return dd.read_parquet(self.file.absolute())
+        return dd.read_csv(self.file.absolute())
 
 
 @dataclass

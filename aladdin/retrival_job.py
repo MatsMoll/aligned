@@ -13,7 +13,6 @@ import pandas as pd
 from aladdin.data_source.batch_data_source import BatchDataSource
 from aladdin.derivied_feature import DerivedFeature
 from aladdin.feature import FeatureType
-from aladdin.feature_view.feature_view import FeatureView
 from aladdin.request.retrival_request import RequestResult, RetrivalRequest
 from aladdin.split_strategy import SplitDataSet, SplitStrategy, TrainTestSet, TrainTestValidateSet
 
@@ -25,6 +24,7 @@ except ModuleNotFoundError:
     GenericDataFrame = pd.DataFrame  # type: ignore
 
 if TYPE_CHECKING:
+    from aladdin.feature_view.feature_view import FeatureView
     from aladdin.local.source import StorageFileReference
 
 

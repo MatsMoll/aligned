@@ -8,7 +8,7 @@ from aladdin.data_source.batch_data_source import BatchDataSource, ColumnFeature
 from aladdin.enricher import SqlDatabaseEnricher, StatisticEricher
 
 if TYPE_CHECKING:
-    from aladdin.enricher import Enricher
+    from aladdin.enricher import Enricher, TimespanSelector
     from aladdin.entity_data_source import EntityDataSource
 
 
@@ -63,10 +63,30 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, StatisticEric
     def __hash__(self) -> int:
         return hash(self.table)
 
-    def mean(self, columns: set[str]) -> Enricher:
+    def mean(
+        self, columns: set[str], time: TimespanSelector | None = None, limit: int | None = None
+    ) -> Enricher:
         sql_columns = ', '.join([f'AVG({column}) AS {column}' for column in columns])
-        return SqlDatabaseEnricher(self.config.url, f'SELECT {sql_columns} FROM {self.table}')
 
-    def std(self, columns: set[str]) -> Enricher:
+        query = f'SELECT {sql_columns} FROM {self.table}'
+        if time:
+            seconds = time.timespand.total_seconds()
+            query += f' WHERE {time.time_column} >= NOW() - interval \'{seconds} seconds\''
+        if limit and isinstance(limit, int):
+            query += f' LIMIT {limit}'
+
+        return SqlDatabaseEnricher(self.config.url, query)
+
+    def std(
+        self, columns: set[str], time: TimespanSelector | None = None, limit: int | None = None
+    ) -> Enricher:
         sql_columns = ', '.join([f'STDDEV({column}) AS {column}' for column in columns])
-        return SqlDatabaseEnricher(self.config.url, f'SELECT {sql_columns} FROM {self.table}')
+
+        query = f'SELECT {sql_columns} FROM {self.table}'
+        if time:
+            seconds = time.timespand.total_seconds()
+            query += f' WHERE {time.time_column} >= NOW() - interval \'{seconds} seconds\''
+        if limit and isinstance(limit, int):
+            query += f' LIMIT {limit}'
+
+        return SqlDatabaseEnricher(self.config.url, query)

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod, abstractproperty
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any, Callable, Literal, TypeVar
 from uuid import uuid4
@@ -7,6 +7,7 @@ from uuid import uuid4
 from pandas import DataFrame, Series
 
 from aladdin.derivied_feature import DerivedFeature
+from aladdin.enricher import TimespanSelector
 from aladdin.feature import Constraint
 from aladdin.feature import EventTimestamp as EventTimestampFeature
 from aladdin.feature import Feature, FeatureReferance, FeatureType
@@ -319,8 +320,12 @@ class NumericalTransformable(FeatureReferancable):
     def log1p(self) -> 'LogTransform':
         return LogTransform(self)
 
-    def standard_scaled(self) -> 'StandardScalingTransformationFactory':
-        return StandardScalingTransformationFactory(self, using_features=[self])
+    def standard_scaled(
+        self, timespan: TimespanSelector | None = None, limit: int | None = None
+    ) -> 'StandardScalingTransformationFactory':
+        return StandardScalingTransformationFactory(
+            self, using_features=[self], timespan=timespan, limit=limit
+        )
 
 
 class Float(FeatureFactory, NumericalTransformable):
@@ -779,10 +784,12 @@ class ToNumerical(TransformationFactory):
 @dataclass
 class StandardScalingTransformationFactory(TransformationFactory):
 
-    field: FeatureReferancable
+    key: FeatureReferancable
 
     using_features: list[FeatureReferancable]
 
+    limit: int | None = field(default=None)
+    timespan: TimespanSelector | None = field(default=None)
     feature: FeatureReferancable = Float()
 
     def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
@@ -792,7 +799,7 @@ class StandardScalingTransformationFactory(TransformationFactory):
 
         from aladdin.enricher import StatisticEricher
 
-        if self.field.is_derived:
+        if self.key.is_derived:
             raise ValueError('Standard scaling is not supported for derived features yet')
 
         assert self.name is not None
@@ -805,8 +812,12 @@ class StandardScalingTransformationFactory(TransformationFactory):
         if not isinstance(metadata.batch_source, StatisticEricher):
             raise ValueError('The data source needs to conform to StatisticEricher')
 
-        std_enricher = metadata.batch_source.std(columns={self.field.name})
-        mean_enricher = metadata.batch_source.mean(columns={self.field.name})
+        std_enricher = metadata.batch_source.std(
+            columns={self.key.name}, time=self.timespan, limit=self.limit
+        )
+        mean_enricher = metadata.batch_source.mean(
+            columns={self.key.name}, time=self.timespan, limit=self.limit
+        )
 
         async def compute() -> tuple[DataFrame, DataFrame]:
             return await asyncio.gather(std_enricher.load(), mean_enricher.load())
@@ -817,7 +828,7 @@ class StandardScalingTransformationFactory(TransformationFactory):
             nest_asyncio.apply()
             std, mean = asyncio.get_event_loop().run_until_complete(compute())
 
-        return StandardScalingTransformation(mean[self.field.name], std[self.field.name], self.field.name)
+        return StandardScalingTransformation(mean[self.key.name], std[self.key.name], self.key.name)
 
 
 class IsIn(TransformationFactory):

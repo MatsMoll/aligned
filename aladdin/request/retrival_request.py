@@ -7,6 +7,12 @@ from aladdin.feature import EventTimestamp, Feature
 
 @dataclass
 class RetrivalRequest(Codable):
+    """
+    Describes all the information needed for a request to be successful.
+
+    This do not mean all the data is shown to the end user,
+    as there may be some features that depend on other features.
+    """
 
     feature_view_name: str
     entities: set[Feature]
@@ -110,6 +116,9 @@ class RetrivalRequest(Codable):
 
 @dataclass
 class RequestResult(Codable):
+    """
+    Describes the returend response of a request
+    """
 
     entities: set[Feature]
     features: set[Feature]

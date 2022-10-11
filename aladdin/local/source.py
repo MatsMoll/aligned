@@ -8,7 +8,7 @@ import pandas as pd
 
 from aladdin.codable import Codable
 from aladdin.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
-from aladdin.enricher import CsvFileEnricher, Enricher, LoadedStatEnricher, StatisticEricher
+from aladdin.enricher import CsvFileEnricher, Enricher, LoadedStatEnricher, StatisticEricher, TimespanSelector
 from aladdin.feature_store import FeatureStore
 from aladdin.repo_definition import RepoDefinition
 from aladdin.s3.storage import FileStorage, HttpStorage
@@ -67,17 +67,27 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher):
     async def read_pandas(self) -> pd.DataFrame:
         return pd.read_csv(self.path, sep=self.csv_config.seperator, compression=self.csv_config.compression)
 
-    def std(self, columns: set[str]) -> Enricher:
+    def std(
+        self, columns: set[str], time: TimespanSelector | None = None, limit: int | None = None
+    ) -> Enricher:
         return LoadedStatEnricher(
-            stat='std', columns=list(columns), enricher=self.enricher(), mapping_keys=self.mapping_keys
+            stat='std',
+            columns=list(columns),
+            enricher=self.enricher().selector(time, limit),
+            mapping_keys=self.mapping_keys,
         )
 
-    def mean(self, columns: set[str]) -> Enricher:
+    def mean(
+        self, columns: set[str], time: TimespanSelector | None = None, limit: int | None = None
+    ) -> Enricher:
         return LoadedStatEnricher(
-            stat='mean', columns=list(columns), enricher=self.enricher(), mapping_keys=self.mapping_keys
+            stat='mean',
+            columns=list(columns),
+            enricher=self.enricher().selector(time, limit),
+            mapping_keys=self.mapping_keys,
         )
 
-    def enricher(self) -> Enricher:
+    def enricher(self) -> CsvFileEnricher:
         return CsvFileEnricher(file=Path(self.path))
 
 

@@ -134,7 +134,7 @@ name = "cloudpickle"
 version = "2.1.0"
 description = "Extended pickling support for Python objects"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.6"
 
 [[package]]
@@ -166,10 +166,10 @@ test = ["pytest (>=6.2.0)", "pytest-benchmark", "pytest-cov", "pytest-subtests",
 
 [[package]]
 name = "dask"
-version = "2022.7.0"
+version = "2022.9.2"
 description = "Parallel PyData with Task Scheduling"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.8"
 
 [package.dependencies]
@@ -184,11 +184,11 @@ toolz = ">=0.8.2"
 
 [package.extras]
 array = ["numpy (>=1.18)"]
-complete = ["bokeh (>=2.4.2)", "distributed (==2022.7.0)", "jinja2", "numpy (>=1.18)", "pandas (>=1.0)"]
+complete = ["bokeh (>=2.4.2)", "distributed (==2022.9.2)", "jinja2", "numpy (>=1.18)", "pandas (>=1.0)"]
 dataframe = ["numpy (>=1.18)", "pandas (>=1.0)"]
 diagnostics = ["bokeh (>=2.4.2)", "jinja2"]
-distributed = ["distributed (==2022.7.0)"]
-test = ["pytest", "pytest-rerunfailures", "pytest-xdist", "pre-commit"]
+distributed = ["distributed (==2022.9.2)"]
+test = ["pandas", "pytest", "pytest-rerunfailures", "pytest-xdist", "pre-commit"]
 
 [[package]]
 name = "databases"
@@ -252,11 +252,22 @@ doc = ["mkdocs (>=1.1.2,<2.0.0)", "mkdocs-material (>=8.1.4,<9.0.0)", "mdx-inclu
 test = ["pytest (>=6.2.4,<7.0.0)", "pytest-cov (>=2.12.0,<4.0.0)", "mypy (==0.910)", "flake8 (>=3.8.3,<4.0.0)", "black (==22.3.0)", "isort (>=5.0.6,<6.0.0)", "requests (>=2.24.0,<3.0.0)", "httpx (>=0.14.0,<0.19.0)", "email_validator (>=1.1.1,<2.0.0)", "sqlalchemy (>=1.3.18,<1.5.0)", "peewee (>=3.13.3,<4.0.0)", "databases[sqlite] (>=0.3.2,<0.6.0)", "orjson (>=3.2.1,<4.0.0)", "ujson (>=4.0.1,!=4.0.2,!=4.1.0,!=4.2.0,!=4.3.0,!=5.0.0,!=5.1.0,<6.0.0)", "python-multipart (>=0.0.5,<0.0.6)", "flask (>=1.1.2,<3.0.0)", "anyio[trio] (>=3.2.1,<4.0.0)", "types-ujson (==4.2.1)", "types-orjson (==3.6.2)", "types-dataclasses (==0.6.5)"]
 
 [[package]]
+name = "freezegun"
+version = "1.2.2"
+description = "Let your Python tests travel through time"
+category = "dev"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+python-dateutil = ">=2.7"
+
+[[package]]
 name = "fsspec"
 version = "2022.5.0"
 description = "File-system specification"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.7"
 
 [package.extras]
@@ -374,7 +385,7 @@ name = "locket"
 version = "1.0.0"
 description = "File-based locks for Python on Linux and Windows"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
@@ -448,7 +459,7 @@ name = "partd"
 version = "1.2.0"
 description = "Appendable key-value storage"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.5"
 
 [package.dependencies]
@@ -582,7 +593,7 @@ name = "pyyaml"
 version = "6.0"
 description = "YAML parser and emitter for Python"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.6"
 
 [[package]]
@@ -691,7 +702,7 @@ name = "toolz"
 version = "0.12.0"
 description = "List processing tools and functional utilities"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.5"
 
 [[package]]
@@ -736,6 +747,7 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 
 [extras]
 aws = ["aioaws", "databases"]
+dask = ["dask"]
 psql = ["databases", "asyncpg"]
 redis = ["redis"]
 server = ["asgi-correlation-id", "fastapi", "uvicorn"]
@@ -743,7 +755,7 @@ server = ["asgi-correlation-id", "fastapi", "uvicorn"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "1181c4bcdecfde9bc7dccfaee65975da28a63007b15082ca52015c7139733393"
+content-hash = "fa45cdd946a7431d6afc5049d9ff46b0a29e0215863f35530fc54a6b78d2ee50"
 
 [metadata.files]
 aioaws = [
@@ -912,6 +924,7 @@ fastapi = [
     {file = "fastapi-0.77.1-py3-none-any.whl", hash = "sha256:041d8935a13c8f22a7ef80c76d8eea54953c44476d7057e7734138ee8951b9dc"},
     {file = "fastapi-0.77.1.tar.gz", hash = "sha256:6dfa715a334d1fafedcea33d74c7382afd2ce123093f83be2f4e322e89d45e22"},
 ]
+freezegun = []
 fsspec = [
     {file = "fsspec-2022.5.0-py3-none-any.whl", hash = "sha256:2c198c50eb541a80bbd03540b07602c4a957366f3fb416a1f270d34bd4ff0926"},
     {file = "fsspec-2022.5.0.tar.gz", hash = "sha256:7a5459c75c44e760fbe6a3ccb1f37e81e023cde7da8ba20401258d877ec483b4"},
