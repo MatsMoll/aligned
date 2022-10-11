@@ -66,7 +66,8 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, StatisticEric
     def mean(
         self, columns: set[str], time: TimespanSelector | None = None, limit: int | None = None
     ) -> Enricher:
-        sql_columns = ', '.join([f'AVG({column}) AS {column}' for column in columns])
+        reverse_map = {value: key for key, value in self.mapping_keys.items()}
+        sql_columns = ', '.join([f'AVG({reverse_map.get(column, column)}) AS {column}' for column in columns])
 
         query = f'SELECT {sql_columns} FROM {self.table}'
         if time:
@@ -80,7 +81,10 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, StatisticEric
     def std(
         self, columns: set[str], time: TimespanSelector | None = None, limit: int | None = None
     ) -> Enricher:
-        sql_columns = ', '.join([f'STDDEV({column}) AS {column}' for column in columns])
+        reverse_map = {value: key for key, value in self.mapping_keys.items()}
+        sql_columns = ', '.join(
+            [f'STDDEV({reverse_map.get(column, column)}) AS {column}' for column in columns]
+        )
 
         query = f'SELECT {sql_columns} FROM {self.table}'
         if time:
