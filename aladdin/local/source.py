@@ -18,6 +18,13 @@ logger = logging.getLogger(__name__)
 
 
 class DataFileReference:
+    """
+    A reference to a data file.
+
+    It can therefore be loaded in and writen to.
+    Either as a pandas data frame, or a dask data frame.
+    """
+
     async def read_pandas(self) -> pd.DataFrame:
         raise NotImplementedError()
 
@@ -32,6 +39,12 @@ class DataFileReference:
 
 
 class StorageFileReference:
+    """
+    A reference to a file that can be loaded as bytes.
+
+    The bytes can contain anything, potentially a FeatureStore definition
+    """
+
     async def read(self) -> bytes:
         raise NotImplementedError()
 
@@ -45,12 +58,19 @@ class StorageFileReference:
 
 @dataclass
 class CsvConfig(Codable):
+    """
+    A config for how a CSV file should be loaded
+    """
+
     seperator: str = field(default=',')
     compression: Literal['infer', 'gzip', 'bz2', 'zip', 'xz', 'zstd'] = field(default='infer')
 
 
 @dataclass
 class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher):
+    """
+    A source pointing to a CSV file
+    """
 
     path: str
     mapping_keys: dict[str, str] = field(default_factory=dict)
@@ -114,6 +134,13 @@ class StorageFileSource(StorageFileReference):
 
 
 class FileSource:
+    """
+    A factory class, creating references to files.
+
+    This therefore abstracts away the concrete classes the users wants.
+    Therefore making them easier to discover.
+    """
+
     @staticmethod
     def from_path(path: str) -> 'StorageFileSource':
         return StorageFileSource(path=path)
@@ -127,6 +154,11 @@ class FileSource:
 
 @dataclass
 class LiteralReference(DataFileReference):
+    """
+    A class containing a in mem pandas frame.
+
+    This makes it easier standardise the interface when writing data.
+    """
 
     file: pd.DataFrame
 
