@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from importlib import import_module
 from typing import Any
 
+from aladdin.data_file import DataFileReference
 from aladdin.enricher import Enricher
 from aladdin.feature_source import (
     BatchFeatureSource,
@@ -286,6 +287,14 @@ class ModelFeatureStore:
         return FilterJob(
             self.request.features_to_include,
             self.source.features_for(entities, self.request),
+        )
+
+    def cached_at(self, location: DataFileReference) -> FilterJob:
+        from aladdin.local.job import FileFullJob
+
+        return FilterJob(
+            self.request.features_to_include,
+            FileFullJob(location, RetrivalRequest.unsafe_combine(self.request.needed_requests)),
         )
 
 

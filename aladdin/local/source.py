@@ -5,37 +5,19 @@ from typing import Literal
 from uuid import uuid4
 
 import pandas as pd
+from httpx import HTTPStatusError
 
 from aladdin.codable import Codable
+from aladdin.data_file import DataFileReference
 from aladdin.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aladdin.enricher import CsvFileEnricher, Enricher, LoadedStatEnricher, StatisticEricher, TimespanSelector
+from aladdin.exceptions import UnableToFindFileException
 from aladdin.feature_store import FeatureStore
 from aladdin.repo_definition import RepoDefinition
 from aladdin.s3.storage import FileStorage, HttpStorage
 from aladdin.storage import Storage
 
 logger = logging.getLogger(__name__)
-
-
-class DataFileReference:
-    """
-    A reference to a data file.
-
-    It can therefore be loaded in and writen to.
-    Either as a pandas data frame, or a dask data frame.
-    """
-
-    async def read_pandas(self) -> pd.DataFrame:
-        raise NotImplementedError()
-
-    async def read_dask(self) -> pd.DataFrame:
-        raise NotImplementedError()
-
-    async def write_pandas(self) -> None:
-        raise NotImplementedError()
-
-    async def write_dask(self) -> None:
-        raise NotImplementedError()
 
 
 class StorageFileReference:
@@ -64,10 +46,11 @@ class CsvConfig(Codable):
 
     seperator: str = field(default=',')
     compression: Literal['infer', 'gzip', 'bz2', 'zip', 'xz', 'zstd'] = field(default='infer')
+    should_write_index: bool = field(default=False)
 
 
 @dataclass
-class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher):
+class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, DataFileReference):
     """
     A source pointing to a CSV file
     """
@@ -85,7 +68,22 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher):
         return hash(self.job_group_key())
 
     async def read_pandas(self) -> pd.DataFrame:
-        return pd.read_csv(self.path, sep=self.csv_config.seperator, compression=self.csv_config.compression)
+        try:
+            return pd.read_csv(
+                self.path, sep=self.csv_config.seperator, compression=self.csv_config.compression
+            )
+        except FileNotFoundError:
+            raise UnableToFindFileException()
+        except HTTPStatusError:
+            raise UnableToFindFileException()
+
+    async def write_pandas(self, df: pd.DataFrame) -> None:
+        df.to_csv(
+            self.path,
+            sep=self.csv_config.seperator,
+            compression=self.csv_config.compression,
+            index=self.csv_config.should_write_index,
+        )
 
     def std(
         self, columns: set[str], time: TimespanSelector | None = None, limit: int | None = None
@@ -109,6 +107,52 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher):
 
     def enricher(self) -> CsvFileEnricher:
         return CsvFileEnricher(file=Path(self.path))
+
+
+@dataclass
+class ParquetConfig(Codable):
+    """
+    A config for how a CSV file should be loaded
+    """
+
+    engien: Literal['auto', 'pyarrow', 'fastparquet'] = field(default='auto')
+    compression: Literal['snappy', 'gzip', 'brotli', None] = field(default='snappy')
+    should_write_index: bool = field(default=False)
+
+
+@dataclass
+class ParquetFileSource(BatchDataSource, ColumnFeatureMappable):
+    """
+    A source pointing to a CSV file
+    """
+
+    path: str
+    mapping_keys: dict[str, str] = field(default_factory=dict)
+    config: ParquetConfig = field(default_factory=ParquetConfig())
+
+    type_name: str = 'csv'
+
+    def job_group_key(self) -> str:
+        return f'{self.type_name}/{self.path}'
+
+    def __hash__(self) -> int:
+        return hash(self.job_group_key())
+
+    async def read_pandas(self) -> pd.DataFrame:
+        try:
+            return pd.read_parquet(self.path)
+        except FileNotFoundError:
+            raise UnableToFindFileException()
+        except HTTPStatusError:
+            raise UnableToFindFileException()
+
+    async def write_pandas(self, df: pd.DataFrame) -> None:
+        df.to_parquet(
+            self.path,
+            engien=self.config.engien,
+            compression=self.config.compression,
+            index=self.config.should_write_index,
+        )
 
 
 @dataclass

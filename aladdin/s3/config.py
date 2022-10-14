@@ -3,10 +3,12 @@ from io import BytesIO
 
 import pandas as pd
 from aioaws.s3 import S3Config
+from httpx import HTTPStatusError
 
 from aladdin.codable import Codable
 from aladdin.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
-from aladdin.local.source import CsvConfig, DataFileReference, StorageFileReference
+from aladdin.exceptions import UnableToFindFileException
+from aladdin.local.source import CsvConfig, DataFileReference, ParquetConfig, StorageFileReference
 from aladdin.s3.storage import AwsS3Storage
 from aladdin.storage import Storage
 
@@ -47,6 +49,9 @@ class AwsS3Config(Codable):
         return AwsS3CsvDataSource(
             config=self, path=path, mapping_keys=mapping_keys or {}, csv_config=csv_config or CsvConfig()
         )
+
+    def parquet_at(self, path: str, mapping_keys: dict[str, str] | None = None) -> 'AwsS3ParquetDataSource':
+        return AwsS3ParquetDataSource(config=self, path=path, mapping_keys=mapping_keys or {})
 
     @property
     def storage(self) -> Storage:
@@ -101,6 +106,49 @@ class AwsS3CsvDataSource(BatchDataSource, DataFileReference, ColumnFeatureMappab
         return f'{self.config.url}{self.path}'
 
     async def read_pandas(self) -> pd.DataFrame:
-        data = await self.storage.read(self.path)
-        buffer = BytesIO(data)
-        return pd.read_csv(buffer, sep=self.csv_config.seperator, compression=self.csv_config.compression)
+        try:
+            data = await self.storage.read(self.path)
+            buffer = BytesIO(data)
+            return pd.read_csv(buffer, sep=self.csv_config.seperator, compression=self.csv_config.compression)
+        except FileNotFoundError:
+            raise UnableToFindFileException()
+        except HTTPStatusError:
+            raise UnableToFindFileException()
+
+
+@dataclass
+class AwsS3ParquetDataSource(BatchDataSource, DataFileReference, ColumnFeatureMappable):
+
+    config: AwsS3Config
+    path: str
+    mapping_keys: dict[str, str]  # = field(default_factory=dict)
+
+    parquet_config: ParquetConfig  # = field(default_factory=ParquetConfig)
+    type_name: str = 'aws_s3_parquet'  # = field(default='aws_s3_parquet')
+
+    def job_group_key(self) -> str:
+        return f'{self.type_name}/{self.path}'
+
+    @property
+    def storage(self) -> Storage:
+        return self.config.storage
+
+    @property
+    def url(self) -> str:
+        return f'{self.config.url}{self.path}'
+
+    async def read_pandas(self) -> pd.DataFrame:
+        try:
+            data = await self.storage.read(self.path)
+            buffer = BytesIO(data)
+            return pd.read_parquet(buffer)
+        except FileNotFoundError:
+            raise UnableToFindFileException()
+        except HTTPStatusError:
+            raise UnableToFindFileException()
+
+    async def write_pandas(self, df: pd.DataFrame) -> None:
+        buffer = BytesIO()
+        df.to_parquet(buffer)
+        buffer.seek(0)
+        await self.storage.write(self.path, buffer.read())

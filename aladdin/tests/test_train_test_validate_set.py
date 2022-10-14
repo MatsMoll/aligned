@@ -43,9 +43,9 @@ async def test_train_test_validate_set(titanic_feature_store: FeatureStore) -> N
         .use_df()
     )
 
-    assert dataset.train.shape[0] == train_size
-    assert dataset.test.shape[0] == test_size
-    assert dataset.validate.shape[0] == validate_size
+    assert dataset.train.data.shape[0] == train_size
+    assert dataset.test.data.shape[0] == test_size
+    assert dataset.validate.data.shape[0] == validate_size
 
     assert 'passenger_id' in dataset.data.columns
     assert 'survived' in dataset.data.columns

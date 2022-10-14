@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TypeVar
 
@@ -23,7 +23,7 @@ class FileFullJob(FullExtractJob):
 
     source: DataFileReference
     request: RetrivalRequest
-    limit: int | None
+    limit: int | None = field(default=None)
 
     def file_transformations(self, df: GenericDataFrame) -> GenericDataFrame:
         entity_names = self.request.entity_names

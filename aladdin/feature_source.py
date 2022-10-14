@@ -58,13 +58,13 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
             if request.feature_view_name in self.sources
         }
         job_factories = {self.job_factories[source.type_name] for source in core_requests.keys()}
+        jobs = [factory.facts(facts=facts, sources=core_requests) for factory in job_factories]
+        requests = [
+            request for request in request.needed_requests if request.feature_view_name not in self.sources
+        ]
         return CombineFactualJob(
-            jobs=[factory.facts(facts=facts, sources=core_requests) for factory in job_factories],
-            combined_requests=[
-                request
-                for request in request.needed_requests
-                if request.feature_view_name not in self.sources
-            ],
+            jobs=jobs,
+            combined_requests=requests,
         )
 
     def all_for(self, request: FeatureRequest, limit: int | None = None) -> RetrivalJob:

@@ -8,6 +8,7 @@ from pandas import DataFrame, Series
 
 from aladdin.derivied_feature import DerivedFeature
 from aladdin.enricher import TimespanSelector
+from aladdin.exceptions import InvalidStandardScalerArtefact
 from aladdin.feature import Constraint
 from aladdin.feature import EventTimestamp as EventTimestampFeature
 from aladdin.feature import Feature, FeatureReferance, FeatureType
@@ -321,7 +322,7 @@ class NumericalTransformable(FeatureReferancable):
         return LogTransform(self)
 
     def standard_scaled(
-        self, timespan: TimespanSelector | None = None, limit: int | None = None
+        self, timespan: timedelta | None = None, limit: int | None = None
     ) -> 'StandardScalingTransformationFactory':
         return StandardScalingTransformationFactory(
             self, using_features=[self], timespan=timespan, limit=limit
@@ -789,7 +790,7 @@ class StandardScalingTransformationFactory(TransformationFactory):
     using_features: list[FeatureReferancable]
 
     limit: int | None = field(default=None)
-    timespan: TimespanSelector | None = field(default=None)
+    timespan: timedelta | None = field(default=None)
     feature: FeatureReferancable = Float()
 
     def transformation(self, sources: list[tuple[FeatureViewMetadata, RetrivalRequest]]) -> Transformation:
@@ -807,17 +808,18 @@ class StandardScalingTransformationFactory(TransformationFactory):
         if len(sources) != 1:
             raise ValueError('Expected one source')
 
-        metadata, _ = sources[0]
+        metadata, feature_view = sources[0]
 
         if not isinstance(metadata.batch_source, StatisticEricher):
             raise ValueError('The data source needs to conform to StatisticEricher')
 
-        std_enricher = metadata.batch_source.std(
-            columns={self.key.name}, time=self.timespan, limit=self.limit
-        )
-        mean_enricher = metadata.batch_source.mean(
-            columns={self.key.name}, time=self.timespan, limit=self.limit
-        )
+        timespan: TimespanSelector | None = None
+
+        if self.timespan and feature_view.event_timestamp:
+            timespan = TimespanSelector(self.timespan, time_column=feature_view.event_timestamp.name)
+
+        std_enricher = metadata.batch_source.std(columns={self.key.name}, time=timespan, limit=self.limit)
+        mean_enricher = metadata.batch_source.mean(columns={self.key.name}, time=timespan, limit=self.limit)
 
         async def compute() -> tuple[DataFrame, DataFrame]:
             return await asyncio.gather(std_enricher.load(), mean_enricher.load())
@@ -827,6 +829,14 @@ class StandardScalingTransformationFactory(TransformationFactory):
         except RuntimeError:
             nest_asyncio.apply()
             std, mean = asyncio.get_event_loop().run_until_complete(compute())
+
+        if std.isna().any() or (std == 0).any():
+            raise InvalidStandardScalerArtefact(
+                f'The standard deviation for {self.key.name} is 0.'
+                'Therefore convaying no meaningful information.\n'
+                'This could be because the used dataset has no values,'
+                'so maybe consider changing `limit`,`timspan` or change the datasource'
+            )
 
         return StandardScalingTransformation(mean[self.key.name], std[self.key.name], self.key.name)
 

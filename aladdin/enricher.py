@@ -55,7 +55,7 @@ class Enricher(ABC, Codable, SerializableType):
         return RedisLockEnricher(lock_name=lock_name, enricher=self, config=redis_config, timeout=timeout)
 
     def cache(self, ttl: timedelta, cache_key: str) -> Enricher:
-        return FileCacheEnricher(ttl, f'./cache/{cache_key}', self)
+        return FileCacheEnricher(ttl, cache_key, self)
 
     @abstractmethod
     async def load(self) -> pd.DataFrame:

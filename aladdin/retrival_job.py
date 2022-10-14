@@ -23,9 +23,10 @@ try:
 except ModuleNotFoundError:
     GenericDataFrame = pd.DataFrame  # type: ignore
 
+from aladdin.exceptions import UnableToFindFileException
+
 if TYPE_CHECKING:
-    from aladdin.feature_view.feature_view import FeatureView
-    from aladdin.local.source import StorageFileReference
+    from aladdin.local.source import DataFileReference
 
 
 logger = logging.getLogger(__name__)
@@ -60,31 +61,12 @@ class RetrivalJob(ABC):
         pass
 
     @abstractmethod
-    def cache_at(self, path: str) -> RetrivalJob:
+    def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         pass
-
-    async def as_dataset(self, file: StorageFileReference) -> pd.DataFrame:
-        import io
-
-        df = await self.to_df()
-        # FIXME: Should be included into the feast lib, as a conveniance and reduce user error
-        for col in df.columns:  # Can't input UUID's, so need to convert all ids to strings
-            if '_id' in col:
-                df[col] = df[col].astype(str)
-
-        data_bytes = io.BytesIO()
-        df.to_parquet(data_bytes)  # write to BytesIO buffer
-        data_bytes.seek(0)
-        await file.write(data_bytes.getvalue())
-        return df
 
     def test_size(self, test_size: float, target_column: str) -> TrainTestSetJob:
 
         return TrainTestSetJob(job=self, test_size=test_size, target_column=target_column)
-
-    def join(self, feature_view: FeatureView) -> RetrivalJob:
-
-        feature_view.compile().entitiy_names
 
 
 class DerivedFeatureJob(RetrivalJob):
@@ -114,14 +96,19 @@ class DerivedFeatureJob(RetrivalJob):
         df = await self.ensure_types(df)
         return await self.compute_derived_features(df)
 
-    def cache_at(self, path: str) -> RetrivalJob:
-        return FileCachedJob(path, self)
+    def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
+        if isinstance(location, str):
+            from aladdin.local.source import ParquetFileSource
+
+            return FileCachedJob(ParquetFileSource(location), self)
+        else:
+            return FileCachedJob(location, self)
 
 
 @dataclass
 class FileCachedJob(RetrivalJob):
 
-    path: str
+    location: DataFileReference
     job: DerivedFeatureJob
 
     @property
@@ -130,17 +117,17 @@ class FileCachedJob(RetrivalJob):
 
     async def to_df(self) -> pd.DataFrame:
         try:
-            df = pd.read_parquet(self.path)
-        except FileNotFoundError:
+            df = await self.location.read_pandas()
+        except UnableToFindFileException:
             df = await self.job._to_df()
-            df.to_parquet(self.path)
+            await self.location.write_pandas(df)
         df = await self.job.ensure_types(df)
         return await self.job.compute_derived_features(df)
 
     async def to_dask(self) -> dd.DataFrame:
         raise NotImplementedError()
 
-    def cache_at(self, path: str) -> RetrivalJob:
+    def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         return self
 
 
@@ -232,6 +219,11 @@ class SingleSourceRetrivalJob(DerivedFeatureJob, Generic[Source]):
         for feature_round in self.request.derived_features_order():
             for feature in feature_round:
                 df[feature.name] = await feature.transformation.transform(df[feature.depending_on_names])
+                if df.dtypes[feature.name] != feature.dtype.pandas_type:
+                    if feature.dtype.is_numeric:
+                        df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce')
+                    else:
+                        df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
         return df
 
     async def ensure_types(self, df: GenericDataFrame) -> GenericDataFrame:
@@ -331,7 +323,9 @@ class CombineFactualJob(RetrivalJob):
 
     @property
     def request_result(self) -> RequestResult:
-        return RequestResult.from_request_list(self.combined_requests)
+        return RequestResult.from_result_list(
+            [job.request_result for job in self.jobs]
+        ) + RequestResult.from_request_list(self.combined_requests)
 
     async def combine_data(self, df: GenericDataFrame) -> GenericDataFrame:
         for request in self.combined_requests:
@@ -360,8 +354,8 @@ class CombineFactualJob(RetrivalJob):
         df = dd.concat(dfs, axis=1)
         return await self.combine_data(df)
 
-    def cache_at(self, path: str) -> RetrivalJob:
-        return CombineFactualJob([job.cache_at(path) for job in self.jobs], self.combined_requests)
+    def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
+        return CombineFactualJob([job.cached_at(location) for job in self.jobs], self.combined_requests)
 
 
 @dataclass
@@ -388,6 +382,6 @@ class FilterJob(RetrivalJob):
         else:
             return df
 
-    def cache_at(self, path: str) -> RetrivalJob:
+    def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
 
-        return FilterJob(self.include_features, self.job.cache_at(path))
+        return FilterJob(self.include_features, self.job.cached_at(location))

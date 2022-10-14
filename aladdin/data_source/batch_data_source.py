@@ -16,12 +16,13 @@ class BatchDataSourceFactory:
     def __init__(self) -> None:
         from aladdin.local.source import CsvFileSource
         from aladdin.psql.data_source import PostgreSQLDataSource
-        from aladdin.s3.config import AwsS3CsvDataSource
+        from aladdin.s3.config import AwsS3CsvDataSource, AwsS3ParquetDataSource
 
         self.supported_data_sources = {
             PostgreSQLDataSource.type_name: PostgreSQLDataSource,
             CsvFileSource.type_name: CsvFileSource,
             AwsS3CsvDataSource.type_name: AwsS3CsvDataSource,
+            AwsS3ParquetDataSource.type_name: AwsS3ParquetDataSource,
         }
 
     @classmethod

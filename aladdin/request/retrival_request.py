@@ -113,6 +113,23 @@ class RetrivalRequest(Codable):
 
         return list(grouped_requests.values())
 
+    @staticmethod
+    def unsafe_combine(requests: list['RetrivalRequest']) -> list['RetrivalRequest']:
+
+        result_request = RetrivalRequest(
+            feature_view_name='random',
+            entities=set(),
+            features=set(),
+            derived_features=set(),
+            event_timestamp=None,
+        )
+        for request in requests:
+            result_request.derived_features.update(request.derived_features)
+            result_request.features.update(request.features)
+            result_request.entities.update(request.entities)
+
+        return result_request
+
 
 @dataclass
 class RequestResult(Codable):
@@ -123,6 +140,13 @@ class RequestResult(Codable):
     entities: set[Feature]
     features: set[Feature]
     event_timestamp: str | None
+
+    def __add__(self, obj: 'RequestResult') -> 'RequestResult':
+        return RequestResult(
+            entities=self.entities.union(obj.entities),
+            features=self.features.union(obj.features),
+            event_timestamp='event_timestamp' if self.event_timestamp or obj.event_timestamp else None,
+        )
 
     def filter_features(self, features_to_include: set[str]) -> 'RequestResult':
         return RequestResult(
@@ -135,7 +159,7 @@ class RequestResult(Codable):
     def from_request(request: RetrivalRequest) -> 'RequestResult':
         return RequestResult(
             entities=request.entities,
-            features=request.all_features,
+            features=request.all_features - request.entities,
             event_timestamp=request.event_timestamp.name if request.event_timestamp else None,
         )
 
@@ -143,17 +167,33 @@ class RequestResult(Codable):
     def from_request_list(requests: list[RetrivalRequest]) -> 'RequestResult':
         request_len = len(requests) > 1
         if request_len == 0:
-            raise ValueError('Needs more then one request')
+            return RequestResult(entities=set(), features=set(), event_timestamp=None)
         elif request_len > 1:
             return RequestResult(
                 entities=set().union(*[request.entities for request in requests]),
-                features=set().union(*[request.all_features for request in requests]),
+                features=set().union(*[request.all_features - request.entities for request in requests]),
                 event_timestamp='event_timestamp'
                 if any(request.event_timestamp for request in requests)
                 else None,
             )
         else:
             return RequestResult.from_request(requests[0])
+
+    @staticmethod
+    def from_result_list(requests: list['RequestResult']) -> 'RequestResult':
+        request_len = len(requests) > 1
+        if request_len == 0:
+            return RequestResult(entities=set(), features=set(), event_timestamp=None)
+        elif request_len > 1:
+            return RequestResult(
+                entities=set().union(*[request.entities for request in requests]),
+                features=set().union(*[request.features for request in requests]),
+                event_timestamp='event_timestamp'
+                if any(request.event_timestamp for request in requests)
+                else None,
+            )
+        else:
+            return requests[0]
 
 
 @dataclass

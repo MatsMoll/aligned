@@ -45,6 +45,22 @@ class TrainTestSet(Generic[DatasetType]):
 
 
 @dataclass
+class SupervisedDataSet(Generic[DatasetType]):
+    data: DatasetType
+
+    features: list[str]
+    target: str
+
+    @property
+    def input(self) -> DatasetType:
+        return self.data[self.features]
+
+    @property
+    def output(self) -> DatasetType:
+        return self.data[self.target]
+
+
+@dataclass
 class TrainTestValidateSet(Generic[DatasetType]):
 
     data: DatasetType
@@ -57,44 +73,48 @@ class TrainTestValidateSet(Generic[DatasetType]):
     validate_index: Index
 
     @property
+    def input(self) -> DatasetType:
+        return self.data[self.features]
+
+    @property
     def output(self) -> DatasetType:
         return self.data[self.target]
 
     @property
-    def train(self) -> DatasetType:
-        return self.data.iloc[self.train_index]
+    def train(self) -> SupervisedDataSet:
+        return SupervisedDataSet(self.data.iloc[self.train_index], self.features, self.target)
 
     @property
     def train_input(self) -> DatasetType:
-        return self.train[self.features]
+        return self.train.input
 
     @property
     def train_output(self) -> DatasetType:
-        return self.train[self.target]
+        return self.train.output
 
     @property
-    def test(self) -> DatasetType:
-        return self.data.iloc[self.test_index]
+    def test(self) -> SupervisedDataSet:
+        return SupervisedDataSet(self.data.iloc[self.test_index], self.features, self.target)
 
     @property
     def test_input(self) -> DatasetType:
-        return self.test[self.features]
+        return self.test.input
 
     @property
     def test_output(self) -> DatasetType:
-        return self.test[self.target]
+        return self.test.output
 
     @property
-    def validate(self) -> DatasetType:
-        return self.data.iloc[self.validate_index]
+    def validate(self) -> SupervisedDataSet:
+        return SupervisedDataSet(self.data.iloc[self.validate_index], self.features, self.target)
 
     @property
     def validate_input(self) -> DatasetType:
-        return self.validate[self.features]
+        return self.validate.input
 
     @property
     def validate_output(self) -> DatasetType:
-        return self.validate[self.target]
+        return self.validate.output
 
 
 @dataclass
