@@ -2,12 +2,12 @@ from abc import ABC, abstractproperty
 from dataclasses import dataclass
 from typing import Callable
 
-from aladdin.codable import Codable
-from aladdin.derivied_feature import DerivedFeature
-from aladdin.feature import Feature
-from aladdin.feature_types import FeatureFactory, FeatureReferancable, TransformationFactory
+from aladdin.compiler.feature_factory import FeatureFactory, TransformationFactory
 from aladdin.feature_view.feature_view import CompiledFeatureView, FeatureSelectable, FeatureView, FVType
 from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
+from aladdin.schemas.codable import Codable
+from aladdin.schemas.derivied_feature import DerivedFeature
+from aladdin.schemas.feature import Feature, FeatureReferance
 
 
 @dataclass
@@ -119,7 +119,7 @@ class CombinedFeatureView(ABC, FeatureSelectable):
 
     @staticmethod
     def _needed_features(
-        depending_on: list[FeatureReferancable], feature_views: dict[str, CompiledFeatureView]
+        depending_on: list[FeatureReferance], feature_views: dict[str, CompiledFeatureView]
     ) -> list[RetrivalRequest]:
 
         feature_refs: dict[CompiledFeatureView, set[str]] = {}

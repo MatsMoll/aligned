@@ -9,6 +9,8 @@ from aladdin.redis.stream import RedisStream
 
 logger = logging.getLogger(__name__)
 
+# Very experimental, so can contain a lot of bugs
+
 
 async def single_processing(
     stream_source: RedisStream, topic_name: str, feature_view: FeatureViewStore
@@ -23,7 +25,7 @@ async def single_processing(
 
         _, values = stream_values[0]
         last_id = values[-1][0]
-        await feature_view.batch_write([record for _, record in values])
+        await feature_view.batch_write([record for _, record in values])  # type: ignore [arg-type]
 
 
 async def multi_processing(
@@ -40,7 +42,9 @@ async def multi_processing(
         _, values = stream_values[0]
         last_id = values[-1][0]
         mapped_values = [record for _, record in values]
-        await asyncio.gather(*[view.batch_write(mapped_values) for view in feature_views])
+        await asyncio.gather(
+            *[view.batch_write(mapped_values) for view in feature_views]  # type: ignore [arg-type]
+        )
 
 
 async def process(stream_source: RedisStream, topic_name: str, feature_views: list[FeatureViewStore]) -> None:

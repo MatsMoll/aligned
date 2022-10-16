@@ -6,11 +6,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from aladdin.codable import Codable
 from aladdin.enricher import Enricher
 from aladdin.feature_view.combined_view import CompiledCombinedFeatureView
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.online_source import OnlineSource
+from aladdin.schemas.codable import Codable
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
@@ -89,7 +89,7 @@ class RepoDefinition(Codable):
 
     @staticmethod
     async def from_reference_at_path(repo_path: str, file_path: str) -> RepoDefinition:
-        from aladdin.repo_reader import RepoReader
+        from aladdin.compiler.repo_reader import RepoReader
 
         dir_path = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
         absolute_file_path = Path(file_path).absolute()
@@ -105,14 +105,14 @@ class RepoDefinition(Codable):
             logger.error(f'Error when loadin repo: {error}')
 
         logger.info('Generating repo definition')
-        return RepoReader.definition_from_path(dir_path)
+        return await RepoReader.definition_from_path(dir_path)
 
     @staticmethod
-    def from_path(path: str) -> RepoDefinition:
-        from aladdin.repo_reader import RepoReader
+    async def from_path(path: str) -> RepoDefinition:
+        from aladdin.compiler.repo_reader import RepoReader
 
         dir_path = Path.cwd() if path == '.' else Path(path).absolute()
-        return RepoReader.definition_from_path(dir_path)
+        return await RepoReader.definition_from_path(dir_path)
 
     # def add_old_version(self, old_version: "RepoDefinition") -> "RepoDefinition":
 

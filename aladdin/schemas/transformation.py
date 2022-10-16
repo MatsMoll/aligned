@@ -1,14 +1,14 @@
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Callable, Literal, Optional, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 import numpy as np
 import pandas as pd
 from mashumaro.types import SerializableType
 
-from aladdin.codable import Codable
-from aladdin.feature import FeatureType
+from aladdin.schemas.codable import Codable
+from aladdin.schemas.feature import FeatureType
 
 try:
     import dask.dataframe as dd
@@ -109,16 +109,16 @@ class SupportedTransformations:
 
     def __init__(self) -> None:
         self.types = {}
-        from aladdin.feature_types import CustomTransformationV2
 
         for tran_type in [
             Equals,
             NotEquals,
-            CustomTransformationV2,
+            DillTransformation,
             StandardScalingTransformation,
             Ratio,
             Contains,
             GreaterThen,
+            GreaterThenValue,
             GreaterThenOrEqual,
             LowerThen,
             LowerThenOrEqual,
@@ -135,7 +135,12 @@ class SupportedTransformations:
             Or,
             Inverse,
             Ordinal,
-            FillMissingTransformation,
+            FillNaValues,
+            Absolute,
+            Round,
+            Ceil,
+            Floor,
+            CopyTransformation,
         ]:
             self.add(tran_type)
 
@@ -148,6 +153,20 @@ class SupportedTransformations:
             return cls._shared
         cls._shared = SupportedTransformations()
         return cls._shared
+
+
+@dataclass
+class DillTransformation(Transformation):
+
+    method: bytes
+    dtype: FeatureType
+    name: str = 'custom_transformation'
+
+    async def transform(self, df: pd.DataFrame) -> pd.Series:
+        import dill
+
+        loaded = dill.loads(self.method)
+        return await loaded(df)
 
 
 @dataclass
@@ -287,17 +306,13 @@ class NotEquals(Transformation):
 
 
 @dataclass
-class GreaterThen(Transformation):
+class GreaterThenValue(Transformation):
 
     key: str
     value: float
 
     name: str = 'gt'
     dtype: FeatureType = FeatureType('').bool
-
-    def __init__(self, key: str, value: float) -> None:
-        self.key = key
-        self.value = value
 
     async def transform(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
@@ -311,7 +326,39 @@ class GreaterThen(Transformation):
         from numpy import nan
 
         return TransformationTestDefinition(
-            GreaterThen(key='x', value=2), input={'x': [1, 2, 3, nan]}, output=[False, False, True, nan]
+            GreaterThenValue(key='x', value=2), input={'x': [1, 2, 3, nan]}, output=[False, False, True, nan]
+        )
+
+
+@dataclass
+class GreaterThen(Transformation):
+
+    left_key: str
+    right_key: str
+
+    name: str = field(default='gtf')
+    dtype: FeatureType = field(default=FeatureType('').bool)
+
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+        return gracefull_transformation(
+            df,
+            is_valid_mask=~(
+                df[self.left_key].isna()
+                | df[self.left_key].isnull()
+                | df[self.right_key].isna()
+                | df[self.right_key].isnull()
+            ),
+            transformation=lambda dfv: dfv[self.left_key] > dfv[self.right_key],
+        )
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        from numpy import nan
+
+        return TransformationTestDefinition(
+            GreaterThen(left_key='x', right_key='y'),
+            input={'x': [1, 2, 3, nan, 5], 'y': [3, 2, 1, 5, nan]},
+            output=[False, False, True, nan, nan],
         )
 
 
@@ -861,24 +908,88 @@ class IsIn(Transformation):
 
 
 @dataclass
-class FillMissingTransformation(Transformation):
+class FillNaValues(Transformation):
 
     key: str
-    strategy: Literal['mean', 'median']
+    value: Any
     dtype: FeatureType
 
     name: str = 'fill_missing'
 
     async def transform(self, df: GenericDataFrame) -> GenericSeries:
-        if self.strategy == 'mean':
-            return df[self.key].fillna(df[self.key].mean())
-        else:
-            return df[self.key].fillna(df[self.key].median())
+        return df[self.key].fillna(self.value)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
-            FillMissingTransformation('x', 'median', dtype=FeatureType('').int32),
+            FillNaValues('x', 3, dtype=FeatureType('').int32),
             input={'x': [1, 1, None, None, 3, 3, None, 4, 5, None]},
             output=[1, 1, 3, 3, 3, 3, 3, 4, 5, 3],
         )
+
+
+@dataclass
+class CopyTransformation(Transformation):
+    key: str
+    dtype: FeatureType
+
+    name: str = 'nothing'
+
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+        return df[self.key]
+
+
+@dataclass
+class Floor(Transformation):
+
+    key: str
+    dtype: FeatureType = FeatureType('').int64
+
+    name: str = 'floor'
+
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+        from numpy import floor
+
+        return floor(df[self.key])
+
+
+@dataclass
+class Ceil(Transformation):
+
+    key: str
+    dtype: FeatureType = FeatureType('').int64
+
+    name: str = 'ceil'
+
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+        from numpy import ceil
+
+        return ceil(df[self.key])
+
+
+@dataclass
+class Round(Transformation):
+
+    key: str
+    dtype: FeatureType = FeatureType('').int64
+
+    name: str = 'round'
+
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+        from numpy import round
+
+        return round(df[self.key])
+
+
+@dataclass
+class Absolute(Transformation):
+
+    key: str
+    dtype: FeatureType = FeatureType('').float
+
+    name: str = 'abs'
+
+    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+        from numpy import abs
+
+        return abs(df[self.key])

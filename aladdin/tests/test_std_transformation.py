@@ -8,7 +8,8 @@ from aladdin.exceptions import InvalidStandardScalerArtefact
 from aladdin.local.source import CsvFileSource
 
 
-def test_standard_scaler_should_fail(scan_with_datetime: CsvFileSource) -> FeatureView:
+@pytest.mark.asyncio
+async def test_standard_scaler_should_fail(scan_with_datetime: CsvFileSource) -> FeatureView:
     class BreastDiagnoseFeatureView(FeatureView):
 
         metadata = FeatureViewMetadata(
@@ -26,7 +27,7 @@ def test_standard_scaler_should_fail(scan_with_datetime: CsvFileSource) -> Featu
         scaled_fraction = fractal_dimension_worst.standard_scaled(timespan=timedelta(days=10))
 
     with pytest.raises(InvalidStandardScalerArtefact) as error:
-        BreastDiagnoseFeatureView.compile()
+        await BreastDiagnoseFeatureView.compile()
     assert 'fractal_dimension_worst' in str(error.value)
 
 

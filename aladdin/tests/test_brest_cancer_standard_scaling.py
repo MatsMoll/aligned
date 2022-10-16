@@ -2,7 +2,7 @@ import pytest
 
 from aladdin import Entity, FeatureStore, FeatureView, FeatureViewMetadata, FileSource, Float, Int32, String
 from aladdin.online_source import InMemoryOnlineSource
-from aladdin.repo_definition import RepoDefinition
+from aladdin.schemas.repo_definition import RepoDefinition
 
 
 class BreastDiagnoseFeatureView(FeatureView):
@@ -65,7 +65,7 @@ class BreastDiagnoseFeatureView(FeatureView):
 async def test_standard_scaled_feature() -> None:
     feature_view = BreastDiagnoseFeatureView()
     store = FeatureStore.experimental()
-    store.add_feature_view(feature_view)
+    await store.add_feature_view(feature_view)
 
     features = await store.feature_view(feature_view.metadata.name).all().to_df()
 
@@ -78,7 +78,7 @@ async def test_standard_scaled_feature() -> None:
 
 @pytest.mark.asyncio
 async def test_online_store_standard_scaling() -> None:
-    compiled_view = BreastDiagnoseFeatureView.compile()
+    compiled_view = await BreastDiagnoseFeatureView.compile()
 
     definition = RepoDefinition(
         feature_views={compiled_view},

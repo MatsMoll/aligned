@@ -18,9 +18,9 @@ from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.feature_view.feature_view import FeatureView
 from aladdin.model import ModelService
 from aladdin.online_source import BatchOnlineSource
-from aladdin.repo_definition import EnricherReference, RepoDefinition
 from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
 from aladdin.retrival_job import FilterJob, RetrivalJob
+from aladdin.schemas.repo_definition import EnricherReference, RepoDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +161,7 @@ class FeatureStore:
         return FeatureStore.from_definition(repo_def)
 
     @staticmethod
-    def from_dir(path: str = '.') -> 'FeatureStore':
+    async def from_dir(path: str = '.') -> 'FeatureStore':
         """Reads and generates a feature store based on the given directory's content.
 
         This will read the feature views, services etc in a given repo and generate a feature store.
@@ -177,7 +177,8 @@ class FeatureStore:
         Returns:
             FeatureStore: The generated feature store
         """
-        return FeatureStore.from_definition(RepoDefinition.from_path(path))
+        definition = await RepoDefinition.from_path(path)
+        return FeatureStore.from_definition(definition)
 
     def features_for(self, entities: dict[str, list], features: list[str]) -> RetrivalJob:
 
@@ -250,8 +251,8 @@ class FeatureStore:
         view = self.feature_views[view]
         return FeatureViewStore(self.feature_source, view)
 
-    def add_feature_view(self, feature_view: FeatureView) -> None:
-        compiled_view = type(feature_view).compile()
+    async def add_feature_view(self, feature_view: FeatureView) -> None:
+        compiled_view = await type(feature_view).compile()
         self.feature_views[compiled_view.name] = compiled_view
         if isinstance(self.feature_source, BatchFeatureSource):
             self.feature_source.sources[compiled_view.name] = compiled_view.batch_data_source

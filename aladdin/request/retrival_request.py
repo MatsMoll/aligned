@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from aladdin.codable import Codable
-from aladdin.derivied_feature import DerivedFeature
-from aladdin.feature import EventTimestamp, Feature
+from aladdin.schemas.codable import Codable
+from aladdin.schemas.derivied_feature import DerivedFeature
+from aladdin.schemas.feature import EventTimestamp, Feature
 
 
 @dataclass
@@ -72,19 +72,8 @@ class RetrivalRequest(Codable):
                         dependent_features.add(dep)
                         feature_map[dep.name] = dep
 
-        def depths(feature: DerivedFeature) -> int:
-            if feature.name not in feature_deps or not feature_deps[feature.name]:
-                return 0
-            max = 0
-            for dep in feature.depending_on:
-                depth = depths(feature_map[dep.name])
-                if depth > max:
-                    max = depth
-
-            return max + 1
-
         for feature in features:
-            depth = depths(feature)
+            depth = feature.depth
             while depth >= len(feature_orders):
                 feature_orders.append(set())
             feature_orders[depth].add(feature_map[feature.name])

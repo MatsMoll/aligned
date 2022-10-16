@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable
 
-from aladdin.codable import Codable
 from aladdin.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aladdin.enricher import SqlDatabaseEnricher, StatisticEricher
+from aladdin.schemas.codable import Codable
 
 if TYPE_CHECKING:
     from aladdin.enricher import Enricher, TimespanSelector

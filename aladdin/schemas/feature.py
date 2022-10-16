@@ -1,26 +1,7 @@
 from dataclasses import dataclass
-from typing import Any
 
-from aladdin.codable import Codable
-
-
-class Constraint(Codable):
-    name: str
-
-    def to_dict(self) -> dict:
-        return {'name': self.name}
-
-    def __hash__(self) -> int:
-        return hash(self.name)
-
-
-@dataclass
-class Above(Constraint):
-    value: Any
-    name = 'above'
-
-    def __hash__(self) -> int:
-        return hash(self.name)
+from aladdin.schemas.codable import Codable
+from aladdin.schemas.constraints import Constraint
 
 
 @dataclass
@@ -162,7 +143,7 @@ class FeatureReferance(Codable):
     name: str
     feature_view: str
     dtype: FeatureType
-    is_derivied: bool
+    is_derived: bool
 
     def __hash__(self) -> int:
         return hash(self.name)

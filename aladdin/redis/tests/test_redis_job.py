@@ -4,10 +4,10 @@ import numpy as np
 import pytest
 from redis.asyncio import StrictRedis  # type: ignore
 
-from aladdin.feature import Feature, FeatureType
 from aladdin.redis.config import RedisConfig
 from aladdin.redis.job import FactualRedisJob
 from aladdin.request.retrival_request import RetrivalRequest
+from aladdin.schemas.feature import Feature, FeatureType
 
 
 @pytest.fixture

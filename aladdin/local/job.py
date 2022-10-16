@@ -5,10 +5,10 @@ from typing import TypeVar
 import pandas as pd
 
 from aladdin.data_source.batch_data_source import ColumnFeatureMappable
-from aladdin.feature import Feature
 from aladdin.local.source import DataFileReference
 from aladdin.request.retrival_request import RetrivalRequest
 from aladdin.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob
+from aladdin.schemas.feature import Feature
 
 try:
     import dask.dataframe as dd

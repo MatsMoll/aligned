@@ -4,8 +4,8 @@ from typing import Callable
 
 from pandas import DataFrame
 
+from aladdin.compiler.feature_factory import FeatureFactory
 from aladdin.entity_data_source import EntityDataSource
-from aladdin.feature_types import FeatureReferancable
 from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
 
 logger = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ class ModelService:
     def __init__(
         self,
         features: list[FeatureRequest],
-        targets: list[RetrivalRequest] | list[FeatureReferancable] | None = None,
+        targets: list[RetrivalRequest] | list[FeatureFactory] | None = None,
         name: str | None = None,
         entity_source: SqlEntityDataSource | None = None,
     ) -> None:
@@ -71,8 +71,8 @@ class ModelService:
         for request in features:
             self.feature_refs.update({f'{request.name}:{feature}' for feature in request.features_to_include})
         for request in targets or []:
-            if isinstance(targets, FeatureReferancable):
-                self.target_refs = [f'{target}' for target in targets]
+            if isinstance(targets, FeatureFactory):
+                self.target_refs = {f'{target}' for target in targets}
             else:
                 self.target_refs.update(
                     {f'{request.feature_view_name}:{feature}' for feature in request.all_feature_names}

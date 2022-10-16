@@ -3,10 +3,10 @@ from datetime import timedelta
 from typing import Callable
 
 from aladdin import RedisConfig
-from aladdin.codable import Codable
 from aladdin.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aladdin.enricher import Enricher
 from aladdin.model import EntityDataSource, SqlEntityDataSource
+from aladdin.schemas.codable import Codable
 
 
 @dataclass

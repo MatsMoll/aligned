@@ -5,11 +5,11 @@ import pandas as pd
 from aioaws.s3 import S3Config
 from httpx import HTTPStatusError
 
-from aladdin.codable import Codable
 from aladdin.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aladdin.exceptions import UnableToFindFileException
 from aladdin.local.source import CsvConfig, DataFileReference, ParquetConfig, StorageFileReference
 from aladdin.s3.storage import AwsS3Storage
+from aladdin.schemas.codable import Codable
 from aladdin.storage import Storage
 
 

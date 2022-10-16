@@ -1,13 +1,12 @@
 from dataclasses import dataclass, field
 
-from aladdin.codable import Codable
-
 # from aladdin.codable import Codable
 from aladdin.data_source.batch_data_source import BatchDataSource
 from aladdin.data_source.stream_data_source import StreamDataSource
-from aladdin.derivied_feature import DerivedFeature
-from aladdin.feature import EventTimestamp, Feature
 from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
+from aladdin.schemas.codable import Codable
+from aladdin.schemas.derivied_feature import DerivedFeature
+from aladdin.schemas.feature import EventTimestamp, Feature
 
 # from typing import Generic, Optional, TypeVar
 
@@ -94,7 +93,7 @@ class CompiledFeatureView(Codable):
             intermediate_features = set()
 
             for dep_ref in feature.depending_on:
-                if dep_ref.is_derivied:
+                if dep_ref.is_derived:
                     dep_feature = [feat for feat in self.derived_features if feat.name == dep_ref.name][0]
                     intermediate_features.add(dep_feature)
                     core, intermediate = dependent_features_for(dep_feature)

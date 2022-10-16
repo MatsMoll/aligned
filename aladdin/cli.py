@@ -10,11 +10,11 @@ from typing import Any, Coroutine
 import click
 from pytz import utc  # type: ignore
 
-from aladdin.codable import Codable
-from aladdin.feature import Feature
+from aladdin.compiler.repo_reader import RepoReader
 from aladdin.feature_source import WritableFeatureSource
-from aladdin.repo_definition import RepoDefinition
-from aladdin.repo_reader import RepoReader
+from aladdin.schemas.codable import Codable
+from aladdin.schemas.feature import Feature
+from aladdin.schemas.repo_definition import RepoDefinition
 
 
 def sync(method: Coroutine) -> Any:
@@ -79,10 +79,10 @@ def apply_command(repo_path: str, reference_file: str, env_file: str) -> None:
 
     # old_def = sync(repo_ref.selected_file.feature_store())
 
-    repo_def = RepoReader.definition_from_path(dir)
+    repo_def = sync(RepoReader.definition_from_path(dir))
 
     if file := repo_ref.selected_file:
-        sync(file.write(repo_def.to_json().encode('utf-8')))
+        sync(file.write(repo_def.to_json(omit_none=True).encode('utf-8')))
     else:
         click.echo(f'No repo file found at {dir}')
 

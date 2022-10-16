@@ -3,10 +3,10 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from aladdin.feature import FeatureType
 from aladdin.redis.config import RedisConfig
 from aladdin.request.retrival_request import RetrivalRequest
 from aladdin.retrival_job import FactualRetrivalJob
+from aladdin.schemas.feature import FeatureType
 
 try:
     import dask.dataframe as dd
@@ -58,6 +58,7 @@ class FactualRedisJob(FactualRetrivalJob):
                     continue
 
                 result = await redis.mget(keys.values)
+
                 result_series = pd.Series(result)
                 set_mask = mask.copy()
                 result_value_mask = result_series.notna()

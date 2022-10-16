@@ -10,8 +10,8 @@ from pathlib import Path
 import pandas as pd
 from mashumaro.types import SerializableType
 
-from aladdin.codable import Codable
 from aladdin.redis.config import RedisConfig
+from aladdin.schemas.codable import Codable
 
 with suppress(ModuleNotFoundError):
     import dask.dataframe as dd
@@ -58,7 +58,7 @@ class Enricher(ABC, Codable, SerializableType):
         return FileCacheEnricher(ttl, cache_key, self)
 
     @abstractmethod
-    async def load(self) -> pd.DataFrame:
+    async def as_df(self) -> pd.DataFrame:
         pass
 
     @abstractmethod
@@ -105,10 +105,10 @@ class RedisLockEnricher(Enricher):
         self.enricher = enricher
         self.timeout = timeout
 
-    async def load(self) -> pd.DataFrame:
+    async def as_df(self) -> pd.DataFrame:
         redis = self.config.redis()
         async with redis.lock(self.lock_name, timeout=self.timeout) as _:
-            return await self.enricher.load()
+            return await self.enricher.as_df()
 
     async def as_dask(self) -> dd.DataFrame:
         redis = self.config.redis()
@@ -118,20 +118,25 @@ class RedisLockEnricher(Enricher):
 
 @dataclass
 class CsvFileSelectedEnricher(Enricher):
-    file: Path
+    file: str
     time: TimespanSelector | None = field(default=None)
     limit: int | None = field(default=None)
     name: str = 'selective_file'
 
-    async def load(self) -> pd.DataFrame:
+    async def as_df(self) -> pd.DataFrame:
         dates_to_parse = None
         if self.time:
             dates_to_parse = [self.time.time_column]
 
+        uri = self.file
+        path = Path(self.file)
+        if 'http' not in path.parts[0]:
+            uri = str(path.absolute())
+
         if self.limit:
-            file = pd.read_csv(self.file.absolute(), nrows=self.limit, parse_dates=dates_to_parse)
+            file = pd.read_csv(uri, nrows=self.limit, parse_dates=dates_to_parse)
         else:
-            file = pd.read_csv(self.file.absolute(), nrows=self.limit, parse_dates=dates_to_parse)
+            file = pd.read_csv(uri, nrows=self.limit, parse_dates=dates_to_parse)
 
         if not self.time:
             return file
@@ -141,13 +146,13 @@ class CsvFileSelectedEnricher(Enricher):
         return file.loc[selector]
 
     async def as_dask(self) -> dd.DataFrame:
-        return dd.read_csv(self.file.absolute())
+        return dd.read_csv(self.file)
 
 
 @dataclass
 class CsvFileEnricher(Enricher):
 
-    file: Path
+    file: str
     name: str = 'file'
 
     def selector(
@@ -155,11 +160,11 @@ class CsvFileEnricher(Enricher):
     ) -> CsvFileSelectedEnricher:
         return CsvFileSelectedEnricher(self.file, time=time, limit=limit)
 
-    async def load(self) -> pd.DataFrame:
-        return pd.read_csv(self.file.absolute())
+    async def as_df(self) -> pd.DataFrame:
+        return pd.read_csv(self.file)
 
     async def as_dask(self) -> dd.DataFrame:
-        return dd.read_csv(self.file.absolute())
+        return dd.read_csv(self.file)
 
 
 @dataclass
@@ -170,8 +175,8 @@ class LoadedStatEnricher(Enricher):
     enricher: Enricher
     mapping_keys: dict[str, str] = field(default_factory=dict)
 
-    async def load(self) -> pd.DataFrame:
-        data = await self.enricher.load()
+    async def as_df(self) -> pd.DataFrame:
+        data = await self.enricher.as_df()
         renamed = data.rename(columns=self.mapping_keys)
         if self.stat == 'mean':
             return renamed[self.columns].mean()
@@ -209,12 +214,12 @@ class FileCacheEnricher(Enricher):
         except FileNotFoundError:
             return True
 
-    async def load(self) -> pd.DataFrame:
+    async def as_df(self) -> pd.DataFrame:
         file_uri = Path(self.file_path).absolute()
 
         if self.is_out_of_date_cache():
             logger.info('Fetching from source')
-            data: pd.DataFrame = await self.enricher.load()
+            data: pd.DataFrame = await self.enricher.as_df()
             file_uri.parent.mkdir(exist_ok=True, parents=True)
             logger.info(f'Storing cache at file {file_uri.as_uri()}')
             data.to_parquet(file_uri)
@@ -251,7 +256,7 @@ class SqlDatabaseEnricher(Enricher):
         self.values = values
         self.url_env = url_env
 
-    async def load(self) -> pd.DataFrame:
+    async def as_df(self) -> pd.DataFrame:
         import os
 
         from databases import Database
@@ -265,5 +270,5 @@ class SqlDatabaseEnricher(Enricher):
         return df
 
     async def as_dask(self) -> dd.DataFrame:
-        pdf = await self.load()
+        pdf = await self.as_df()
         return dd.from_pandas(pdf)

@@ -11,9 +11,9 @@ from typing import TYPE_CHECKING, Generic, TypeVar
 import pandas as pd
 
 from aladdin.data_source.batch_data_source import BatchDataSource
-from aladdin.derivied_feature import DerivedFeature
-from aladdin.feature import FeatureType
 from aladdin.request.retrival_request import RequestResult, RetrivalRequest
+from aladdin.schemas.derivied_feature import DerivedFeature
+from aladdin.schemas.feature import FeatureType
 from aladdin.split_strategy import SplitDataSet, SplitStrategy, TrainTestSet, TrainTestValidateSet
 
 try:

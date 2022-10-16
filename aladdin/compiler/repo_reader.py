@@ -7,7 +7,7 @@ from typing import Any
 from aladdin.enricher import Enricher
 from aladdin.model import ModelService
 from aladdin.online_source import BatchOnlineSource, OnlineSource
-from aladdin.repo_definition import EnricherReference, RepoDefinition, RepoReference
+from aladdin.schemas.repo_definition import EnricherReference, RepoDefinition, RepoReference
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ class RepoReader:
     """
 
     @staticmethod
-    def definition_from_path(repo_path: Path) -> RepoDefinition:
+    async def definition_from_path(repo_path: Path) -> RepoDefinition:
         repo = RepoDefinition(
             feature_views=set(),
             combined_feature_views=set(),
@@ -120,7 +120,7 @@ class RepoReader:
                 else:
                     classes = super_classes_in(obj)
                     if 'FeatureView' in classes:
-                        fv = obj.compile()
+                        fv = await obj.compile()
                         if fv.name in feature_view_names:
                             raise Exception(
                                 (

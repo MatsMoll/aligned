@@ -4,7 +4,7 @@ from typing import Optional
 
 from mashumaro.types import SerializableType
 
-from aladdin.codable import Codable
+from aladdin.schemas.codable import Codable
 
 
 class StreamDataSourceFactory:

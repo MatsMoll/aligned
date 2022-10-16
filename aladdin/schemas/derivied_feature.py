@@ -1,11 +1,12 @@
-from aladdin.feature import Constraint, Feature, FeatureReferance, FeatureType
-from aladdin.transformation import Transformation
+from aladdin.schemas.feature import Constraint, Feature, FeatureReferance, FeatureType
+from aladdin.schemas.transformation import Transformation
 
 
 class DerivedFeature(Feature):
 
     depending_on: set[FeatureReferance]
     transformation: Transformation
+    depth: int = 1
 
     def __init__(
         self,
@@ -13,8 +14,8 @@ class DerivedFeature(Feature):
         dtype: FeatureType,
         depending_on: set[FeatureReferance],
         transformation: Transformation,
+        depth: int,
         description: str | None = None,
-        is_target: bool = False,
         tags: dict[str, str] | None = None,
         constraints: set[Constraint] | None = None,
     ):
@@ -22,8 +23,8 @@ class DerivedFeature(Feature):
         self.dtype = dtype
         self.depending_on = depending_on
         self.transformation = transformation
+        self.depth = depth
         self.description = description
-        self.is_target = is_target
         self.tags = tags
         self.constraints = constraints
 

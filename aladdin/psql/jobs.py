@@ -6,10 +6,10 @@ from typing import Any, TypeVar
 
 import pandas as pd
 
-from aladdin.feature import FeatureType
 from aladdin.psql.data_source import PostgreSQLConfig, PostgreSQLDataSource
 from aladdin.request.retrival_request import RetrivalRequest
 from aladdin.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
+from aladdin.schemas.feature import FeatureType
 
 logger = logging.getLogger(__name__)
 

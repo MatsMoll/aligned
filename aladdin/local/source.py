@@ -1,20 +1,19 @@
 import logging
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
 import pandas as pd
 from httpx import HTTPStatusError
 
-from aladdin.codable import Codable
 from aladdin.data_file import DataFileReference
 from aladdin.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aladdin.enricher import CsvFileEnricher, Enricher, LoadedStatEnricher, StatisticEricher, TimespanSelector
 from aladdin.exceptions import UnableToFindFileException
 from aladdin.feature_store import FeatureStore
-from aladdin.repo_definition import RepoDefinition
 from aladdin.s3.storage import FileStorage, HttpStorage
+from aladdin.schemas.codable import Codable
+from aladdin.schemas.repo_definition import RepoDefinition
 from aladdin.storage import Storage
 
 logger = logging.getLogger(__name__)
@@ -106,7 +105,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
         )
 
     def enricher(self) -> CsvFileEnricher:
-        return CsvFileEnricher(file=Path(self.path))
+        return CsvFileEnricher(file=self.path)
 
 
 @dataclass

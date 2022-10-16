@@ -1,3 +1,5 @@
+import pytest
+
 from aladdin import Bool, Entity, FeatureView, FeatureViewMetadata, PostgreSQLConfig, String
 
 source = PostgreSQLConfig.localhost('test')
@@ -17,8 +19,9 @@ class TestView(FeatureView):
     is_true = variable == 'True'
 
 
-def test_hidden_variable() -> None:
+@pytest.mark.asyncio
+async def test_hidden_variable() -> None:
 
-    view = TestView.compile()
+    view = await TestView.compile()
 
     assert len(view.derived_features) == 7

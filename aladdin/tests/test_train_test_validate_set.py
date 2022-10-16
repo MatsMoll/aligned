@@ -14,7 +14,7 @@ async def test_split(titanic_source: CsvFileSource) -> None:
     end_ratio = 0.8
     result_size = data_set_size * end_ratio
 
-    dataset = await titanic_source.enricher().load()
+    dataset = await titanic_source.enricher().as_df()
     subset = dataset[:data_set_size]
 
     split_set = split(subset, target_column='Survived', start_ratio=0, end_ratio=end_ratio)
