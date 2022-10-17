@@ -15,6 +15,7 @@ from aladdin import (
 )
 from aladdin.compiler.transformation_factory import FillNaStrategy
 from aladdin.feature_store import FeatureStore
+from aladdin.feature_view.combined_view import CombinedFeatureView, CombinedFeatureViewMetadata
 from aladdin.local.source import CsvFileSource
 
 
@@ -259,4 +260,36 @@ async def alot_of_transforation_feature_store(
 ) -> FeatureStore:
     feature_store = FeatureStore.experimental()
     await feature_store.add_feature_view(alot_of_transforations_feature_view)
+    return feature_store
+
+
+@pytest.fixture
+async def combined_view(
+    titanic_feature_view, breast_scan_feature_viewout_with_datetime
+) -> CombinedFeatureView:
+    class SomeCombinedView(CombinedFeatureView):
+
+        metadata = CombinedFeatureViewMetadata(
+            name='combined', description='Some features that depend on multiple view'
+        )
+
+        titanic = titanic_feature_view
+        cancer_scan = breast_scan_feature_viewout_with_datetime
+
+        some_feature = titanic.age + cancer_scan.radius_mean
+        other_feature = titanic.scaled_age + cancer_scan.radius_mean
+
+    return SomeCombinedView()
+
+
+@pytest.fixture
+async def combined_feature_store(
+    titanic_feature_view: FeatureView,
+    breast_scan_feature_viewout_with_datetime: FeatureView,
+    combined_view: CombinedFeatureView,
+) -> FeatureStore:
+    feature_store = FeatureStore.experimental()
+    await feature_store.add_feature_view(titanic_feature_view)
+    await feature_store.add_feature_view(breast_scan_feature_viewout_with_datetime)
+    await feature_store.add_combined_feature_view(combined_view)
     return feature_store

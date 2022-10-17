@@ -4,3 +4,7 @@ class UnableToFindFileException(Exception):
 
 class InvalidStandardScalerArtefact(Exception):
     pass
+
+
+class CombinedFeatureViewQuerying(Exception):
+    pass

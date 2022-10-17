@@ -119,7 +119,7 @@ class CompiledFeatureView(Codable):
                 RetrivalRequest(
                     feature_view_name=self.name,
                     entities=self.entities,
-                    features=features,
+                    features=features - self.entities,
                     derived_features=derived_features,
                     event_timestamp=self.event_timestamp,
                 )

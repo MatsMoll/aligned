@@ -209,16 +209,16 @@ class LowerThenOrEqualFactory(TransformationFactory):
 class DateComponentFactory(TransformationFactory):
 
     component: str
-    from_feature: FeatureFactory
+    feature: FeatureFactory
 
     @property
     def using_features(self) -> list[FeatureFactory]:
-        return [self.from_feature]
+        return [self.feature]
 
     async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
         from aladdin.schemas.transformation import DateComponent as DCTransformation
 
-        return DCTransformation(self.from_feature.name, self.component)
+        return DCTransformation(self.feature.name, self.component)
 
 
 @dataclass

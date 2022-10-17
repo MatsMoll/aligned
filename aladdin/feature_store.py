@@ -7,6 +7,7 @@ from typing import Any
 
 from aladdin.data_file import DataFileReference
 from aladdin.enricher import Enricher
+from aladdin.exceptions import CombinedFeatureViewQuerying
 from aladdin.feature_source import (
     BatchFeatureSource,
     FeatureSource,
@@ -185,19 +186,27 @@ class FeatureStore:
         feature_request = RawStringFeatureRequest(features=set(features))
         entities_names: set[str] = set(entities.keys())
         requests = self.requests_for(feature_request)
+        feature_names = set()
 
         if requests.needs_event_timestamp and self.event_timestamp_column not in entities:
             raise ValueError(f'Missing {self.event_timestamp_column} in entities')
 
-        feature_names = set()
-        for feature_set in feature_request.grouped_features.values():
-            feature_names.update(feature_set.union({self.event_timestamp_column}))
+        if requests.needs_event_timestamp:
+            feature_names.add(self.event_timestamp_column)
+
+        for view, feature_set in feature_request.grouped_features.items():
+            if feature_set != {'*'}:
+                feature_names.update(feature_set)
+            else:
+                for request in requests.needed_requests:
+                    if request.feature_view_name == view:
+                        feature_names.update(request.all_feature_names)
         for request in requests.needed_requests:
             feature_names.update(request.entity_names)
             entities_names.update(request.entity_names)
 
         return FilterJob(
-            feature_request.feature_names.union(entities_names),
+            feature_names,
             self.feature_source.features_for(entities, requests),
         )
 
@@ -219,7 +228,10 @@ class FeatureStore:
         for feature_view_name in feature_request.feature_view_names:
             if feature_view_name in combined_feature_views:
                 cfv = combined_feature_views[feature_view_name]
-                sub_requests = cfv.requests_for(features[feature_view_name])
+                if len(features[feature_view_name]) == 1 and list(features[feature_view_name])[0] == '*':
+                    sub_requests = cfv.request_all
+                else:
+                    sub_requests = cfv.requests_for(features[feature_view_name])
                 requests.extend(sub_requests.needed_requests)
                 for request in sub_requests.needed_requests:
                     entity_names.update(request.entity_names)
@@ -228,7 +240,10 @@ class FeatureStore:
 
             else:
                 feature_view = feature_views[feature_view_name]
-                sub_requests = feature_view.request_for(features[feature_view_name])
+                if len(features[feature_view_name]) == 1 and list(features[feature_view_name])[0] == '*':
+                    sub_requests = feature_view.request_all
+                else:
+                    sub_requests = feature_view.request_for(features[feature_view_name])
                 requests.extend(sub_requests.needed_requests)
                 for request in sub_requests.needed_requests:
                     entity_names.update(request.entity_names)
@@ -248,6 +263,11 @@ class FeatureStore:
         return FeatureStore._requests_for(feature_request, self.feature_views, self.combined_feature_views)
 
     def feature_view(self, view: str) -> 'FeatureViewStore':
+        if view in self.combined_feature_views:
+            raise CombinedFeatureViewQuerying(
+                'You are trying to get a combined feature view. ',
+                'This is only possible through store.features_for(...), as of now.\n',
+            )
         view = self.feature_views[view]
         return FeatureViewStore(self.feature_source, view)
 
@@ -257,8 +277,8 @@ class FeatureStore:
         if isinstance(self.feature_source, BatchFeatureSource):
             self.feature_source.sources[compiled_view.name] = compiled_view.batch_data_source
 
-    def add_combined_feature_view(self, feature_view: CombinedFeatureView) -> None:
-        compiled_view = type(feature_view).compile()
+    async def add_combined_feature_view(self, feature_view: CombinedFeatureView) -> None:
+        compiled_view = await type(feature_view).compile()
         self.combined_feature_views[compiled_view.name] = compiled_view
 
     def add_model_service(self, service: ModelService) -> None:

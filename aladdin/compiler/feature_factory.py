@@ -222,6 +222,13 @@ class EquatableFeature(FeatureFactory):
     def not_equals(self, right: object) -> Bool:
         return self != right
 
+    def is_in(self, values: list[Any]) -> Bool:
+        from aladdin.compiler.transformation_factory import IsInFactory
+
+        instance = Bool()
+        instance.transformation = IsInFactory(self, values)
+        return instance
+
 
 class ComparableFeature(EquatableFeature):
     def __lt__(self, right: object) -> Bool:
@@ -299,6 +306,13 @@ class ArithmeticFeature(ComparableFeature):
         feature.transformation = StandardScalingFactory(feature=self, limit=limit, timespan=timespan)
         return feature
 
+    def log1p(self) -> Float:
+        from aladdin.compiler.transformation_factory import LogTransformFactory
+
+        feature = Float()
+        feature.transformation = LogTransformFactory(self)
+        return feature
+
 
 class DecimalOperations(FeatureFactory):
     def __round__(self) -> Int64:
@@ -329,6 +343,13 @@ class TruncatableFeature(FeatureFactory):
 
 
 class NumberConvertableFeature(FeatureFactory):
+    def as_float(self) -> Float:
+        from aladdin.compiler.transformation_factory import ToNumericalFactory
+
+        feature = Float()
+        feature.transformation = ToNumericalFactory(self)
+        return feature
+
     def __int__(self) -> Int64:
         raise NotImplementedError()
 
@@ -374,7 +395,18 @@ class CategoricalEncodableFeature(EquatableFeature):
     def ordinal_categories(self, orders: list[str]) -> Int32:
         from aladdin.compiler.transformation_factory import OrdinalFactory
 
-        return OrdinalFactory(orders, self)
+        feature = Int32()
+        feature.transformation = OrdinalFactory(orders, self)
+        return feature
+
+
+class DateFeature(FeatureFactory):
+    def date_component(self, component: str) -> Int32:
+        from aladdin.compiler.transformation_factory import DateComponentFactory
+
+        feature = Int32()
+        feature.transformation = DateComponentFactory(component, self)
+        return feature
 
 
 class Bool(EquatableFeature, LogicalOperatableFeature):
@@ -460,7 +492,13 @@ class Entity(FeatureFactory):
         self._dtype = dtype
 
 
-class EventTimestamp(FeatureFactory):
+class Timestamp(DateFeature, ArithmeticFeature):
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType('').datetime
+
+
+class EventTimestamp(DateFeature, ArithmeticFeature):
 
     ttl: timedelta | None
 
@@ -472,4 +510,6 @@ class EventTimestamp(FeatureFactory):
         self.ttl = ttl
 
     def event_timestamp(self) -> EventTimestampFeature:
-        return EventTimestampFeature(name=self.name, ttl=self.ttl, description=self._description)
+        return EventTimestampFeature(
+            name=self.name, ttl=self.ttl.total_seconds() if self.ttl else None, description=self._description
+        )

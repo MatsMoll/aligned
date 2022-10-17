@@ -81,7 +81,7 @@ class TrainTestValidateSet(Generic[DatasetType]):
         return self.data[self.target]
 
     @property
-    def train(self) -> SupervisedDataSet:
+    def train(self) -> SupervisedDataSet[DatasetType]:
         return SupervisedDataSet(self.data.iloc[self.train_index], self.features, self.target)
 
     @property
@@ -93,7 +93,7 @@ class TrainTestValidateSet(Generic[DatasetType]):
         return self.train.output
 
     @property
-    def test(self) -> SupervisedDataSet:
+    def test(self) -> SupervisedDataSet[DatasetType]:
         return SupervisedDataSet(self.data.iloc[self.test_index], self.features, self.target)
 
     @property
@@ -105,7 +105,7 @@ class TrainTestValidateSet(Generic[DatasetType]):
         return self.test.output
 
     @property
-    def validate(self) -> SupervisedDataSet:
+    def validate(self) -> SupervisedDataSet[DatasetType]:
         return SupervisedDataSet(self.data.iloc[self.validate_index], self.features, self.target)
 
     @property

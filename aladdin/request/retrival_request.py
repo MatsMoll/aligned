@@ -154,7 +154,7 @@ class RequestResult(Codable):
 
     @staticmethod
     def from_request_list(requests: list[RetrivalRequest]) -> 'RequestResult':
-        request_len = len(requests) > 1
+        request_len = len(requests)
         if request_len == 0:
             return RequestResult(entities=set(), features=set(), event_timestamp=None)
         elif request_len > 1:
@@ -170,7 +170,7 @@ class RequestResult(Codable):
 
     @staticmethod
     def from_result_list(requests: list['RequestResult']) -> 'RequestResult':
-        request_len = len(requests) > 1
+        request_len = len(requests)
         if request_len == 0:
             return RequestResult(entities=set(), features=set(), event_timestamp=None)
         elif request_len > 1:

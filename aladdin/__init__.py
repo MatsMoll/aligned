@@ -1,4 +1,14 @@
-from aladdin.compiler.feature_factory import UUID, Bool, Entity, EventTimestamp, Float, Int32, Int64, String
+from aladdin.compiler.feature_factory import (
+    UUID,
+    Bool,
+    Entity,
+    EventTimestamp,
+    Float,
+    Int32,
+    Int64,
+    String,
+    Timestamp,
+)
 from aladdin.data_source.stream_data_source import HttpStreamSource
 from aladdin.feature_store import FeatureStore
 from aladdin.feature_view.combined_view import CombinedFeatureView, CombinedFeatureViewMetadata
@@ -35,4 +45,5 @@ __all__ = [
     'Int64',
     'Float',
     'EventTimestamp',
+    'Timestamp',
 ]

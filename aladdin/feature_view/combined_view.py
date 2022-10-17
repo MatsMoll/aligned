@@ -1,13 +1,16 @@
+import logging
 from abc import ABC, abstractproperty
 from dataclasses import dataclass
 from typing import Callable
 
-from aladdin.compiler.feature_factory import FeatureFactory, TransformationFactory
+from aladdin.compiler.feature_factory import FeatureFactory
 from aladdin.feature_view.feature_view import CompiledFeatureView, FeatureSelectable, FeatureView, FVType
 from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
 from aladdin.schemas.codable import Codable
 from aladdin.schemas.derivied_feature import DerivedFeature
-from aladdin.schemas.feature import Feature, FeatureReferance
+from aladdin.schemas.feature import Feature
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -119,13 +122,13 @@ class CombinedFeatureView(ABC, FeatureSelectable):
 
     @staticmethod
     def _needed_features(
-        depending_on: list[FeatureReferance], feature_views: dict[str, CompiledFeatureView]
+        depending_on: list[FeatureFactory], feature_views: dict[str, CompiledFeatureView]
     ) -> list[RetrivalRequest]:
 
         feature_refs: dict[CompiledFeatureView, set[str]] = {}
 
         for feature_dep in depending_on:
-            view = feature_views[feature_dep.feature_view]
+            view = feature_views[feature_dep._feature_view]
             feature_refs.setdefault(view, set()).add(feature_dep.name)
 
         return [
@@ -134,7 +137,7 @@ class CombinedFeatureView(ABC, FeatureSelectable):
         ]
 
     @classmethod
-    def compile(cls) -> CompiledCombinedFeatureView:
+    async def compile(cls) -> CompiledCombinedFeatureView:
         transformations: set[DerivedFeature] = set()
         metadata = cls().metadata
         var_names = [name for name in cls().__dir__() if not name.startswith('_')]
@@ -145,25 +148,53 @@ class CombinedFeatureView(ABC, FeatureSelectable):
         for var_name in var_names:
             feature = getattr(cls, var_name)
             if isinstance(feature, FeatureView):
-                feature_view_deps[feature.metadata.name] = feature.compile()
-            if isinstance(feature, TransformationFactory):
+                # Needs to compile the view one more time. unfortunally..
+                # not optimal as the view will be duplicated in the definition file
+                feature_view_deps[feature.metadata.name] = await feature.compile()
+            if isinstance(feature, FeatureFactory):
                 feature._feature_view = metadata.name
                 feature._name = var_name  # Needed in some cases for later inferance and features
+                if not feature.transformation:
+                    logger.info('Feature had no transformation, which do not make sense in a CombinedView')
+                    continue
                 requests[var_name] = CombinedFeatureView._needed_features(
-                    feature.using_features, feature_view_deps
+                    feature.transformation.using_features, feature_view_deps
                 )
 
-                sources = [
-                    (feature_view_deps[request.feature_view_name], request) for request in requests[var_name]
-                ]
-                tran = feature.transformation(sources)
-                derived = DerivedFeature(
-                    name=var_name,
-                    dtype=feature.feature._dtype,
-                    depending_on={feature.feature_referance() for feature in feature.using_features},
-                    transformation=tran,
+                transformations.add(await feature.compile(list(feature_view_deps.values())))
+
+        return CompiledCombinedFeatureView(
+            name=metadata.name,
+            features=transformations,
+            feature_referances=requests,
+        )
+
+    @classmethod
+    async def compile_only_graph(cls) -> CompiledCombinedFeatureView:
+        transformations: set[DerivedFeature] = set()
+        metadata = cls().metadata
+        var_names = [name for name in cls().__dir__() if not name.startswith('_')]
+
+        requests: dict[str, list[RetrivalRequest]] = {}
+        feature_view_deps: dict[str, CompiledFeatureView] = {}
+
+        for var_name in var_names:
+            feature = getattr(cls, var_name)
+            if isinstance(feature, FeatureView):
+                # Needs to compile the view one more time. unfortunally..
+                # not optimal as the view will be duplicated in the definition file
+                feature_view_deps[feature.metadata.name] = feature.compile_graph_only()
+            if isinstance(feature, FeatureFactory):
+                feature._feature_view = metadata.name
+                feature._name = var_name  # Needed in some cases for later inferance and features
+                if not feature.transformation:
+                    logger.info('Feature had no transformation, which do not make sense in a CombinedView')
+                    continue
+                requests[var_name] = CombinedFeatureView._needed_features(
+                    feature.transformation.using_features, feature_view_deps
                 )
-                transformations.add(derived)
+
+                transformations.add(feature.compile_graph_only())
 
         return CompiledCombinedFeatureView(
             name=metadata.name,
@@ -175,9 +206,9 @@ class CombinedFeatureView(ABC, FeatureSelectable):
     def select(
         cls: type[FVType], features: Callable[[type[FVType]], list[FeatureFactory]]
     ) -> RetrivalRequest:
-        view: CompiledCombinedFeatureView = cls.compile()
+        view: CompiledCombinedFeatureView = cls.compile_only_graph()
         names = features(cls)
-        return view.requests_for({feature.name for feature in names if feature.name})
+        return view.requests_for({feat.name for feat in names})
 
     @classmethod
     def select_all(cls: type[FVType]) -> RetrivalRequest:
