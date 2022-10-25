@@ -1,23 +1,94 @@
 from dataclasses import dataclass
+from typing import Optional
+
+from mashumaro.types import SerializableType
 
 from aladdin.schemas.codable import Codable
 
 
-class Constraint(Codable):
+class Constraint(Codable, SerializableType):
     name: str
 
-    def to_dict(self) -> dict:
-        return {'name': self.name}
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+    def _serialize(self) -> dict:
+        return self.to_dict()
+
+    @classmethod
+    def _deserialize(cls, value: dict) -> 'Constraint':
+        name_type = value['name']
+        del value['name']
+        data_class = SupportedConstraints.shared().types[name_type]
+
+        return data_class.from_dict(value)
+
+
+class SupportedConstraints:
+
+    types: dict[str, type[Constraint]]
+
+    _shared: Optional['SupportedConstraints'] = None
+
+    def __init__(self) -> None:
+        self.types = {}
+
+        for tran_type in [
+            LowerBound,
+            LowerBoundInclusive,
+            UpperBound,
+            UpperBoundInclusive,
+            Required,
+            InDomain,
+        ]:
+            self.add(tran_type)
+
+    def add(self, constraint: type[Constraint]) -> None:
+        self.types[constraint.name] = constraint
+
+    @classmethod
+    def shared(cls) -> 'SupportedConstraints':
+        if cls._shared:
+            return cls._shared
+        cls._shared = SupportedConstraints()
+        return cls._shared
+
+
+@dataclass
+class LowerBound(Constraint):
+    value: float
+
+    name = 'lower_bound'
 
     def __hash__(self) -> int:
         return hash(self.name)
 
 
 @dataclass
-class Above(Constraint):
+class LowerBoundInclusive(Constraint):
     value: float
 
-    name = 'above'
+    name = 'lower_bound_inc'
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+@dataclass
+class UpperBound(Constraint):
+    value: float
+
+    name = 'upper_bound'
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+@dataclass
+class UpperBoundInclusive(Constraint):
+    value: float
+
+    name = 'upper_bound_inc'
 
     def __hash__(self) -> int:
         return hash(self.name)
@@ -44,10 +115,10 @@ class Required(Constraint):
 
 
 @dataclass
-class Domain(Constraint):
+class InDomain(Constraint):
 
     values: list[str]
-    name = 'domain'
+    name = 'in_domain'
 
     def __hash__(self) -> int:
         return hash(self.name)

@@ -5,6 +5,7 @@ from aladdin.compiler.feature_factory import Entity, EventTimestamp, FeatureFact
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.feature_view.feature_view_metadata import FeatureViewMetadata
 from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
+from aladdin.schemas.feature import Feature
 
 # Enables code compleation in the select method
 FVType = TypeVar('FVType')
@@ -73,6 +74,7 @@ class FeatureView(ABC, FeatureSelectable):
 
             feature._name = var_name
             feature._feature_view = metadata.name
+            compiled_feature = await feature.feature()
 
             if feature.transformation:
                 # Adding features that is not stored in the view
@@ -97,7 +99,7 @@ class FeatureView(ABC, FeatureSelectable):
 
                     if depth == 0:
                         feature_dep._name = var_name
-                        view.features.add(feature.feature())
+                        view.features.add(compiled_feature)
                         continue
 
                     feature_dep._name = str(hidden_features)
@@ -111,7 +113,7 @@ class FeatureView(ABC, FeatureSelectable):
                 )
 
             elif isinstance(feature, Entity):
-                view.entities.add(feature.feature())
+                view.entities.add(compiled_feature)
             elif isinstance(feature, EventTimestamp):
                 if view.event_timestamp is not None:
                     raise Exception(
@@ -119,10 +121,10 @@ class FeatureView(ABC, FeatureSelectable):
                         ' FeatureViewDefinition. Check that this is the case for'
                         f' {cls.__name__}'
                     )
-                view.features.add(feature.feature())
+                view.features.add(compiled_feature)
                 view.event_timestamp = feature.event_timestamp()
             else:
-                view.features.add(feature.feature())
+                view.features.add(compiled_feature)
 
         if not view.entities:
             raise ValueError(f'FeatureView {metadata.name} must contain at least one Entity')
@@ -159,6 +161,7 @@ class FeatureView(ABC, FeatureSelectable):
 
             feature._name = var_name
             feature._feature_view = metadata.name
+            compiled_feature = Feature(name=feature._name, dtype=feature.dtype)
 
             if feature.transformation:
                 feature_deps = [(feat.depth(), feat) for feat in feature.feature_dependencies()]
@@ -184,7 +187,7 @@ class FeatureView(ABC, FeatureSelectable):
                 )
 
             elif isinstance(feature, Entity):
-                view.entities.add(feature.feature())
+                view.entities.add(compiled_feature)
             elif isinstance(feature, EventTimestamp):
                 if view.event_timestamp is not None:
                     raise Exception(
@@ -192,10 +195,10 @@ class FeatureView(ABC, FeatureSelectable):
                         ' FeatureViewDefinition. Check that this is the case for'
                         f' {cls.__name__}'
                     )
-                view.features.add(feature.feature())
+                view.features.add(compiled_feature)
                 view.event_timestamp = feature.event_timestamp()
             else:
-                view.features.add(feature.feature())
+                view.features.add(compiled_feature)
 
         if not view.entities:
             raise ValueError(f'FeatureView {metadata.name} must contain at least one Entity')

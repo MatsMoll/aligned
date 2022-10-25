@@ -15,6 +15,7 @@ from aladdin.request.retrival_request import RequestResult, RetrivalRequest
 from aladdin.schemas.derivied_feature import DerivedFeature
 from aladdin.schemas.feature import FeatureType
 from aladdin.split_strategy import SplitDataSet, SplitStrategy, TrainTestSet, TrainTestValidateSet
+from aladdin.validation.interface import Validator
 
 try:
     import dask.dataframe as dd
@@ -68,6 +69,37 @@ class RetrivalJob(ABC):
 
         return TrainTestSetJob(job=self, test_size=test_size, target_column=target_column)
 
+    def validate(self, validator: Validator) -> ValidationJob:
+
+        return ValidationJob(self, validator)
+
+
+@dataclass
+class ValidationJob(RetrivalJob):
+
+    job: RetrivalJob
+    validator: Validator
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.job.request_result
+
+    async def to_df(self) -> pd.DataFrame:
+        return await self.validator.validate_pandas(
+            list(self.request_result.features), await self.job.to_df()
+        )
+
+    async def to_dask(self) -> dd.DataFrame:
+        raise NotImplementedError()
+
+    def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
+        if isinstance(location, str):
+            from aladdin.local.source import ParquetFileSource
+
+            return FileCachedJob(ParquetFileSource(location), self)
+        else:
+            return FileCachedJob(location, self)
+
 
 class DerivedFeatureJob(RetrivalJob):
     @abstractmethod
@@ -100,13 +132,13 @@ class DerivedFeatureJob(RetrivalJob):
         if isinstance(location, str):
             from aladdin.local.source import ParquetFileSource
 
-            return FileCachedJob(ParquetFileSource(location), self)
+            return RawFileCachedJob(ParquetFileSource(location), self)
         else:
-            return FileCachedJob(location, self)
+            return RawFileCachedJob(location, self)
 
 
 @dataclass
-class FileCachedJob(RetrivalJob):
+class RawFileCachedJob(RetrivalJob):
 
     location: DataFileReference
     job: DerivedFeatureJob
@@ -123,6 +155,31 @@ class FileCachedJob(RetrivalJob):
             await self.location.write_pandas(df)
         df = await self.job.ensure_types(df)
         return await self.job.compute_derived_features(df)
+
+    async def to_dask(self) -> dd.DataFrame:
+        raise NotImplementedError()
+
+    def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
+        return self
+
+
+@dataclass
+class FileCachedJob(RetrivalJob):
+
+    location: DataFileReference
+    job: RetrivalJob
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.job.request_result
+
+    async def to_df(self) -> pd.DataFrame:
+        try:
+            df = await self.location.read_pandas()
+        except UnableToFindFileException:
+            df = await self.job.to_df()
+            await self.location.write_pandas(df)
+        return df
 
     async def to_dask(self) -> dd.DataFrame:
         raise NotImplementedError()
@@ -219,9 +276,11 @@ class SingleSourceRetrivalJob(DerivedFeatureJob, Generic[Source]):
         for feature_round in self.request.derived_features_order():
             for feature in feature_round:
                 df[feature.name] = await feature.transformation.transform(df[feature.depending_on_names])
-                if df.dtypes[feature.name] != feature.dtype.pandas_type:
+                if df[feature.name].dtype != feature.dtype.pandas_type:
                     if feature.dtype.is_numeric:
-                        df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce')
+                        df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce').astype(
+                            feature.dtype.pandas_type
+                        )
                     else:
                         df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
         return df
@@ -245,7 +304,9 @@ class SingleSourceRetrivalJob(DerivedFeatureJob, Generic[Source]):
             else:
 
                 if feature.dtype.is_numeric:
-                    df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce')
+                    df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce').astype(
+                        feature.dtype.pandas_type
+                    )
                 else:
                     df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
         return df
@@ -279,7 +340,7 @@ class FactualRetrivalJob(DerivedFeatureJob):
                         continue
 
                     df[feature.name] = await feature.transformation.transform(df[feature.depending_on_names])
-                    if df.dtypes[feature.name] != feature.dtype.pandas_type:
+                    if df[feature.name].dtype != feature.dtype.pandas_type:
                         if feature.dtype.is_numeric:
                             df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce')
                         else:

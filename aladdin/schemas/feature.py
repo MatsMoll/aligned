@@ -37,16 +37,16 @@ class FeatureType(Codable):
         }[self.name]
 
     @property
-    def pandas_type(self) -> type:
+    def pandas_type(self) -> str | type:
         import numpy as np
 
         return {
             'string': str,
-            'int32': np.int32,
-            'int64': np.int64,
+            'int32': 'Int32',
+            'int64': 'Int64',
             'float': np.float64,
             'double': np.double,
-            'bool': int,
+            'bool': bool,
             'date': np.datetime64,
             'datetime': np.datetime64,
             'time': np.datetime64,

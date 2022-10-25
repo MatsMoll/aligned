@@ -5,8 +5,16 @@ from typing import Any, Callable, TypeVar
 
 from pandas import DataFrame, Series
 
+from aladdin.compiler.constraint_factory import ConstraintFactory, LiteralFactory
 from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
-from aladdin.schemas.constraints import Constraint
+from aladdin.schemas.constraints import (
+    Constraint,
+    InDomain,
+    LowerBound,
+    LowerBoundInclusive,
+    UpperBound,
+    UpperBoundInclusive,
+)
 from aladdin.schemas.derivied_feature import DerivedFeature
 from aladdin.schemas.feature import EventTimestamp as EventTimestampFeature
 from aladdin.schemas.feature import Feature, FeatureReferance, FeatureType
@@ -70,7 +78,7 @@ class FeatureFactory:
     _description: str | None = None
 
     transformation: TransformationFactory | None = None
-    constraints: set[Constraint] = set()
+    constraints: set[ConstraintFactory] | None = None
 
     @property
     def dtype(self) -> FeatureType:
@@ -91,9 +99,13 @@ class FeatureFactory:
     def feature_referance(self) -> FeatureReferance:
         return FeatureReferance(self.name, self._feature_view, self.dtype, self.transformation is not None)
 
-    def feature(self) -> Feature:
+    async def feature(self) -> Feature:
         return Feature(
-            name=self.name, dtype=self.dtype, description=self._description, tags=None, constraints=None
+            name=self.name,
+            dtype=self.dtype,
+            description=self._description,
+            tags=None,
+            constraints=self.constraints,
         )
 
     def compile_graph_only(self) -> DerivedFeature:
@@ -198,6 +210,23 @@ class FeatureFactory:
         dtype.transformation = DillTransformationFactory(dtype, sub_tran, using_features or [self])
         return dtype  # type: ignore [return-value]
 
+    def is_required(self: T) -> T:
+        from aladdin.schemas.constraints import Required
+
+        self._add_constraint(Required())  # type: ignore[attr-defined]
+        return self
+
+    def _add_constraint(self, constraint: ConstraintFactory | Constraint) -> None:
+        # The constraint should be a lazy evaluated constraint
+        # Aka, a factory, as with the features.
+        # Therefore making it possible to add distribution checks
+        if not self.constraints:
+            self.constraints = set()
+        if isinstance(constraint, Constraint):
+            self.constraints.add(constraint)
+        else:
+            self.constraints.add(LiteralFactory(constraint))
+
 
 class EquatableFeature(FeatureFactory):
 
@@ -258,6 +287,22 @@ class ComparableFeature(EquatableFeature):
         instance = Bool()
         instance.transformation = GreaterThenOrEqualFactory(right, self)
         return instance
+
+    def lower_bound(self: T, value: float, is_inclusive: bool | None = None) -> T:
+
+        if is_inclusive:
+            self._add_constraint(LowerBoundInclusive(value))  # type: ignore[attr-defined]
+        else:
+            self._add_constraint(LowerBound(value))  # type: ignore[attr-defined]
+        return self
+
+    def upper_bound(self: T, value: float, is_inclusive: bool | None = None) -> T:
+
+        if is_inclusive:
+            self._add_constraint(UpperBoundInclusive(value))  # type: ignore[attr-defined]
+        else:
+            self._add_constraint(UpperBound(value))  # type: ignore[attr-defined]
+        return self
 
 
 class ArithmeticFeature(ComparableFeature):
@@ -398,6 +443,10 @@ class CategoricalEncodableFeature(EquatableFeature):
         feature = Int32()
         feature.transformation = OrdinalFactory(orders, self)
         return feature
+
+    def accepted_values(self: T, values: list[str]) -> T:
+        self._add_constraint(InDomain(values))  # type: ignore[attr-defined]
+        return self
 
 
 class DateFeature(FeatureFactory):
