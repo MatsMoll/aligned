@@ -35,7 +35,7 @@ classifiers = [
     'Topic :: Scientific/Engineering :: Artificial Intelligence',
 ]
 packages = [
-    { include = "aladdin" },
+    { include = "aligned" },
 ]
 
 [tool.poetry.dependencies]
@@ -75,7 +75,7 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-aladdin = 'aladdin.cli:cli'
+aligned = 'aligned.cli:cli'
 
 [tool.black]
 line-length = 110

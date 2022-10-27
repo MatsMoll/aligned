@@ -2,7 +2,7 @@ from math import ceil, floor
 
 import pytest
 
-from aladdin import (
+from aligned import (
     Bool,
     Entity,
     EventTimestamp,
@@ -13,10 +13,10 @@ from aladdin import (
     Int32,
     String,
 )
-from aladdin.compiler.transformation_factory import FillNaStrategy
-from aladdin.feature_store import FeatureStore
-from aladdin.feature_view.combined_view import CombinedFeatureView, CombinedFeatureViewMetadata
-from aladdin.local.source import CsvFileSource
+from aligned.compiler.transformation_factory import FillNaStrategy
+from aligned.feature_store import FeatureStore
+from aligned.feature_view.combined_view import CombinedFeatureView, CombinedFeatureViewMetadata
+from aligned.local.source import CsvFileSource
 
 
 @pytest.fixture
