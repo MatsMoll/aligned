@@ -7,10 +7,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from aladdin.enricher import Enricher
-from aladdin.feature_view.combined_view import CompiledCombinedFeatureView
-from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.online_source import OnlineSource
 from aladdin.schemas.codable import Codable
+from aladdin.schemas.feature_view import CompiledCombinedFeatureView, CompiledFeatureView
 
 if TYPE_CHECKING:
     from fastapi import FastAPI

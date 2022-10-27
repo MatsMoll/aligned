@@ -5,12 +5,12 @@ from redis.asyncio import Redis, StrictRedis  # type: ignore
 
 from aladdin.data_source.stream_data_source import StreamDataSource
 from aladdin.feature_source import FeatureSource, WritableFeatureSource
-from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.online_source import OnlineSource
 from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
 from aladdin.retrival_job import RetrivalJob
 from aladdin.schemas.codable import Codable
 from aladdin.schemas.feature import FeatureType
+from aladdin.schemas.feature_view import CompiledFeatureView
 
 logger = logging.getLogger(__name__)
 

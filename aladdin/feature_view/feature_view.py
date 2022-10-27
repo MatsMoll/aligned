@@ -1,11 +1,13 @@
 from abc import ABC, abstractproperty
+from dataclasses import dataclass, field
 from typing import Callable, TypeVar
 
 from aladdin.compiler.feature_factory import Entity, EventTimestamp, FeatureFactory
-from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
-from aladdin.feature_view.feature_view_metadata import FeatureViewMetadata
+from aladdin.data_source.batch_data_source import BatchDataSource
+from aladdin.data_source.stream_data_source import StreamDataSource
 from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
 from aladdin.schemas.feature import Feature
+from aladdin.schemas.feature_view import CompiledFeatureView
 
 # Enables code compleation in the select method
 FVType = TypeVar('FVType')
@@ -21,6 +23,25 @@ class FeatureSelectable:
     @classmethod
     def select_all(cls: type[FVType]) -> RetrivalRequest:
         pass
+
+
+@dataclass
+class FeatureViewMetadata:
+    name: str
+    description: str
+    batch_source: BatchDataSource
+    stream_source: StreamDataSource | None = None
+    tags: dict[str, str] = field(default_factory=dict)
+
+    @staticmethod
+    def from_compiled(view: CompiledFeatureView) -> 'FeatureViewMetadata':
+        return FeatureViewMetadata(
+            name=view.name,
+            description=view.description,
+            tags=view.tags,
+            batch_source=view.batch_data_source,
+            stream_source=None,
+        )
 
 
 class FeatureView(ABC, FeatureSelectable):

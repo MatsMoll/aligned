@@ -11,9 +11,12 @@ from aladdin.compiler.feature_factory import (
 )
 from aladdin.data_source.stream_data_source import HttpStreamSource
 from aladdin.feature_store import FeatureStore
-from aladdin.feature_view.combined_view import CombinedFeatureView, CombinedFeatureViewMetadata
-from aladdin.feature_view.feature_view import FeatureView
-from aladdin.feature_view.feature_view_metadata import FeatureViewMetadata
+from aladdin.feature_view import (
+    CombinedFeatureView,
+    CombinedFeatureViewMetadata,
+    FeatureView,
+    FeatureViewMetadata,
+)
 from aladdin.local.source import FileSource
 from aladdin.psql.data_source import PostgreSQLConfig
 from aladdin.redis.config import RedisConfig

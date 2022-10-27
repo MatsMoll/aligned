@@ -9,7 +9,7 @@ from aladdin import FileSource
 async def test_cache_enricher(mocker) -> None:  # type: ignore
     cache_time = timedelta(hours=1)
     source = FileSource.csv_at(path='test_data/data-with-datetime.csv', mapping_keys={}).enricher()
-    enricher = source.cache(ttl=cache_time, cache_key='cached_data')
+    enricher = source.cache(ttl=cache_time, cache_key='cache/cached_data')
 
     file = await enricher.as_df()
     expected = await source.as_df()

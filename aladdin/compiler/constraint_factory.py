@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.schemas.constraints import Constraint
+from aladdin.schemas.feature_view import CompiledFeatureView
 
 
 class ConstraintFactory:

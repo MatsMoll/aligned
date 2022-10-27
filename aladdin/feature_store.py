@@ -15,12 +15,12 @@ from aladdin.feature_source import (
     WritableFeatureSource,
 )
 from aladdin.feature_view.combined_view import CombinedFeatureView, CompiledCombinedFeatureView
-from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.feature_view.feature_view import FeatureView
 from aladdin.model import ModelService
 from aladdin.online_source import BatchOnlineSource
 from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
 from aladdin.retrival_job import FilterJob, RetrivalJob
+from aladdin.schemas.feature_view import CompiledFeatureView
 from aladdin.schemas.repo_definition import EnricherReference, RepoDefinition
 
 logger = logging.getLogger(__name__)

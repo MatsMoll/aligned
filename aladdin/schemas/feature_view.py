@@ -1,43 +1,11 @@
 from dataclasses import dataclass, field
 
-# from aladdin.codable import Codable
 from aladdin.data_source.batch_data_source import BatchDataSource
 from aladdin.data_source.stream_data_source import StreamDataSource
 from aladdin.request.retrival_request import FeatureRequest, RetrivalRequest
 from aladdin.schemas.codable import Codable
 from aladdin.schemas.derivied_feature import DerivedFeature
 from aladdin.schemas.feature import EventTimestamp, Feature
-
-# from typing import Generic, Optional, TypeVar
-
-
-# class VersionableData(Codable):
-#     valid_from: datetime
-
-# VersionData = TypeVar("VersionData", bound=VersionableData)
-
-# @dataclass
-# class VersionedData(Generic[VersionData], Codable):
-
-#     identifier: str
-#     versions: list[VersionData]
-
-#     def __init__(self, identifier: str, versions: list[VersionData]) -> None:
-#         self.identifier = identifier
-#         self.versions = versions
-
-#     @property
-#     def latest(self) -> VersionData:
-#         return self.versions[0]
-
-#     def version_valid_at(self, timestamp: datetime) -> VersionData | None:
-#         for version in self.versions:
-#             if version.valid_from < timestamp:
-#                 return version
-#         return None
-
-#     def __hash__(self) -> int:
-#         return hash(self.identifier)
 
 
 @dataclass
@@ -126,14 +94,6 @@ class CompiledFeatureView(Codable):
             ],
         )
 
-    # def version_at(self, timestamp: datetime) -> Optional["CompiledFeatureView"]:
-    #     if self.created_at < timestamp:
-    #         return self
-    #     if prev_version := self.prev_version:
-    #         return prev_version.version_at(timestamp)
-    #     else:
-    #         return None
-
     def __hash__(self) -> int:
         return hash(self.name)
 
@@ -141,7 +101,7 @@ class CompiledFeatureView(Codable):
         entites = '\n'.join([str(entity) for entity in self.entities])
         input_features = '\n'.join([str(features) for features in self.features])
         transformed_features = '\n'.join([str(features) for features in self.derived_features])
-        string_representation = f"""
+        return f"""
 {self.name}
 Description: {self.description}
 Tags: {self.tags}
@@ -158,29 +118,97 @@ Input features:
 Transformed features:
 {transformed_features}
         """
-        return string_representation
 
-    # def __eq__(self, other: object) -> bool:
 
-    #     if not isinstance(other, CompiledFeatureView):
-    #         return False
+@dataclass
+class CompiledCombinedFeatureView(Codable):
+    name: str
+    features: set[DerivedFeature]  # FIXME: Should combine this and feature_referances into one class.
+    feature_referances: dict[str, list[RetrivalRequest]]
 
-    #     feature_difference = (other.features.union(self.features) -
-    # other.features.intersection(self.features))
-    #     if feature_difference:
-    #         return False
+    @property
+    def entity_features(self) -> set[Feature]:
+        values = set()
+        for requests in self.feature_referances.values():
+            for request in requests:
+                values.update(request.entities)
+        return values
 
-    #     derived_feature_difference = other.derived_features.union(
-    #         self.derived_features
-    #     ) - other.derived_features.intersection(self.derived_features)
-    #     if derived_feature_difference:
-    #         return False
+    @property
+    def entity_names(self) -> set[str]:
+        return {feature.name for feature in self.entity_features}
 
-    #     entity_differance = other.entities.union(self.entities) - other.entities.intersection(self.entities)
-    #     if entity_differance:
-    #         return False
+    @property
+    def request_all(self) -> FeatureRequest:
+        requests: dict[str, RetrivalRequest] = {}
+        entities = set()
+        for sub_requests in self.feature_referances.values():
+            for request in sub_requests:
+                entities.update(request.entities)
+                if request.feature_view_name not in requests:
+                    requests[request.feature_view_name] = RetrivalRequest(
+                        feature_view_name=request.feature_view_name,
+                        entities=request.entities,
+                        features=set(),
+                        derived_features=set(),
+                        event_timestamp=request.event_timestamp,
+                    )
+                requests[request.feature_view_name].derived_features.update(request.derived_features)
+                requests[request.feature_view_name].features.update(request.features)
+                requests[request.feature_view_name].entities.update(request.entities)
 
-    #     if self.event_timestamp != other.event_timestamp:
-    #         return False
+        requests[self.name] = RetrivalRequest(
+            feature_view_name=self.name,
+            entities=entities,
+            features=set(),
+            derived_features=self.features,
+            event_timestamp=None,
+        )
 
-    #     return True
+        return FeatureRequest(
+            self.name,
+            features_to_include={feature.name for feature in self.features.union(entities)},
+            needed_requests=RetrivalRequest.combine(list(requests.values())),
+        )
+
+    def requests_for(self, feature_names: set[str]) -> FeatureRequest:
+        entities = self.entity_names
+        dependent_views: dict[str, RetrivalRequest] = {}
+        for feature in feature_names:
+            if feature in entities:
+                continue
+
+            if feature not in self.feature_referances.keys():
+                raise ValueError(f'Invalid feature {feature} in {self.name}')
+
+            requests = self.feature_referances[feature]
+            for request in requests:
+                if request.feature_view_name not in dependent_views:
+                    dependent_views[request.feature_view_name] = RetrivalRequest(
+                        feature_view_name=request.feature_view_name,
+                        entities=request.entities,
+                        features=set(),
+                        derived_features=set(),
+                        event_timestamp=request.event_timestamp,
+                    )
+                current = dependent_views[request.feature_view_name]
+                current.derived_features = current.derived_features.union(request.derived_features)
+                current.features = current.features.union(request.features)
+                dependent_views[request.feature_view_name] = current
+
+        dependent_views[self.name] = RetrivalRequest(  # Add the request we want
+            feature_view_name=self.name,
+            entities=self.entity_features,
+            features=set(),
+            derived_features=[feature for feature in self.features if feature.name in feature_names],
+            event_timestamp=None,
+        )
+
+        return FeatureRequest(
+            self.name,
+            features_to_include=feature_names,
+            needed_requests=list(dependent_views.values()),
+        )
+
+    def __hash__(self) -> int:
+        return hash(self.name)

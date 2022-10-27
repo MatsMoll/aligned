@@ -6,8 +6,8 @@ from typing import Any, Optional
 from mashumaro.types import SerializableType
 
 from aladdin.feature_source import FeatureSource, InMemoryFeatureSource
-from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.schemas.codable import Codable
+from aladdin.schemas.feature_view import CompiledFeatureView
 
 logger = logging.getLogger(__name__)
 

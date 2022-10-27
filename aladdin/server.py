@@ -11,8 +11,8 @@ from pydantic import BaseModel
 from aladdin.data_source.stream_data_source import HttpStreamSource
 from aladdin.feature_source import WritableFeatureSource
 from aladdin.feature_store import FeatureStore
-from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.schemas.feature import Feature
+from aladdin.schemas.feature_view import CompiledFeatureView
 
 logger = logging.getLogger(__name__)
 

@@ -6,7 +6,6 @@ from typing import Any, Callable, TypeVar
 from pandas import DataFrame, Series
 
 from aladdin.compiler.constraint_factory import ConstraintFactory, LiteralFactory
-from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
 from aladdin.schemas.constraints import (
     Constraint,
     InDomain,
@@ -18,6 +17,7 @@ from aladdin.schemas.constraints import (
 from aladdin.schemas.derivied_feature import DerivedFeature
 from aladdin.schemas.feature import EventTimestamp as EventTimestampFeature
 from aladdin.schemas.feature import Feature, FeatureReferance, FeatureType
+from aladdin.schemas.feature_view import CompiledFeatureView
 from aladdin.schemas.transformation import Transformation
 
 

@@ -8,7 +8,7 @@ from pandas import DataFrame, Series
 from aladdin.compiler.feature_factory import FeatureFactory, Transformation, TransformationFactory
 from aladdin.enricher import StatisticEricher, TimespanSelector
 from aladdin.exceptions import InvalidStandardScalerArtefact
-from aladdin.feature_view.compiled_feature_view import CompiledFeatureView
+from aladdin.schemas.feature_view import CompiledFeatureView
 from aladdin.schemas.transformation import StandardScalingTransformation
 
 
