@@ -1,7 +1,6 @@
-# Aladdin
+# Aligned
 
-A feature store simplifying feature managment, serving and quality control.
-Describe your features, and the feature store grants your wishes so you become the feature king.
+A feature store alignes the offline and online features in a ML system. Therefore making it harder to achive a training-serving skew. However, that is only the beginning.
 
 ## Feature Views
 
@@ -11,66 +10,69 @@ Then get code completion and typesafety by referencing them in other features.
 This makes the features light weight, data source indipendent, and flexible.
 
 ```python
-class Match(FeatureView):
+class TitanicPassenger(FeatureView):
 
     metadata = FeatureViewMetadata(
-        name="match",
-        description="Features about football matches",
-        batch_source=...
+        name="passenger",
+        description="Some features from the titanic dataset",
+        batch_source=FileSource.csv_at("titanic.csv"),
+        stream_source=HttpStreamSource(topic_name="titanic")
     )
 
-    # Raw data
-    home_team = Entity(dtype=String())
-    away_team = Entity(dtype=String())
+    passenger_id = Entity(dtype=Int32())
 
-    date = EventTimestamp(max_join_with=timedelta(days=365))
+    # Input values
+    age = (
+        Float()
+            .description("A float as some have decimals")
+            .is_required()
+            .lower_bound(0)
+            .upper_bound(110)
+    )
 
-    half_time_score = String()
-    full_time_score = String().description("the scores at full time, in the format 'home-away'. E.g: '2-1'")
+    name = String()
+    sex = String().accepted_values(["male", "female"])
+    survived = Bool().description("If the passenger survived")
+    sibsp = Int32().lower_bound(0, is_inclusive=True).description("Number of siblings on titanic")
+    cabin = String()
 
+    # Creates two one hot encoded values
+    is_male, is_female = sex.one_hot_encode(['male', 'female'])
 
-    # Transformed features
-    is_liverpool = (home_team == "Liverpool").description("If the home team is Liverpool")
-
-    score_as_array = full_time_score.split("-")
-
-    # Custom pandas df method, which get first and second index in `score_as_array`
-    home_team_score = score_as_array.transformed(lambda df: df["score_as_array"].str[0].replace({np.nan: 0}).astype(int))
-    away_team_score = score_as_array.transformed(...)
-
-    score_differance = home_team_score - away_team_score
-    total_score = home_team_score + away_team_score
+    # Standard scale the age.
+    # This will fit the scaler using a data slice from the batch source
+    # limited to maximum 100 rows. We can also uese a time constraint if wanted
+    scaled_age = age.standard_scaled(limit=100)
 ```
 
 ## Data sources
 
-Aladdin makes handling data sources easy, as you do not have to think about how it is done.
+Alinged makes handling data sources easy, as you do not have to think about how it is done.
 Only define where the data is, and we handle the dirty work.
 
 ```python
 my_db = PostgreSQLConfig(env_var="DATABASE_URL")
 
-class Match(FeatureView):
+class TitanicPassenger(FeatureView):
 
     metadata = FeatureViewMetadata(
-        name="match",
-        description="...",
+        name="passenger",
+        description="Some features from the titanic dataset",
         batch_source=my_db.table(
-            "matches",
+            "passenger",
             mapping_keys={
-                "Team 1": "home_team",
-                "Team 2": "away_team",
+                "Passenger_Id": "passenger_id"
             }
-        )
+        ),
+        stream_source=HttpStreamSource(topic_name="titanic")
     )
 
-    home_team = Entity(dtype=String())
-    away_team = Entity(dtype=String())
+    passenger_id = Entity(dtype=Int32())
 ```
 
 ### Fast development
 
-Making iterativ and fast exploration in ML is important. This is why Aladdin also makes it super easy to combine, and test multiple sources.
+Making iterativ and fast exploration in ML is important. This is why Aligned also makes it super easy to combine, and test multiple sources.
 
 ```python
 my_db = PostgreSQLConfig.localhost()
@@ -109,14 +111,14 @@ Here can you define which features should be exposed.
 ```python
 # Uses the variable name, as the model service name.
 # Can also define a custom name, if wanted.
-match_model = ModelService(
+titanic_model = ModelService(
     features=[
-        Match.select_all(),
+        TitanicPassenger.select_all(),
 
         # Select features with code completion
         LocationFeatures.select(lambda view: [
-            view.distance_to_match,
-            view.duration_to_match
+            view.distance_to_shore,
+            view.distance_to_closest_boat
         ]),
     ]
 )
@@ -127,7 +129,7 @@ match_model = ModelService(
 
 In manny cases will extra data be needed in order to generate some features.
 We therefore need some way of enriching the data.
-This can easily be done with Aladdin's `DataEnricher`s.
+This can easily be done with Alinged's `DataEnricher`s.
 
 ```python
 my_db = PostgreSQLConfig.localhost()
@@ -169,7 +171,7 @@ This can then be used to genreate data sets, setup an instce to serve features, 
 store = FeatureStore.from_dir(".")
 
 # Select all features from a single feature view
-df = await store.all_for("match", limit=2000).to_df()
+df = await store.all_for("passenger", limit=100).to_df()
 ```
 
 ### Centraliced Feature Store Definition
@@ -184,19 +186,19 @@ store = await aws_bucket.file_at("production.json").feature_store()
 # Aka. the batch sources defined on the feature views
 experimental_store = store.offline_store()
 ```
-This json file can be generated by running `aladdin apply`.
+This json file can be generated by running `alinged apply`.
 
 ### Select multiple feature views
 
 ```python
 df = await store.features_for({
-    "home_team": ["Man City", "Leeds"],
-    "away_team": ["Liverpool", "Arsenal"],
+    "passenger_id": [1, 50, 110]
 }, features=[
-    "match:home_team_score",
-    "match:is_liverpool",
+    "passenger:scaled_age",
+    "passenger:is_male",
+    "passenger:sibsp"
 
-    "other_features:distance_traveled",
+    "other_features:distance_to_closest_boat",
 ]).to_df()
 ```
 
@@ -206,9 +208,8 @@ Selecting features for a model is super simple.
 
 
 ```python
-df = await store.model("test_model").features_for({
-    "home_team": ["Man City", "Leeds"],
-    "away_team": ["Liverpool", "Arsenal"],
+df = await store.model("titanic_model").features_for({
+    "passenger_id": [1, 50, 110]
 }).to_df()
 ```
 
@@ -222,8 +223,34 @@ sample_of_20 = await store.feature_view("match").all(limit=20).to_df()
 ```
 
 ## Data quality
-Aladdin will make sure all the different features gets formatted as the correct datatype.
-In this way will there be no incorrect format, value type errors.
+Alinged will make sure all the different features gets formatted as the correct datatype.
+In addition will aligned also make sure that the returend features aligne with defined constraints.
+
+```python
+class TitanicPassenger(FeatureView):
+
+    ...
+
+    age = (
+        Float()
+            .is_required()
+            .lower_bound(0)
+            .upper_bound(110)
+    )
+    sibsp = Int32().lower_bound(0, is_inclusive=True)
+```
+
+Then since our feature view have a `is_required` and a `lower_bound`, will the `.validate(...)` command filter out the entites that do not follow that behavior.
+
+```python
+from aligned.validation.pandera import PanderaValidator
+
+df = await store.model("titanic_model").features_for({
+    "passenger_id": [1, 50, 110]
+}).validate(
+    PanderaValidator()  # Validates all features
+).to_df()
+```
 
 ## Feature Server
 
@@ -250,4 +277,4 @@ if repo_files.selected != "local":
     online_source = redis.online_source()
 ```
 
-Then run `aladdin serve`, and a FastAPI server will start. Here can you push new features, which then transforms and stores the features, or just fetch them.
+Then run `aligned serve`, and a FastAPI server will start. Here can you push new features, which then transforms and stores the features, or just fetch them.

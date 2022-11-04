@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import DerivedFeature
@@ -18,7 +18,7 @@ class RetrivalRequest(Codable):
     entities: set[Feature]
     features: set[Feature]
     derived_features: set[DerivedFeature]
-    event_timestamp: EventTimestamp | None
+    event_timestamp: EventTimestamp | None = field(default=None)
 
     @property
     def feature_names(self) -> list[str]:

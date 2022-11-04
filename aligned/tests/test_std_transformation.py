@@ -32,7 +32,8 @@ async def test_standard_scaler_should_fail(scan_with_datetime: CsvFileSource) ->
 
 
 @freeze_time('2020-01-11')
-def test_standard_scaler_should_not_fail(scan_with_datetime: CsvFileSource) -> FeatureView:
+@pytest.mark.asyncio
+async def test_standard_scaler_should_not_fail(scan_with_datetime: CsvFileSource) -> FeatureView:
     class BreastDiagnoseFeatureView(FeatureView):
 
         metadata = FeatureViewMetadata(
@@ -49,4 +50,4 @@ def test_standard_scaler_should_not_fail(scan_with_datetime: CsvFileSource) -> F
         fractal_dimension_worst = Float()
         scaled_fraction = fractal_dimension_worst.standard_scaled(timespan=timedelta(days=10))
 
-    assert BreastDiagnoseFeatureView.compile()
+    assert await BreastDiagnoseFeatureView.compile()

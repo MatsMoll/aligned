@@ -1,6 +1,7 @@
 from math import ceil, floor
 
 import pytest
+import pytest_asyncio
 
 from aligned import (
     Bool,
@@ -16,7 +17,7 @@ from aligned import (
 from aligned.compiler.transformation_factory import FillNaStrategy
 from aligned.feature_store import FeatureStore
 from aligned.feature_view.combined_view import CombinedFeatureView, CombinedFeatureViewMetadata
-from aligned.local.source import CsvFileSource
+from aligned.local.source import CsvFileSource, ParquetFileSource
 
 
 @pytest.fixture
@@ -41,7 +42,7 @@ def breast_scan_feature_viewout_with_datetime(scan_without_datetime: CsvFileSour
 
         radius_mean = Float()
         radius_se = Float()
-        radius_worst = Float()
+        radius_worst = Float().fill_na(FillNaStrategy.mean())
 
         texture_mean = Float()
         texture_se = Float()
@@ -82,7 +83,7 @@ def breast_scan_feature_viewout_with_datetime(scan_without_datetime: CsvFileSour
     return BreastDiagnoseFeatureView()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def breast_scan_without_timestamp_feature_store(breast_scan_feature_viewout_with_datetime: FeatureView):
     store = FeatureStore.experimental()
     await store.add_feature_view(breast_scan_feature_viewout_with_datetime)
@@ -155,7 +156,7 @@ def breast_scan_feature_view_with_datetime(scan_with_datetime: CsvFileSource) ->
     return BreastDiagnoseFeatureView()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def breast_scan_with_timestamp_feature_store(breast_scan_feature_view_with_datetime: FeatureView):
     store = FeatureStore.experimental()
     await store.add_feature_view(breast_scan_feature_view_with_datetime)
@@ -176,6 +177,11 @@ def titanic_source() -> CsvFileSource:
             'Cabin': 'cabin',
         },
     )
+
+
+@pytest.fixture
+def titanic_source_parquet() -> CsvFileSource:
+    return FileSource.parquet_at('test_data/titanic.parquet')
 
 
 @pytest.fixture
@@ -216,9 +222,50 @@ def titanic_feature_view(titanic_source: CsvFileSource) -> FeatureView:
 
 
 @pytest.fixture
-async def titanic_feature_store(titanic_feature_view: FeatureView) -> FeatureStore:
+def titanic_feature_view_parquet(titanic_source_parquet: ParquetFileSource) -> FeatureView:
+    class TitanicPassenger(FeatureView):
+
+        metadata = FeatureViewMetadata(
+            name='titanic_parquet',
+            description='Some features from the titanic dataset',
+            batch_source=titanic_source_parquet,
+        )
+
+        passenger_id = Entity(dtype=Int32())
+
+        # Input values
+        age = (
+            Float().is_required().lower_bound(0).upper_bound(100).description('A float as some have decimals')
+        )
+
+        name = String()
+        sex = String().accepted_values(['male', 'female'])
+        survived = Bool().description('If the passenger survived')
+
+        sibsp = (
+            Int32()
+            .lower_bound(0, is_inclusive=True)
+            .upper_bound(20, is_inclusive=True)
+            .description('Number of siblings on titanic')
+        )
+
+        cabin = String()
+
+        # Transformed features
+        has_siblings = sibsp != 0
+        is_male, is_female = sex.one_hot_encode(['male', 'female'])
+        is_mr = name.contains('Mr.')
+
+    return TitanicPassenger()
+
+
+@pytest_asyncio.fixture
+async def titanic_feature_store(
+    titanic_feature_view: FeatureView, titanic_feature_view_parquet: FeatureView
+) -> FeatureStore:
     feature_store = FeatureStore.experimental()
     await feature_store.add_feature_view(titanic_feature_view)
+    await feature_store.add_feature_view(titanic_feature_view_parquet)
     return feature_store
 
 
@@ -264,7 +311,7 @@ def alot_of_transforations_feature_view(titanic_source: CsvFileSource) -> Featur
     return TitanicPassenger()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def alot_of_transforation_feature_store(
     alot_of_transforations_feature_view: FeatureView,
 ) -> FeatureStore:
@@ -273,7 +320,7 @@ async def alot_of_transforation_feature_store(
     return feature_store
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def combined_view(
     titanic_feature_view, breast_scan_feature_viewout_with_datetime
 ) -> CombinedFeatureView:
@@ -292,7 +339,7 @@ async def combined_view(
     return SomeCombinedView()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def combined_feature_store(
     titanic_feature_view: FeatureView,
     breast_scan_feature_viewout_with_datetime: FeatureView,

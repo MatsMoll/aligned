@@ -131,7 +131,7 @@ class RepoReader:
                         feature_view_names[fv.name] = py_file.as_posix()
                         repo.feature_views.add(fv)
                     elif 'CombinedFeatureView' in classes:
-                        fv = obj.compile()
+                        fv = await obj.compile()
                         if fv.name in feature_view_names:
                             raise Exception(
                                 (

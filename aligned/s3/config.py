@@ -50,8 +50,12 @@ class AwsS3Config(Codable):
             config=self, path=path, mapping_keys=mapping_keys or {}, csv_config=csv_config or CsvConfig()
         )
 
-    def parquet_at(self, path: str, mapping_keys: dict[str, str] | None = None) -> 'AwsS3ParquetDataSource':
-        return AwsS3ParquetDataSource(config=self, path=path, mapping_keys=mapping_keys or {})
+    def parquet_at(
+        self, path: str, mapping_keys: dict[str, str] | None = None, config: ParquetConfig | None = None
+    ) -> 'AwsS3ParquetDataSource':
+        return AwsS3ParquetDataSource(
+            config=self, path=path, mapping_keys=mapping_keys or {}, parquet_config=config or ParquetConfig()
+        )
 
     @property
     def storage(self) -> Storage:

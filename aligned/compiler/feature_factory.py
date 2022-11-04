@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 from pandas import DataFrame, Series
 
@@ -19,6 +19,9 @@ from aligned.schemas.feature import EventTimestamp as EventTimestampFeature
 from aligned.schemas.feature import Feature, FeatureReferance, FeatureType
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.transformation import Transformation
+
+if TYPE_CHECKING:
+    from aligned.compiler.transformation_factory import FillNaStrategy
 
 
 class TransformationFactory:
@@ -175,7 +178,8 @@ class FeatureFactory:
     def copy_type(self: T) -> T:
         raise NotImplementedError()
 
-    def fill_na(self: T, value: Any) -> T:
+    def fill_na(self: T, value: FillNaStrategy | Any) -> T:
+
         from aligned.compiler.transformation_factory import (
             ConstantFillNaStrategy,
             FillMissingFactory,

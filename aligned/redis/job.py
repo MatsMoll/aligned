@@ -67,6 +67,8 @@ class FactualRedisJob(FactualRetrivalJob):
                 if feature.dtype == FeatureType('').datetime:
                     dates = pd.to_datetime(result_series[result_value_mask], unit='s', utc=True)
                     result_df.loc[set_mask, feature.name] = dates
+                elif feature.dtype == FeatureType('').bool:
+                    result_df.loc[set_mask, feature.name] = result_series[result_value_mask] == '1'
                 elif feature.dtype == FeatureType('').int32 or feature.dtype == FeatureType('').int64:
                     result_df.loc[set_mask, feature.name] = (
                         result_series[result_value_mask]

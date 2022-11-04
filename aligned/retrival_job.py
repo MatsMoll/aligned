@@ -342,37 +342,65 @@ class FactualRetrivalJob(DerivedFeatureJob):
                     df[feature.name] = await feature.transformation.transform(df[feature.depending_on_names])
                     if df[feature.name].dtype != feature.dtype.pandas_type:
                         if feature.dtype.is_numeric:
-                            df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce')
+                            df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce').astype(
+                                feature.dtype.pandas_type
+                            )
                         else:
                             df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
-
         return df
 
     async def ensure_types(self, df: GenericDataFrame) -> GenericDataFrame:
         for request in self.requests:
             for feature in request.all_required_features:
 
-                try:
-                    if feature.dtype == FeatureType('').datetime:
+                # try:
+                #     if feature.dtype == FeatureType('').datetime:
 
-                        if isinstance(df, pd.DataFrame):
-                            df[feature.name] = pd.to_datetime(
-                                df[feature.name], infer_datetime_format=True, utc=True, errors='coerce'
-                            )
-                        else:
-                            df[feature.name] = dd.to_datetime(
-                                df[feature.name], infer_datetime_format=True, utc=True
-                            )
-                    elif feature.dtype == FeatureType('').string:
-                        continue
+                #         if isinstance(df, pd.DataFrame):
+                #             df[feature.name] = pd.to_datetime(
+                #                 df[feature.name], infer_datetime_format=True, utc=True, errors='coerce'
+                #             )
+                #         else:
+                #             df[feature.name] = dd.to_datetime(
+                #                 df[feature.name], infer_datetime_format=True, utc=True
+                #             )
+                #     elif feature.dtype == FeatureType('').string:
+                #         continue
+                #     else:
+                #         if feature.dtype.is_numeric:
+                #             df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce')
+                #         else:
+                #             df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
+                # except ValueError as error:
+                #     logger.info(f'Unable to ensure type for {feature.name}, error: {error}')
+                #     continue
+
+                mask = ~df[feature.name].isnull()
+
+                with suppress(AttributeError):
+                    df[feature.name] = df[feature.name].mask(
+                        ~mask, other=df.loc[mask, feature.name].str.strip('"')
+                    )
+
+                if feature.dtype == FeatureType('').datetime:
+                    if isinstance(df, pd.DataFrame):
+                        df[feature.name] = pd.to_datetime(
+                            df[feature.name], infer_datetime_format=True, utc=True
+                        )
                     else:
-                        if feature.dtype.is_numeric:
-                            df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce')
-                        else:
-                            df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
-                except ValueError as error:
-                    logger.info(f'Unable to ensure type for {feature.name}, error: {error}')
+                        df[feature.name] = dd.to_datetime(
+                            df[feature.name], infer_datetime_format=True, utc=True
+                        )
+                elif feature.dtype == FeatureType('').datetime or feature.dtype == FeatureType('').string:
                     continue
+                else:
+
+                    if feature.dtype.is_numeric:
+                        df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce').astype(
+                            feature.dtype.pandas_type
+                        )
+                    else:
+                        df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
         return df
 
 

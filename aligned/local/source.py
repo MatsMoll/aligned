@@ -114,7 +114,7 @@ class ParquetConfig(Codable):
     A config for how a CSV file should be loaded
     """
 
-    engien: Literal['auto', 'pyarrow', 'fastparquet'] = field(default='auto')
+    engine: Literal['auto', 'pyarrow', 'fastparquet'] = field(default='auto')
     compression: Literal['snappy', 'gzip', 'brotli', None] = field(default='snappy')
     should_write_index: bool = field(default=False)
 
@@ -122,14 +122,14 @@ class ParquetConfig(Codable):
 @dataclass
 class ParquetFileSource(BatchDataSource, ColumnFeatureMappable):
     """
-    A source pointing to a CSV file
+    A source pointing to a Parquet file
     """
 
     path: str
     mapping_keys: dict[str, str] = field(default_factory=dict)
     config: ParquetConfig = field(default_factory=ParquetConfig())
 
-    type_name: str = 'csv'
+    type_name: str = 'parquet'
 
     def job_group_key(self) -> str:
         return f'{self.type_name}/{self.path}'
@@ -148,7 +148,7 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable):
     async def write_pandas(self, df: pd.DataFrame) -> None:
         df.to_parquet(
             self.path,
-            engien=self.config.engien,
+            engine=self.config.engine,
             compression=self.config.compression,
             index=self.config.should_write_index,
         )
@@ -193,6 +193,12 @@ class FileSource:
         path: str, mapping_keys: dict[str, str] | None = None, csv_config: CsvConfig | None = None
     ) -> 'CsvFileSource':
         return CsvFileSource(path, mapping_keys=mapping_keys or {}, csv_config=csv_config or CsvConfig())
+
+    @staticmethod
+    def parquet_at(
+        path: str, mapping_keys: dict[str, str] | None = None, config: ParquetConfig | None = None
+    ) -> 'ParquetFileSource':
+        return ParquetFileSource(path=path, mapping_keys=mapping_keys or {}, config=config or ParquetConfig())
 
 
 @dataclass

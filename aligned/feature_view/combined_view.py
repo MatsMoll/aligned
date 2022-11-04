@@ -75,7 +75,7 @@ class CombinedFeatureView(ABC, FeatureSelectable):
         )
 
     @classmethod
-    async def compile_only_graph(cls) -> CompiledCombinedFeatureView:
+    def compile_only_graph(cls) -> CompiledCombinedFeatureView:
         transformations: set[DerivedFeature] = set()
         metadata = cls().metadata
         var_names = [name for name in cls().__dir__() if not name.startswith('_')]
@@ -117,4 +117,4 @@ class CombinedFeatureView(ABC, FeatureSelectable):
 
     @classmethod
     def select_all(cls: type[FVType]) -> RetrivalRequest:
-        return cls.compile().request_all  # type: ignore[attr-defined]
+        return cls.compile_only_graph().request_all  # type: ignore[attr-defined]

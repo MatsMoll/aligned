@@ -46,7 +46,7 @@ class FeatureType(Codable):
             'int64': 'Int64',
             'float': np.float64,
             'double': np.double,
-            'bool': bool,
+            'bool': 'boolean',
             'date': np.datetime64,
             'datetime': np.datetime64,
             'time': np.datetime64,
