@@ -207,11 +207,12 @@ class FeatureFactory:
 
         if asyncio.iscoroutinefunction(transformation):
             dtype.transformation = DillTransformationFactory(dtype, transformation, using_features or [self])
+        else:
 
-        async def sub_tran(df: DataFrame) -> Series:
-            return transformation(df)
+            async def sub_tran(df: DataFrame) -> Series:
+                return transformation(df)
 
-        dtype.transformation = DillTransformationFactory(dtype, sub_tran, using_features or [self])
+            dtype.transformation = DillTransformationFactory(dtype, sub_tran, using_features or [self])
         return dtype  # type: ignore [return-value]
 
     def is_required(self: T) -> T:

@@ -208,8 +208,9 @@ class FastAPIServer:
                 payload.entities,
                 features=payload.features,
             ).to_df()
-            df.replace(nan, value=None, inplace=True)
-            return df.to_dict('list')
+            orient = 'values'
+            body = ','.join([f'"{column}":{df[column].to_json(orient=orient)}' for column in df.columns])
+            return Response(content=f'{{{body}}}', media_type='application/json')
 
         return app
 
