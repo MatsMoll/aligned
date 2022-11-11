@@ -6,11 +6,10 @@ from abc import ABC, abstractmethod, abstractproperty
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 import pandas as pd
 
-from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import FeatureType
@@ -261,11 +260,7 @@ class SplitJob:
         return self.strategy.split_pandas(data, self.target_column)
 
 
-Source = TypeVar('Source', bound=BatchDataSource)
-
-
-class SingleSourceRetrivalJob(DerivedFeatureJob, Generic[Source]):
-    source: Source
+class SingleSourceRetrivalJob(DerivedFeatureJob):
     request: RetrivalRequest
 
     @property
@@ -427,7 +422,8 @@ class CombineFactualJob(RetrivalJob):
         if job_count > 1:
             dfs = await asyncio.gather(*[job.to_df() for job in self.jobs])
             df = pd.concat(dfs, axis=1)
-            return await self.combine_data(df)
+            combined = await self.combine_data(df)
+            return combined.loc[:, ~df.columns.duplicated()].copy()
         elif job_count == 1:
             df = await self.jobs[0].to_df()
             return await self.combine_data(df)

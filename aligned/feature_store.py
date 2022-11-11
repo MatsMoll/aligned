@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from importlib import import_module
 from typing import Any
@@ -324,21 +324,37 @@ class FeatureViewStore:
 
     source: FeatureSource
     view: CompiledFeatureView
+    feature_filter: set[str] | None = field(default=None)
 
     def all(self, limit: int | None = None) -> RetrivalJob:
         if not isinstance(self.source, RangeFeatureSource):
             raise ValueError(f'The source ({self.source}) needs to conform to RangeFeatureSource')
-        return self.source.all_for(self.view.request_all, limit)
+
+        if self.feature_filter:
+            request = self.view.request_for(self.feature_filter)
+            return FilterJob(include_features=self.feature_filter, job=self.source.all_for(request, limit))
+
+        request = self.view.request_all
+        return self.source.all_for(request, limit)
 
     def between(self, start_date: datetime, end_date: datetime) -> RetrivalJob:
         if not isinstance(self.source, RangeFeatureSource):
             raise ValueError('The source needs to conform to RangeFeatureSource')
-        return self.source.all_between(start_date, end_date, self.view.request_all)
+
+        if self.feature_filter:
+            request = self.view.request_for(self.feature_filter)
+            return FilterJob(self.feature_filter, self.source.all_between(start_date, end_date, request))
+
+        request = self.view.request_all
+        return self.source.all_between(start_date, end_date, request)
 
     def previous(self, days: int = 0, minutes: int = 0, seconds: int = 0) -> RetrivalJob:
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(days=days, minutes=minutes, seconds=seconds)
         return self.between(start_date, end_date)
+
+    def select(self, features: set[str]) -> 'FeatureViewStore':
+        return FeatureViewStore(self.source, self.view, features)
 
     @property
     def write_input(self) -> set[str]:

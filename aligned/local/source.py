@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Literal
 from uuid import uuid4
 
@@ -11,6 +14,9 @@ from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeature
 from aligned.enricher import CsvFileEnricher, Enricher, LoadedStatEnricher, StatisticEricher, TimespanSelector
 from aligned.exceptions import UnableToFindFileException
 from aligned.feature_store import FeatureStore
+from aligned.local.job import FileDateJob, FileFactualJob, FileFullJob
+from aligned.request.retrival_request import RetrivalRequest
+from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob
 from aligned.s3.storage import FileStorage, HttpStorage
 from aligned.schemas.codable import Codable
 from aligned.schemas.repo_definition import RepoDefinition
@@ -107,6 +113,32 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
     def enricher(self) -> CsvFileEnricher:
         return CsvFileEnricher(file=self.path)
 
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
+        return FileFullJob(self, request, limit)
+
+    def all_between_dates(
+        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
+    ) -> DateRangeJob:
+        return FileDateJob(source=self, request=request, start_date=start_date, end_date=end_date)
+
+    @classmethod
+    def feature_for(
+        cls, facts: dict[str, list], requests: dict[CsvFileSource, RetrivalRequest]
+    ) -> FactualRetrivalJob:
+        if len(requests.keys()) != 1:
+            raise ValueError(f'Only able to load one {requests} at a time')
+
+        source = list(requests.keys())[0]
+        if not isinstance(source, cls):
+            raise ValueError(f'Only {cls} is supported, recived: {source}')
+
+        # Group based on config
+        return FileFactualJob(
+            source=source,
+            requests=list(requests.values()),
+            facts=facts,
+        )
+
 
 @dataclass
 class ParquetConfig(Codable):
@@ -153,6 +185,32 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable):
             index=self.config.should_write_index,
         )
 
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
+        return FileFullJob(self, request, limit)
+
+    def all_between_dates(
+        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
+    ) -> DateRangeJob:
+        return FileDateJob(source=self, request=request, start_date=start_date, end_date=end_date)
+
+    @classmethod
+    def feature_for(
+        cls, facts: dict[str, list], requests: dict[ParquetFileSource, RetrivalRequest]
+    ) -> FactualRetrivalJob:
+        if len(requests.keys()) != 1:
+            raise ValueError(f'Only able to load one {requests} at a time')
+
+        source = list(requests.keys())[0]
+        if not isinstance(source, cls):
+            raise ValueError(f'Only {cls} is supported, recived: {source}')
+
+        # Group based on config
+        return FileFactualJob(
+            source=source,
+            requests=list(requests.values()),
+            facts=facts,
+        )
+
 
 @dataclass
 class StorageFileSource(StorageFileReference):
@@ -185,19 +243,19 @@ class FileSource:
     """
 
     @staticmethod
-    def from_path(path: str) -> 'StorageFileSource':
+    def from_path(path: str) -> StorageFileSource:
         return StorageFileSource(path=path)
 
     @staticmethod
     def csv_at(
         path: str, mapping_keys: dict[str, str] | None = None, csv_config: CsvConfig | None = None
-    ) -> 'CsvFileSource':
+    ) -> CsvFileSource:
         return CsvFileSource(path, mapping_keys=mapping_keys or {}, csv_config=csv_config or CsvConfig())
 
     @staticmethod
     def parquet_at(
         path: str, mapping_keys: dict[str, str] | None = None, config: ParquetConfig | None = None
-    ) -> 'ParquetFileSource':
+    ) -> ParquetFileSource:
         return ParquetFileSource(path=path, mapping_keys=mapping_keys or {}, config=config or ParquetConfig())
 
 

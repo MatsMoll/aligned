@@ -78,13 +78,14 @@ class FullExtractPsqlJob(PostgreSQLRetrivalJob, FullExtractJob):
             for sql_col, alias in zip(sql_columns, all_features)
         ]
         column_select = ', '.join(columns)
+        schema = f'{self.config.schema}.' if self.config.schema else ''
 
         limit_query = ''
         if self.limit:
             limit_query = f'LIMIT {int(self.limit)}'
 
         return SQLQuery(
-            sql=f'SELECT {column_select} FROM {self.source.table} {limit_query}',
+            sql=f'SELECT {column_select} FROM {schema}{self.source.table} {limit_query}',
         )
 
 
@@ -115,10 +116,10 @@ class DateRangePsqlJob(PostgreSQLRetrivalJob, DateRangeJob):
             for sql_col, alias in zip(sql_columns, all_features)
         ]
         column_select = ', '.join(columns)
-
+        schema = f'{self.config.schema}.' if self.config.schema else ''
         return SQLQuery(
             sql=(
-                f'SELECT {column_select} FROM {self.source.table} WHERE'
+                f'SELECT {column_select} FROM {schema}{self.source.table} WHERE'
                 f' {event_timestamp_column} BETWEEN (:start_date) AND (:end_date)'
             ),
             values={'start_date': self.start_date, 'end_date': self.end_date},

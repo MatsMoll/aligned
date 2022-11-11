@@ -1,8 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from datetime import datetime
+from typing import Optional, TypeVar
 
 from mashumaro.types import SerializableType
 
+from aligned.request.retrival_request import RetrivalRequest
+from aligned.retrival_job import DateRangeJob, FullExtractJob, RetrivalJob
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import Feature
 
@@ -31,6 +34,9 @@ class BatchDataSourceFactory:
             return cls._shared
         cls._shared = BatchDataSourceFactory()
         return cls._shared
+
+
+T = TypeVar('T')
 
 
 class BatchDataSource(ABC, Codable, SerializableType):
@@ -65,6 +71,21 @@ class BatchDataSource(ABC, Codable, SerializableType):
         del value['type_name']
         data_class = BatchDataSourceFactory.shared().supported_data_sources[name_type]
         return data_class.from_dict(value)
+
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
+        raise NotImplementedError()
+
+    def all_between_dates(
+        self,
+        request: RetrivalRequest,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> DateRangeJob:
+        raise NotImplementedError()
+
+    @classmethod
+    def feature_for(cls: type[T], facts: dict[str, list], requests: dict[T, RetrivalRequest]) -> RetrivalJob:
+        raise NotImplementedError()
 
 
 class ColumnFeatureMappable:

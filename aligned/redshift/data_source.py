@@ -1,11 +1,13 @@
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Callable
 
 from aligned import RedisConfig
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.enricher import Enricher
 from aligned.model import EntityDataSource, SqlEntityDataSource
+from aligned.psql.data_source import PostgreSQLConfig
+from aligned.retrival_job import DateRangeJob, RetrivalRequest
 from aligned.schemas.codable import Codable
 
 
@@ -19,6 +21,11 @@ class RedshiftSQLConfig(Codable):
         import os
 
         return os.environ[self.env_var]
+
+    @property
+    def psql_config(self) -> PostgreSQLConfig:
+
+        return PostgreSQLConfig(self.env_var, self.schema)
 
     @staticmethod
     def from_url(url: str) -> 'RedshiftSQLConfig':
@@ -63,3 +70,12 @@ class RedshiftSQLDataSource(BatchDataSource, ColumnFeatureMappable):
 
     def __hash__(self) -> int:
         return hash(self.table)
+
+    def all_between_dates(
+        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
+    ) -> DateRangeJob:
+        from aligned.psql.jobs import DateRangePsqlJob, PostgreSQLDataSource
+
+        source = PostgreSQLDataSource(self.config.psql_config, self.table, self.mapping_keys)
+
+        return DateRangePsqlJob(source, start_date, end_date, request)

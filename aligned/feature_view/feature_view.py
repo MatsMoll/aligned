@@ -116,18 +116,25 @@ class FeatureView(ABC, FeatureSelectable):
                 for depth, feature_dep in sorted(feature_deps, key=sort_key):
 
                     if feature_dep._name:
-                        continue
+                        feat_dep = await feature_dep.feature()
+                        if feat_dep in view.features or feat_dep in view.entities:
+                            continue
 
                     if depth == 0:
                         feature_dep._name = var_name
-                        view.features.add(compiled_feature)
+                        feat_dep = await feature_dep.feature()
+                        view.features.add(feat_dep)
                         continue
 
-                    feature_dep._name = str(hidden_features)
-                    hidden_features += 1
-                    view.derived_features.add(
-                        await feature_dep.compile([view])  # Should decide on which payload to send
-                    )
+                    if not feature_dep._name:
+                        feature_dep._name = str(hidden_features)
+                        hidden_features += 1
+
+                    feature_graph = feature_dep.compile_graph_only()  # Should decide on which payload to send
+                    if feature_graph in view.derived_features:
+                        continue
+
+                    view.derived_features.add(await feature_dep.compile([view]))
 
                 view.derived_features.add(
                     await feature.compile([view])  # Should decide on which payload to send
@@ -154,6 +161,14 @@ class FeatureView(ABC, FeatureSelectable):
 
     @classmethod
     def compile_graph_only(cls) -> CompiledFeatureView:
+        """Compiles a view with all its metadata,
+        However it is not containing the correct compiled transofmrations in all cases
+        As it will nto compute the different artefacts.
+
+        This is a flaw in the current system and should potentially be fixed by creating artefacts
+        based on data models and not views. As that is more data set spesifics.
+        It would therefore not need two different compile methods
+        """
         from aligned.compiler.feature_factory import FeatureFactory
 
         # Used to deterministicly init names for hidden features
@@ -192,23 +207,33 @@ class FeatureView(ABC, FeatureSelectable):
                 def sort_key(x: tuple[int, FeatureFactory]) -> int:
                     return x[0]
 
-                for _, feature_dep in sorted(feature_deps, key=sort_key):
-
+                for depth, feature_dep in sorted(feature_deps, key=sort_key):
                     if feature_dep._name:
+                        feat_dep = Feature(feature_dep._name, dtype=feature_dep.dtype)
+                        if feat_dep in view.features or feat_dep in view.entities:
+                            continue
+
+                    if depth == 0:
+                        feature_dep._name = var_name
+                        feat_dep = Feature(var_name, dtype=feature_dep.dtype)
+                        view.features.add(feat_dep)
                         continue
 
-                    feature_dep._name = str(hidden_features)
-                    hidden_features += 1
+                    if not feature_dep._name:
+                        feature_dep._name = str(hidden_features)
+                        hidden_features += 1
+
+                    feature_graph = feature_dep.compile_graph_only()  # Should decide on which payload to send
+                    if feature_graph in view.derived_features:
+                        continue
+
                     view.derived_features.add(
                         feature_dep.compile_graph_only()  # Should decide on which payload to send
                     )
-
-                view.derived_features.add(
-                    feature.compile_graph_only()  # Should decide on which payload to send
-                )
-
+                view.derived_features.add(feature.compile_graph_only())
             elif isinstance(feature, Entity):
                 view.entities.add(compiled_feature)
+
             elif isinstance(feature, EventTimestamp):
                 if view.event_timestamp is not None:
                     raise Exception(

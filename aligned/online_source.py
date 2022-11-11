@@ -86,10 +86,8 @@ class BatchOnlineSource(OnlineSource):
 
     def feature_source(self, feature_views: set[CompiledFeatureView]) -> FeatureSource:
         from aligned.feature_source import BatchFeatureSource
-        from aligned.job_factories import get_factories
 
         return BatchFeatureSource(
-            get_factories(),
             sources={fv.name: fv.batch_data_source for fv in feature_views},
         )
 

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import TYPE_CHECKING, Callable
 
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.enricher import SqlDatabaseEnricher, StatisticEricher
+from aligned.request.retrival_request import RetrivalRequest
+from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob
 from aligned.schemas.codable import Codable
 
 if TYPE_CHECKING:
@@ -94,3 +97,31 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, StatisticEric
             query += f' LIMIT {limit}'
 
         return SqlDatabaseEnricher(self.config.url, query)
+
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
+        from aligned.psql.jobs import FullExtractPsqlJob
+
+        return FullExtractPsqlJob(self, request, limit)
+
+    def all_between_dates(
+        self,
+        request: RetrivalRequest,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> DateRangeJob:
+        from aligned.psql.jobs import DateRangePsqlJob
+
+        return DateRangePsqlJob(self, start_date, end_date, request)
+
+    @classmethod
+    def feature_for(
+        cls, facts: dict[str, list], requests: dict[PostgreSQLDataSource, RetrivalRequest]
+    ) -> FactualRetrivalJob:
+        # Group based on config
+        from aligned.psql.jobs import FactPsqlJob
+
+        return FactPsqlJob(
+            sources={request.feature_view_name: source for source, request in requests.items()},
+            requests=list(requests.values()),
+            facts=facts,
+        )

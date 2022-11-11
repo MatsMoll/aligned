@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 
 from aligned.data_source.batch_data_source import BatchDataSource
-from aligned.job_factory import JobFactory
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import FactualRetrivalJob
 
@@ -46,8 +45,11 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
     This class will then know how to strucutre the query in the correct way
     """
 
-    job_factories: dict[str, JobFactory]
     sources: dict[str, BatchDataSource]
+
+    @property
+    def source_types(self) -> dict[str, type[BatchDataSource]]:
+        return {source.job_group_key(): type(source) for source in self.sources.values()}
 
     def features_for(self, facts: dict[str, list], request: FeatureRequest) -> RetrivalJob:
         from aligned.retrival_job import CombineFactualJob
@@ -57,10 +59,25 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
             for request in request.needed_requests
             if request.feature_view_name in self.sources
         }
-        job_factories = {self.job_factories[source.type_name] for source in core_requests.keys()}
-        jobs = [factory.facts(facts=facts, sources=core_requests) for factory in job_factories]
+        source_groupes = {
+            self.sources[request.feature_view_name].job_group_key()
+            for request in request.needed_requests
+            if request.feature_view_name in self.sources
+        }
+        # The combined views basicly, as they have no direct
         requests = [
             request for request in request.needed_requests if request.feature_view_name not in self.sources
+        ]
+        jobs = [
+            self.source_types[source_group].feature_for(
+                facts=facts,
+                requests={
+                    source: req
+                    for source, req in core_requests.items()
+                    if source.job_group_key() == source_group
+                },
+            )
+            for source_group in source_groupes
         ]
         return CombineFactualJob(
             jobs=jobs,
@@ -68,18 +85,28 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
         )
 
     def all_for(self, request: FeatureRequest, limit: int | None = None) -> RetrivalJob:
-        source = self.sources[request.name]
         if len(request.needed_requests) != 1:
             raise ValueError("Can't use all_for with a request that has subrequests")
-        return self.job_factories[source.type_name].all_data(source, request.needed_requests[0], limit)
+        if request.name not in self.sources:
+            raise ValueError(
+                (
+                    f"Unable to find feature view named '{request.name}'.",
+                    'Make sure it is added to the featuer store',
+                )
+            )
+        return self.sources[request.name].all_data(request.needed_requests[0], limit)
 
     def all_between(self, start_date: datetime, end_date: datetime, request: FeatureRequest) -> RetrivalJob:
-        source = self.sources[request.name]
         if len(request.needed_requests) != 1:
             raise ValueError("Can't use all_for with a request that has subrequests")
-        return self.job_factories[source.type_name].all_between_dates(
-            source, request.needed_requests[0], start_date, end_date
-        )
+        if request.name not in self.sources:
+            raise ValueError(
+                (
+                    f"Unable to find feature view named '{request.name}'.",
+                    'Make sure it is added to the featuer store',
+                )
+            )
+        return self.sources[request.name].all_between_dates(request.needed_requests[0], start_date, end_date)
 
 
 @dataclass
