@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
 from pandas import DataFrame, Series
 
 from aligned.compiler.constraint_factory import ConstraintFactory, LiteralFactory
+from aligned.exceptions import NotSupportedYet
 from aligned.schemas.constraints import (
     Constraint,
     InDomain,
@@ -363,6 +364,15 @@ class ArithmeticFeature(ComparableFeature):
         feature.transformation = LogTransformFactory(self)
         return feature
 
+    def mean(self: T, over: timedelta | None = None) -> NumericalAggregation[T]:
+        from aligned.compiler.transformation_factory import MeanTransfomrationFactory
+
+        if over:
+            raise NotSupportedYet('Computing mean with a time window is not supported yet')
+        feature = NumericalAggregation(self)
+        feature.transformation = MeanTransfomrationFactory(self)
+        return feature
+
 
 class DecimalOperations(FeatureFactory):
     def __round__(self) -> Int64:
@@ -479,6 +489,36 @@ class Float(ArithmeticFeature, DecimalOperations):
     @property
     def dtype(self) -> FeatureType:
         return FeatureType('').float
+
+
+NumericType = TypeVar('NumericType', bound=ArithmeticFeature)
+
+
+class NumericalAggregation(Generic[NumericType], ArithmeticFeature, DecimalOperations):
+    def __init__(self, dtype: NumericType):
+        self._dtype = dtype
+
+    _dtype: NumericType
+
+    def copy_type(self: NumericalAggregation) -> NumericalAggregation:
+        return NumericalAggregation()
+
+    @property
+    def dtype(self) -> FeatureType:
+        return self._dtype.dtype
+
+    def grouped_by(self, keys: FeatureFactory | list[FeatureFactory]) -> NumericType:
+        from aligned.compiler.transformation_factory import AggregatableTransformation
+
+        if not isinstance(self.transformation, AggregatableTransformation):
+            raise ValueError(
+                f'Can only group by on aggregatable transformations. This is a {self.transformation}'
+            )
+
+        feature = self._dtype.copy_type()
+        feature.transformation = self.transformation.copy()
+        feature.transformation.group_by = keys if isinstance(keys, list) else [keys]
+        return feature
 
 
 class Int32(ArithmeticFeature):

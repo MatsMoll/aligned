@@ -153,6 +153,9 @@ def breast_scan_feature_view_with_datetime(scan_with_datetime: CsvFileSource) ->
         fractal_dimension_se = Float()
         fractal_dimension_worst = Float()
 
+        mean_fd_worst = fractal_dimension_worst.mean()
+        mean_fd_worst_for_group = mean_fd_worst.grouped_by(diagnosis)
+
     return BreastDiagnoseFeatureView()
 
 

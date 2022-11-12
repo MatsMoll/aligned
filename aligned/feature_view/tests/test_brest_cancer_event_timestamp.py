@@ -32,3 +32,4 @@ async def test_between_datetime_features(
     )
 
     assert limit_features.shape[0] == 6
+    assert features['mean_fd_worst_for_group'].isna().count() != 0

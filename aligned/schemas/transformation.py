@@ -804,66 +804,6 @@ class Ratio(Transformation):
         )
 
 
-# @dataclass
-# class TimeSeriesTransformation(Transformation):
-
-#     method: str
-#     field_name: str
-#     table_name: str
-#     config: PostgreSQLConfig
-#     event_timestamp_column: str
-
-#     dtype: FeatureType = FeatureType('').int64
-#     name: str = 'ts_transform'
-
-#     async def transform(self, df: GenericDataFrame) -> GenericSeries:
-#         import numpy as np
-
-#         org_facts = df[[self.event_timestamp_column, self.field_name]]
-#         ret_data = Series(np.repeat(np.nan, org_facts.shape[0]))
-
-#         mask = org_facts.notna().all(axis=1)
-
-#         fact_df = org_facts.loc[mask]
-
-#         if fact_df.empty:
-#             return ret_data
-
-#         fact_df['row_id'] = list(range(1, fact_df.shape[0] + 1))
-
-#         values = []
-#         columns = ','.join(list(fact_df.columns))
-#         for _, row in fact_df.iterrows():
-#             row_values = []
-#             for column, value in row.items():
-#                 if column == self.event_timestamp_column:
-#                     row_values.append(f"'{value}'::timestamp with time zone")
-#                 else:
-#                     row_values.append(f"'{value}'")
-#             values.append(','.join(row_values))
-
-#         sql_values = '(' + '),\n    ('.join(values) + ')'
-#         sql = f"""
-# WITH entities (
-#     {columns}
-# ) AS (
-# VALUES
-#     {sql_values}
-# )
-
-# SELECT {self.method}(t.{self.field_name}) AS {self.field_name}_value, et.row_id
-# FROM entities et
-# LEFT JOIN {self.table_name} t ON
-#     t.{self.field_name} = et.{self.field_name} AND
-#     t.{self.event_timestamp_column} < et.{self.event_timestamp_column}
-# GROUP BY et.row_id;
-# """
-#         data = await self.config.data_enricher(sql).load()
-
-#         ret_data[mask] = data[f'{self.field_name}_value']
-#         return ret_data
-
-
 @dataclass
 class StandardScalingTransformation(Transformation):
 
@@ -993,3 +933,27 @@ class Absolute(Transformation):
         from numpy import abs
 
         return abs(df[self.key])
+
+
+@dataclass
+class Mean(Transformation):
+
+    key: str
+    group_keys: list[str] | None = field(default=None)
+    # sliding_window: float | None = field(default=None)
+
+    name: str = 'mean'
+
+    async def transform(self, df: pd.DataFrame) -> pd.Series:
+
+        # df.set_index("event_timestamp").rolling(2).mean()
+
+        if self.group_keys:
+            if len(self.group_keys) == 1:
+                group_key = self.group_keys[0]
+                group_by_result = df.groupby(group_key)[self.key].mean()
+                return df[group_key].map(group_by_result)
+            else:
+                raise ValueError('Group by with multiple keys is not suppported yet')
+        else:
+            return df[self.key].mean()

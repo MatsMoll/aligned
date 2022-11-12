@@ -566,3 +566,39 @@ class DillTransformationFactory(TransformationFactory):
         from aligned.schemas.transformation import DillTransformation
 
         return DillTransformation(method=dill.dumps(self.method, recurse=True), dtype=self.dtype.dtype)
+
+
+class AggregatableTransformation:
+
+    group_by: list[FeatureFactory] | None = field(default=None)
+
+    def copy(self) -> 'AggregatableTransformation':
+        pass
+
+
+@dataclass
+class MeanTransfomrationFactory(TransformationFactory, AggregatableTransformation):
+
+    feature: FeatureFactory
+    over: timedelta | None = field(default=None)
+    group_by: list[FeatureFactory] | None = field(default=None)
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        if self.group_by:
+            return [self.feature] + self.group_by
+        else:
+            return [self.feature]
+
+    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+        from aligned.schemas.transformation import Mean
+
+        if len(source_views) != 1:
+            raise ValueError('Unable to compute mean for CombinedView')
+
+        return Mean(
+            key=self.feature.name, group_keys=[feat.name for feat in self.group_by] if self.group_by else None
+        )
+
+    def copy(self) -> 'MeanTransfomrationFactory':
+        return MeanTransfomrationFactory(self.feature, self.over, self.group_by)
