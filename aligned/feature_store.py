@@ -339,7 +339,9 @@ class FeatureViewStore:
 
     def between(self, start_date: datetime, end_date: datetime) -> RetrivalJob:
         if not isinstance(self.source, RangeFeatureSource):
-            raise ValueError('The source needs to conform to RangeFeatureSource')
+            raise ValueError(
+                f'The source needs to conform to RangeFeatureSource, you got a {type(self.source)}'
+            )
 
         if self.feature_filter:
             request = self.view.request_for(self.feature_filter)

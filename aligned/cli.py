@@ -356,6 +356,8 @@ class ProfilingResult(Codable):
     categorical_features: dict[str, CategoricalFeatureSummary]
 
 
+# Should add some way of profiling models, not feature views.
+# Or maybe both
 @cli.command('profile')
 @click.option(
     '--repo-path',

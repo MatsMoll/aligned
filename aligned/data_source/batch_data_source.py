@@ -19,6 +19,7 @@ class BatchDataSourceFactory:
     def __init__(self) -> None:
         from aligned.local.source import CsvFileSource
         from aligned.psql.data_source import PostgreSQLDataSource
+        from aligned.redshift.data_source import RedshiftSQLDataSource
         from aligned.s3.config import AwsS3CsvDataSource, AwsS3ParquetDataSource
 
         self.supported_data_sources = {
@@ -26,6 +27,7 @@ class BatchDataSourceFactory:
             CsvFileSource.type_name: CsvFileSource,
             AwsS3CsvDataSource.type_name: AwsS3CsvDataSource,
             AwsS3ParquetDataSource.type_name: AwsS3ParquetDataSource,
+            RedshiftSQLDataSource.type_name: RedshiftSQLDataSource,
         }
 
     @classmethod

@@ -148,9 +148,12 @@ class RawFileCachedJob(RetrivalJob):
 
     async def to_df(self) -> pd.DataFrame:
         try:
+            logger.info('Trying to read cache file')
             df = await self.location.read_pandas()
         except UnableToFindFileException:
+            logger.info('Unable to load file, so fetching from source')
             df = await self.job._to_df()
+            logger.info('Writing result to cache')
             await self.location.write_pandas(df)
         df = await self.job.ensure_types(df)
         return await self.job.compute_derived_features(df)
@@ -174,9 +177,12 @@ class FileCachedJob(RetrivalJob):
 
     async def to_df(self) -> pd.DataFrame:
         try:
+            logger.info('Trying to read cache file')
             df = await self.location.read_pandas()
         except UnableToFindFileException:
+            logger.info('Unable to load file, so fetching from source')
             df = await self.job.to_df()
+            logger.info('Writing result to cache')
             await self.location.write_pandas(df)
         return df
 
@@ -456,14 +462,16 @@ class FilterJob(RetrivalJob):
     async def to_df(self) -> pd.DataFrame:
         df = await self.job.to_df()
         if self.include_features:
-            return df[list(self.include_features)]
+            total_list = list({ent.name for ent in self.request_result.entities}.union(self.include_features))
+            return df[total_list]
         else:
             return df
 
     async def to_dask(self) -> dd.DataFrame:
         df = await self.job.to_dask()
         if self.include_features:
-            return df[list(self.include_features)]
+            total_list = list({ent.name for ent in self.request_result.entities}.union(self.include_features))
+            return df[total_list]
         else:
             return df
 

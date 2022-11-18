@@ -159,7 +159,7 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable):
 
     path: str
     mapping_keys: dict[str, str] = field(default_factory=dict)
-    config: ParquetConfig = field(default_factory=ParquetConfig())
+    config: ParquetConfig = field(default_factory=ParquetConfig)
 
     type_name: str = 'parquet'
 

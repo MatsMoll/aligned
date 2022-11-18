@@ -122,12 +122,14 @@ class FeatureView(ABC, FeatureSelectable):
 
                     if depth == 0:
                         feature_dep._name = var_name
+                        feature_dep._feature_view = metadata.name
                         feat_dep = await feature_dep.feature()
                         view.features.add(feat_dep)
                         continue
 
                     if not feature_dep._name:
                         feature_dep._name = str(hidden_features)
+                        feature_dep._feature_view = metadata.name
                         hidden_features += 1
 
                     feature_graph = feature_dep.compile_graph_only()  # Should decide on which payload to send
@@ -215,12 +217,14 @@ class FeatureView(ABC, FeatureSelectable):
 
                     if depth == 0:
                         feature_dep._name = var_name
+                        feature_dep._feature_view = metadata.name
                         feat_dep = Feature(var_name, dtype=feature_dep.dtype)
                         view.features.add(feat_dep)
                         continue
 
                     if not feature_dep._name:
                         feature_dep._name = str(hidden_features)
+                        feature_dep._feature_view = metadata.name
                         hidden_features += 1
 
                     feature_graph = feature_dep.compile_graph_only()  # Should decide on which payload to send
