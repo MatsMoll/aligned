@@ -115,6 +115,9 @@ class FeatureView(ABC, FeatureSelectable):
 
                 for depth, feature_dep in sorted(feature_deps, key=sort_key):
 
+                    if not feature_dep._feature_view:
+                        feature_dep._feature_view = metadata.name
+
                     if feature_dep._name:
                         feat_dep = await feature_dep.feature()
                         if feat_dep in view.features or feat_dep in view.entities:
@@ -122,14 +125,12 @@ class FeatureView(ABC, FeatureSelectable):
 
                     if depth == 0:
                         feature_dep._name = var_name
-                        feature_dep._feature_view = metadata.name
                         feat_dep = await feature_dep.feature()
                         view.features.add(feat_dep)
                         continue
 
                     if not feature_dep._name:
                         feature_dep._name = str(hidden_features)
-                        feature_dep._feature_view = metadata.name
                         hidden_features += 1
 
                     feature_graph = feature_dep.compile_graph_only()  # Should decide on which payload to send
@@ -210,6 +211,10 @@ class FeatureView(ABC, FeatureSelectable):
                     return x[0]
 
                 for depth, feature_dep in sorted(feature_deps, key=sort_key):
+
+                    if not feature_dep._feature_view:
+                        feature_dep._feature_view = metadata.name
+
                     if feature_dep._name:
                         feat_dep = Feature(feature_dep._name, dtype=feature_dep.dtype)
                         if feat_dep in view.features or feat_dep in view.entities:
@@ -217,14 +222,12 @@ class FeatureView(ABC, FeatureSelectable):
 
                     if depth == 0:
                         feature_dep._name = var_name
-                        feature_dep._feature_view = metadata.name
                         feat_dep = Feature(var_name, dtype=feature_dep.dtype)
                         view.features.add(feat_dep)
                         continue
 
                     if not feature_dep._name:
                         feature_dep._name = str(hidden_features)
-                        feature_dep._feature_view = metadata.name
                         hidden_features += 1
 
                     feature_graph = feature_dep.compile_graph_only()  # Should decide on which payload to send
