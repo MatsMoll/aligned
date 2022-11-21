@@ -119,6 +119,12 @@ class AwsS3CsvDataSource(BatchDataSource, DataFileReference, ColumnFeatureMappab
         except HTTPStatusError:
             raise UnableToFindFileException()
 
+    async def write_pandas(self, df: pd.DataFrame) -> None:
+        buffer = BytesIO()
+        df.to_csv(buffer, sep=self.csv_config.seperator, index=self.csv_config.should_write_index, compression=self.csv_config.compression)
+        buffer.seek(0)
+        await self.storage.write(self.path, buffer.read())
+
 
 @dataclass
 class AwsS3ParquetDataSource(BatchDataSource, DataFileReference, ColumnFeatureMappable):
