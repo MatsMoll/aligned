@@ -37,15 +37,15 @@ class PostgreSQLRetrivalJob(RetrivalJob):
 
     async def _to_df(self) -> pd.DataFrame:
         sql_request = self.build_request()
-        from databases import Database
 
         try:
-            async with Database(self.config.url) as db:
-                records = await db.fetch_all(query=sql_request.sql, values=sql_request.values)
-                df = pd.DataFrame.from_records([dict(record) for record in records])
-                object_mask = df.dtypes == 'object'
-                df.loc[:, object_mask] = df.loc[:, object_mask].astype(str)
-                return df
+            from sqlalchemy import create_engine
+            from sqlalchemy.engine import Engine
+
+            engine: Engine = create_engine(self.config.url).execution_options(autocommit=True)
+            df = pd.read_sql_query(sql_request.sql, con=engine, params=sql_request.values)
+            engine.dispose()
+            return df
         except Exception as error:
             logger.info(sql_request.sql)
             logger.error(error)
@@ -74,7 +74,7 @@ class FullExtractPsqlJob(PostgreSQLRetrivalJob, FullExtractJob):
         ]
         sql_columns = self.source.feature_identifier_for(all_features)
         columns = [
-            f'{sql_col} AS {alias}' if sql_col != alias else sql_col
+            f'"{sql_col}" AS {alias}' if sql_col != alias else sql_col
             for sql_col, alias in zip(sql_columns, all_features)
         ]
         column_select = ', '.join(columns)
@@ -85,7 +85,7 @@ class FullExtractPsqlJob(PostgreSQLRetrivalJob, FullExtractJob):
             limit_query = f'LIMIT {int(self.limit)}'
 
         return SQLQuery(
-            sql=f'SELECT {column_select} FROM {schema}{self.source.table} {limit_query}',
+            sql=f'SELECT {column_select} FROM {schema}"{self.source.table}" {limit_query}',
         )
 
 
@@ -112,14 +112,14 @@ class DateRangePsqlJob(PostgreSQLRetrivalJob, DateRangeJob):
         ]
         sql_columns = self.source.feature_identifier_for(all_features)
         columns = [
-            f'{sql_col} AS {alias}' if sql_col != alias else sql_col
+            f'"{sql_col}" AS {alias}' if sql_col != alias else sql_col
             for sql_col, alias in zip(sql_columns, all_features)
         ]
         column_select = ', '.join(columns)
         schema = f'{self.config.schema}.' if self.config.schema else ''
         return SQLQuery(
             sql=(
-                f'SELECT {column_select} FROM {schema}{self.source.table} WHERE'
+                f'SELECT {column_select} FROM {schema}"{self.source.table}" WHERE'
                 f' {event_timestamp_column} BETWEEN (:start_date) AND (:end_date)'
             ),
             values={'start_date': self.start_date, 'end_date': self.end_date},

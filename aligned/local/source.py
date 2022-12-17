@@ -62,7 +62,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
 
     path: str
     mapping_keys: dict[str, str] = field(default_factory=dict)
-    csv_config: CsvConfig = field(default_factory=CsvConfig())
+    csv_config: CsvConfig = field(default_factory=CsvConfig)
 
     type_name: str = 'csv'
 

@@ -412,7 +412,9 @@ def profile(repo_path: str, reference_file: str, env_file: str, output: str, dat
                 filter_unique_nan_values = [
                     value
                     for value in unique_values
-                    if not (str(value).lower() == 'nan' or str(value).lower() == 'nat')
+                    if not (
+                        str(value).lower() == 'nan' or str(value).lower() == 'nat' or str(value) == '<NA>'
+                    )
                 ]
 
                 results.categorical_features[reference] = CategoricalFeatureSummary(
@@ -437,7 +439,7 @@ def profile(repo_path: str, reference_file: str, env_file: str, output: str, dat
                     cuts = []
                 else:
                     cuts = np.arange(start=min_value, stop=max_value + width, step=width)
-                    histogram, _ = np.histogram(data_slice.values, cuts)
+                    histogram, _ = np.histogram(data_slice.loc[~data_slice.isna()].values, cuts)
 
                 results.numeric_features[reference] = NumericFeatureSummary(
                     missing_percentage=(data_slice.isna() | data_slice.isnull()).sum() / data_slice.shape[0],
