@@ -1,5 +1,6 @@
 # Dont check-in database folder
 .pg/*
+.DS_STORE
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

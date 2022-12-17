@@ -371,6 +371,25 @@ class FeatureViewStore:
     async def write(self, values: dict[str, list[Any]]) -> None:
         await self.batch_write(values)
 
+    async def process_input(self, values: dict[str, list[Any]]) -> dict[str, list[Any]]:
+        from pandas import DataFrame
+
+        from aligned.local.job import FileFullJob
+        from aligned.local.source import LiteralReference
+
+        request = self.view.request_all.needed_requests[0]
+        df = DataFrame.from_records(values)
+
+        if request.entity_names - set(df.columns):
+            missing = request.entity_names - set(df.columns)
+            raise ValueError(f'Missing entities: {missing}')
+
+        if request.all_required_feature_names - set(df.columns):
+            missing = request.all_required_feature_names - set(df.columns)
+            df[list(missing)] = None
+        output = await FileFullJob(LiteralReference(df)).to_df()
+        return output.to_dict('list')
+
     async def batch_write(self, values: dict[str, list[Any]]) -> None:
         if not isinstance(self.source, WritableFeatureSource):
             logger.info('Feature Source is not writable')
