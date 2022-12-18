@@ -7,6 +7,7 @@ from typing import Literal
 from uuid import uuid4
 
 import pandas as pd
+import polars as pl
 from httpx import HTTPStatusError
 
 from aligned.data_file import DataFileReference
@@ -81,6 +82,9 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
             raise UnableToFindFileException()
         except HTTPStatusError:
             raise UnableToFindFileException()
+
+    async def to_polars(self) -> pl.LazyFrame:
+        return pl.scan_csv(self.path, sep=self.csv_config.seperator)
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
         df.to_csv(

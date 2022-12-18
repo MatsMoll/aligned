@@ -530,6 +530,26 @@ dev = ["pre-commit", "tox"]
 testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
+name = "polars"
+version = "0.15.6"
+description = "Blazingly fast DataFrame library"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.extras]
+all = ["polars[connectorx,deltalake,fsspec,matplotlib,numpy,pandas,pyarrow,timezone,xlsx2csv]"]
+connectorx = ["connectorx"]
+deltalake = ["deltalake"]
+fsspec = ["fsspec"]
+matplotlib = ["matplotlib"]
+numpy = ["numpy (>=1.16.0)"]
+pandas = ["pandas", "pyarrow (>=4.0.0)"]
+pyarrow = ["pyarrow (>=4.0.0)"]
+timezone = ["backports.zoneinfo", "tzdata"]
+xlsx2csv = ["xlsx2csv (>=0.8.0)"]
+
+[[package]]
 name = "pyarrow"
 version = "8.0.0"
 description = "Python library for Apache Arrow"
@@ -821,7 +841,7 @@ server = ["asgi-correlation-id", "fastapi", "uvicorn"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "5c16b805bdba19923ce8be25c3659b635bdce41db834a9831736ae74241e6281"
+content-hash = "4a1dc02059b584a43fbfed41f827216975250e0ff0fc65976c2e7dc0ad7903fd"
 
 [metadata.files]
 aioaws = [
@@ -1240,6 +1260,14 @@ partd = [
 pluggy = [
     {file = "pluggy-1.0.0-py2.py3-none-any.whl", hash = "sha256:74134bbf457f031a36d68416e1509f34bd5ccc019f0bcc952c7b909d06b37bd3"},
     {file = "pluggy-1.0.0.tar.gz", hash = "sha256:4224373bacce55f955a878bf9cfa763c1e360858e330072059e10bad68531159"},
+]
+polars = [
+    {file = "polars-0.15.6-cp37-abi3-macosx_10_7_x86_64.whl", hash = "sha256:668e2a2f977c448150f70609598a55a8ad7c31a84529629f917fa28a2c6959e8"},
+    {file = "polars-0.15.6-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:db3ff521bd1ec4d6238ab15736d95b79979218156aab83d019a2f9ce08eab3e6"},
+    {file = "polars-0.15.6-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4e260636ba58848f5da54cfa77350bc0d35e4ece66f20cfaca107ef659b23750"},
+    {file = "polars-0.15.6-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6ee01e847554b2d066b0475fc201504b938fb340db22cc6c1730e3f67b3da5fa"},
+    {file = "polars-0.15.6-cp37-abi3-win_amd64.whl", hash = "sha256:49dba09121ee7c9e65a1793f7fb9c5010fd0d828263501cb10bf90a895ac6370"},
+    {file = "polars-0.15.6.tar.gz", hash = "sha256:f6d27e88b46ddd88036869f066c12dd6877192d936430b43001e092529766cee"},
 ]
 pyarrow = [
     {file = "pyarrow-8.0.0-cp310-cp310-macosx_10_13_universal2.whl", hash = "sha256:d5ef4372559b191cafe7db8932801eee252bfc35e983304e7d60b6954576a071"},

@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import TypeVar
 
 import pandas as pd
+import polars as pl
 
 from aligned.data_source.batch_data_source import ColumnFeatureMappable
 from aligned.local.source import DataFileReference
@@ -42,6 +43,26 @@ class FileFullJob(FullExtractJob):
         else:
             return df
 
+    def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
+
+        entity_names = self.request.entity_names
+        all_names = list(self.request.all_required_feature_names.union(entity_names))
+
+        request_features = all_names
+        if isinstance(self.source, ColumnFeatureMappable):
+            request_features = self.source.feature_identifier_for(all_names)
+        renames = {
+            org_name: wanted_name
+            for org_name, wanted_name in zip(request_features, all_names)
+            if org_name != wanted_name
+        }
+        df = df.rename(mapping=renames)
+
+        if self.limit:
+            return df.limit(self.limit)
+        else:
+            return df
+
     async def _to_df(self) -> pd.DataFrame:
         file = await self.source.read_pandas()
         return self.file_transformations(file)
@@ -49,6 +70,10 @@ class FileFullJob(FullExtractJob):
     async def _to_dask(self) -> dd.DataFrame:
         file = await self.source.read_dask()
         return self.file_transformations(file)
+
+    async def _to_polars(self) -> pl.LazyFrame:
+        file = await self.source.to_polars()
+        return self.file_transform_polars(file)
 
 
 @dataclass
@@ -83,6 +108,22 @@ class FileDateJob(DateRangeJob):
         end_date_ts = pd.to_datetime(self.end_date, utc=True)
         return df.loc[df[event_timestamp_column].between(start_date_ts, end_date_ts)]
 
+    def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
+
+        entity_names = self.request.entity_names
+        all_names = list(self.request.all_required_feature_names.union(entity_names))
+
+        request_features = all_names
+        if isinstance(self.source, ColumnFeatureMappable):
+            request_features = self.source.feature_identifier_for(all_names)
+
+        df = df.rename(
+            mapping={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)}
+        )
+        event_timestamp_column = self.request.event_timestamp.name
+
+        return df.filter(pl.col(event_timestamp_column).is_between(self.start_date, self.end_date))
+
     async def _to_df(self) -> pd.DataFrame:
         file = await self.source.read_pandas()
         return self.file_transformations(file)
@@ -90,6 +131,10 @@ class FileDateJob(DateRangeJob):
     async def _to_dask(self) -> dd.DataFrame:
         file = await self.source.read_dask()
         return self.file_transformations(file)
+
+    async def _to_polars(self) -> pl.LazyFrame:
+        file = await self.source.to_polars()
+        return self.file_transform_polars(file)
 
 
 @dataclass
@@ -140,3 +185,6 @@ class FileFactualJob(FactualRetrivalJob):
     async def _to_dask(self) -> dd.DataFrame:
         file = await self.source.read_dask()
         return self.file_transformations(file)
+
+    async def _to_polars(self) -> pl.LazyFrame:
+        return pl.from_pandas(await self._to_df())

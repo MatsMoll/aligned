@@ -387,7 +387,7 @@ class FeatureViewStore:
         if request.all_required_feature_names - set(df.columns):
             missing = request.all_required_feature_names - set(df.columns)
             df[list(missing)] = None
-        output = await FileFullJob(LiteralReference(df)).to_df()
+        output = await FileFullJob(LiteralReference(df), request).to_pandas()
         return output.to_dict('list')
 
     async def batch_write(self, values: dict[str, list[Any]]) -> None:

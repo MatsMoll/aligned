@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
+import polars as pl
 
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
@@ -158,11 +159,14 @@ class FactualInMemoryJob(FactualRetrivalJob):
 
         return result_df
 
-    async def to_df(self) -> pd.DataFrame:
+    async def to_pandas(self) -> pd.DataFrame:
         return await self._to_df()
 
     async def _to_dask(self) -> dd.DataFrame:
         return await self._to_df()
+
+    async def _to_polars(self) -> pl.LazyFrame:
+        return pl.from_pandas(await self._to_df()).lazy()
 
 
 @dataclass
@@ -177,7 +181,7 @@ class InMemoryFeatureSource(FeatureSource, WritableFeatureSource):
         return f'{request.feature_view_name}:{entity}:{feature_name}'
 
     async def write(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
-        data = await job.to_df()
+        data = await job.to_pandas()
 
         for _, row in data.iterrows():
             # Run one query per row

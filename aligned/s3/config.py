@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from io import BytesIO
 
 import pandas as pd
-from aioaws.s3 import S3Config
 from httpx import HTTPStatusError
 
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
@@ -11,6 +10,13 @@ from aligned.local.source import CsvConfig, DataFileReference, ParquetConfig, St
 from aligned.s3.storage import AwsS3Storage
 from aligned.schemas.codable import Codable
 from aligned.storage import Storage
+
+try:
+    from aioaws.s3 import S3Config
+except ModuleNotFoundError:
+
+    class S3Config:  # type: ignore[no-redef]
+        pass
 
 
 @dataclass
@@ -121,7 +127,12 @@ class AwsS3CsvDataSource(BatchDataSource, DataFileReference, ColumnFeatureMappab
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
         buffer = BytesIO()
-        df.to_csv(buffer, sep=self.csv_config.seperator, index=self.csv_config.should_write_index, compression=self.csv_config.compression)
+        df.to_csv(
+            buffer,
+            sep=self.csv_config.seperator,
+            index=self.csv_config.should_write_index,
+            compression=self.csv_config.compression,
+        )
         buffer.seek(0)
         await self.storage.write(self.path, buffer.read())
 

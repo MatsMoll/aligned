@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
+import polars as pl
 
 from aligned.redis.config import RedisConfig
 from aligned.request.retrival_request import RetrivalRequest
@@ -83,8 +84,11 @@ class FactualRedisJob(FactualRetrivalJob):
 
         return result_df
 
-    async def to_df(self) -> pd.DataFrame:
+    async def to_pandas(self) -> pd.DataFrame:
         return await self._to_df()
 
     async def _to_dask(self) -> dd.DataFrame:
         return await self._to_df()
+
+    async def _to_polars(self) -> pl.LazyFrame:
+        return pl.from_pandas(await self.to_pandas())

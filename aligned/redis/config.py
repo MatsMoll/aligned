@@ -83,7 +83,7 @@ class RedisSource(FeatureSource, WritableFeatureSource):
     async def write(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
 
         redis = self.config.redis()
-        data = await job.to_df()
+        data = await job.to_pandas()
 
         async with redis.pipeline(transaction=True) as pipe:
 

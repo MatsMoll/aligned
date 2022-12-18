@@ -94,7 +94,7 @@ class FastAPIServer:
     def feature_view_path(name: str, feature_store: FeatureStore, app: FastAPI) -> None:
         @app.post(f'/feature-views/{name}/all')
         async def all(limit: int | None = None) -> dict:
-            df = await feature_store.feature_view(name).all(limit=limit).to_df()
+            df = await feature_store.feature_view(name).all(limit=limit).to_pandas()
             df.replace(nan, value=None, inplace=True)
             return df.to_dict('list')
 
@@ -151,7 +151,7 @@ class FastAPIServer:
                     for value in entity_values['event_timestamp']
                 ]
 
-            df = await feature_store.model(name).features_for(entity_values).to_df()
+            df = await feature_store.model(name).features_for(entity_values).to_pandas()
             orient = 'values'
             body = ','.join([f'"{column}":{df[column].to_json(orient=orient)}' for column in df.columns])
             return Response(content=f'{{{body}}}', media_type='application/json')
@@ -207,7 +207,7 @@ class FastAPIServer:
             df = await feature_store.features_for(
                 payload.entities,
                 features=payload.features,
-            ).to_df()
+            ).to_pandas()
             orient = 'values'
             body = ','.join([f'"{column}":{df[column].to_json(orient=orient)}' for column in df.columns])
             return Response(content=f'{{{body}}}', media_type='application/json')

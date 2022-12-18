@@ -5,6 +5,7 @@ from typing import Any, Callable, Optional, TypeVar
 
 import numpy as np
 import pandas as pd
+import polars as pl
 from mashumaro.types import SerializableType
 
 from aligned.schemas.codable import Codable
@@ -27,12 +28,27 @@ class TransformationTestDefinition:
     output: list
 
     @property
-    def input_df(self) -> pd.DataFrame:
+    def input_pandas(self) -> pd.DataFrame:
         return pd.DataFrame(self.input)
 
     @property
-    def output_series(self) -> pd.Series:
+    def output_pandas(self) -> pd.Series:
         return pd.Series(self.output)
+
+    @property
+    def input_polars(self) -> pl.DataFrame:
+        return pl.from_dict(self.input)
+
+    @property
+    def output_polars(self) -> pl.Series:
+        try:
+            values = pl.Series(self.output).fill_nan(None)
+            if self.transformation.dtype == FeatureType('').bool:
+                return values.cast(pl.Boolean)
+            else:
+                return values
+        except pl.InvalidOperationError:
+            return pl.Series(self.output)
 
 
 def gracefull_transformation(
@@ -53,8 +69,11 @@ class Transformation(Codable, SerializableType):
     name: str
     dtype: FeatureType
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.DataFrame:
         pass
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        raise NotImplementedError()
 
     def _serialize(self) -> dict:
         return self.to_dict()
@@ -75,27 +94,46 @@ class Transformation(Codable, SerializableType):
         raise NotImplementedError()
 
     @classmethod
-    async def run_transformation_test(cls) -> None:
+    async def run_transformation_test_polars(cls) -> None:
+        from polars.testing import assert_series_equal
+
+        with suppress(NotImplementedError):
+            test = cls.test_definition()
+            expression = await test.transformation.transform_polars()
+            output = test.input_polars.select(expression).to_series().alias('')
+
+            expected = test.output_polars
+            if test.transformation.dtype == FeatureType('').bool:
+                is_correct = output.series_equal(test.output_polars)
+                assert is_correct, (
+                    f'Output for {cls.__name__} is not correct.,'
+                    f'\nGot: {output},\nexpected: {test.output_polars}'
+                )
+            else:
+                assert_series_equal(expected, output, check_names=False, check_dtype=False)
+
+    @classmethod
+    async def run_transformation_test_pandas(cls) -> None:
         import numpy as np
         from numpy.testing import assert_almost_equal
 
         with suppress(NotImplementedError):
             test = cls.test_definition()
-            output = await test.transformation.transform(test.input_df)
+            output = await test.transformation.transform_pandas(test.input_pandas)
             if test.transformation.dtype == FeatureType('').bool:
-                is_correct = np.all(output == test.output_series) | output.equals(test.output_series)
+                is_correct = np.all(output == test.output_pandas) | output.equals(test.output_pandas)
                 assert is_correct, (
                     f'Output for {cls.__name__} is not correct.,'
-                    f'\nGot: {output},\nexpected: {test.output_series}'
+                    f'\nGot: {output},\nexpected: {test.output_pandas}'
                 )
             elif test.transformation.dtype == FeatureType('').string:
-                expected = test.output_series
+                expected = test.output_pandas
                 assert expected.equals(output), (
                     f'Output for {cls.__name__} is not correct.,'
-                    f'\nGot: {output},\nexpected: {test.output_series}'
+                    f'\nGot: {output},\nexpected: {test.output_pandas}'
                 )
             else:
-                expected = test.output_series.to_numpy()
+                expected = test.output_pandas.to_numpy()
                 output_np = output.to_numpy().astype('float')
                 is_null = np.isnan(expected) & np.isnan(output_np)
                 assert_almost_equal(expected[~is_null], output_np[~is_null])
@@ -162,11 +200,14 @@ class DillTransformation(Transformation):
     dtype: FeatureType
     name: str = 'custom_transformation'
 
-    async def transform(self, df: pd.DataFrame) -> pd.Series:
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         import dill
 
         loaded = dill.loads(self.method)
         return await loaded(df)
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return await super().transform_polars()
 
 
 @dataclass
@@ -182,8 +223,11 @@ class Equals(Transformation):
         self.key = key
         self.value = value
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return df[self.key] == self.value
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.col(self.key) == self.value
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -207,11 +251,18 @@ class And(Transformation):
         self.first_key = first_key
         self.second_key = second_key
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.first_key].isnull() | df[self.second_key].isnull()),
             transformation=lambda dfv: dfv[self.first_key] & dfv[self.second_key],
+        )
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return (
+            pl.when(pl.col(self.first_key).is_not_null() & pl.col(self.second_key).is_not_null())
+            .then(pl.col(self.first_key) & pl.col(self.second_key))
+            .otherwise(pl.lit(None))
         )
 
     @staticmethod
@@ -236,7 +287,10 @@ class Or(Transformation):
         self.first_key = first_key
         self.second_key = second_key
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.col(self.first_key) | pl.col(self.second_key)
+
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         df[self.first_key].__invert__
         return gracefull_transformation(
             df,
@@ -264,12 +318,15 @@ class Inverse(Transformation):
     def __init__(self, key: str) -> None:
         self.key = key
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isnull()),
             transformation=lambda dfv: dfv[self.key] == False,  # noqa: E712
         )
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return ~pl.col(self.key)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -293,8 +350,11 @@ class NotEquals(Transformation):
         self.key = key
         self.value = value
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return df[self.key] != self.value
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.col(self.key) != self.value
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -314,11 +374,18 @@ class GreaterThenValue(Transformation):
     name: str = 'gt'
     dtype: FeatureType = FeatureType('').bool
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna() | df[self.key].isnull()),
             transformation=lambda dfv: dfv[self.key] > self.value,
+        )
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return (
+            pl.when(pl.col(self.key).is_not_null() & pl.col(self.key).is_not_nan())
+            .then(pl.col(self.key) > self.value)
+            .otherwise(pl.lit(None))
         )
 
     @staticmethod
@@ -339,7 +406,7 @@ class GreaterThen(Transformation):
     name: str = field(default='gtf')
     dtype: FeatureType = field(default=FeatureType('').bool)
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(
@@ -349,6 +416,18 @@ class GreaterThen(Transformation):
                 | df[self.right_key].isnull()
             ),
             transformation=lambda dfv: dfv[self.left_key] > dfv[self.right_key],
+        )
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return (
+            pl.when(
+                pl.col(self.left_key).is_not_null()
+                & pl.col(self.right_key).is_not_null()
+                & pl.col(self.left_key).is_not_nan()
+                & pl.col(self.right_key).is_not_nan()
+            )
+            .then(pl.col(self.left_key) > pl.col(self.right_key))
+            .otherwise(pl.lit(None))
         )
 
     @staticmethod
@@ -375,12 +454,15 @@ class GreaterThenOrEqual(Transformation):
         self.key = key
         self.value = value
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna() | df[self.key].isnull()),
             transformation=lambda dfv: dfv[self.key] >= self.value,
         )
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.col(self.key) >= self.value
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -406,12 +488,15 @@ class LowerThen(Transformation):
         self.key = key
         self.value = value
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna() | df[self.key].isnull()),
             transformation=lambda dfv: dfv[self.key] < self.value,
         )
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.col(self.key) < self.value
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -435,7 +520,10 @@ class LowerThenOrEqual(Transformation):
         self.key = key
         self.value = value
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.col(self.key) <= self.value
+
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna() | df[self.key].isnull()),
@@ -464,7 +552,10 @@ class Subtraction(Transformation):
         self.front = front
         self.behind = behind
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.col(self.front) - pl.col(self.behind)
+
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.front].isna() | df[self.behind].isna()),
@@ -495,12 +586,15 @@ class Addition(Transformation):
         self.front = front
         self.behind = behind
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.front].isna() | df[self.behind].isna()),
             transformation=lambda dfv: dfv[self.front] + dfv[self.behind],
         )
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.col(self.front) + pl.col(self.behind)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -528,12 +622,15 @@ class TimeDifference(Transformation):
         self.behind = behind
         self.unit = unit
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.front].isna() | df[self.behind].isna()),
             transformation=lambda dfv: (dfv[self.front] - dfv[self.behind]) / np.timedelta64(1, self.unit),
         )
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return (pl.col(self.front) - pl.col(self.behind)).dt.seconds()
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -572,12 +669,15 @@ class Logarithm(Transformation):
     def __init__(self, key: str) -> None:
         self.key = key
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna() | (df[self.key] <= 0)),
             transformation=lambda dfv: np.log(dfv[self.key]),
         )
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.when(pl.col(self.key) > 0).then(pl.col(self.key).log()).otherwise(pl.lit(None))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -599,12 +699,15 @@ class LogarithmOnePluss(Transformation):
     def __init__(self, key: str) -> None:
         self.key = key
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna() | (df[self.key] <= -1)),
             transformation=lambda dfv: np.log1p(dfv[self.key]),
         )
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.when(pl.col(self.key) > -1).then((pl.col(self.key) + 1).log()).otherwise(pl.lit(None))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -628,10 +731,13 @@ class ToNumerical(Transformation):
     def __init__(self, key: str) -> None:
         self.key = key
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         from pandas import to_numeric
 
         return to_numeric(df[self.key], errors='coerce')
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.col(self.key).cast(pl.Float64)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -639,7 +745,7 @@ class ToNumerical(Transformation):
 
         return TransformationTestDefinition(
             ToNumerical('x'),
-            input={'x': [1, '0', '10.5', None, nan, '-20']},
+            input={'x': ['1', '0', '10.5', None, nan, '-20']},
             output=[1, 0, 10.5, nan, nan, -20],
         )
 
@@ -657,14 +763,68 @@ class DateComponent(Transformation):
         self.key = key
         self.component = component
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
-        from pandas import to_datetime
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
 
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna()),
-            transformation=lambda dfv: getattr(to_datetime(dfv[self.key]).dt, self.component),
+            transformation=lambda dfv: getattr(dfv[self.key].dt, self.component),
         )
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        pl.col(self.key).str.strptime(pl.Datetime, strict=False)
+        pl.when(pl.col(self.key))
+
+        col = pl.col(self.key).cast(pl.Datetime).dt
+        match self.component:
+            case 'day':
+                return col.day()
+            case 'days':
+                return col.days()
+            case 'epoch':
+                return col.epoch()
+            case 'hour':
+                return col.hour()
+            case 'hours':
+                return col.hours()
+            case 'iso_year':
+                return col.iso_year()
+            case 'microsecond':
+                return col.microsecond()
+            case 'microseconds':
+                return col.microseconds()
+            case 'millisecond':
+                return col.millisecond()
+            case 'milliseconds':
+                return col.milliseconds()
+            case 'minute':
+                return col.minute()
+            case 'minutes':
+                return col.minutes()
+            case 'month':
+                return col.month()
+            case 'nanosecond':
+                return col.nanosecond()
+            case 'nanoseconds':
+                return col.nanoseconds()
+            case 'ordinal_day':
+                return col.ordinal_day()
+            case 'quarter':
+                return col.quarter()
+            case 'second':
+                return col.second()
+            case 'seconds':
+                return col.seconds()
+            case 'week':
+                return col.week()
+            case 'weekday':
+                return col.weekday()
+            case 'year':
+                return col.year()
+            case _:
+                raise NotImplementedError(
+                    f'Date component {self.component} is not implemented. Maybe setup a PR and contribute?'
+                )
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -672,13 +832,23 @@ class DateComponent(Transformation):
 
         return TransformationTestDefinition(
             DateComponent(key='x', component='hour'),
-            input={'x': ['2022-04-02T20:20:50', None, '2022-02-20T23:20:50', '1993-04-02T01:20:50']},
+            input={
+                'x': [
+                    datetime.fromisoformat(value) if value else None
+                    for value in ['2022-04-02T20:20:50', None, '2022-02-20T23:20:50', '1993-04-02T01:20:50']
+                ]
+            },
             output=[20, nan, 23, 1],
         )
 
 
 @dataclass
 class Contains(Transformation):
+    """Checks if a string value contains another string
+
+    some_string = String()
+    contains_a_char = some_string.contains("a")
+    """
 
     key: str
     value: str
@@ -690,12 +860,15 @@ class Contains(Transformation):
         self.key = key
         self.value = value
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna()),
             transformation=lambda dfv: dfv[self.key].astype('str').str.contains(self.value),
         )
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.col(self.key).str.contains(self.value)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -723,8 +896,12 @@ class Ordinal(Transformation):
         self.key = key
         self.orders = orders
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return df[self.key].map(self.orders_dict)
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        mapper = pl.DataFrame({self.key: list(self.orders), 'values': list(range(0, len(self.orders)))})
+        return df.join(mapper.lazy(), on=self.key, how='left').select('values_right')
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -750,7 +927,7 @@ class ReplaceStrings(Transformation):
         self.key = key
         self.values = values
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         temp_df = df[self.key].copy()
         mask = ~(df[self.key].isna() | df[self.key].isnull())
         temp_df.loc[~mask] = np.nan
@@ -758,6 +935,9 @@ class ReplaceStrings(Transformation):
             temp_df.loc[mask] = temp_df.loc[mask].astype(str).str.replace(k, v)
 
         return temp_df
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        raise NotImplementedError()
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -783,7 +963,7 @@ class Ratio(Transformation):
         self.numerator = numerator
         self.denumerator = denumerator
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return gracefull_transformation(
             df,
             is_valid_mask=~(
@@ -791,6 +971,13 @@ class Ratio(Transformation):
             ),
             transformation=lambda dfv: dfv[self.numerator].astype(float)
             / dfv[self.denumerator].astype(float),
+        )
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return (
+            pl.when(pl.col(self.denumerator) != 0)
+            .then(pl.col(self.numerator) / pl.col(self.denumerator))
+            .otherwise(pl.lit(None))
         )
 
     @staticmethod
@@ -814,8 +1001,11 @@ class StandardScalingTransformation(Transformation):
     name = 'standard_scaling'
     dtype = FeatureType('').float
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return (df[self.key] - self.mean) / self.std
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return (pl.col(self.key) - self.mean) / self.std
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -835,8 +1025,11 @@ class IsIn(Transformation):
     name = 'isin'
     dtype = FeatureType('').bool
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return df[self.key].isin(self.values)
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.col(self.key).is_in(self.values)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -856,8 +1049,14 @@ class FillNaValues(Transformation):
 
     name: str = 'fill_missing'
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return df[self.key].fillna(self.value)
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        if self.dtype == FeatureType('').float:
+            return pl.col(self.key).fill_nan(self.value).fill_null(self.value)
+        else:
+            return pl.col(self.key).fill_null(self.value)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -875,8 +1074,11 @@ class CopyTransformation(Transformation):
 
     name: str = 'nothing'
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         return df[self.key]
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.col(self.key)
 
 
 @dataclass
@@ -887,10 +1089,13 @@ class Floor(Transformation):
 
     name: str = 'floor'
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         from numpy import floor
 
         return floor(df[self.key])
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.col(self.key).floor()
 
 
 @dataclass
@@ -901,10 +1106,13 @@ class Ceil(Transformation):
 
     name: str = 'ceil'
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         from numpy import ceil
 
         return ceil(df[self.key])
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.col(self.key).ceil()
 
 
 @dataclass
@@ -915,10 +1123,13 @@ class Round(Transformation):
 
     name: str = 'round'
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         from numpy import round
 
         return round(df[self.key])
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.col(self.key).round()
 
 
 @dataclass
@@ -929,10 +1140,13 @@ class Absolute(Transformation):
 
     name: str = 'abs'
 
-    async def transform(self, df: GenericDataFrame) -> GenericSeries:
+    async def transform_pandas(self, df: GenericDataFrame) -> GenericSeries:
         from numpy import abs
 
         return abs(df[self.key])
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+        return pl.col(self.key).abs()
 
 
 @dataclass
@@ -941,10 +1155,9 @@ class Mean(Transformation):
     key: str
     group_keys: list[str] | None = field(default=None)
     # sliding_window: float | None = field(default=None)
-
     name: str = 'mean'
 
-    async def transform(self, df: pd.DataFrame) -> pd.Series:
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
 
         # df.set_index("event_timestamp").rolling(2).mean()
 
@@ -957,3 +1170,14 @@ class Mean(Transformation):
                 raise ValueError('Group by with multiple keys is not suppported yet')
         else:
             return df[self.key].mean()
+
+    async def transform_polars(self, df: pl.LazyFrame) -> pl.Expr:
+
+        if self.group_keys:
+            # if len(self.group_keys) == 1:
+            #     group_key = self.group_keys[0]
+            # return df.join(df.groupby(group_key).agg(pl.col(self.key).mean()
+            # .alias("agg_mean")), on=group_key, how="left").select("agg_mean_right")
+            raise ValueError('Group by is not supported for polars yet')
+        else:
+            return pl.col(self.key).mean()

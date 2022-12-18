@@ -40,7 +40,7 @@ async def test_factual_redis_job(mocker, retrival_request) -> None:  # type: ign
         facts={'id_int': [1.0, 2.0, None, 4.0], 'id_str': ['a', 'b', 'c', None]},
     )
 
-    result = await job.to_df()
+    result = await job.to_pandas()
     redis_mock.assert_called_once()
     assert np.all(redis_mock.call_args[0][0] == ['test:1.0a:x', 'test:2.0b:x'])
     x_result = [int(value) for value in values] + [0, 0]
@@ -61,7 +61,7 @@ async def test_factual_redis_job_int_as_str(mocker, retrival_request) -> None:  
         facts={'id_int': ['1', '2', None, '4'], 'id_str': ['a', 'b', 'c', None]},
     )
 
-    result = await job.to_df()
+    result = await job.to_pandas()
     redis_mock.assert_called_once()
     assert np.all(redis_mock.call_args[0][0] == ['test:1.0a:x', 'test:2.0b:x'])
     x_result = [int(value) for value in values] + [0, 0]
@@ -82,7 +82,7 @@ async def test_nan_entities_job(mocker, retrival_request) -> None:  # type: igno
         facts={'id_int': [None, '4'], 'id_str': ['c', None]},
     )
 
-    _ = await job.to_df()
+    _ = await job.to_pandas()
     redis_mock.assert_not_called()
 
 
@@ -100,7 +100,7 @@ async def test_no_entities_job(mocker, retrival_request) -> None:  # type: ignor
         facts={'id_int': [], 'id_str': []},
     )
 
-    _ = await job.to_df()
+    _ = await job.to_pandas()
     redis_mock.assert_not_called()
 
 
@@ -129,7 +129,7 @@ async def test_factual_redis_job_int_entity(mocker) -> None:  # type: ignore[no-
         facts={'id_int': [1.0, 2.0, 4.0, None]},
     )
 
-    result = await job.to_df()
+    result = await job.to_pandas()
     redis_mock.assert_called_once()
     assert np.all(redis_mock.call_args[0][0] == ['test:1.0:x', 'test:2.0:x', 'test:4.0:x'])
     x_result = [int(value) for value in values] + [0]

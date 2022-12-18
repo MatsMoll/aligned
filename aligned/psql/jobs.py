@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any, TypeVar
 
 import pandas as pd
+import polars as pl
 
 from aligned.psql.data_source import PostgreSQLConfig, PostgreSQLDataSource
 from aligned.request.retrival_request import RetrivalRequest
@@ -54,6 +55,9 @@ class PostgreSQLRetrivalJob(RetrivalJob):
     async def _to_dask(self) -> dd.DataFrame:
         df = await self._to_df()
         return dd.from_pandas(df)
+
+    async def _to_polars(self) -> pl.LazyFrame:
+        return pl.from_pandas(await self._to_df())
 
 
 @dataclass

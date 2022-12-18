@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, TypeVar
 
 import pandas as pd
+import polars as pl
 
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.schemas.derivied_feature import DerivedFeature
@@ -53,12 +54,16 @@ class RetrivalJob(ABC):
         pass
 
     @abstractmethod
-    async def to_df(self) -> pd.DataFrame:
+    async def to_pandas(self) -> pd.DataFrame:
         pass
 
     @abstractmethod
     async def to_dask(self) -> dd.DataFrame:
-        pass
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def to_polars(self) -> pl.LazyFrame:
+        raise NotImplementedError()
 
     @abstractmethod
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
@@ -83,12 +88,15 @@ class ValidationJob(RetrivalJob):
     def request_result(self) -> RequestResult:
         return self.job.request_result
 
-    async def to_df(self) -> pd.DataFrame:
+    async def to_pandas(self) -> pd.DataFrame:
         return await self.validator.validate_pandas(
-            list(self.request_result.features), await self.job.to_df()
+            list(self.request_result.features), await self.job.to_pandas()
         )
 
     async def to_dask(self) -> dd.DataFrame:
+        raise NotImplementedError()
+
+    async def to_polars(self) -> pl.LazyFrame:
         raise NotImplementedError()
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
@@ -102,11 +110,19 @@ class ValidationJob(RetrivalJob):
 
 class DerivedFeatureJob(RetrivalJob):
     @abstractmethod
+    async def compute_derived_features_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
+        pass
+
+    @abstractmethod
     async def compute_derived_features(self, df: GenericDataFrame) -> GenericDataFrame:
         pass
 
     @abstractmethod
     async def ensure_types(self, df: GenericDataFrame) -> GenericDataFrame:
+        pass
+
+    @abstractmethod
+    async def _to_polars(self) -> pl.LazyFrame:
         pass
 
     @abstractmethod
@@ -117,7 +133,7 @@ class DerivedFeatureJob(RetrivalJob):
     async def _to_dask(self) -> dd.DataFrame:
         pass
 
-    async def to_df(self) -> pd.DataFrame:
+    async def to_pandas(self) -> pd.DataFrame:
         df = await self._to_df()
         df = await self.ensure_types(df)
         return await self.compute_derived_features(df)
@@ -126,6 +142,10 @@ class DerivedFeatureJob(RetrivalJob):
         df = await self._to_dask()
         df = await self.ensure_types(df)
         return await self.compute_derived_features(df)
+
+    async def to_polars(self) -> pl.LazyFrame:
+        df = await self._to_polars()
+        return await self.compute_derived_features_polars(df)
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         if isinstance(location, str):
@@ -146,7 +166,7 @@ class RawFileCachedJob(RetrivalJob):
     def request_result(self) -> RequestResult:
         return self.job.request_result
 
-    async def to_df(self) -> pd.DataFrame:
+    async def to_pandas(self) -> pd.DataFrame:
         try:
             logger.info('Trying to read cache file')
             df = await self.location.read_pandas()
@@ -160,6 +180,9 @@ class RawFileCachedJob(RetrivalJob):
 
     async def to_dask(self) -> dd.DataFrame:
         raise NotImplementedError()
+
+    async def to_polars(self) -> pl.LazyFrame:
+        return await self.job.to_polars()
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         return self
@@ -175,19 +198,22 @@ class FileCachedJob(RetrivalJob):
     def request_result(self) -> RequestResult:
         return self.job.request_result
 
-    async def to_df(self) -> pd.DataFrame:
+    async def to_pandas(self) -> pd.DataFrame:
         try:
             logger.info('Trying to read cache file')
             df = await self.location.read_pandas()
         except UnableToFindFileException:
             logger.info('Unable to load file, so fetching from source')
-            df = await self.job.to_df()
+            df = await self.job.to_pandas()
             logger.info('Writing result to cache')
             await self.location.write_pandas(df)
         return df
 
     async def to_dask(self) -> dd.DataFrame:
         raise NotImplementedError()
+
+    async def to_polars(self) -> pl.LazyFrame:
+        return await super().to_polars()
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         return self
@@ -206,7 +232,7 @@ class TrainTestSetJob:
 
     async def use_df(self) -> TrainTestSet[pd.DataFrame]:
 
-        data = await self.job.to_df()
+        data = await self.job.to_pandas()
 
         features = list({feature.name for feature in self.request_result.features} - {self.target_column})
 
@@ -262,21 +288,33 @@ class SplitJob:
         return self.job.request_result
 
     async def use_pandas(self) -> SplitDataSet[pd.DataFrame]:
-        data = await self.job.to_df()
+        data = await self.job.to_pandas()
         return self.strategy.split_pandas(data, self.target_column)
 
 
 class SingleSourceRetrivalJob(DerivedFeatureJob):
+
     request: RetrivalRequest
 
     @property
     def request_result(self) -> RequestResult:
         return self.request.request_result
 
+    async def compute_derived_features_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
+        ret_df = df
+        for feature_round in self.request.derived_features_order():
+            for feature in feature_round:
+                ret_df = ret_df.with_column(
+                    (await feature.transformation.transform_polars(ret_df)).alias(feature.name)
+                )
+        return ret_df
+
     async def compute_derived_features(self, df: GenericDataFrame) -> GenericDataFrame:
         for feature_round in self.request.derived_features_order():
             for feature in feature_round:
-                df[feature.name] = await feature.transformation.transform(df[feature.depending_on_names])
+                df[feature.name] = await feature.transformation.transform_pandas(
+                    df[feature.depending_on_names]
+                )
                 if df[feature.name].dtype != feature.dtype.pandas_type:
                     if feature.dtype.is_numeric:
                         df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce').astype(
@@ -331,6 +369,19 @@ class FactualRetrivalJob(DerivedFeatureJob):
     def request_result(self) -> RequestResult:
         return RequestResult.from_request_list(self.requests)
 
+    async def compute_derived_features_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
+        combined_views: list[DerivedFeature] = []
+        for request in self.requests:
+            for feature_round in request.derived_features_order():
+                for feature in feature_round:
+                    if feature.depending_on_views - {request.feature_view_name}:
+                        combined_views.append(feature)
+                        continue
+                    df = df.with_column(
+                        (await feature.transformation.transform_polars(df)).alias(feature.name)
+                    )
+        return df
+
     async def compute_derived_features(self, df: GenericDataFrame) -> GenericDataFrame:
         combined_views: list[DerivedFeature] = []
         for request in self.requests:
@@ -340,7 +391,9 @@ class FactualRetrivalJob(DerivedFeatureJob):
                         combined_views.append(feature)
                         continue
 
-                    df[feature.name] = await feature.transformation.transform(df[feature.depending_on_names])
+                    df[feature.name] = await feature.transformation.transform_pandas(
+                        df[feature.depending_on_names]
+                    )
                     if df[feature.name].dtype != feature.dtype.pandas_type:
                         if feature.dtype.is_numeric:
                             df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce').astype(
@@ -420,18 +473,26 @@ class CombineFactualJob(RetrivalJob):
     async def combine_data(self, df: GenericDataFrame) -> GenericDataFrame:
         for request in self.combined_requests:
             for feature in request.derived_features:
-                df[feature.name] = await feature.transformation.transform(df[feature.depending_on_names])
+                df[feature.name] = await feature.transformation.transform_pandas(
+                    df[feature.depending_on_names]
+                )
         return df
 
-    async def to_df(self) -> pd.DataFrame:
+    async def combine_polars_data(self, df: pl.LazyFrame) -> pl.LazyFrame:
+        for request in self.combined_requests:
+            for feature in request.derived_features:
+                df = df.with_column((await feature.transformation.transform_polars(df)).alias(feature.name))
+        return df
+
+    async def to_pandas(self) -> pd.DataFrame:
         job_count = len(self.jobs)
         if job_count > 1:
-            dfs = await asyncio.gather(*[job.to_df() for job in self.jobs])
+            dfs = await asyncio.gather(*[job.to_pandas() for job in self.jobs])
             df = pd.concat(dfs, axis=1)
             combined = await self.combine_data(df)
             return combined.loc[:, ~df.columns.duplicated()].copy()
         elif job_count == 1:
-            df = await self.jobs[0].to_df()
+            df = await self.jobs[0].to_pandas()
             return await self.combine_data(df)
         else:
             raise ValueError(
@@ -444,6 +505,11 @@ class CombineFactualJob(RetrivalJob):
         dfs = await asyncio.gather(*[job.to_dask() for job in self.jobs])
         df = dd.concat(dfs, axis=1)
         return await self.combine_data(df)
+
+    async def to_polars(self) -> pl.DataFrame:
+        dfs = await asyncio.gather(*[job.to_polars() for job in self.jobs])
+        df = pl.concat(dfs, how='horizontal')
+        return await self.combine_polars_data(df)
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         return CombineFactualJob([job.cached_at(location) for job in self.jobs], self.combined_requests)
@@ -459,8 +525,8 @@ class FilterJob(RetrivalJob):
     def request_result(self) -> RequestResult:
         return self.job.request_result.filter_features(self.include_features)
 
-    async def to_df(self) -> pd.DataFrame:
-        df = await self.job.to_df()
+    async def to_pandas(self) -> pd.DataFrame:
+        df = await self.job.to_pandas()
         if self.include_features:
             total_list = list({ent.name for ent in self.request_result.entities}.union(self.include_features))
             return df[total_list]
@@ -472,6 +538,14 @@ class FilterJob(RetrivalJob):
         if self.include_features:
             total_list = list({ent.name for ent in self.request_result.entities}.union(self.include_features))
             return df[total_list]
+        else:
+            return df
+
+    async def to_polars(self) -> pl.LazyFrame:
+        df = await self.job.to_polars()
+        if self.include_features:
+            total_list = list({ent.name for ent in self.request_result.entities}.union(self.include_features))
+            return df.select(total_list)
         else:
             return df
 

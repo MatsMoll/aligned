@@ -67,7 +67,7 @@ async def test_standard_scaled_feature() -> None:
     store = FeatureStore.experimental()
     await store.add_feature_view(feature_view)
 
-    features = await store.feature_view(feature_view.metadata.name).all().to_df()
+    features = await store.feature_view(feature_view.metadata.name).all().to_pandas()
 
     for feature in BreastDiagnoseFeatureView.select_all().features_to_include:
         assert feature in features.columns
@@ -97,6 +97,34 @@ async def test_online_store_standard_scaling() -> None:
 
     stored = await store.features_for(
         {'scan_id': [10, 11]}, features=[f'{compiled_view.name}:scaled_mean_radius']
-    ).to_df()
+    ).to_pandas()
 
     assert ((stored['scaled_mean_radius'].values * 1000).astype(int) == [1096, 0]).all()
+
+
+@pytest.mark.asyncio
+async def test_online_store_standard_scaling_polars() -> None:
+    compiled_view = await BreastDiagnoseFeatureView.compile()
+
+    definition = RepoDefinition(
+        feature_views={compiled_view},
+        combined_feature_views=set(),
+        models={},
+        online_source=InMemoryOnlineSource(),
+    )
+    store = FeatureStore.from_definition(definition)
+
+    await store.feature_view(compiled_view.name).write(
+        {
+            'radius_mean': [17.99, 14.127291739894552],
+            'scan_id': [10, 11],
+        }
+    )
+
+    stored = await store.features_for(
+        {'scan_id': [10, 11]}, features=[f'{compiled_view.name}:scaled_mean_radius']
+    ).to_polars()
+
+    values = stored.collect().to_pandas()
+
+    assert ((values['scaled_mean_radius'].values * 1000).astype(int) == [1096, 0]).all()
