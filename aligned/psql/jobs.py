@@ -120,7 +120,7 @@ class DateRangePsqlJob(PostgreSQLRetrivalJob, DateRangeJob):
         return SQLQuery(
             sql=(
                 f'SELECT {column_select} FROM {schema}"{self.source.table}" WHERE'
-                f' {event_timestamp_column} BETWEEN (:start_date) AND (:end_date)'
+                f' {event_timestamp_column} BETWEEN (%(start_date)s) AND (%(end_date)s)'
             ),
             values={'start_date': self.start_date, 'end_date': self.end_date},
         )
