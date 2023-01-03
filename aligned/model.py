@@ -83,6 +83,6 @@ class Model:
 
         return ModelSchema(
             name=self.name,
-            features=[feature.request_result for feature in self.features],
+            features=features,
             targets=targets if targets else None,
         )

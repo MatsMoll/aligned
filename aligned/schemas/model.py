@@ -10,3 +10,6 @@ class Model(Codable):
     features: set[FeatureReferance]
     targets: set[FeatureReferance] | None = field(default=None)
     model_register: str | None = field(default=None)
+
+    def __hash__(self) -> int:
+        return self.name.__hash__()

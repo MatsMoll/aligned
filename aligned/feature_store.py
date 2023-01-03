@@ -148,12 +148,7 @@ class FeatureStore:
         return FeatureStore(
             feature_views=feature_views,
             combined_feature_views=combined_feature_views,
-            models={
-                name: FeatureStore._requests_for(
-                    RawStringFeatureRequest(model), feature_views, combined_feature_views
-                )
-                for name, model in repo.models.items()
-            },
+            models={model.name: model for model in repo.models},
             feature_source=source,
         )
 
@@ -229,13 +224,16 @@ class FeatureStore:
 
     def model(self, name: str) -> 'ModelFeatureStore':
         model = self.model_requests[name]
-        feature_referances = {f'{feature.feature_view}:{feature.name}' for feature in model.features} + {
-            f'{feature.feature_view}:{feature.name}' for feature in model.targets
-        }
-        request = FeatureStore._requests_for(
+        request = self.requests_for_model(model)
+        return ModelFeatureStore(self.feature_source, request)
+
+    def requests_for_model(self, model: ModelSchema) -> FeatureRequest:
+        feature_referances = {f'{feature.feature_view}:{feature.name}' for feature in model.features}.union(
+            {f'{feature.feature_view}:{feature.name}' for feature in model.targets or set()}
+        )
+        return FeatureStore._requests_for(
             RawStringFeatureRequest(feature_referances), self.feature_views, self.combined_feature_views
         )
-        return ModelFeatureStore(self.feature_source, request)
 
     @staticmethod
     def _requests_for(

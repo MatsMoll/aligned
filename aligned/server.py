@@ -100,7 +100,8 @@ class FastAPIServer:
 
     @staticmethod
     def model_path(name: str, feature_store: FeatureStore, app: FastAPI) -> None:
-        feature_request = feature_store.model_requests[name]
+        model = feature_store.model_requests[name]
+        feature_request = feature_store.requests_for_model(model)
 
         entities: set[Feature] = set()
         for request in feature_request.needed_requests:
