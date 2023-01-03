@@ -2,7 +2,9 @@
 
 Aligned help defining a single source of truth for logic while keeping the technology stack flexible. Such innovation has been possible by removing the need to depend on a processing engine, leading to less- and more transparent- code. Furthermore, the declarative API has made it possible to comment, add data validation, and define feature transformation at the same location. Therefore, it leads to a precise definition of the intended result.
 
-Read the post about [how Aligned was created on](https://matsmoll.github.io/2022/12/31/How-I-created-the-most-elegant-MLOps-tool.html)
+Read the post about [how the most elegant MLOps tool was created](https://matsmoll.github.io/2022/12/31/How-I-created-the-most-elegant-MLOps-tool.html)
+
+⚠️ Aligned is in alpha, so bugs will be likely. Even though Otovo use this for production.
 
 ## Feature Views
 
