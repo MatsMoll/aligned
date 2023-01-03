@@ -4,6 +4,8 @@ Aligned help defining a single source of truth for logic while keeping the techn
 
 Read the post about [how the most elegant MLOps tool was created](https://matsmoll.github.io/2022/12/31/How-I-created-the-most-elegant-MLOps-tool.html)
 
+Also check out the the [example repo](https://github.com/otovo/aligned-example) to see how it can be used
+
 ⚠️ Aligned is in alpha, so bugs will be likely. Even though Otovo use this for production.
 
 ## Feature Views
