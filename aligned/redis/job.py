@@ -2,16 +2,12 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
+import polars as pl
 
 from aligned.redis.config import RedisConfig
 from aligned.request.retrival_request import RetrivalRequest
-from aligned.retrival_job import FactualRetrivalJob
+from aligned.retrival_job import FactualRetrivalJob, RequestResult
 from aligned.schemas.feature import FeatureType
-
-try:
-    import dask.dataframe as dd
-except ModuleNotFoundError:
-    import pandas as dd
 
 
 @dataclass
@@ -21,7 +17,11 @@ class FactualRedisJob(FactualRetrivalJob):
     requests: list[RetrivalRequest]
     facts: dict[str, list]
 
-    async def _to_df(self) -> pd.DataFrame:
+    @property
+    def request_result(self) -> RequestResult:
+        return RequestResult.from_request_list(self.requests)
+
+    async def to_pandas(self) -> pd.DataFrame:
         redis = self.config.redis()
 
         result_df = pd.DataFrame(self.facts)
@@ -83,8 +83,5 @@ class FactualRedisJob(FactualRetrivalJob):
 
         return result_df
 
-    async def to_df(self) -> pd.DataFrame:
-        return await self._to_df()
-
-    async def _to_dask(self) -> dd.DataFrame:
-        return await self._to_df()
+    async def to_polars(self) -> pl.LazyFrame:
+        return pl.from_pandas(await self.to_pandas())

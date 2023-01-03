@@ -11,7 +11,7 @@ async def test_all_features(
     store = breast_scan_without_timestamp_feature_store
     feature_view = breast_scan_feature_viewout_with_datetime
 
-    features = await store.feature_view(feature_view.metadata.name).all().to_df()
+    features = await store.feature_view(feature_view.metadata.name).all().to_pandas()
 
     for feature in type(breast_scan_feature_viewout_with_datetime).select_all().features_to_include:
         assert feature in features.columns
@@ -22,6 +22,6 @@ async def test_all_features(
     assert 'scan_id' in features.columns
 
     limit = 10
-    limit_features = await store.feature_view(feature_view.metadata.name).all(limit=limit).to_df()
+    limit_features = await store.feature_view(feature_view.metadata.name).all(limit=limit).to_pandas()
 
     assert limit_features.shape[0] == limit

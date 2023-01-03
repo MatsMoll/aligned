@@ -9,7 +9,15 @@ async def test_transformations() -> None:
     supported = SupportedTransformations.shared()
 
     for transformation in supported.types.values():
-        await transformation.run_transformation_test()
+        await transformation.run_transformation_test_pandas()
+
+
+@pytest.mark.asyncio
+async def test_polars_transformation() -> None:
+    supported = SupportedTransformations.shared()
+
+    for transformation in supported.types.values():
+        await transformation.run_transformation_test_polars()
 
 
 @pytest.mark.asyncio
@@ -18,6 +26,6 @@ async def test_transformations_in_feture_view(alot_of_transforation_feature_stor
 
     amount = 100
 
-    data = await store.feature_view('titanic').all(limit=amount).to_df()
+    data = await store.feature_view('titanic').all(limit=amount).to_pandas()
 
     assert data.shape[0] == amount

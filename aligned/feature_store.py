@@ -16,11 +16,12 @@ from aligned.feature_source import (
 )
 from aligned.feature_view.combined_view import CombinedFeatureView, CompiledCombinedFeatureView
 from aligned.feature_view.feature_view import FeatureView
-from aligned.model import ModelService
+from aligned.model import Model
 from aligned.online_source import BatchOnlineSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
-from aligned.retrival_job import FilterJob, RetrivalJob
+from aligned.retrival_job import DerivedFeatureJob, FilterJob, RetrivalJob
 from aligned.schemas.feature_view import CompiledFeatureView
+from aligned.schemas.model import Model as ModelSchema
 from aligned.schemas.repo_definition import EnricherReference, RepoDefinition
 
 logger = logging.getLogger(__name__)
@@ -59,7 +60,7 @@ class FeatureStore:
     feature_source: FeatureSource
     feature_views: dict[str, CompiledFeatureView]
     combined_feature_views: dict[str, CompiledCombinedFeatureView]
-    model_requests: dict[str, FeatureRequest]
+    models: dict[str, ModelSchema]
     event_timestamp_column = 'event_timestamp'
 
     @property
@@ -70,7 +71,7 @@ class FeatureStore:
         self,
         feature_views: dict[str, CompiledFeatureView],
         combined_feature_views: dict[str, CompiledCombinedFeatureView],
-        models: dict[str, FeatureRequest],
+        models: dict[str, ModelSchema],
         feature_source: FeatureSource,
     ) -> None:
         self.feature_source = feature_source
@@ -122,6 +123,22 @@ class FeatureStore:
 
     @staticmethod
     def from_definition(repo: RepoDefinition, feature_source: FeatureSource | None = None) -> 'FeatureStore':
+        """Creates a feature store based on a repo definition
+        A feature source can also be defined if wanted, otherwise will the batch source be used for reads
+
+        ```
+        repo_file: bytes = ...
+        repo_def = RepoDefinition.from_json(repo_file)
+        feature_store = FeatureStore.from_definition(repo_def)
+        ```
+
+        Args:
+            repo (RepoDefinition): The definition to setup
+            feature_source (FeatureSource | None, optional): The source to read from and potentially write to.
+
+        Returns:
+            FeatureStore: A ready to use feature store
+        """
         source = feature_source or repo.online_source.feature_source(repo.feature_views)
         feature_views = {fv.name: fv for fv in repo.feature_views}
         combined_feature_views = {fv.name: fv for fv in repo.combined_feature_views}
@@ -211,7 +228,13 @@ class FeatureStore:
         )
 
     def model(self, name: str) -> 'ModelFeatureStore':
-        request = self.model_requests[name]
+        model = self.model_requests[name]
+        feature_referances = {f'{feature.feature_view}:{feature.name}' for feature in model.features} + {
+            f'{feature.feature_view}:{feature.name}' for feature in model.targets
+        }
+        request = FeatureStore._requests_for(
+            RawStringFeatureRequest(feature_referances), self.feature_views, self.combined_feature_views
+        )
         return ModelFeatureStore(self.feature_source, request)
 
     @staticmethod
@@ -281,9 +304,8 @@ class FeatureStore:
         compiled_view = await type(feature_view).compile()
         self.combined_feature_views[compiled_view.name] = compiled_view
 
-    def add_model_service(self, service: ModelService) -> None:
-        request = RawStringFeatureRequest(service.feature_refs)
-        self.model_requests[service.name] = self.requests_for(request)
+    def add_model(self, model: Model) -> None:
+        self.models[model.name] = model.schema()
 
     def offline_store(self) -> 'FeatureStore':
         return FeatureStore(
@@ -371,6 +393,27 @@ class FeatureViewStore:
     async def write(self, values: dict[str, list[Any]]) -> None:
         await self.batch_write(values)
 
+    async def process_input(self, values: dict[str, list[Any]]) -> dict[str, list[Any]]:
+        from pandas import DataFrame
+
+        from aligned.local.job import FileFullJob
+        from aligned.local.source import LiteralReference
+
+        request = self.view.request_all.needed_requests[0]
+        df = DataFrame.from_records(values)
+
+        if request.entity_names - set(df.columns):
+            missing = request.entity_names - set(df.columns)
+            raise ValueError(f'Missing entities: {missing}')
+
+        if request.all_required_feature_names - set(df.columns):
+            missing = request.all_required_feature_names - set(df.columns)
+            df[list(missing)] = None
+        output = await DerivedFeatureJob(
+            FileFullJob(LiteralReference(df), request), requests=[request]
+        ).to_pandas()
+        return output.to_dict('list')
+
     async def batch_write(self, values: dict[str, list[Any]]) -> None:
         if not isinstance(self.source, WritableFeatureSource):
             logger.info('Feature Source is not writable')
@@ -399,4 +442,7 @@ Will fill values with None, but it could be a potential problem: {missing}
             )
             df[list(missing)] = None
 
-        await self.source.write(FileFullJob(LiteralReference(df), request, limit=None), [request])
+        await self.source.write(
+            DerivedFeatureJob(FileFullJob(LiteralReference(df), request, limit=None), requests=[request]),
+            [request],
+        )

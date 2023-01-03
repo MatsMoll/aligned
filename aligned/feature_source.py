@@ -1,19 +1,16 @@
 from __future__ import annotations
 
-from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
+import polars as pl
 
 from aligned.data_source.batch_data_source import BatchDataSource
-from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
+from aligned.request.retrival_request import FeatureRequest, RequestResult, RetrivalRequest
 from aligned.retrival_job import FactualRetrivalJob
-
-with suppress(ModuleNotFoundError):
-    import dask.dataframe as dd
 
 if TYPE_CHECKING:
     from aligned.retrival_job import RetrivalJob
@@ -65,11 +62,12 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
             if request.feature_view_name in self.sources
         }
         # The combined views basicly, as they have no direct
-        requests = [
+        combined_requests = [
             request for request in request.needed_requests if request.feature_view_name not in self.sources
         ]
         jobs = [
-            self.source_types[source_group].feature_for(
+            self.source_types[source_group]
+            .feature_for(
                 facts=facts,
                 requests={
                     source: req
@@ -77,12 +75,17 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
                     if source.job_group_key() == source_group
                 },
             )
+            .derive_features(
+                requests=[
+                    req for source, req in core_requests.items() if source.job_group_key() == source_group
+                ]
+            )
             for source_group in source_groupes
         ]
         return CombineFactualJob(
             jobs=jobs,
-            combined_requests=requests,
-        )
+            combined_requests=combined_requests,
+        ).ensure_types(request.needed_requests)
 
     def all_for(self, request: FeatureRequest, limit: int | None = None) -> RetrivalJob:
         if len(request.needed_requests) != 1:
@@ -94,7 +97,12 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
                     'Make sure it is added to the featuer store',
                 )
             )
-        return self.sources[request.name].all_data(request.needed_requests[0], limit)
+        return (
+            self.sources[request.name]
+            .all_data(request.needed_requests[0], limit)
+            .derive_features(request.needed_requests)
+            .ensure_types(request.needed_requests)
+        )
 
     def all_between(self, start_date: datetime, end_date: datetime, request: FeatureRequest) -> RetrivalJob:
         if len(request.needed_requests) != 1:
@@ -106,10 +114,14 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
                     'Make sure it is added to the featuer store',
                 )
             )
-        return self.sources[request.name].all_between_dates(request.needed_requests[0], start_date, end_date)
+        return (
+            self.sources[request.name]
+            .all_between_dates(request.needed_requests[0], start_date, end_date)
+            .derive_features(requests=request.needed_requests)
+            .ensure_types(request.needed_requests)
+        )
 
 
-@dataclass
 class FactualInMemoryJob(FactualRetrivalJob):
     """
     A job using a in mem storage, aka a dict.
@@ -132,10 +144,21 @@ class FactualInMemoryJob(FactualRetrivalJob):
     requests: list[RetrivalRequest]
     facts: dict[str, list]
 
+    @property
+    def request_result(self) -> RequestResult:
+        return RequestResult.from_request_list(self.requests)
+
+    def __init__(
+        self, values: dict[str, Any], requests: list[RetrivalRequest], facts: dict[str, list]
+    ) -> None:
+        self.values = values
+        self.requests = requests
+        self.facts = facts
+
     def key(self, request: RetrivalRequest, entity: str, feature_name: str) -> str:
         return f'{request.feature_view_name}:{entity}:{feature_name}'
 
-    async def _to_df(self) -> pd.DataFrame:
+    async def to_pandas(self) -> pd.DataFrame:
 
         columns = set()
         for request in self.requests:
@@ -158,11 +181,8 @@ class FactualInMemoryJob(FactualRetrivalJob):
 
         return result_df
 
-    async def to_df(self) -> pd.DataFrame:
-        return await self._to_df()
-
-    async def _to_dask(self) -> dd.DataFrame:
-        return await self._to_df()
+    async def to_polars(self) -> pl.LazyFrame:
+        return pl.from_pandas(await self.to_pandas()).lazy()
 
 
 @dataclass
@@ -177,7 +197,7 @@ class InMemoryFeatureSource(FeatureSource, WritableFeatureSource):
         return f'{request.feature_view_name}:{entity}:{feature_name}'
 
     async def write(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
-        data = await job.to_df()
+        data = await job.to_pandas()
 
         for _, row in data.iterrows():
             # Run one query per row

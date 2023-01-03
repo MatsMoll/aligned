@@ -1,13 +1,12 @@
 from datetime import datetime
 
-from aligned.job_factory import JobFactory
 from aligned.local.job import FileDateJob, FileFactualJob, FileFullJob
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob
 from aligned.s3.config import AwsS3CsvDataSource
 
 
-class AwsS3JobFactory(JobFactory):
+class AwsS3JobFactory:
 
     source = AwsS3CsvDataSource
 

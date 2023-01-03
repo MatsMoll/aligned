@@ -4,7 +4,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from aioaws.s3 import S3Client
+try:
+    from aioaws.s3 import S3Client
+except ModuleNotFoundError:
+
+    class S3Client:  # type: ignore[no-redef]
+        pass
+
 
 from aligned.storage import Storage
 

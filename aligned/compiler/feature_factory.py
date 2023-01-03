@@ -101,7 +101,7 @@ class FeatureFactory:
         return [feat._name for feat in self.transformation.using_features if feat._name]
 
     def feature_referance(self) -> FeatureReferance:
-        return FeatureReferance(self.name, self._feature_view, self.dtype, self.transformation is not None)
+        return FeatureReferance(self.name, self._feature_view, self.dtype)
 
     async def feature(self) -> Feature:
         return Feature(
@@ -348,13 +348,6 @@ class ArithmeticFeature(ComparableFeature):
 
         feature = Float()
         feature.transformation = AbsoluteFactory(self)
-        return feature
-
-    def standard_scaled(self, timespan: timedelta | None = None, limit: int | None = None) -> Float:
-        from aligned.compiler.transformation_factory import StandardScalingFactory
-
-        feature = Float()
-        feature.transformation = StandardScalingFactory(feature=self, limit=limit, timespan=timespan)
         return feature
 
     def log1p(self) -> Float:

@@ -1,16 +1,25 @@
 from dataclasses import dataclass
+from datetime import datetime
 from io import BytesIO
 
 import pandas as pd
-from aioaws.s3 import S3Config
 from httpx import HTTPStatusError
 
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.exceptions import UnableToFindFileException
+from aligned.local.job import FileDateJob, FileFullJob
 from aligned.local.source import CsvConfig, DataFileReference, ParquetConfig, StorageFileReference
+from aligned.retrival_job import DateRangeJob, FullExtractJob, RetrivalRequest
 from aligned.s3.storage import AwsS3Storage
 from aligned.schemas.codable import Codable
 from aligned.storage import Storage
+
+try:
+    from aioaws.s3 import S3Config
+except ModuleNotFoundError:
+
+    class S3Config:  # type: ignore[no-redef]
+        pass
 
 
 @dataclass
@@ -121,9 +130,22 @@ class AwsS3CsvDataSource(BatchDataSource, DataFileReference, ColumnFeatureMappab
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
         buffer = BytesIO()
-        df.to_csv(buffer, sep=self.csv_config.seperator, index=self.csv_config.should_write_index, compression=self.csv_config.compression)
+        df.to_csv(
+            buffer,
+            sep=self.csv_config.seperator,
+            index=self.csv_config.should_write_index,
+            compression=self.csv_config.compression,
+        )
         buffer.seek(0)
         await self.storage.write(self.path, buffer.read())
+
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
+        return FileFullJob(self, request=request, limit=limit)
+
+    def all_between_dates(
+        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
+    ) -> DateRangeJob:
+        return FileDateJob(self, request, start_date, end_date)
 
 
 @dataclass

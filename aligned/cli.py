@@ -396,7 +396,7 @@ def profile(repo_path: str, reference_file: str, env_file: str, output: str, dat
     for feature_view_name in sorted(feature_store.feature_views.keys()):
         click.echo(f'Profiling: {feature_view_name}')
         feature_view = feature_store.feature_view(feature_view_name)
-        data_set: DataFrame = sync(feature_view.all(limit=dataset_size).to_df())
+        data_set: DataFrame = sync(feature_view.all(limit=dataset_size).to_pandas())
 
         all_features: list[Feature] = list(feature_view.view.features) + list(
             feature_view.view.derived_features

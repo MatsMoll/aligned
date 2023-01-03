@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from aligned.enricher import Enricher
-from aligned.model import ModelService
+from aligned.model import Model
 from aligned.online_source import BatchOnlineSource, OnlineSource
 from aligned.schemas.repo_definition import EnricherReference, RepoDefinition, RepoReference
 
@@ -80,7 +80,7 @@ class RepoReader:
         repo = RepoDefinition(
             feature_views=set(),
             combined_feature_views=set(),
-            models={},
+            models=set(),
             online_source=BatchOnlineSource(),
             enrichers=[],
         )
@@ -108,9 +108,11 @@ class RepoReader:
 
                 obj = getattr(module, attribute)
 
-                if isinstance(obj, ModelService):
-                    model_name = obj._name or attribute
-                    repo.models[model_name] = obj.feature_refs
+                if isinstance(obj, Model):
+                    if not obj.name:
+                        obj.name = attribute
+                    repo.models.add(obj.schema())
+
                 elif isinstance(obj, Enricher):
                     repo.enrichers.append(
                         EnricherReference(module=module_path, attribute_name=attribute, enricher=obj)

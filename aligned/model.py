@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Callable
 
@@ -6,7 +7,9 @@ from pandas import DataFrame
 
 from aligned.compiler.feature_factory import FeatureFactory
 from aligned.entity_data_source import EntityDataSource
-from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
+from aligned.request.retrival_request import FeatureRequest
+from aligned.schemas.feature import FeatureReferance
+from aligned.schemas.model import Model as ModelSchema
 
 logger = logging.getLogger(__name__)
 
@@ -44,36 +47,42 @@ class SqlEntityDataSource(EntityDataSource):
         return await self.all_in_range(now - timedelta(days=days, hours=hours, seconds=seconds), now)
 
 
-class ModelService:
-    feature_refs: set[str]
-    target_refs: set[str] | None
+@dataclass
+class Model:
+    features: set[FeatureRequest]
+    target: list[FeatureRequest] | FeatureFactory | None = field(default=None)
+    name: str | None = field(default=None)
 
-    _name: str | None
-    entity_source: SqlEntityDataSource | None
+    def schema(self) -> ModelSchema:
+        if not self.name:
+            raise ValueError(
+                'Missing name for model. You man need to set it manually using the `name` property.'
+            )
+        features: set[FeatureReferance] = set()
+        targets: set[FeatureReferance] = set()
 
-    @property
-    def name(self) -> str:
-        if not self._name:
-            raise ValueError('Model name is not set')
-        return self._name
+        for request in self.features:
+            features.update(
+                {
+                    FeatureReferance(feature.name, request.name, feature.dtype)
+                    for feature in request.request_result.features
+                }
+            )
 
-    def __init__(
-        self,
-        features: list[FeatureRequest],
-        targets: list[RetrivalRequest] | list[FeatureFactory] | None = None,
-        name: str | None = None,
-        entity_source: SqlEntityDataSource | None = None,
-    ) -> None:
-        self._name = name
-        self.entity_source = entity_source
-        self.feature_refs = set()
-        self.target_refs = set()
-        for request in features:
-            self.feature_refs.update({f'{request.name}:{feature}' for feature in request.features_to_include})
-        for request in targets or []:
-            if isinstance(targets, FeatureFactory):
-                self.target_refs = {f'{target}' for target in targets}
+        if self.target:
+            if isinstance(self.target, FeatureFactory):
+                targets.add(self.target.feature_referance())
             else:
-                self.target_refs.update(
-                    {f'{request.feature_view_name}:{feature}' for feature in request.all_feature_names}
-                )
+                for request in self.target:
+                    targets.update(
+                        {
+                            FeatureReferance(feature.name, request.name, feature.dtype)
+                            for feature in request.request_result.features
+                        }
+                    )
+
+        return ModelSchema(
+            name=self.name,
+            features=[feature.request_result for feature in self.features],
+            targets=targets if targets else None,
+        )

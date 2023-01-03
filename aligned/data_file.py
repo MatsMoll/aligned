@@ -1,4 +1,5 @@
 import pandas as pd
+import polars as pl
 
 
 class DataFileReference:
@@ -20,6 +21,9 @@ class DataFileReference:
 
     async def to_dask(self) -> pd.DataFrame:
         await self.read_dask()
+
+    async def to_polars(self) -> pl.LazyFrame:
+        raise NotImplementedError()
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
         raise NotImplementedError()

@@ -17,7 +17,111 @@ from aligned import (
 from aligned.compiler.transformation_factory import FillNaStrategy
 from aligned.feature_store import FeatureStore
 from aligned.feature_view.combined_view import CombinedFeatureView, CombinedFeatureViewMetadata
-from aligned.local.source import CsvFileSource, ParquetFileSource
+from aligned.local.source import CsvFileSource, FileFullJob, LiteralReference, ParquetFileSource
+from aligned.retrival_job import DerivedFeatureJob, RetrivalJob, RetrivalRequest
+from aligned.schemas.derivied_feature import DerivedFeature
+from aligned.schemas.feature import Feature, FeatureReferance, FeatureType
+
+
+@pytest.fixture
+def retrival_request_without_derived() -> RetrivalRequest:
+    return RetrivalRequest(
+        feature_view_name='test',
+        entities={Feature(name='id', dtype=FeatureType('').int32)},
+        features={
+            Feature(name='a', dtype=FeatureType('').int32),
+            Feature(name='b', dtype=FeatureType('').int32),
+        },
+        derived_features=set(),
+        event_timestamp=None,
+    )
+
+
+@pytest.fixture
+def retrival_job(retrival_request_without_derived: RetrivalRequest) -> RetrivalJob:
+    import pandas as pd
+
+    return FileFullJob(
+        LiteralReference(pd.DataFrame({'id': [1, 2, 3, 4, 5], 'a': [3, 4, 2, 3, 4], 'b': [1, 1, 1, 2, 4]})),
+        request=retrival_request_without_derived,
+    )
+
+
+@pytest.fixture
+def retrival_request_with_derived() -> RetrivalRequest:
+    from aligned.schemas.feature import EventTimestamp as TimestampFeature
+    from aligned.schemas.transformation import Addition
+
+    return RetrivalRequest(
+        feature_view_name='test_with_ts',
+        entities={Feature(name='id', dtype=FeatureType('').int32)},
+        features={
+            Feature(name='c', dtype=FeatureType('').int32),
+            Feature(name='d', dtype=FeatureType('').int32),
+        },
+        derived_features={
+            DerivedFeature(
+                name='c+d',
+                dtype=FeatureType('').int32,
+                depending_on={
+                    FeatureReferance(name='c', feature_view='test_with_ts', dtype=FeatureType('').int32),
+                    FeatureReferance(name='d', feature_view='test_with_ts', dtype=FeatureType('').int32),
+                },
+                transformation=Addition(front='c', behind='d'),
+                depth=1,
+            )
+        },
+        event_timestamp=TimestampFeature(name='created_at'),
+    )
+
+
+@pytest.fixture
+def retrival_job_with_timestamp(retrival_request_with_derived: RetrivalRequest) -> RetrivalJob:
+    from datetime import datetime, timedelta
+
+    import pandas as pd
+
+    date = datetime(year=2022, month=1, day=1)
+    one_day = timedelta(days=1)
+    return DerivedFeatureJob(
+        job=FileFullJob(
+            LiteralReference(
+                pd.DataFrame(
+                    {
+                        'id': [1, 2, 3, 4, 5],
+                        'c': [3, 4, 2, 3, 4],
+                        'd': [1, 1, 1, 2, 4],
+                        'created_at': [date, date, date + one_day, date + one_day, date + one_day],
+                    }
+                )
+            ),
+            request=retrival_request_with_derived,
+        ),
+        requests=[retrival_request_with_derived],
+    )
+
+
+@pytest.fixture
+def combined_retrival_request() -> RetrivalRequest:
+    from aligned.schemas.transformation import Addition
+
+    return RetrivalRequest(
+        feature_view_name='combined',
+        entities={Feature(name='id', dtype=FeatureType('').int32)},
+        features=set(),
+        derived_features={
+            DerivedFeature(
+                name='a+c+d',
+                dtype=FeatureType('').int32,
+                depending_on={
+                    FeatureReferance(name='c+d', feature_view='test_with_ts', dtype=FeatureType('').int32),
+                    FeatureReferance(name='a', feature_view='test', dtype=FeatureType('').int32),
+                },
+                transformation=Addition(front='c+d', behind='a'),
+                depth=2,
+            )
+        },
+    )
 
 
 @pytest.fixture
@@ -92,11 +196,74 @@ async def breast_scan_without_timestamp_feature_store(breast_scan_feature_viewou
 
 @pytest.fixture
 def scan_with_datetime() -> CsvFileSource:
-    return FileSource.csv_at(path='test_data/data-with-datetime.csv', mapping_keys={'id': 'scan_id'})
+    return FileSource.csv_at(path='test_data/data-with-datetime.csv')
 
 
 @pytest.fixture
 def breast_scan_feature_view_with_datetime(scan_with_datetime: CsvFileSource) -> FeatureView:
+    class BreastDiagnoseFeatureView(FeatureView):
+
+        metadata = FeatureViewMetadata(
+            name='breast_features',
+            description='Features defining a scan and diagnose of potential cancer cells',
+            tags={},
+            batch_source=scan_with_datetime,
+        )
+
+        scan_id = Entity(dtype=Int32())
+
+        created_at = EventTimestamp()
+
+        diagnosis = String().description('The given diagnose. M for malignant, and B for benigne')
+        is_malignant = (diagnosis == 'M').description('If the scanned cells was diagnosed as dangerous')
+
+        radius_mean = Float()
+        radius_se = Float()
+        radius_worst = Float()
+
+        texture_mean = Float()
+        texture_se = Float()
+        texture_worst = Float()
+
+        perimeter_mean = Float()
+        perimeter_se = Float()
+        perimeter_worst = Float()
+
+        area_mean = Float()
+        area_se = Float()
+        area_worst = Float()
+
+        smoothness_mean = Float()
+        smoothness_se = Float()
+        smoothness_worst = Float()
+
+        compactness_mean = Float()
+        compactness_se = Float()
+        compactness_worst = Float()
+
+        concavity_mean = Float()
+        concavity_se = Float()
+        concavity_worst = Float()
+
+        concave_points_mean = Float()
+        concave_points_se = Float()
+        concave_points_worst = Float()
+
+        symmetry_mean = Float()
+        symmetry_se = Float()
+        symmetry_worst = Float()
+
+        fractal_dimension_mean = Float()
+        fractal_dimension_se = Float()
+        fractal_dimension_worst = Float()
+
+        mean_fd_worst = fractal_dimension_worst.mean()
+
+    return BreastDiagnoseFeatureView()
+
+
+@pytest.fixture
+def breast_scan_feature_view_with_datetime_and_aggregation(scan_with_datetime: CsvFileSource) -> FeatureView:
     class BreastDiagnoseFeatureView(FeatureView):
 
         metadata = FeatureViewMetadata(
@@ -166,6 +333,15 @@ async def breast_scan_with_timestamp_feature_store(breast_scan_feature_view_with
     return store
 
 
+@pytest_asyncio.fixture
+async def breast_scan_with_timestamp_and_aggregation_feature_store(
+    breast_scan_feature_view_with_datetime_and_aggregation: FeatureView,
+):
+    store = FeatureStore.experimental()
+    await store.add_feature_view(breast_scan_feature_view_with_datetime_and_aggregation)
+    return store
+
+
 @pytest.fixture
 def titanic_source() -> CsvFileSource:
     return FileSource.csv_at(
@@ -218,7 +394,6 @@ def titanic_feature_view(titanic_source: CsvFileSource) -> FeatureView:
         # Transformed features
         has_siblings = sibsp != 0
         is_male, is_female = sex.one_hot_encode(['male', 'female'])
-        scaled_age = age.standard_scaled(limit=100)
         is_mr = name.contains('Mr.')
 
     return TitanicPassenger()
@@ -294,18 +469,14 @@ def alot_of_transforations_feature_view(titanic_source: CsvFileSource) -> Featur
         has_siblings = sibsp != 0
         is_male, is_female = sex.one_hot_encode(['male', 'female'])
         ordinal_sex = sex.ordinal_categories(['male', 'female'])
-        scaled_age = age.standard_scaled(limit=100)
         filled_age = age.fill_na(FillNaStrategy.mean(limit=100))
         is_mr = name.contains('Mr.')
 
-        ratio = scaled_age / age
-        floor_ratio = scaled_age // age
         adding = sibsp + age
         subtracting = sibsp - age
         floored_age = floor(age)
         ceiled_age = ceil(age)
         rounded_age = round(age)
-        abs_scaled_age = abs(scaled_age)
 
         inverted_is_mr = ~is_mr
         logical_and = is_mr & survived
@@ -337,7 +508,7 @@ async def combined_view(
         cancer_scan = breast_scan_feature_viewout_with_datetime
 
         some_feature = titanic.age + cancer_scan.radius_mean
-        other_feature = titanic.scaled_age + cancer_scan.radius_mean
+        other_feature = titanic.sibsp + cancer_scan.radius_mean
 
     return SomeCombinedView()
 
