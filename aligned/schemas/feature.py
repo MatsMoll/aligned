@@ -143,7 +143,7 @@ class FeatureReferance(Codable):
     name: str
     feature_view: str
     dtype: FeatureType
-    is_derived: bool
+    # is_derived: bool
 
     def __hash__(self) -> int:
         return hash(self.name)

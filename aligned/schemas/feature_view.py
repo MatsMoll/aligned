@@ -61,22 +61,23 @@ class CompiledFeatureView(Codable):
             intermediate_features = set()
 
             for dep_ref in feature.depending_on:
-                if dep_ref.is_derived:
-                    dep_features = [feat for feat in self.derived_features if feat.name == dep_ref.name]
-                    if not dep_features:
-                        raise ValueError(
-                            'Unable to find the referenced feature. This is most likely a bug in the systemd'
-                        )
-                    dep_feature = dep_features[0]
-                    intermediate_features.add(dep_feature)
-                    core, intermediate = dependent_features_for(dep_feature)
-                    features.update(core)
-                    intermediate_features.update(intermediate)
-                else:
-                    dep_feature = [
-                        feat for feat in self.features.union(self.entities) if feat.name == dep_ref.name
-                    ][0]
-                    core_features.add(dep_feature)
+                dep_feature = [
+                    feat for feat in self.features.union(self.entities) if feat.name == dep_ref.name
+                ]
+                if len(dep_feature) == 1:
+                    core_features.add(dep_feature[0])
+                    continue
+
+                dep_features = [feat for feat in self.derived_features if feat.name == dep_ref.name]
+                if not dep_features:
+                    raise ValueError(
+                        'Unable to find the referenced feature. This is most likely a bug in the systemd'
+                    )
+                dep_feature = dep_features[0]
+                intermediate_features.add(dep_feature)
+                core, intermediate = dependent_features_for(dep_feature)
+                features.update(core)
+                intermediate_features.update(intermediate)
 
             return core_features, intermediate_features
 

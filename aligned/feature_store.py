@@ -16,11 +16,12 @@ from aligned.feature_source import (
 )
 from aligned.feature_view.combined_view import CombinedFeatureView, CompiledCombinedFeatureView
 from aligned.feature_view.feature_view import FeatureView
-from aligned.model import ModelService
+from aligned.model import Model
 from aligned.online_source import BatchOnlineSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import DerivedFeatureJob, FilterJob, RetrivalJob
 from aligned.schemas.feature_view import CompiledFeatureView
+from aligned.schemas.model import Model as ModelSchema
 from aligned.schemas.repo_definition import EnricherReference, RepoDefinition
 
 logger = logging.getLogger(__name__)
@@ -59,7 +60,7 @@ class FeatureStore:
     feature_source: FeatureSource
     feature_views: dict[str, CompiledFeatureView]
     combined_feature_views: dict[str, CompiledCombinedFeatureView]
-    model_requests: dict[str, FeatureRequest]
+    models: dict[str, ModelSchema]
     event_timestamp_column = 'event_timestamp'
 
     @property
@@ -70,7 +71,7 @@ class FeatureStore:
         self,
         feature_views: dict[str, CompiledFeatureView],
         combined_feature_views: dict[str, CompiledCombinedFeatureView],
-        models: dict[str, FeatureRequest],
+        models: dict[str, ModelSchema],
         feature_source: FeatureSource,
     ) -> None:
         self.feature_source = feature_source
@@ -227,7 +228,13 @@ class FeatureStore:
         )
 
     def model(self, name: str) -> 'ModelFeatureStore':
-        request = self.model_requests[name]
+        model = self.model_requests[name]
+        feature_referances = {f'{feature.feature_view}:{feature.name}' for feature in model.features} + {
+            f'{feature.feature_view}:{feature.name}' for feature in model.targets
+        }
+        request = FeatureStore._requests_for(
+            RawStringFeatureRequest(feature_referances), self.feature_views, self.combined_feature_views
+        )
         return ModelFeatureStore(self.feature_source, request)
 
     @staticmethod
@@ -297,9 +304,8 @@ class FeatureStore:
         compiled_view = await type(feature_view).compile()
         self.combined_feature_views[compiled_view.name] = compiled_view
 
-    def add_model_service(self, service: ModelService) -> None:
-        request = RawStringFeatureRequest(service.feature_refs)
-        self.model_requests[service.name] = self.requests_for(request)
+    def add_model(self, model: Model) -> None:
+        self.models[model.name] = model.schema()
 
     def offline_store(self) -> 'FeatureStore':
         return FeatureStore(

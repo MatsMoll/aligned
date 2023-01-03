@@ -64,12 +64,8 @@ def retrival_request_with_derived() -> RetrivalRequest:
                 name='c+d',
                 dtype=FeatureType('').int32,
                 depending_on={
-                    FeatureReferance(
-                        name='c', feature_view='test_with_ts', dtype=FeatureType('').int32, is_derived=False
-                    ),
-                    FeatureReferance(
-                        name='d', feature_view='test_with_ts', dtype=FeatureType('').int32, is_derived=False
-                    ),
+                    FeatureReferance(name='c', feature_view='test_with_ts', dtype=FeatureType('').int32),
+                    FeatureReferance(name='d', feature_view='test_with_ts', dtype=FeatureType('').int32),
                 },
                 transformation=Addition(front='c', behind='d'),
                 depth=1,
@@ -118,12 +114,8 @@ def combined_retrival_request() -> RetrivalRequest:
                 name='a+c+d',
                 dtype=FeatureType('').int32,
                 depending_on={
-                    FeatureReferance(
-                        name='c+d', feature_view='test_with_ts', dtype=FeatureType('').int32, is_derived=True
-                    ),
-                    FeatureReferance(
-                        name='a', feature_view='test', dtype=FeatureType('').int32, is_derived=False
-                    ),
+                    FeatureReferance(name='c+d', feature_view='test_with_ts', dtype=FeatureType('').int32),
+                    FeatureReferance(name='a', feature_view='test', dtype=FeatureType('').int32),
                 },
                 transformation=Addition(front='c+d', behind='a'),
                 depth=2,

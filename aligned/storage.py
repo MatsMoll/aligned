@@ -1,7 +1,4 @@
-from abc import ABC
-
-
-class Storage(ABC):
+class Storage:
     async def read(self, path: str) -> bytes:
         raise NotImplementedError()
 
