@@ -19,7 +19,7 @@ from aligned.feature_view.feature_view import FeatureView
 from aligned.model import ModelService
 from aligned.online_source import BatchOnlineSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
-from aligned.retrival_job import FilterJob, RetrivalJob
+from aligned.retrival_job import DerivedFeatureJob, FilterJob, RetrivalJob
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.repo_definition import EnricherReference, RepoDefinition
 
@@ -122,6 +122,22 @@ class FeatureStore:
 
     @staticmethod
     def from_definition(repo: RepoDefinition, feature_source: FeatureSource | None = None) -> 'FeatureStore':
+        """Creates a feature store based on a repo definition
+        A feature source can also be defined if wanted, otherwise will the batch source be used for reads
+
+        ```
+        repo_file: bytes = ...
+        repo_def = RepoDefinition.from_json(repo_file)
+        feature_store = FeatureStore.from_definition(repo_def)
+        ```
+
+        Args:
+            repo (RepoDefinition): The definition to setup
+            feature_source (FeatureSource | None, optional): The source to read from and potentially write to.
+
+        Returns:
+            FeatureStore: A ready to use feature store
+        """
         source = feature_source or repo.online_source.feature_source(repo.feature_views)
         feature_views = {fv.name: fv for fv in repo.feature_views}
         combined_feature_views = {fv.name: fv for fv in repo.combined_feature_views}
@@ -387,7 +403,9 @@ class FeatureViewStore:
         if request.all_required_feature_names - set(df.columns):
             missing = request.all_required_feature_names - set(df.columns)
             df[list(missing)] = None
-        output = await FileFullJob(LiteralReference(df), request).to_pandas()
+        output = await DerivedFeatureJob(
+            FileFullJob(LiteralReference(df), request), requests=[request]
+        ).to_pandas()
         return output.to_dict('list')
 
     async def batch_write(self, values: dict[str, list[Any]]) -> None:
@@ -418,4 +436,7 @@ Will fill values with None, but it could be a potential problem: {missing}
             )
             df[list(missing)] = None
 
-        await self.source.write(FileFullJob(LiteralReference(df), request, limit=None), [request])
+        await self.source.write(
+            DerivedFeatureJob(FileFullJob(LiteralReference(df), request, limit=None), requests=[request]),
+            [request],
+        )

@@ -278,3 +278,6 @@ class LiteralReference(DataFileReference):
 
     async def read_pandas(self) -> pd.DataFrame:
         return self.file
+
+    async def to_polars(self) -> pl.LazyFrame:
+        return pl.from_pandas(self.file).lazy()

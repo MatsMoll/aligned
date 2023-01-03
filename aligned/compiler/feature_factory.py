@@ -350,13 +350,6 @@ class ArithmeticFeature(ComparableFeature):
         feature.transformation = AbsoluteFactory(self)
         return feature
 
-    def standard_scaled(self, timespan: timedelta | None = None, limit: int | None = None) -> Float:
-        from aligned.compiler.transformation_factory import StandardScalingFactory
-
-        feature = Float()
-        feature.transformation = StandardScalingFactory(feature=self, limit=limit, timespan=timespan)
-        return feature
-
     def log1p(self) -> Float:
         from aligned.compiler.transformation_factory import LogTransformFactory
 

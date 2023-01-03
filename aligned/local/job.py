@@ -1,22 +1,13 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TypeVar
 
 import pandas as pd
 import polars as pl
 
-from aligned.data_source.batch_data_source import ColumnFeatureMappable
 from aligned.local.source import DataFileReference
 from aligned.request.retrival_request import RetrivalRequest
-from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob
+from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RequestResult
 from aligned.schemas.feature import Feature
-
-try:
-    import dask.dataframe as dd
-except ModuleNotFoundError:
-    import pandas as dd
-
-GenericDataFrame = TypeVar('GenericDataFrame', pd.DataFrame, dd.DataFrame)
 
 
 @dataclass
@@ -26,7 +17,13 @@ class FileFullJob(FullExtractJob):
     request: RetrivalRequest
     limit: int | None = field(default=None)
 
-    def file_transformations(self, df: GenericDataFrame) -> GenericDataFrame:
+    @property
+    def request_result(self) -> RequestResult:
+        return self.request.request_result
+
+    def file_transformations(self, df: pd.DataFrame) -> pd.DataFrame:
+        from aligned.data_source.batch_data_source import ColumnFeatureMappable
+
         entity_names = self.request.entity_names
         all_names = list(self.request.all_required_feature_names.union(entity_names))
 
@@ -44,6 +41,7 @@ class FileFullJob(FullExtractJob):
             return df
 
     def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
+        from aligned.data_source.batch_data_source import ColumnFeatureMappable
 
         entity_names = self.request.entity_names
         all_names = list(self.request.all_required_feature_names.union(entity_names))
@@ -63,15 +61,11 @@ class FileFullJob(FullExtractJob):
         else:
             return df
 
-    async def _to_df(self) -> pd.DataFrame:
+    async def to_pandas(self) -> pd.DataFrame:
         file = await self.source.read_pandas()
         return self.file_transformations(file)
 
-    async def _to_dask(self) -> dd.DataFrame:
-        file = await self.source.read_dask()
-        return self.file_transformations(file)
-
-    async def _to_polars(self) -> pl.LazyFrame:
+    async def to_polars(self) -> pl.LazyFrame:
         file = await self.source.to_polars()
         return self.file_transform_polars(file)
 
@@ -84,7 +78,12 @@ class FileDateJob(DateRangeJob):
     start_date: datetime
     end_date: datetime
 
-    def file_transformations(self, df: GenericDataFrame) -> GenericDataFrame:
+    @property
+    def request_result(self) -> RequestResult:
+        return self.request.request_result
+
+    def file_transformations(self, df: pd.DataFrame) -> pd.DataFrame:
+        from aligned.data_source.batch_data_source import ColumnFeatureMappable
 
         entity_names = self.request.entity_names
         all_names = list(self.request.all_required_feature_names.union(entity_names))
@@ -109,6 +108,7 @@ class FileDateJob(DateRangeJob):
         return df.loc[df[event_timestamp_column].between(start_date_ts, end_date_ts)]
 
     def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
+        from aligned.data_source.batch_data_source import ColumnFeatureMappable
 
         entity_names = self.request.entity_names
         all_names = list(self.request.all_required_feature_names.union(entity_names))
@@ -124,15 +124,11 @@ class FileDateJob(DateRangeJob):
 
         return df.filter(pl.col(event_timestamp_column).is_between(self.start_date, self.end_date))
 
-    async def _to_df(self) -> pd.DataFrame:
+    async def to_pandas(self) -> pd.DataFrame:
         file = await self.source.read_pandas()
         return self.file_transformations(file)
 
-    async def _to_dask(self) -> dd.DataFrame:
-        file = await self.source.read_dask()
-        return self.file_transformations(file)
-
-    async def _to_polars(self) -> pl.LazyFrame:
+    async def to_polars(self) -> pl.LazyFrame:
         file = await self.source.to_polars()
         return self.file_transform_polars(file)
 
@@ -144,7 +140,13 @@ class FileFactualJob(FactualRetrivalJob):
     requests: list[RetrivalRequest]
     facts: dict[str, list]
 
-    def file_transformations(self, df: GenericDataFrame) -> GenericDataFrame:
+    @property
+    def request_result(self) -> RequestResult:
+        return RequestResult.from_request_list(self.requests)
+
+    def file_transformations(self, df: pd.DataFrame) -> pd.DataFrame:
+        from aligned.data_source.batch_data_source import ColumnFeatureMappable
+
         all_features: set[Feature] = set()
         for request in self.requests:
             all_features.update(request.all_required_features)
@@ -178,13 +180,9 @@ class FileFactualJob(FactualRetrivalJob):
 
         return result
 
-    async def _to_df(self) -> pd.DataFrame:
+    async def to_pandas(self) -> pd.DataFrame:
         file = await self.source.read_pandas()
         return self.file_transformations(file)
 
-    async def _to_dask(self) -> dd.DataFrame:
-        file = await self.source.read_dask()
-        return self.file_transformations(file)
-
-    async def _to_polars(self) -> pl.LazyFrame:
-        return pl.from_pandas(await self._to_df())
+    async def to_polars(self) -> pl.LazyFrame:
+        return pl.from_pandas(await self.to_pandas())

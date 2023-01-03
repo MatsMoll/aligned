@@ -54,6 +54,9 @@ class PanderaValidator(Validator):
             if error.failure_cases.shape[0] == df.shape[0]:
                 raise ValueError('Validation is removing all the data.')
 
+            if error.failure_cases['index'].iloc[0] is None:
+                raise ValueError(error)
+
             return await self.validate_pandas(
                 features, df.loc[df.index.delete(error.failure_cases['index'])].reset_index()
             )

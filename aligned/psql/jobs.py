@@ -8,7 +8,7 @@ import pandas as pd
 import polars as pl
 
 from aligned.psql.data_source import PostgreSQLConfig, PostgreSQLDataSource
-from aligned.request.retrival_request import RetrivalRequest
+from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
 from aligned.schemas.feature import FeatureType
 
@@ -36,7 +36,7 @@ class PostgreSQLRetrivalJob(RetrivalJob):
     def build_request(self) -> SQLQuery:
         raise NotImplementedError()
 
-    async def _to_df(self) -> pd.DataFrame:
+    async def to_pandas(self) -> pd.DataFrame:
         sql_request = self.build_request()
 
         try:
@@ -52,12 +52,8 @@ class PostgreSQLRetrivalJob(RetrivalJob):
             logger.error(error)
             raise error
 
-    async def _to_dask(self) -> dd.DataFrame:
-        df = await self._to_df()
-        return dd.from_pandas(df)
-
-    async def _to_polars(self) -> pl.LazyFrame:
-        return pl.from_pandas(await self._to_df())
+    async def to_polars(self) -> pl.LazyFrame:
+        return pl.from_pandas(await self.to_pandas())
 
 
 @dataclass
@@ -66,6 +62,10 @@ class FullExtractPsqlJob(PostgreSQLRetrivalJob, FullExtractJob):
     source: PostgreSQLDataSource
     request: RetrivalRequest
     limit: int | None = None
+
+    @property
+    def request_result(self) -> RequestResult:
+        return RequestResult.from_request(self.request)
 
     @property
     def config(self) -> PostgreSQLConfig:
@@ -102,6 +102,10 @@ class DateRangePsqlJob(PostgreSQLRetrivalJob, DateRangeJob):
     request: RetrivalRequest
 
     @property
+    def request_result(self) -> RequestResult:
+        return RequestResult.from_request(self.request)
+
+    @property
     def config(self) -> PostgreSQLConfig:
         return self.source.config
 
@@ -124,7 +128,7 @@ class DateRangePsqlJob(PostgreSQLRetrivalJob, DateRangeJob):
         return SQLQuery(
             sql=(
                 f'SELECT {column_select} FROM {schema}"{self.source.table}" WHERE'
-                f' {event_timestamp_column} BETWEEN (:start_date) AND (:end_date)'
+                f' {event_timestamp_column} BETWEEN (%(start_date)s) AND (%(end_date)s)'
             ),
             values={'start_date': self.start_date, 'end_date': self.end_date},
         )
@@ -132,10 +136,21 @@ class DateRangePsqlJob(PostgreSQLRetrivalJob, DateRangeJob):
 
 @dataclass
 class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
+    """Fetches features for defined facts within a postgres DB
+
+    It is supported to fetch from different tables, in one request
+    This is hy the `source` property is a dict with sources
+
+    NB: It is expected that the data sources are for the same psql instance
+    """
 
     sources: dict[str, PostgreSQLDataSource]
     requests: list[RetrivalRequest]
     facts: dict[str, list]
+
+    @property
+    def request_result(self) -> RequestResult:
+        return RequestResult.from_request_list(self.requests)
 
     @property
     def config(self) -> PostgreSQLConfig:
