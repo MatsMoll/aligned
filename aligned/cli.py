@@ -23,10 +23,7 @@ def sync(method: Coroutine) -> Any:
 
 def make_tzaware(t: datetime) -> datetime:
     """We assume tz-naive datetimes are UTC"""
-    if t.tzinfo is None:
-        return t.replace(tzinfo=utc)
-    else:
-        return t
+    return t.replace(tzinfo=utc) if t.tzinfo is None else t
 
 
 def load_envs(path: Path) -> None:
@@ -403,18 +400,17 @@ def profile(repo_path: str, reference_file: str, env_file: str, output: str, dat
         )
         for feature in all_features:
 
-            data_slice = data_set[feature.name]
-
             reference = f'{feature_view_name}:{feature.name}'
 
+            data_slice = data_set[feature.name]
             if (not feature.dtype.is_numeric) or feature.dtype.name == 'bool':
                 unique_values = data_slice.unique()
                 filter_unique_nan_values = [
                     value
                     for value in unique_values
-                    if not (
-                        str(value).lower() == 'nan' or str(value).lower() == 'nat' or str(value) == '<NA>'
-                    )
+                    if str(value).lower() != 'nan'
+                    and str(value).lower() != 'nat'
+                    and str(value) != '<NA>'
                 ]
 
                 results.categorical_features[reference] = CategoricalFeatureSummary(
@@ -442,12 +438,25 @@ def profile(repo_path: str, reference_file: str, env_file: str, output: str, dat
                     histogram, _ = np.histogram(data_slice.loc[~data_slice.isna()].values, cuts)
 
                 results.numeric_features[reference] = NumericFeatureSummary(
-                    missing_percentage=(data_slice.isna() | data_slice.isnull()).sum() / data_slice.shape[0],
-                    mean=description['mean'] if not np.isnan(description['mean']) else None,
-                    median=description['50%'] if not np.isnan(description['50%']) else None,
-                    std=description['std'] if not np.isnan(description['std']) else None,
-                    lowest=description['min'] if not np.isnan(description['min']) else None,
-                    highests=description['max'] if not np.isnan(description['max']) else None,
+                    missing_percentage=(
+                        data_slice.isna() | data_slice.isnull()
+                    ).sum()
+                    / data_slice.shape[0],
+                    mean=None
+                    if np.isnan(description['mean'])
+                    else description['mean'],
+                    median=None
+                    if np.isnan(description['50%'])
+                    else description['50%'],
+                    std=None
+                    if np.isnan(description['std'])
+                    else description['std'],
+                    lowest=None
+                    if np.isnan(description['min'])
+                    else description['min'],
+                    highests=None
+                    if np.isnan(description['max'])
+                    else description['max'],
                     histogram_count=list(histogram),
                     histogram_splits=list(cuts),
                 )

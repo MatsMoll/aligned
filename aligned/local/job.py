@@ -31,14 +31,9 @@ class FileFullJob(FullExtractJob):
         if isinstance(self.source, ColumnFeatureMappable):
             request_features = self.source.feature_identifier_for(all_names)
 
-        df = df.rename(
-            columns={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)},
-        )
+        df = df.rename(columns=dict(zip(request_features, all_names)))
 
-        if self.limit and df.shape[0] > self.limit:
-            return df.iloc[: self.limit]
-        else:
-            return df
+        return df.iloc[: self.limit] if self.limit and df.shape[0] > self.limit else df
 
     def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
@@ -56,10 +51,7 @@ class FileFullJob(FullExtractJob):
         }
         df = df.rename(mapping=renames)
 
-        if self.limit:
-            return df.limit(self.limit)
-        else:
-            return df
+        return df.limit(self.limit) if self.limit else df
 
     async def to_pandas(self) -> pd.DataFrame:
         file = await self.source.read_pandas()
@@ -92,10 +84,7 @@ class FileDateJob(DateRangeJob):
         if isinstance(self.source, ColumnFeatureMappable):
             request_features = self.source.feature_identifier_for(all_names)
 
-        df.rename(
-            columns={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)},
-            inplace=True,
-        )
+        df.rename(columns=dict(zip(request_features, all_names)), inplace=True)
 
         event_timestamp_column = self.request.event_timestamp.name
         # Making sure it is in the correct format
@@ -117,9 +106,7 @@ class FileDateJob(DateRangeJob):
         if isinstance(self.source, ColumnFeatureMappable):
             request_features = self.source.feature_identifier_for(all_names)
 
-        df = df.rename(
-            mapping={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)}
-        )
+        df = df.rename(mapping=dict(zip(request_features, all_names)))
         event_timestamp_column = self.request.event_timestamp.name
 
         return df.filter(pl.col(event_timestamp_column).is_between(self.start_date, self.end_date))
@@ -173,9 +160,7 @@ class FileFactualJob(FactualRetrivalJob):
                 set_mask = set_mask & (pd.Series(self.facts[entity]).isin(df[entity_source_name]))
 
             feature_df = df.loc[mask, request_features]
-            feature_df = feature_df.rename(
-                columns={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)},
-            )
+            feature_df = feature_df.rename(columns=dict(zip(request_features, all_names)))
             result.loc[set_mask, list(all_names)] = feature_df.reset_index(drop=True)
 
         return result

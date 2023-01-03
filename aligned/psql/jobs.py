@@ -84,10 +84,7 @@ class FullExtractPsqlJob(PostgreSQLRetrivalJob, FullExtractJob):
         column_select = ', '.join(columns)
         schema = f'{self.config.schema}.' if self.config.schema else ''
 
-        limit_query = ''
-        if self.limit:
-            limit_query = f'LIMIT {int(self.limit)}'
-
+        limit_query = f'LIMIT {int(self.limit)}' if self.limit else ''
         return SQLQuery(
             sql=f'SELECT {column_select} FROM {schema}"{self.source.table}" {limit_query}',
         )
@@ -163,7 +160,7 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
             return 'text'
         if dtype == FeatureType('').uuid:
             return 'uuid'
-        if dtype == FeatureType('').int32 or dtype == FeatureType('').int64:
+        if dtype in [FeatureType('').int32, FeatureType('').int64]:
             return 'integer'
         if dtype == FeatureType('').datetime:
             return 'TIMESTAMP WITH TIME ZONE'

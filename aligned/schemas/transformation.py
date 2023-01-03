@@ -914,7 +914,9 @@ class Ordinal(Transformation):
         return df[self.key].map(self.orders_dict)
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
-        mapper = pl.DataFrame({self.key: list(self.orders), alias: list(range(0, len(self.orders)))})
+        mapper = pl.DataFrame(
+            {self.key: list(self.orders), alias: list(range(len(self.orders)))}
+        )
         return df.join(mapper.lazy(), on=self.key, how='left')
 
     @staticmethod
@@ -1175,17 +1177,14 @@ class Mean(Transformation):
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
 
-        # df.set_index("event_timestamp").rolling(2).mean()
-
-        if self.group_keys:
-            if len(self.group_keys) == 1:
-                group_key = self.group_keys[0]
-                group_by_result = df.groupby(group_key)[self.key].mean()
-                return df[group_key].map(group_by_result)
-            else:
-                raise ValueError('Group by with multiple keys is not suppported yet')
-        else:
+        if not self.group_keys:
             return df[self.key].mean()
+        if len(self.group_keys) == 1:
+            group_key = self.group_keys[0]
+            group_by_result = df.groupby(group_key)[self.key].mean()
+            return df[group_key].map(group_by_result)
+        else:
+            raise ValueError('Group by with multiple keys is not suppported yet')
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
 

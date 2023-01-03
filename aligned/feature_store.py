@@ -255,24 +255,18 @@ class FeatureStore:
                     sub_requests = cfv.request_all
                 else:
                     sub_requests = cfv.requests_for(features[feature_view_name])
-                requests.extend(sub_requests.needed_requests)
-                for request in sub_requests.needed_requests:
-                    entity_names.update(request.entity_names)
-                    if request.event_timestamp:
-                        needs_event_timestamp = True
-
             else:
                 feature_view = feature_views[feature_view_name]
                 if len(features[feature_view_name]) == 1 and list(features[feature_view_name])[0] == '*':
                     sub_requests = feature_view.request_all
                 else:
                     sub_requests = feature_view.request_for(features[feature_view_name])
-                requests.extend(sub_requests.needed_requests)
-                for request in sub_requests.needed_requests:
-                    entity_names.update(request.entity_names)
-                    if request.event_timestamp:
-                        needs_event_timestamp = True
+            for request in sub_requests.needed_requests:
+                entity_names.update(request.entity_names)
+                if request.event_timestamp:
+                    needs_event_timestamp = True
 
+            requests.extend(sub_requests.needed_requests)
         if needs_event_timestamp:
             entity_names.add('event_timestamp')
 

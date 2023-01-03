@@ -54,13 +54,13 @@ def python_files(repo_path: Path, ignore_path: Path | None = None) -> list[Path]
     files = {
         path.resolve()
         for path in repo_path.resolve().glob('**/*.py')
-        if path.is_file() and '__init__.py' != path.name
+        if path.is_file() and path.name != '__init__.py'
     }
     if ignore_path:
         ignore_files = {
             path.resolve()
             for path in ignore_path.glob('**/*.py')
-            if path.is_file() and '__init__.py' != path.name
+            if path.is_file() and path.name != '__init__.py'
         }
         files -= ignore_files
     return sorted(files)

@@ -115,7 +115,7 @@ class RedisSource(FeatureSource, WritableFeatureSource):
 
                     redis_values = redis_values.astype(str)
 
-                    feature_key = entity_ids.loc[mask] + ':' + feature.name
+                    feature_key = f'{entity_ids.loc[mask]}:{feature.name}'
                     for keys, value in zip(feature_key.values, redis_values.values):
                         pipe.set(keys, value)
                     written_count += 1

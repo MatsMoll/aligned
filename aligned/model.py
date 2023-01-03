@@ -84,5 +84,5 @@ class Model:
         return ModelSchema(
             name=self.name,
             features=[feature.request_result for feature in self.features],
-            targets=targets if targets else None,
+            targets=targets or None,
         )

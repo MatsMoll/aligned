@@ -53,12 +53,11 @@ class RetrivalJob(ABC):
         raise NotImplementedError()
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
-        if isinstance(location, str):
-            from aligned.local.source import ParquetFileSource
-
-            return FileCachedJob(ParquetFileSource(location), self)
-        else:
+        if not isinstance(location, str):
             return FileCachedJob(location, self)
+        from aligned.local.source import ParquetFileSource
+
+        return FileCachedJob(ParquetFileSource(location), self)
 
     def test_size(self, test_size: float, target_column: str) -> TrainTestSetJob:
 
@@ -94,12 +93,11 @@ class ValidationJob(RetrivalJob):
         raise NotImplementedError()
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
-        if isinstance(location, str):
-            from aligned.local.source import ParquetFileSource
-
-            return FileCachedJob(ParquetFileSource(location), self)
-        else:
+        if not isinstance(location, str):
             return FileCachedJob(location, self)
+        from aligned.local.source import ParquetFileSource
+
+        return FileCachedJob(ParquetFileSource(location), self)
 
 
 @dataclass
@@ -322,7 +320,10 @@ class EnsureTypesJob(RetrivalJob):
 
                 if feature.dtype == FeatureType('').datetime:
                     df[feature.name] = pd.to_datetime(df[feature.name], infer_datetime_format=True, utc=True)
-                elif feature.dtype == FeatureType('').datetime or feature.dtype == FeatureType('').string:
+                elif feature.dtype in [
+                    FeatureType('').datetime,
+                    FeatureType('').string,
+                ]:
                     continue
                 else:
 
