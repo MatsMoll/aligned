@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import sys
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -10,7 +11,7 @@ from typing import Any, Coroutine
 import click
 from pytz import utc  # type: ignore
 
-from aligned.compiler.repo_reader import RepoReader
+from aligned.compiler.repo_reader import RepoReader, RepoReference
 from aligned.feature_source import WritableFeatureSource
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import Feature
@@ -56,7 +57,7 @@ def cli() -> None:
 )
 @click.option(
     '--reference-file',
-    default='feature_store_location.py',
+    default='feature_store_location.py:source',
     help='The path to a feature store reference file. Defining where to read and write the feature store',
 )
 @click.option(
@@ -68,20 +69,23 @@ def apply_command(repo_path: str, reference_file: str, env_file: str) -> None:
     """
     Create or update a feature store deployment
     """
+    from aligned import FileSource
 
     dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
-    reference_file_path = Path(reference_file).absolute()
+    path, obj = reference_file.split(':')
+    reference_file_path = Path(path).absolute()
     load_envs(dir / env_file)
     sys.path.append(str(dir))
-    repo_ref = RepoReader.reference_from_path(dir, reference_file_path)
 
-    click.echo(f'Updating file at: {repo_ref.selected}')
-
-    # old_def = sync(repo_ref.selected_file.feature_store())
-
-    repo_def = sync(RepoReader.definition_from_path(dir))
+    repo_ref = RepoReference('const', {'const': FileSource.from_path('./feature-store.json')})
+    with suppress(ValueError):
+        repo_ref = RepoReference.reference_object(dir, reference_file_path, obj)
 
     if file := repo_ref.selected_file:
+        click.echo(f'Updating file at: {file}')
+
+        repo_def = sync(RepoReader.definition_from_path(dir))
+
         sync(file.write(repo_def.to_json(omit_none=True).encode('utf-8')))
     else:
         click.echo(f'No repo file found at {dir}')

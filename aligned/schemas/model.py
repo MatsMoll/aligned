@@ -13,3 +13,9 @@ class Model(Codable):
 
     def __hash__(self) -> int:
         return self.name.__hash__()
+
+
+@dataclass
+class ModelRegister(Codable):
+    name: str
+    model_framework: str

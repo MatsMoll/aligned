@@ -17,7 +17,7 @@ from aligned.feature_source import (
 from aligned.feature_view.combined_view import CombinedFeatureView, CompiledCombinedFeatureView
 from aligned.feature_view.feature_view import FeatureView
 from aligned.model import Model
-from aligned.online_source import BatchOnlineSource
+from aligned.online_source import BatchOnlineSource, OnlineSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import DerivedFeatureJob, FilterJob, RetrivalJob
 from aligned.schemas.feature_view import CompiledFeatureView
@@ -305,13 +305,32 @@ class FeatureStore:
     def add_model(self, model: Model) -> None:
         self.models[model.name] = model.schema()
 
-    def offline_store(self) -> 'FeatureStore':
+    def with_source(self, source: OnlineSource | None = None) -> 'FeatureStore':
+        """
+        Creates a new instance of a feature store, but changes where to fetch the features from
+
+        ```
+        store = # Load the store
+        redis_store = store.with_source(redis.online_source())
+        batch_source = redis_store.with_source()
+        ```
+
+        Args:
+            source (OnlineSource): The source to fetch from, None will lead to using the batch source
+
+        Returns:
+            FeatureStore: A new feature store instance
+        """
+        online_source = source or BatchOnlineSource()
         return FeatureStore(
             feature_views=self.feature_views,
             combined_feature_views=self.combined_feature_views,
             models=self.model_requests,
-            feature_source=BatchOnlineSource().feature_source(set(self.feature_views.values())),
+            feature_source=online_source.feature_source(set(self.feature_views.values())),
         )
+
+    def offline_store(self) -> 'FeatureStore':
+        return self.with_source()
 
 
 @dataclass

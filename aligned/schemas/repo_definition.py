@@ -30,6 +30,10 @@ def get_event_loop() -> asyncio.AbstractEventLoop:
 
 @dataclass
 class RepoReference:
+    """
+    NB: Is deprecated!
+    """
+
     env_var_name: str
     repo_paths: dict[str, StorageFileReference]
 
@@ -41,6 +45,8 @@ class RepoReference:
 
     @property
     def selected_file(self) -> StorageFileReference | None:
+        if self.env_var_name in self.repo_paths:
+            return self.repo_paths.get(self.env_var_name)
         return self.repo_paths.get(self.selected)
 
     def feature_server(self, online_source: OnlineSource) -> FastAPI | OnlineSource:
@@ -63,6 +69,66 @@ class RepoReference:
             feature_store = asyncio.new_event_loop().run_until_complete(selected_file.feature_store())
 
         return FastAPIServer.app(feature_store)
+
+    @staticmethod
+    def reference_object(repo: Path, file: Path, object: str) -> RepoReference:
+        from aligned.compiler.repo_reader import import_module, path_to_py_module
+        from aligned.local.source import StorageFileReference
+
+        module_path = path_to_py_module(file, repo)
+        module = import_module(module_path)
+
+        try:
+            obj = getattr(module, object)
+            if isinstance(obj, StorageFileReference):
+                return RepoReference(env_var_name='const', repo_paths={'const': obj})
+            raise ValueError('No reference found')
+        except AttributeError:
+            raise ValueError('No reference found')
+
+
+class FeatureServer:
+    @staticmethod
+    def from_reference(
+        reference: StorageFileReference, online_source: OnlineSource | None = None
+    ) -> FastAPI | None:
+        """Creates a feature server
+        This can process and serve features for both models and feature views
+
+        ```python
+        redis = RedisConfig.localhost()
+        server = FeatureSever.from_reference(
+            FileSource.from_path("./feature-store.json"),
+            online_source=redis.online_source()
+        )
+        ```
+
+        You can then run `aligned serve path_to_server_instance:server`.
+
+        Args:
+            reference (StorageFileReference): The location to the feature repository
+            online_source (OnlineSource | None, optional): The online source to use.
+                Defaults to None meaning the batch source.
+
+        Returns:
+            FastAPI: A FastAPI instance that contains paths for fetching features
+        """
+        import os
+
+        if os.environ.get('ALADDIN_ENABLE_SERVER', 'False').lower() == 'false':
+            return None
+
+        from aligned.server import FastAPIServer
+
+        try:
+            feature_store = asyncio.get_event_loop().run_until_complete(reference.feature_store())
+        except RuntimeError:
+            import nest_asyncio
+
+            nest_asyncio.apply()
+            feature_store = asyncio.new_event_loop().run_until_complete(reference.feature_store())
+
+        return FastAPIServer.app(feature_store.with_source(online_source))
 
 
 @dataclass

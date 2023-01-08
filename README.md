@@ -2,6 +2,12 @@
 
 Aligned help defining a single source of truth for logic while keeping the technology stack flexible. Such innovation has been possible by removing the need to depend on a processing engine, leading to less- and more transparent- code. Furthermore, the declarative API has made it possible to comment, add data validation, and define feature transformation at the same location. Therefore, it leads to a precise definition of the intended result.
 
+Main advantages:
+- Test new features faster
+- Adapt faster to new technical and business requirements.
+- Stop technology lock-in, like processing engines and infrastructure.
+- Stop vendor lock-in. Deploy to any provider that fits you
+
 As a result, loading model featurs can be done with the following code.
 
 ```python
@@ -12,7 +18,7 @@ Read the post about [how the most elegant MLOps tool was created](https://matsmo
 
 Also check out the the [example repo](https://github.com/otovo/aligned-example) to see how it can be used
 
-Aligned is still in actice development, so changes are likely. 
+Aligned is still in actice development, so changes are likely.
 
 ## Feature Views
 
