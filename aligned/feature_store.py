@@ -459,7 +459,10 @@ Will fill values with None, but it could be a potential problem: {missing}
             )
             df[list(missing)] = None
 
-        await self.source.write(
-            DerivedFeatureJob(FileFullJob(LiteralReference(df), request, limit=None), requests=[request]),
-            [request],
+        job = (
+            FileFullJob(LiteralReference(df), request, limit=None)
+            .ensure_types([request])
+            .derive_features([request])
         )
+
+        await self.source.write(job, [request])

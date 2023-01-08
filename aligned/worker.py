@@ -1,15 +1,86 @@
+from __future__ import annotations
+
 import asyncio
 import logging
+from pathlib import Path
 
 from aligned import FeatureStore
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.feature_store import FeatureViewStore
+from aligned.local.source import StorageFileReference
+from aligned.online_source import OnlineSource
 from aligned.redis.config import RedisStreamSource
 from aligned.redis.stream import RedisStream
 
 logger = logging.getLogger(__name__)
 
 # Very experimental, so can contain a lot of bugs
+
+
+class StreamWorker:
+
+    feature_store: FeatureStore
+    views_to_process: set[str]
+
+    def __init__(self, feature_store: FeatureStore, views_to_process: set[str]) -> None:
+        self.feature_store = feature_store
+        self.views_to_process = views_to_process
+
+    @staticmethod
+    def from_reference(
+        source: StorageFileReference, online_source: OnlineSource, views_to_process: set[str] | None = None
+    ) -> StreamWorker | None:
+        """
+        Creates a stream worker.
+
+        This object can start a background worker process of streaming data.
+
+        Args:
+            source (StorageFileReference): The storage of the feature store file
+            online_source (OnlineSource): Where to store the processed features
+            views_to_process (set[str] | None, optional): The views to process.
+                Defaults to None aka, all streaming views.
+
+        Returns:
+            StreamWorker | None: A worker that can start processing
+        """
+        from aligned.cli import sync
+
+        feature_store: FeatureStore = sync(source.feature_store())
+        feature_store = feature_store.with_source(online_source)
+
+        return StreamWorker(feature_store, views_to_process)
+
+    @staticmethod
+    def from_object(repo: Path, file: Path, obj: str) -> StreamWorker:
+        from aligned.compiler.repo_reader import import_module, path_to_py_module
+
+        module_path = path_to_py_module(file, repo)
+        module = import_module(module_path)
+
+        try:
+            obj = getattr(module, obj)
+            if isinstance(obj, StreamWorker):
+                return obj
+            raise ValueError('No reference found')
+        except AttributeError:
+            raise ValueError('No reference found')
+
+    async def start(self) -> None:
+        from aligned.data_source.stream_data_source import HttpStreamSource
+
+        views = self.views_to_process or set()
+        if not self.views_to_process:
+            views = [
+                view.name
+                for view in self.feature_store.feature_views.values()
+                if view.stream_data_source is not None
+                and not isinstance(view.stream_data_source, HttpStreamSource)
+            ]
+        if not views:
+            raise ValueError('No feature views with streaming source to process')
+
+        await start(self.feature_store, views)
 
 
 async def single_processing(

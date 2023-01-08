@@ -16,6 +16,7 @@ from aligned.feature_source import WritableFeatureSource
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import Feature
 from aligned.schemas.repo_definition import RepoDefinition
+from aligned.worker import StreamWorker
 
 
 def sync(method: Coroutine) -> Any:
@@ -213,31 +214,20 @@ def serve_command(
     help='The path to the repo',
 )
 @click.option(
-    '--reference-file',
-    default='feature_store_location.py',
-    help='The path to a feature store reference file. Defining where to read and write the feature store',
+    '--worker-path',
+    default='feature_store_location.py:worker',
+    help='The path to the `StreamWorker`',
 )
-@click.option(
-    '--workers',
-    '-w',
-    default=1,
-    help='The number of workers',
-)
-@click.option('--views', '-v', help='The views to run in a worker', multiple=True)
 @click.option(
     '--env-file',
     default='.env',
     help='The path to env variables',
 )
-def serve_worker_command(
-    repo_path: str, reference_file: str, views: list[str], workers: int, env_file: str
-) -> None:
+def serve_worker_command(repo_path: str, worker_path: str, env_file: str) -> None:
     """
     Starts a API serving the feature store
     """
     from logging.config import dictConfig
-
-    from aligned.worker import start
 
     handler = 'console'
     log_format = '%(levelname)s:\t\b%(asctime)s %(name)s:%(lineno)d [%(correlation_id)s] %(message)s'
@@ -268,20 +258,16 @@ def serve_worker_command(
         }
     )
     # Needed in order to find the feature_store_location file
+    path, obj = worker_path.split(':')
     dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
-    reference_file_path = Path(reference_file).absolute()
+    reference_file_path = Path(path).absolute()
     sys.path.append(str(dir))
     env_file_path = dir / env_file
     load_envs(env_file_path)
 
-    repo_ref = RepoReader.reference_from_path(dir, reference_file_path)
+    worker = StreamWorker.from_object(dir, reference_file_path, obj)
 
-    if not repo_ref.selected_file:
-        raise ValueError('No selected feature store in the repo reference. Make sure the env var is set')
-
-    feature_store = sync(repo_ref.selected_file.feature_store())
-
-    sync(start(store=feature_store, feature_views_to_process=set(views)))
+    sync(worker.start())
 
 
 @cli.command('materialize')
