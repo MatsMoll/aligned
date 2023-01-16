@@ -76,6 +76,10 @@ class FactualRedisJob(FactualRetrivalJob):
                         .str[0]
                         .astype(feature.dtype.pandas_type)
                     )
+                elif feature.dtype == FeatureType('').embedding:
+                    result_df.loc[set_mask, feature.name] = (
+                        result_series[result_value_mask].str.split(',').apply(lambda x: [float(i) for i in x])
+                    )
                 else:
                     result_df.loc[set_mask, feature.name] = result_series[result_value_mask].astype(
                         feature.dtype.pandas_type

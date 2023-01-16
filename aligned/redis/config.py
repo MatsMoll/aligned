@@ -112,6 +112,8 @@ class RedisSource(FeatureSource, WritableFeatureSource):
                         redis_values = redis_values.astype(int)
                     elif feature.dtype == FeatureType('').datetime:
                         redis_values = redis_values.astype('int64') // 10**9
+                    elif feature.dtype == FeatureType('').embedding:
+                        redis_values = redis_values.apply(lambda x: ','.join(map(str, x)))
 
                     redis_values = redis_values.astype(str)
 

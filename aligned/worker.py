@@ -44,7 +44,12 @@ class StreamWorker:
         Returns:
             StreamWorker | None: A worker that can start processing
         """
+        import os
+
         from aligned.cli import sync
+
+        if os.environ.get('ALADDIN_ENABLE_SERVER', 'False').lower() == 'false':
+            return None
 
         feature_store: FeatureStore = sync(source.feature_store())
         feature_store = feature_store.with_source(online_source)

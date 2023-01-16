@@ -19,7 +19,7 @@ from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import EventTimestamp as EventTimestampFeature
 from aligned.schemas.feature import Feature, FeatureReferance, FeatureType
 from aligned.schemas.feature_view import CompiledFeatureView
-from aligned.schemas.transformation import Transformation
+from aligned.schemas.transformation import Transformation, VectoriserModel
 
 if TYPE_CHECKING:
     from aligned.compiler.transformation_factory import FillNaStrategy
@@ -566,6 +566,13 @@ class String(CategoricalEncodableFeature, NumberConvertableFeature):
         feature.transformation = ContainsFactory(value, self)
         return feature
 
+    def sentence_vector(self, model: VectoriserModel) -> Embedding:
+        from aligned.compiler.transformation_factory import WordVectoriserFactory
+
+        feature = Embedding()
+        feature.transformation = WordVectoriserFactory(self, model)
+        return feature
+
 
 class Entity(FeatureFactory):
 
@@ -600,3 +607,15 @@ class EventTimestamp(DateFeature, ArithmeticFeature):
         return EventTimestampFeature(
             name=self.name, ttl=self.ttl.total_seconds() if self.ttl else None, description=self._description
         )
+
+
+class Embedding(FeatureFactory):
+
+    sub_type: FeatureFactory
+
+    def copy_type(self) -> UUID:
+        return Embedding()
+
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType('').embedding

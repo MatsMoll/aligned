@@ -34,6 +34,7 @@ class FeatureType(Codable):
             'timedelta': timedelta,
             'uuid': UUID,
             'array': list,
+            'embedding': list,
         }[self.name]
 
     @property
@@ -53,6 +54,7 @@ class FeatureType(Codable):
             'timedelta': np.timedelta64,
             'uuid': str,
             'array': list,
+            'embedding': list,
         }[self.name]
 
     def __eq__(self, other: object) -> bool:
@@ -99,6 +101,10 @@ class FeatureType(Codable):
     @property
     def array(self) -> 'FeatureType':
         return FeatureType(name='array')
+
+    @property
+    def embedding(self) -> 'FeatureType':
+        return FeatureType(name='embedding')
 
 
 @dataclass

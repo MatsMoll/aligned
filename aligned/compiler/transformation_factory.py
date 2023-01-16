@@ -9,7 +9,7 @@ from aligned.compiler.feature_factory import FeatureFactory, Transformation, Tra
 from aligned.enricher import StatisticEricher, TimespanSelector
 from aligned.exceptions import InvalidStandardScalerArtefact
 from aligned.schemas.feature_view import CompiledFeatureView
-from aligned.schemas.transformation import StandardScalingTransformation
+from aligned.schemas.transformation import StandardScalingTransformation, VectoriserModel
 
 
 @dataclass
@@ -602,3 +602,19 @@ class MeanTransfomrationFactory(TransformationFactory, AggregatableTransformatio
 
     def copy(self) -> 'MeanTransfomrationFactory':
         return MeanTransfomrationFactory(self.feature, self.over, self.group_by)
+
+
+@dataclass
+class WordVectoriserFactory(TransformationFactory):
+
+    feature: FeatureFactory
+    model: VectoriserModel
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.feature]
+
+    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+        from aligned.schemas.transformation import WordVectoriser
+
+        return WordVectoriser(self.feature.name, self.model)

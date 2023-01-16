@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
@@ -14,7 +16,7 @@ from aligned.schemas.feature import FeatureType
 
 @dataclass
 class TransformationTestDefinition:
-    transformation: 'Transformation'
+    transformation: Transformation
     input: dict[str, list]
     output: list
 
@@ -66,7 +68,7 @@ class Transformation(Codable, SerializableType):
         return self.to_dict()
 
     @classmethod
-    def _deserialize(cls, value: dict) -> 'Transformation':
+    def _deserialize(cls, value: dict) -> Transformation:
         name_type = value['name']
         del value['name']
         data_class = SupportedTransformations.shared().types[name_type]
@@ -144,7 +146,7 @@ class SupportedTransformations:
 
     types: dict[str, type[Transformation]]
 
-    _shared: Optional['SupportedTransformations'] = None
+    _shared: SupportedTransformations | None = None
 
     def __init__(self) -> None:
         self.types = {}
@@ -180,6 +182,7 @@ class SupportedTransformations:
             Ceil,
             Floor,
             CopyTransformation,
+            WordVectoriser,
         ]:
             self.add(tran_type)
 
@@ -187,7 +190,7 @@ class SupportedTransformations:
         self.types[transformation.name] = transformation
 
     @classmethod
-    def shared(cls) -> 'SupportedTransformations':
+    def shared(cls) -> SupportedTransformations:
         if cls._shared:
             return cls._shared
         cls._shared = SupportedTransformations()
@@ -325,7 +328,7 @@ class Inverse(Transformation):
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isnull()),
-            transformation=lambda dfv: dfv[self.key] == False,  # noqa: E712
+            transformation=lambda dfv: ~dfv[self.key],
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
@@ -1197,3 +1200,140 @@ class Mean(Transformation):
             raise ValueError('Group by is not supported for polars yet')
         else:
             return df.with_column(pl.col(self.key).mean().alias(alias))
+
+
+class SupportedModels:
+
+    types: dict[str, type[VectoriserModel]]
+
+    _shared: SupportedModels | None = None
+
+    def __init__(self) -> None:
+        self.types = {}
+
+        for tran_type in [GensimModel]:
+            self.add(tran_type)
+
+    def add(self, transformation: type[VectoriserModel]) -> None:
+        self.types[transformation.name] = transformation
+
+    @classmethod
+    def shared(cls) -> SupportedModels:
+        if cls._shared:
+            return cls._shared
+        cls._shared = SupportedModels()
+        return cls._shared
+
+
+class VectoriserModel(Codable, SerializableType):
+    name: str
+
+    def _serialize(self) -> dict:
+        return self.to_dict()
+
+    @classmethod
+    def _deserialize(cls, value: dict) -> VectoriserModel:
+        name_type = value['name']
+        del value['name']
+        data_class = SupportedModels.shared().types[name_type]
+        with suppress(AttributeError):
+            if data_class.dtype:
+                del value['dtype']
+
+        return data_class.from_dict(value)
+
+    async def load_model(self):
+        pass
+
+    async def vectorise_pandas(self, texts: pd.Series) -> pd.Series:
+        pass
+
+    async def vectorise_polars(self, texts: pl.LazyFrame, text_key: str, output_key: str) -> pl.LazyFrame:
+        pass
+
+    @staticmethod
+    def gensim(model_name: str) -> GensimModel:
+        return GensimModel(model_name=model_name)
+
+
+@dataclass
+class GensimModel(VectoriserModel):
+
+    model_name: str
+
+    loaded_model: Any = field(default=None)
+    name: str = 'gensim'
+
+    async def vectorise_pandas(self, texts: pd.Series) -> pd.Series:
+        if not self.loaded_model:
+            await self.load_model()
+
+        from gensim.utils import tokenize
+
+        def token(text: str) -> list[str]:
+            return list(tokenize(text))
+
+        tokens = texts.apply(token)
+
+        def vector(tokens: list[str]):
+            vector = np.zeros(self.loaded_model.vector_size)
+            n = 0
+            for token in tokens:
+                if token in self.loaded_model:
+                    vector += self.loaded_model[token]
+                    n += 1
+            if n > 0:
+                vector = vector / n
+
+            return vector
+
+        return tokens.apply(vector)
+
+    async def vectorise_polars(self, texts: pl.LazyFrame, text_key: str, output_key: str) -> pl.LazyFrame:
+        if not self.loaded_model:
+            await self.load_model()
+
+        from gensim.utils import tokenize
+
+        def token(text: str) -> list[str]:
+            return list(tokenize(text))
+
+        tokenised_text = texts.with_columns(
+            [pl.col(text_key).apply(lambda text: list(tokenize(text))).alias(f'{text_key}_tokens')]
+        )
+
+        def vector(tokens: list[str]) -> list[float]:
+            vector = np.zeros(self.loaded_model.vector_size)
+            n = 0
+            for token in tokens:
+                if token in self.loaded_model:
+                    vector += self.loaded_model[token]
+                    n += 1
+            if n > 0:
+                vector = vector / n
+
+            return vector.tolist()
+
+        return tokenised_text.with_columns(
+            [pl.col(f'{text_key}_tokens').apply(vector, return_dtype=pl.List(pl.Float64)).alias(output_key)]
+        )
+
+    async def load_model(self):
+        import gensim.downloader as gensim_downloader
+
+        self.loaded_model = gensim_downloader.load(self.model_name)
+
+
+@dataclass
+class WordVectoriser(Transformation):
+
+    key: str
+    model: VectoriserModel
+    name = 'word_vectoriser'
+    dtype = FeatureType('').embedding
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return await self.model.vectorise_pandas(df[self.key])
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+        return await self.model.vectorise_polars(df, self.key, alias)
