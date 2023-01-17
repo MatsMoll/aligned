@@ -19,7 +19,7 @@ from aligned.feature_view.feature_view import FeatureView
 from aligned.model import Model
 from aligned.online_source import BatchOnlineSource, OnlineSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
-from aligned.retrival_job import DerivedFeatureJob, FilterJob, RetrivalJob
+from aligned.retrival_job import DerivedFeatureJob, FilterJob, RetrivalJob, SupervisedJob
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.model import Model as ModelSchema
 from aligned.schemas.repo_definition import EnricherReference, RepoDefinition
@@ -224,16 +224,7 @@ class FeatureStore:
 
     def model(self, name: str) -> 'ModelFeatureStore':
         model = self.model_requests[name]
-        request = self.requests_for_model(model)
-        return ModelFeatureStore(self.feature_source, request)
-
-    def requests_for_model(self, model: ModelSchema) -> FeatureRequest:
-        feature_referances = {f'{feature.feature_view}:{feature.name}' for feature in model.features}.union(
-            {f'{feature.feature_view}:{feature.name}' for feature in model.targets or set()}
-        )
-        return FeatureStore._requests_for(
-            RawStringFeatureRequest(feature_referances), self.feature_views, self.combined_feature_views
-        )
+        return ModelFeatureStore(model, self)
 
     @staticmethod
     def _requests_for(
@@ -303,6 +294,8 @@ class FeatureStore:
         self.combined_feature_views[compiled_view.name] = compiled_view
 
     def add_model(self, model: Model) -> None:
+        if not model.name:
+            raise ValueError('Model name must be set')
         self.models[model.name] = model.schema()
 
     def with_source(self, source: OnlineSource | None = None) -> 'FeatureStore':
@@ -336,25 +329,42 @@ class FeatureStore:
 @dataclass
 class ModelFeatureStore:
 
-    source: FeatureSource
-    request: FeatureRequest
+    model: ModelSchema
+    store: FeatureStore
 
-    def features_for(self, entities: dict[str, list]) -> FilterJob:
+    def for_entities(self, entities: dict[str, list]) -> RetrivalJob:
+        features = {f'{feature.feature_view}:{feature.name}' for feature in self.model.features}
+        request = self.store.requests_for(RawStringFeatureRequest(features))
+        return self.store.features_for(entities, list(features)).filter(request.features_to_include)
 
-        if self.request.needs_event_timestamp and 'event_timestamp' not in entities:
-            raise ValueError('Missing event_timestamp in entities')
+    def with_target(self) -> 'SupervisedModelFeatureStore':
+        return SupervisedModelFeatureStore(self.model, self.store)
 
-        return FilterJob(
-            self.request.features_to_include,
-            self.source.features_for(entities, self.request),
-        )
-
-    def cached_at(self, location: DataFileReference) -> FilterJob:
+    def cached_at(self, location: DataFileReference) -> RetrivalJob:
         from aligned.local.job import FileFullJob
 
-        return FilterJob(
-            self.request.features_to_include,
-            FileFullJob(location, RetrivalRequest.unsafe_combine(self.request.needed_requests)),
+        features = {f'{feature.feature_view}:{feature.name}' for feature in self.model.features}
+        request = self.store.requests_for(RawStringFeatureRequest(features))
+
+        return FileFullJob(location, RetrivalRequest.unsafe_combine(request.needed_requests)).filter(
+            request.features_to_include
+        )
+
+
+@dataclass
+class SupervisedModelFeatureStore:
+
+    model: ModelSchema
+    store: FeatureStore
+
+    def for_entities(self, entities: dict[str, list]) -> SupervisedJob:
+        feature_refs = self.model.features.union(self.model.targets)
+        features = {f'{feature.feature_view}:{feature.name}' for feature in feature_refs}
+        targets = {feature.name for feature in self.model.targets}
+        request = self.store.requests_for(RawStringFeatureRequest(features))
+        return SupervisedJob(
+            self.store.features_for(entities, list(features)).filter(request.features_to_include),
+            target_columns=targets,
         )
 
 

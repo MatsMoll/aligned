@@ -9,7 +9,7 @@ from aligned.compiler.feature_factory import FeatureFactory, Transformation, Tra
 from aligned.enricher import StatisticEricher, TimespanSelector
 from aligned.exceptions import InvalidStandardScalerArtefact
 from aligned.schemas.feature_view import CompiledFeatureView
-from aligned.schemas.transformation import StandardScalingTransformation, VectoriserModel
+from aligned.schemas.transformation import StandardScalingTransformation, TextVectoriserModel
 
 
 @dataclass
@@ -469,7 +469,11 @@ class MeanFillNaStrategy(FillNaStrategy):
             raise ValueError('The data source needs to be a StatisticEnricher')
 
         mean = await source.batch_data_source.mean(columns={feature.name}, limit=self.limit).as_df()
-        return mean[feature.name]
+        value = mean[feature.name]
+        if isinstance(value, Series):
+            return value.iloc[0]
+        else:
+            return value
 
 
 @dataclass
@@ -608,7 +612,7 @@ class MeanTransfomrationFactory(TransformationFactory, AggregatableTransformatio
 class WordVectoriserFactory(TransformationFactory):
 
     feature: FeatureFactory
-    model: VectoriserModel
+    model: TextVectoriserModel
 
     @property
     def using_features(self) -> list[FeatureFactory]:

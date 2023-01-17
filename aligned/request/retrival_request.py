@@ -130,6 +130,14 @@ class RequestResult(Codable):
     features: set[Feature]
     event_timestamp: str | None
 
+    @property
+    def feature_columns(self) -> list[str]:
+        return [feature.name for feature in self.features]
+
+    @property
+    def entity_columns(self) -> list[str]:
+        return [entity.name for entity in self.entities]
+
     def __add__(self, obj: 'RequestResult') -> 'RequestResult':
         return RequestResult(
             entities=self.entities.union(obj.entities),

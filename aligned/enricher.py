@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -12,9 +11,6 @@ from mashumaro.types import SerializableType
 
 from aligned.redis.config import RedisConfig
 from aligned.schemas.codable import Codable
-
-with suppress(ModuleNotFoundError):
-    import dask.dataframe as dd
 
 logger = logging.getLogger(__name__)
 
@@ -59,10 +55,6 @@ class Enricher(ABC, Codable, SerializableType):
 
     @abstractmethod
     async def as_df(self) -> pd.DataFrame:
-        pass
-
-    @abstractmethod
-    async def as_dask(self) -> dd.DataFrame:
         pass
 
 
@@ -110,11 +102,6 @@ class RedisLockEnricher(Enricher):
         async with redis.lock(self.lock_name, timeout=self.timeout) as _:
             return await self.enricher.as_df()
 
-    async def as_dask(self) -> dd.DataFrame:
-        redis = self.config.redis()
-        async with redis.lock(self.lock_name, timeout=self.timeout) as _:
-            return await self.enricher.as_dask()
-
 
 @dataclass
 class CsvFileSelectedEnricher(Enricher):
@@ -145,9 +132,6 @@ class CsvFileSelectedEnricher(Enricher):
         selector = file[self.time.time_column] >= date
         return file.loc[selector]
 
-    async def as_dask(self) -> dd.DataFrame:
-        return dd.read_csv(self.file)
-
 
 @dataclass
 class CsvFileEnricher(Enricher):
@@ -163,9 +147,6 @@ class CsvFileEnricher(Enricher):
     async def as_df(self) -> pd.DataFrame:
         return pd.read_csv(self.file)
 
-    async def as_dask(self) -> dd.DataFrame:
-        return dd.read_csv(self.file)
-
 
 @dataclass
 class LoadedStatEnricher(Enricher):
@@ -177,16 +158,6 @@ class LoadedStatEnricher(Enricher):
 
     async def as_df(self) -> pd.DataFrame:
         data = await self.enricher.as_df()
-        renamed = data.rename(columns=self.mapping_keys)
-        if self.stat == 'mean':
-            return renamed[self.columns].mean()
-        elif self.stat == 'std':
-            return renamed[self.columns].std()
-        else:
-            raise ValueError(f'Not supporting stat: {self.stat}')
-
-    async def as_dask(self) -> dd.DataFrame:
-        data = await self.enricher.as_dask()
         renamed = data.rename(columns=self.mapping_keys)
         if self.stat == 'mean':
             return renamed[self.columns].mean()
@@ -228,20 +199,6 @@ class FileCacheEnricher(Enricher):
             data = pd.read_parquet(file_uri)
         return data
 
-    async def as_dask(self) -> dd.DataFrame:
-        file_uri = Path(self.file_path).absolute()
-
-        if self.is_out_of_date_cache():
-            logger.info('Fetching from source')
-            data: dd.DataFrame = await self.enricher.as_dask()
-            file_uri.parent.mkdir(exist_ok=True, parents=True)
-            logger.info(f'Storing cache at file {file_uri.as_uri()}')
-            data.to_parquet(file_uri)
-        else:
-            logger.info('Loading cache')
-            data = dd.read_parquet(file_uri)
-        return data
-
 
 @dataclass
 class SqlDatabaseEnricher(Enricher):
@@ -259,16 +216,12 @@ class SqlDatabaseEnricher(Enricher):
     async def as_df(self) -> pd.DataFrame:
         import os
 
-        from databases import Database
+        import connectorx as cx
 
-        async with Database(os.environ[self.url_env]) as db:
-            records = await db.fetch_all(self.query, values=self.values)
-        df = pd.DataFrame.from_records([dict(record) for record in records])
+        df = cx.read_sql(os.environ[self.url_env], self.query, return_type='pandas')
+
         for name, dtype in df.dtypes.iteritems():
             if dtype == 'object':  # Need to convert the databases UUID type
                 df[name] = df[name].astype('str')
-        return df
 
-    async def as_dask(self) -> dd.DataFrame:
-        pdf = await self.as_df()
-        return dd.from_pandas(pdf)
+        return df

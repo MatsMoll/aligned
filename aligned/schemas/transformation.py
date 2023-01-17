@@ -12,6 +12,7 @@ from mashumaro.types import SerializableType
 
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import FeatureType
+from aligned.schemas.text_vectoriser import TextVectoriserModel
 
 
 @dataclass
@@ -1116,6 +1117,14 @@ class Floor(Transformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
         return df.with_column(pl.col(self.key).floor().alias(alias))
 
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            Floor('x'),
+            input={'x': [1.3, 1.9, None]},
+            output=[1, 1, None],
+        )
+
 
 @dataclass
 class Ceil(Transformation):
@@ -1133,6 +1142,14 @@ class Ceil(Transformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
         return df.with_column(pl.col(self.key).ceil().alias(alias))
 
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            Ceil('x'),
+            input={'x': [1.3, 1.9, None]},
+            output=[2, 2, None],
+        )
+
 
 @dataclass
 class Round(Transformation):
@@ -1148,7 +1165,15 @@ class Round(Transformation):
         return round(df[self.key])
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
-        return df.with_column(pl.col(self.key).round().alias(alias))
+        return df.with_column(pl.col(self.key).round(0).alias(alias))
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            Round('x'),
+            input={'x': [1.3, 1.9, None]},
+            output=[1, 2, None],
+        )
 
 
 @dataclass
@@ -1166,6 +1191,14 @@ class Absolute(Transformation):
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
         return df.with_column(pl.col(self.key).abs().alias(alias))
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            Absolute('x'),
+            input={'x': [-13, 19, None]},
+            output=[13, 19, None],
+        )
 
 
 @dataclass
@@ -1202,133 +1235,11 @@ class Mean(Transformation):
             return df.with_column(pl.col(self.key).mean().alias(alias))
 
 
-class SupportedModels:
-
-    types: dict[str, type[VectoriserModel]]
-
-    _shared: SupportedModels | None = None
-
-    def __init__(self) -> None:
-        self.types = {}
-
-        for tran_type in [GensimModel]:
-            self.add(tran_type)
-
-    def add(self, transformation: type[VectoriserModel]) -> None:
-        self.types[transformation.name] = transformation
-
-    @classmethod
-    def shared(cls) -> SupportedModels:
-        if cls._shared:
-            return cls._shared
-        cls._shared = SupportedModels()
-        return cls._shared
-
-
-class VectoriserModel(Codable, SerializableType):
-    name: str
-
-    def _serialize(self) -> dict:
-        return self.to_dict()
-
-    @classmethod
-    def _deserialize(cls, value: dict) -> VectoriserModel:
-        name_type = value['name']
-        del value['name']
-        data_class = SupportedModels.shared().types[name_type]
-        with suppress(AttributeError):
-            if data_class.dtype:
-                del value['dtype']
-
-        return data_class.from_dict(value)
-
-    async def load_model(self):
-        pass
-
-    async def vectorise_pandas(self, texts: pd.Series) -> pd.Series:
-        pass
-
-    async def vectorise_polars(self, texts: pl.LazyFrame, text_key: str, output_key: str) -> pl.LazyFrame:
-        pass
-
-    @staticmethod
-    def gensim(model_name: str) -> GensimModel:
-        return GensimModel(model_name=model_name)
-
-
-@dataclass
-class GensimModel(VectoriserModel):
-
-    model_name: str
-
-    loaded_model: Any = field(default=None)
-    name: str = 'gensim'
-
-    async def vectorise_pandas(self, texts: pd.Series) -> pd.Series:
-        if not self.loaded_model:
-            await self.load_model()
-
-        from gensim.utils import tokenize
-
-        def token(text: str) -> list[str]:
-            return list(tokenize(text))
-
-        tokens = texts.apply(token)
-
-        def vector(tokens: list[str]):
-            vector = np.zeros(self.loaded_model.vector_size)
-            n = 0
-            for token in tokens:
-                if token in self.loaded_model:
-                    vector += self.loaded_model[token]
-                    n += 1
-            if n > 0:
-                vector = vector / n
-
-            return vector
-
-        return tokens.apply(vector)
-
-    async def vectorise_polars(self, texts: pl.LazyFrame, text_key: str, output_key: str) -> pl.LazyFrame:
-        if not self.loaded_model:
-            await self.load_model()
-
-        from gensim.utils import tokenize
-
-        def token(text: str) -> list[str]:
-            return list(tokenize(text))
-
-        tokenised_text = texts.with_columns(
-            [pl.col(text_key).apply(lambda text: list(tokenize(text))).alias(f'{text_key}_tokens')]
-        )
-
-        def vector(tokens: list[str]) -> list[float]:
-            vector = np.zeros(self.loaded_model.vector_size)
-            n = 0
-            for token in tokens:
-                if token in self.loaded_model:
-                    vector += self.loaded_model[token]
-                    n += 1
-            if n > 0:
-                vector = vector / n
-
-            return vector.tolist()
-
-        return tokenised_text.with_columns(
-            [pl.col(f'{text_key}_tokens').apply(vector, return_dtype=pl.List(pl.Float64)).alias(output_key)]
-        )
-
-    async def load_model(self):
-        import gensim.downloader as gensim_downloader
-
-        self.loaded_model = gensim_downloader.load(self.model_name)
-
-
 @dataclass
 class WordVectoriser(Transformation):
-
     key: str
-    model: VectoriserModel
+    model: TextVectoriserModel
+
     name = 'word_vectoriser'
     dtype = FeatureType('').embedding
 

@@ -13,11 +13,13 @@ class TrainTestSet(Generic[DatasetType]):
 
     data: DatasetType
 
-    features: list[str]
-    target: str
+    entity_columns: set[str]
+    features: set[str]
+    target: set[str]
 
     train_index: Index
     test_index: Index
+    event_timestamp_column: str | None
 
     @property
     def train(self) -> DatasetType:
@@ -25,11 +27,11 @@ class TrainTestSet(Generic[DatasetType]):
 
     @property
     def train_input(self) -> DatasetType:
-        return self.train[self.features]
+        return self.train[list(self.features)]
 
     @property
     def train_output(self) -> DatasetType:
-        return self.train[self.target]
+        return self.train[list(self.target)]
 
     @property
     def test(self) -> DatasetType:
@@ -37,27 +39,33 @@ class TrainTestSet(Generic[DatasetType]):
 
     @property
     def test_input(self) -> DatasetType:
-        return self.test[self.features]
+        return self.test[list(self.features)]
 
     @property
     def test_output(self) -> DatasetType:
-        return self.test[self.target]
+        return self.test[list(self.target)]
 
 
 @dataclass
 class SupervisedDataSet(Generic[DatasetType]):
     data: DatasetType
 
-    features: list[str]
-    target: str
+    entity_columns: set[str]
+    features: set[str]
+    target: set[str]
+    event_timestamp_column: str | None
+
+    @property
+    def entities(self) -> DatasetType:
+        return self.data[list(self.entity_columns)]
 
     @property
     def input(self) -> DatasetType:
-        return self.data[self.features]
+        return self.data[list(self.features)]
 
     @property
     def output(self) -> DatasetType:
-        return self.data[self.target]
+        return self.data[list(self.target)]
 
 
 @dataclass
@@ -65,12 +73,14 @@ class TrainTestValidateSet(Generic[DatasetType]):
 
     data: DatasetType
 
-    features: list[str]
-    target: str
+    entity_columns: set[str]
+    features: set[str]
+    target: set[str]
 
     train_index: Index
     test_index: Index
     validate_index: Index
+    event_timestamp_column: str | None
 
     @property
     def input(self) -> DatasetType:
@@ -82,7 +92,13 @@ class TrainTestValidateSet(Generic[DatasetType]):
 
     @property
     def train(self) -> SupervisedDataSet[DatasetType]:
-        return SupervisedDataSet(self.data.iloc[self.train_index], self.features, self.target)
+        return SupervisedDataSet(
+            self.data.iloc[self.train_index],
+            self.entity_columns,
+            set(self.features),
+            self.target,
+            self.event_timestamp_column,
+        )
 
     @property
     def train_input(self) -> DatasetType:
@@ -94,7 +110,13 @@ class TrainTestValidateSet(Generic[DatasetType]):
 
     @property
     def test(self) -> SupervisedDataSet[DatasetType]:
-        return SupervisedDataSet(self.data.iloc[self.test_index], self.features, self.target)
+        return SupervisedDataSet(
+            self.data.iloc[self.test_index],
+            set(self.entity_columns),
+            set(self.features),
+            self.target,
+            self.event_timestamp_column,
+        )
 
     @property
     def test_input(self) -> DatasetType:
@@ -106,7 +128,13 @@ class TrainTestValidateSet(Generic[DatasetType]):
 
     @property
     def validate(self) -> SupervisedDataSet[DatasetType]:
-        return SupervisedDataSet(self.data.iloc[self.validate_index], self.features, self.target)
+        return SupervisedDataSet(
+            self.data.iloc[self.validate_index],
+            self.entity_columns,
+            set(self.features),
+            self.target,
+            self.event_timestamp_column,
+        )
 
     @property
     def validate_input(self) -> DatasetType:

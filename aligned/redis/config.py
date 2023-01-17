@@ -1,7 +1,14 @@
 import logging
 from dataclasses import dataclass, field
 
-from redis.asyncio import Redis, StrictRedis  # type: ignore
+try:
+    from redis.asyncio import Redis, StrictRedis  # type: ignore
+except ModuleNotFoundError:
+
+    class Redis:  # type: ignore
+        pass
+
+    StrictRedis = Redis
 
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.feature_source import FeatureSource, WritableFeatureSource

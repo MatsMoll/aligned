@@ -14,7 +14,13 @@ import polars as pl
 from aligned.exceptions import UnableToFindFileException
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.schemas.feature import FeatureType
-from aligned.split_strategy import SplitDataSet, SplitStrategy, TrainTestSet, TrainTestValidateSet
+from aligned.split_strategy import (
+    SplitDataSet,
+    SplitStrategy,
+    SupervisedDataSet,
+    TrainTestSet,
+    TrainTestValidateSet,
+)
 from aligned.validation.interface import Validator
 
 if TYPE_CHECKING:
@@ -24,19 +30,121 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def split(data: pd.DataFrame, target_column: str, start_ratio: float, end_ratio: float) -> pd.Index:
+def split(
+    data: pd.DataFrame, start_ratio: float, end_ratio: float, event_timestamp_column: str | None = None
+) -> pd.Index:
     index = pd.Index([], dtype=data.index.dtype)
-    for value in data[target_column].unique():
-        subset = data.loc[data[target_column] == value]
-        group_size = subset.shape[0]
-        start_index = round(group_size * start_ratio)
-        end_index = round(group_size * end_ratio)
+    if event_timestamp_column:
+        column = data[event_timestamp_column]
+        if column.dtype != 'datetime64[ns]':
+            column = pd.to_datetime(data[event_timestamp_column])
+        values = column.quantile([start_ratio, end_ratio])
+        return data.loc[(column >= values.iloc[0]) & (column <= values.iloc[1])].index
 
-        if end_index >= group_size:
-            index = index.append(subset.iloc[start_index:].index)
-        else:
-            index = index.append(subset.iloc[start_index:end_index].index)
+    group_size = data.shape[0]
+    start_index = round(group_size * start_ratio)
+    end_index = round(group_size * end_ratio)
+
+    if end_index >= group_size:
+        index = index.append(data.iloc[start_index:].index)
+    else:
+        index = index.append(data.iloc[start_index:end_index].index)
     return index
+
+
+@dataclass
+class SupervisedJob:
+
+    job: RetrivalJob
+    target_columns: set[str]
+
+    async def to_pandas(self) -> SupervisedDataSet[pd.DataFrame]:
+        data = await self.job.to_pandas()
+        features = {
+            feature.name
+            for feature in self.job.request_result.features
+            if feature.name not in self.target_columns
+        }
+        entities = {feature.name for feature in self.job.request_result.entities}
+        return SupervisedDataSet(
+            data, entities, features, self.target_columns, self.job.request_result.event_timestamp
+        )
+
+    async def to_polars(self) -> SupervisedDataSet[pl.LazyFrame]:
+        data = await self.job.to_polars()
+        features = [
+            feature.name
+            for feature in self.job.request_result.features.union(self.job.request_result.entities)
+            if feature.name not in self.target_columns
+        ]
+        entities = [feature.name for feature in self.job.request_result.entities]
+        return SupervisedDataSet(
+            data, set(entities), set(features), self.target_columns, self.job.request_result.event_timestamp
+        )
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.job.request_result
+
+    def train_set(self, train_size: float) -> SupervisedTrainJob:
+        return SupervisedTrainJob(self, train_size)
+
+    def with_subfeatures(self) -> SupervisedJob:
+        return SupervisedJob(self.job.with_subfeatures(), self.target_columns)
+
+
+@dataclass
+class SupervisedTrainJob:
+
+    job: SupervisedJob
+    train_size: float
+
+    async def to_pandas(self) -> TrainTestSet[pd.DataFrame]:
+        data = await self.job.to_pandas()
+
+        test_ratio_start = self.train_size
+        return TrainTestSet(
+            data=data.data,
+            entity_columns=data.entity_columns,
+            features=data.features,
+            target=data.target,
+            train_index=split(data.data, 0, test_ratio_start, data.event_timestamp_column),
+            test_index=split(data.data, test_ratio_start, 1, data.event_timestamp_column),
+            event_timestamp_column=data.event_timestamp_column,
+        )
+
+    async def to_polars(self) -> TrainTestSet[pl.DataFrame]:
+        raise NotImplementedError()
+
+    def validation_set(self, validation_size: float) -> SupervisedValidationJob:
+        return SupervisedValidationJob(self, validation_size)
+
+
+@dataclass
+class SupervisedValidationJob:
+
+    job: SupervisedTrainJob
+    validation_size: float
+
+    async def to_pandas(self) -> TrainTestValidateSet[pd.DataFrame]:
+        data = await self.job.to_pandas()
+
+        test_start = self.job.train_size
+        validate_start = test_start + self.validation_size
+
+        return TrainTestValidateSet(
+            data=data.data,
+            entity_columns=set(data.entity_columns),
+            features=data.features,
+            target=data.target,
+            train_index=split(data.data, 0, test_start, data.event_timestamp_column),
+            test_index=split(data.data, test_start, validate_start, data.event_timestamp_column),
+            validate_index=split(data.data, validate_start, 1, data.event_timestamp_column),
+            event_timestamp_column=data.event_timestamp_column,
+        )
+
+    async def to_polars(self) -> TrainTestValidateSet[pl.DataFrame]:
+        raise NotImplementedError()
 
 
 class RetrivalJob(ABC):
@@ -52,6 +160,9 @@ class RetrivalJob(ABC):
     async def to_polars(self) -> pl.LazyFrame:
         raise NotImplementedError()
 
+    def with_subfeatures(self) -> RetrivalJob:
+        return self
+
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         if isinstance(location, str):
             from aligned.local.source import ParquetFileSource
@@ -60,9 +171,11 @@ class RetrivalJob(ABC):
         else:
             return FileCachedJob(location, self)
 
-    def test_size(self, test_size: float, target_column: str) -> TrainTestSetJob:
+    def test_size(self, test_size: float, target_column: str) -> SupervisedTrainJob:
+        return SupervisedJob(self, {target_column}).train_set(train_size=1 - test_size)
 
-        return TrainTestSetJob(job=self, test_size=test_size, target_column=target_column)
+    def train_set(self, train_size: float, target_column: str) -> SupervisedTrainJob:
+        return SupervisedJob(self, {target_column}).train_set(train_size=train_size)
 
     def validate(self, validator: Validator) -> ValidationJob:
 
@@ -73,6 +186,9 @@ class RetrivalJob(ABC):
 
     def ensure_types(self, requests: list[RetrivalRequest]) -> RetrivalJob:
         return EnsureTypesJob(job=self, requests=requests)
+
+    def filter(self, include_features: set[str]) -> RetrivalJob:
+        return FilterJob(include_features, self)
 
 
 @dataclass
@@ -92,6 +208,9 @@ class ValidationJob(RetrivalJob):
 
     async def to_polars(self) -> pl.LazyFrame:
         raise NotImplementedError()
+
+    def with_subfeatures(self) -> RetrivalJob:
+        return ValidationJob(self.job.with_subfeatures(), self.validator)
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         if isinstance(location, str):
@@ -210,63 +329,6 @@ class FileCachedJob(RetrivalJob):
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         return self
-
-
-@dataclass
-class TrainTestSetJob:
-
-    job: RetrivalJob
-    test_size: float
-    target_column: str
-
-    @property
-    def request_result(self) -> RequestResult:
-        return self.job.request_result
-
-    async def use_df(self) -> TrainTestSet[pd.DataFrame]:
-
-        data = await self.job.to_pandas()
-
-        features = list({feature.name for feature in self.request_result.features} - {self.target_column})
-
-        test_ratio_start = 1 - self.test_size
-        return TrainTestSet(
-            data=data,
-            features=features,
-            target=self.target_column,
-            train_index=split(data, self.target_column, 0, test_ratio_start),
-            test_index=split(data, self.target_column, test_ratio_start, 1),
-        )
-
-    def validation_size(self, validation_size: float) -> TrainTestValidateSetJob:
-        return TrainTestValidateSetJob(self, validation_size)
-
-
-@dataclass
-class TrainTestValidateSetJob:
-
-    job: TrainTestSetJob
-    validation_size: float
-
-    @property
-    def request_result(self) -> RequestResult:
-        return self.job.request_result
-
-    async def use_df(self) -> TrainTestValidateSet[pd.DataFrame]:
-        test_set = await self.job.use_df()
-
-        train_data = test_set.train
-
-        validation_ratio_start = 1 - 1 / (1 - self.job.test_size) * self.validation_size
-
-        return TrainTestValidateSet(
-            data=test_set.data,
-            features=test_set.features,
-            target=test_set.target,
-            train_index=split(train_data, test_set.target, 0, validation_ratio_start),
-            test_index=test_set.test_index,
-            validate_index=split(train_data, test_set.target, validation_ratio_start, 1),
-        )
 
 
 @dataclass
@@ -458,3 +520,6 @@ class FilterJob(RetrivalJob):
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
 
         return FilterJob(self.include_features, self.job.cached_at(location))
+
+    def with_subfeatures(self) -> RetrivalJob:
+        return self.job.with_subfeatures()

@@ -25,7 +25,6 @@ GenericDataFrame = TypeVar('GenericDataFrame', pd.DataFrame, dd.DataFrame)
 @dataclass
 class SQLQuery:
     sql: str
-    values: dict[str, Any] | None = None
 
 
 class PostgreSQLRetrivalJob(RetrivalJob):
@@ -37,23 +36,12 @@ class PostgreSQLRetrivalJob(RetrivalJob):
         raise NotImplementedError()
 
     async def to_pandas(self) -> pd.DataFrame:
-        sql_request = self.build_request()
-
-        try:
-            from sqlalchemy import create_engine
-            from sqlalchemy.engine import Engine
-
-            engine: Engine = create_engine(self.config.url).execution_options(autocommit=True)
-            df = pd.read_sql_query(sql_request.sql, con=engine, params=sql_request.values)
-            engine.dispose()
-            return df
-        except Exception as error:
-            logger.info(sql_request.sql)
-            logger.error(error)
-            raise error
+        df = await self.to_polars()
+        return df.collect().to_pandas()
 
     async def to_polars(self) -> pl.LazyFrame:
-        return pl.from_pandas(await self.to_pandas())
+        sql_request = self.build_request()
+        return pl.read_sql(sql_request.sql, self.config.url).lazy()
 
 
 @dataclass
@@ -125,12 +113,13 @@ class DateRangePsqlJob(PostgreSQLRetrivalJob, DateRangeJob):
         ]
         column_select = ', '.join(columns)
         schema = f'{self.config.schema}.' if self.config.schema else ''
+        start_date = self.start_date.strftime('%Y-%m-%d %H:%M:%S')
+        end_date = self.end_date.strftime('%Y-%m-%d %H:%M:%S')
         return SQLQuery(
             sql=(
                 f'SELECT {column_select} FROM {schema}"{self.source.table}" WHERE'
-                f' {event_timestamp_column} BETWEEN (%(start_date)s) AND (%(end_date)s)'
-            ),
-            values={'start_date': self.start_date, 'end_date': self.end_date},
+                f' {event_timestamp_column} BETWEEN \'{start_date}\' AND \'{end_date}\''
+            )
         )
 
 

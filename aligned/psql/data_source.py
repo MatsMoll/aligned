@@ -34,7 +34,9 @@ class PostgreSQLConfig(Codable):
         return PostgreSQLConfig(env_var='PSQL_DATABASE')
 
     @staticmethod
-    def localhost(db: str) -> PostgreSQLConfig:
+    def localhost(db: str, credentials: tuple[str, str] | None = None) -> PostgreSQLConfig:
+        if credentials:
+            return PostgreSQLConfig.from_url(f'postgresql://{credentials[0]}:{credentials[1]}@localhost/{db}')
         return PostgreSQLConfig.from_url(f'postgresql://localhost/{db}')
 
     def table(self, table: str, mapping_keys: dict[str, str] | None = None) -> PostgreSQLDataSource:
@@ -79,7 +81,7 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, StatisticEric
         if limit and isinstance(limit, int):
             query += f' LIMIT {limit}'
 
-        return SqlDatabaseEnricher(self.config.url, query)
+        return SqlDatabaseEnricher(self.config.env_var, query)
 
     def std(
         self, columns: set[str], time: TimespanSelector | None = None, limit: int | None = None
@@ -96,7 +98,7 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, StatisticEric
         if limit and isinstance(limit, int):
             query += f' LIMIT {limit}'
 
-        return SqlDatabaseEnricher(self.config.url, query)
+        return SqlDatabaseEnricher(self.config.env_var, query)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
         from aligned.psql.jobs import FullExtractPsqlJob

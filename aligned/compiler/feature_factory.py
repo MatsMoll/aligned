@@ -19,7 +19,7 @@ from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import EventTimestamp as EventTimestampFeature
 from aligned.schemas.feature import Feature, FeatureReferance, FeatureType
 from aligned.schemas.feature_view import CompiledFeatureView
-from aligned.schemas.transformation import Transformation, VectoriserModel
+from aligned.schemas.transformation import TextVectoriserModel, Transformation
 
 if TYPE_CHECKING:
     from aligned.compiler.transformation_factory import FillNaStrategy
@@ -284,7 +284,7 @@ class ComparableFeature(EquatableFeature):
         from aligned.compiler.transformation_factory import GreaterThenFactory
 
         instance = Bool()
-        instance.transformation = GreaterThenFactory(right, self)
+        instance.transformation = GreaterThenFactory(self, right)
         return instance
 
     def __ge__(self, right: object) -> Bool:
@@ -566,7 +566,7 @@ class String(CategoricalEncodableFeature, NumberConvertableFeature):
         feature.transformation = ContainsFactory(value, self)
         return feature
 
-    def sentence_vector(self, model: VectoriserModel) -> Embedding:
+    def sentence_vector(self, model: TextVectoriserModel) -> Embedding:
         from aligned.compiler.transformation_factory import WordVectoriserFactory
 
         feature = Embedding()

@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Callable
 
-from pandas import DataFrame
+import polars as pl
 
 from aligned.compiler.feature_factory import FeatureFactory
 from aligned.entity_data_source import EntityDataSource
@@ -24,25 +24,16 @@ class SqlEntityDataSource(EntityDataSource):
         self.url = url
         self.timestamp_column = timestamp_column
 
-    async def all_in_range(self, start_date: datetime, end_date: datetime) -> DataFrame:
+    async def all_in_range(self, start_date: datetime, end_date: datetime) -> pl.DataFrame:
         import os
 
-        query = self.sql(f'{self.timestamp_column} BETWEEN (:start_date) AND (:end_date)')
-        from databases import Database
+        start = start_date.strftime('%Y-%m-%d %H:%M:%S')
+        end = end_date.strftime('%Y-%m-%d %H:%M:%S')
 
-        try:
-            async with Database(os.environ[self.url]) as db:
-                records = await db.fetch_all(
-                    query=query, values={'start_date': start_date, 'end_date': end_date}
-                )
-        except Exception as error:
-            logger.info(query)
-            logger.error(error)
-            raise error
+        query = self.sql(f'{self.timestamp_column} BETWEEN \'{start}\' AND \'{end}\'')
+        return pl.read_sql(query, os.environ[self.url])
 
-        return DataFrame.from_records([dict(record) for record in records])
-
-    async def last(self, days: int, hours: int, seconds: int) -> DataFrame:
+    async def last(self, days: int, hours: int, seconds: int) -> pl.DataFrame:
         now = datetime.utcnow()
         return await self.all_in_range(now - timedelta(days=days, hours=hours, seconds=seconds), now)
 
@@ -66,6 +57,7 @@ class Model:
                 {
                     FeatureReferance(feature.name, request.name, feature.dtype)
                     for feature in request.request_result.features
+                    if feature.name in request.features_to_include
                 }
             )
 
