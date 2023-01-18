@@ -3,7 +3,8 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any, Callable
 
-from pandas import DataFrame, Series
+import pandas as pd
+import polars as pl
 
 from aligned.compiler.feature_factory import FeatureFactory, Transformation, TransformationFactory
 from aligned.enricher import StatisticEricher, TimespanSelector
@@ -176,8 +177,8 @@ class LowerThenOrEqualFactory(TransformationFactory):
 #     max_splits: int | None
 
 #     @property
-#     def method(self) -> Callable[[DataFrame], Series]:
-#         async def met(df: DataFrame) -> Series:
+#     def method(self) -> Callable[[pd.DataFrame], pd.Series]:
+#         async def met(df: pd.DataFrame) -> pd.Series:
 #             return df[self.from_feature.name].str.split(pat=self.pattern, n=self.max_splits)
 
 #         return met
@@ -198,8 +199,8 @@ class LowerThenOrEqualFactory(TransformationFactory):
 #         self.from_feature = feature
 
 #     @property
-#     def method(self) -> Callable[[DataFrame], Series]:
-#         async def met(df: DataFrame) -> Series:
+#     def method(self) -> Callable[[pd.DataFrame], pd.Series]:
+#         async def met(df: pd.DataFrame) -> pd.Series:
 #             return df[self.from_feature.name].str[self.index]
 
 #         return met
@@ -470,7 +471,7 @@ class MeanFillNaStrategy(FillNaStrategy):
 
         mean = await source.batch_data_source.mean(columns={feature.name}, limit=self.limit).as_df()
         value = mean[feature.name]
-        if isinstance(value, Series):
+        if isinstance(value, pd.Series):
             return value.iloc[0]
         else:
             return value
@@ -554,10 +555,27 @@ class AbsoluteFactory(TransformationFactory):
 
 
 @dataclass
-class DillTransformationFactory(TransformationFactory):
+class PandasTransformationFactory(TransformationFactory):
 
     dtype: FeatureFactory
-    method: Callable[[DataFrame], Series]
+    method: Callable[[pd.DataFrame], pd.Series]
+    _using_features: list[FeatureFactory]
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return self._using_features
+
+    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+        from aligned.schemas.transformation import PandasTransformation
+
+        return PandasTransformation(method=self.method, dtype=self.dtype.dtype)
+
+
+@dataclass
+class PolarsTransformationFactory(TransformationFactory):
+
+    dtype: FeatureFactory
+    method: pl.Expr
     _using_features: list[FeatureFactory]
 
     @property
@@ -567,9 +585,28 @@ class DillTransformationFactory(TransformationFactory):
     async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
         import dill
 
-        from aligned.schemas.transformation import DillTransformation
+        from aligned.schemas.transformation import PolarsTransformation
 
-        return DillTransformation(method=dill.dumps(self.method, recurse=True), dtype=self.dtype.dtype)
+        return PolarsTransformation(method=dill.dumps(self.method), dtype=self.dtype.dtype)
+
+
+@dataclass
+class DillTransformationFactory(TransformationFactory):
+
+    dtype: FeatureFactory
+    method: Callable[[pd.DataFrame], pd.Series]
+    _using_features: list[FeatureFactory]
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return self._using_features
+
+    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+        import dill
+
+        from aligned.schemas.transformation import PandasTransformation
+
+        return PandasTransformation(method=dill.dumps(self.method, recurse=True), dtype=self.dtype.dtype)
 
 
 class AggregatableTransformation:

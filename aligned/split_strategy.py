@@ -1,5 +1,4 @@
 import math
-from dataclasses import dataclass
 from typing import Generic, TypeVar
 
 from pandas import DataFrame, Index, concat
@@ -8,7 +7,6 @@ from pandas.core.generic import NDFrame
 DatasetType = TypeVar('DatasetType', bound=NDFrame)
 
 
-@dataclass
 class TrainTestSet(Generic[DatasetType]):
 
     data: DatasetType
@@ -21,6 +19,24 @@ class TrainTestSet(Generic[DatasetType]):
     test_index: Index
     event_timestamp_column: str | None
 
+    def __init__(
+        self,
+        data: DatasetType,
+        entity_columns: set[str],
+        features: set[str],
+        target: set[str],
+        train_index: Index,
+        test_index: Index,
+        event_timestamp_column: str | None,
+    ):
+        self.data = data
+        self.entity_columns = entity_columns
+        self.features = features
+        self.target = target
+        self.train_index = train_index
+        self.test_index = test_index
+        self.event_timestamp_column = event_timestamp_column
+
     @property
     def train(self) -> DatasetType:
         return self.data.iloc[self.train_index]
@@ -30,7 +46,7 @@ class TrainTestSet(Generic[DatasetType]):
         return self.train[list(self.features)]
 
     @property
-    def train_output(self) -> DatasetType:
+    def train_target(self) -> DatasetType:
         return self.train[list(self.target)]
 
     @property
@@ -42,18 +58,31 @@ class TrainTestSet(Generic[DatasetType]):
         return self.test[list(self.features)]
 
     @property
-    def test_output(self) -> DatasetType:
+    def test_target(self) -> DatasetType:
         return self.test[list(self.target)]
 
 
-@dataclass
 class SupervisedDataSet(Generic[DatasetType]):
     data: DatasetType
 
     entity_columns: set[str]
     features: set[str]
-    target: set[str]
+    target_columns: set[str]
     event_timestamp_column: str | None
+
+    def __init__(
+        self,
+        data: DatasetType,
+        entity_columns: set[str],
+        features: set[str],
+        target: set[str],
+        event_timestamp_column: str | None,
+    ):
+        self.data = data
+        self.entity_columns = entity_columns
+        self.features = features
+        self.target_columns = target
+        self.event_timestamp_column = event_timestamp_column
 
     @property
     def entities(self) -> DatasetType:
@@ -64,38 +93,57 @@ class SupervisedDataSet(Generic[DatasetType]):
         return self.data[list(self.features)]
 
     @property
-    def output(self) -> DatasetType:
-        return self.data[list(self.target)]
+    def target(self) -> DatasetType:
+        return self.data[list(self.target_columns)]
 
 
-@dataclass
 class TrainTestValidateSet(Generic[DatasetType]):
 
     data: DatasetType
 
     entity_columns: set[str]
     features: set[str]
-    target: set[str]
+    target_columns: set[str]
 
     train_index: Index
     test_index: Index
     validate_index: Index
     event_timestamp_column: str | None
 
-    @property
-    def input(self) -> DatasetType:
-        return self.data[self.features]
+    def __init__(
+        self,
+        data: DatasetType,
+        entity_columns: set[str],
+        features: set[str],
+        target: set[str],
+        train_index: Index,
+        test_index: Index,
+        validate_index: Index,
+        event_timestamp_column: str | None,
+    ):
+        self.data = data
+        self.entity_columns = entity_columns
+        self.features = features
+        self.target_columns = target
+        self.train_index = train_index
+        self.test_index = test_index
+        self.validate_index = validate_index
+        self.event_timestamp_column = event_timestamp_column
 
     @property
-    def output(self) -> DatasetType:
-        return self.data[self.target]
+    def input(self) -> DatasetType:
+        return self.data[list(self.features)]
+
+    @property
+    def target(self) -> DatasetType:
+        return self.data[list(self.target_columns)]
 
     @property
     def train(self) -> SupervisedDataSet[DatasetType]:
         return SupervisedDataSet(
             self.data.iloc[self.train_index],
             self.entity_columns,
-            set(self.features),
+            self.features,
             self.target,
             self.event_timestamp_column,
         )
@@ -105,8 +153,8 @@ class TrainTestValidateSet(Generic[DatasetType]):
         return self.train.input
 
     @property
-    def train_output(self) -> DatasetType:
-        return self.train.output
+    def train_target(self) -> DatasetType:
+        return self.train.target
 
     @property
     def test(self) -> SupervisedDataSet[DatasetType]:
@@ -123,8 +171,8 @@ class TrainTestValidateSet(Generic[DatasetType]):
         return self.test.input
 
     @property
-    def test_output(self) -> DatasetType:
-        return self.test.output
+    def test_target(self) -> DatasetType:
+        return self.test.target
 
     @property
     def validate(self) -> SupervisedDataSet[DatasetType]:
@@ -141,21 +189,36 @@ class TrainTestValidateSet(Generic[DatasetType]):
         return self.validate.input
 
     @property
-    def validate_output(self) -> DatasetType:
-        return self.validate.output
+    def validate_target(self) -> DatasetType:
+        return self.validate.target
 
 
-@dataclass
 class SplitDataSet(Generic[DatasetType]):
 
     train_input: DatasetType
-    train_output: DatasetType
+    train_target: DatasetType
 
     develop_input: DatasetType
-    develop_output: DatasetType
+    develop_target: DatasetType
 
     test_input: DatasetType
-    test_output: DatasetType
+    test_target: DatasetType
+
+    def __init__(
+        self,
+        train_input: DatasetType,
+        train_target: DatasetType,
+        develop_input: DatasetType,
+        develop_target: DatasetType,
+        test_input: DatasetType,
+        test_target: DatasetType,
+    ):
+        self.train_input = train_input
+        self.train_target = train_target
+        self.develop_input = develop_input
+        self.develop_target = develop_target
+        self.test_input = test_input
+        self.test_target = test_target
 
 
 class SplitStrategy:
@@ -207,9 +270,9 @@ class StrategicSplitStrategy(SplitStrategy):
 
         return SplitDataSet(
             train_input=train.drop(columns=[target_column]),
-            train_output=train[target_column],
+            train_target=train[target_column],
             develop_input=develop.drop(columns=[target_column]),
-            develop_output=develop[target_column],
+            develop_target=develop[target_column],
             test_input=test.drop(columns=[target_column]),
-            test_output=test[target_column],
+            test_target=test[target_column],
         )

@@ -24,7 +24,7 @@ async def test_between_datetime_features(
 
     limit_features = (
         await store.feature_view(feature_view.metadata.name)
-        .between(
+        .between_dates(
             start_date=datetime(2020, 1, 5),
             end_date=datetime(2020, 1, 11),
         )
@@ -52,7 +52,7 @@ async def test_between_datetime_features_with_aggregation(
 
     limit_features = (
         await store.feature_view(feature_view.metadata.name)
-        .between(
+        .between_dates(
             start_date=datetime(2020, 1, 5),
             end_date=datetime(2020, 1, 11),
         )
@@ -83,7 +83,7 @@ async def test_between_datetime_features_polars(
 
     limit_features = (
         await store.feature_view(feature_view.metadata.name)
-        .between(
+        .between_dates(
             start_date=datetime(2020, 1, 5),
             end_date=datetime(2020, 1, 11),
         )

@@ -155,7 +155,8 @@ class SupportedTransformations:
         for tran_type in [
             Equals,
             NotEquals,
-            DillTransformation,
+            PandasTransformation,
+            PolarsTransformation,
             StandardScalingTransformation,
             Ratio,
             Contains,
@@ -199,11 +200,11 @@ class SupportedTransformations:
 
 
 @dataclass
-class DillTransformation(Transformation):
+class PandasTransformation(Transformation):
 
     method: bytes
     dtype: FeatureType
-    name: str = 'custom_transformation'
+    name: str = 'pandas_tran'
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         import dill
@@ -212,7 +213,35 @@ class DillTransformation(Transformation):
         return await loaded(df)
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
-        return await super().transform_polars()
+        import dill
+
+        pandas_df = df.collect().to_pandas()
+        loaded = dill.loads(self.method)
+        pandas_df[alias] = await loaded(pandas_df)
+
+        return pl.from_pandas(pandas_df).lazy()
+
+
+@dataclass
+class PolarsTransformation(Transformation):
+
+    method: bytes
+    dtype: FeatureType
+    name: str = 'polars_tran'
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        import dill
+
+        loaded: pl.Expr = dill.loads(self.method)
+        pl_df = pl.from_pandas(df)
+        pl_df = pl_df.with_column((loaded).alias('polars_tran_column'))
+        return pl_df['polars_tran_column'].to_pandas()
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+        import dill
+
+        expr: pl.Expr = dill.loads(self.method)
+        return df.with_column(expr.alias(alias))
 
 
 @dataclass

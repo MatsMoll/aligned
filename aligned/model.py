@@ -40,7 +40,7 @@ class SqlEntityDataSource(EntityDataSource):
 
 @dataclass
 class Model:
-    features: set[FeatureRequest]
+    features: list[FeatureRequest]
     target: list[FeatureRequest] | FeatureFactory | None = field(default=None)
     name: str | None = field(default=None)
 

@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
-from pandas import DataFrame, Series
+import pandas as pd
+import polars as pl
 
 from aligned.compiler.constraint_factory import ConstraintFactory, LiteralFactory
 from aligned.exceptions import NotSupportedYet
@@ -194,9 +195,9 @@ class FeatureFactory:
             instance.transformation = FillMissingFactory(self, ConstantFillNaStrategy(value))
         return instance  # type: ignore [return-value]
 
-    def transformed(
+    def transform_pandas(
         self,
-        transformation: Callable[[DataFrame], Series],
+        transformation: Callable[[pd.DataFrame], pd.Series],
         using_features: list[FeatureFactory] | None = None,
         as_dtype: T | None = None,
     ) -> T:
@@ -210,10 +211,22 @@ class FeatureFactory:
             dtype.transformation = DillTransformationFactory(dtype, transformation, using_features or [self])
         else:
 
-            async def sub_tran(df: DataFrame) -> Series:
+            async def sub_tran(df: pd.DataFrame) -> pd.Series:
                 return transformation(df)
 
             dtype.transformation = DillTransformationFactory(dtype, sub_tran, using_features or [self])
+        return dtype  # type: ignore [return-value]
+
+    def transform_polars(
+        self,
+        expression: pl.Expr,
+        using_features: list[FeatureFactory] | None = None,
+        as_dtype: T | None = None,
+    ) -> T:
+        from aligned.compiler.transformation_factory import PolarsTransformationFactory
+
+        dtype: FeatureFactory = as_dtype or self.copy_type()  # type: ignore [assignment]
+        dtype.transformation = PolarsTransformationFactory(dtype, expression, using_features or [self])
         return dtype  # type: ignore [return-value]
 
     def is_required(self: T) -> T:

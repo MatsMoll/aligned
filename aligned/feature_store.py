@@ -65,7 +65,7 @@ class FeatureStore:
 
     @property
     def all_models(self) -> list[str]:
-        return list(self.model_requests.keys())
+        return list(self.models.keys())
 
     def __init__(
         self,
@@ -77,7 +77,7 @@ class FeatureStore:
         self.feature_source = feature_source
         self.combined_feature_views = combined_feature_views
         self.feature_views = feature_views
-        self.model_requests = models
+        self.models = models
 
     @staticmethod
     def experimental() -> 'FeatureStore':
@@ -223,7 +223,7 @@ class FeatureStore:
         )
 
     def model(self, name: str) -> 'ModelFeatureStore':
-        model = self.model_requests[name]
+        model = self.models[name]
         return ModelFeatureStore(model, self)
 
     @staticmethod
@@ -281,7 +281,7 @@ class FeatureStore:
                 'This is only possible through store.features_for(...), as of now.\n',
             )
         view = self.feature_views[view]
-        return FeatureViewStore(self.feature_source, view)
+        return FeatureViewStore(self, view)
 
     async def add_feature_view(self, feature_view: FeatureView) -> None:
         compiled_view = await type(feature_view).compile()
@@ -318,12 +318,20 @@ class FeatureStore:
         return FeatureStore(
             feature_views=self.feature_views,
             combined_feature_views=self.combined_feature_views,
-            models=self.model_requests,
+            models=self.models,
             feature_source=online_source.feature_source(set(self.feature_views.values())),
         )
 
     def offline_store(self) -> 'FeatureStore':
         return self.with_source()
+
+    def model_features_for(self, view_name: str) -> set[str]:
+        all_model_features: set[str] = set()
+        for model in self.models.values():
+            all_model_features.update(
+                {feature.name for feature in model.features if feature.feature_view == view_name}
+            )
+        return all_model_features
 
 
 @dataclass
@@ -371,9 +379,19 @@ class SupervisedModelFeatureStore:
 @dataclass
 class FeatureViewStore:
 
-    source: FeatureSource
+    store: FeatureStore
     view: CompiledFeatureView
     feature_filter: set[str] | None = field(default=None)
+    only_write_model_features: bool = field(default=False)
+
+    @property
+    def source(self) -> FeatureSource:
+        return self.store.feature_source
+
+    def with_optimised_write(self, only_write_model_features: bool = True) -> 'FeatureViewStore':
+        return FeatureViewStore(
+            self.store, self.view, self.feature_filter, only_write_model_features=only_write_model_features
+        )
 
     def all(self, limit: int | None = None) -> RetrivalJob:
         if not isinstance(self.source, RangeFeatureSource):
@@ -386,7 +404,7 @@ class FeatureViewStore:
         request = self.view.request_all
         return self.source.all_for(request, limit)
 
-    def between(self, start_date: datetime, end_date: datetime) -> RetrivalJob:
+    def between_dates(self, start_date: datetime, end_date: datetime) -> RetrivalJob:
         if not isinstance(self.source, RangeFeatureSource):
             raise ValueError(
                 f'The source needs to conform to RangeFeatureSource, you got a {type(self.source)}'
@@ -402,10 +420,16 @@ class FeatureViewStore:
     def previous(self, days: int = 0, minutes: int = 0, seconds: int = 0) -> RetrivalJob:
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(days=days, minutes=minutes, seconds=seconds)
-        return self.between(start_date, end_date)
+        return self.between_dates(start_date, end_date)
+
+    def for_entities(self, entities: dict[str, list]) -> RetrivalJob:
+        if self.feature_filter:
+            return self.source.features_for(entities, self.view.request_for(self.feature_filter))
+
+        return self.source.features_for(entities, self.view.request_all)
 
     def select(self, features: set[str]) -> 'FeatureViewStore':
-        return FeatureViewStore(self.source, self.view, features)
+        return FeatureViewStore(self.store, self.view, features)
 
     @property
     def write_input(self) -> set[str]:
@@ -442,6 +466,12 @@ class FeatureViewStore:
         return output.to_dict('list')
 
     async def batch_write(self, values: dict[str, list[Any]]) -> None:
+
+        features_in_models = self.store.model_features_for(self.view.name)
+        if self.only_write_model_features and not features_in_models:
+            logger.info('No model is using this feature view')
+            return
+
         if not isinstance(self.source, WritableFeatureSource):
             logger.info('Feature Source is not writable')
             return
@@ -453,6 +483,10 @@ class FeatureViewStore:
 
         # As it is a feature view, should it only contain one request
         request = self.view.request_all.needed_requests[0]
+
+        if self.only_write_model_features:
+            request = self.view.request_for(features_in_models).needed_requests[0]
+
         df = DataFrame.from_records(values)
 
         if request.entity_names - set(df.columns):
