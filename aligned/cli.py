@@ -78,7 +78,7 @@ def apply_command(repo_path: str, reference_file: str, env_file: str) -> None:
     load_envs(dir / env_file)
     sys.path.append(str(dir))
 
-    repo_ref = RepoReference('const', {'const': FileSource.from_path('./feature-store.json')})
+    repo_ref = RepoReference('const', {'const': FileSource.json_at('./feature-store.json')})
     with suppress(ValueError):
         repo_ref = RepoReference.reference_object(dir, reference_file_path, obj)
 

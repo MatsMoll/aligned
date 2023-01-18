@@ -98,7 +98,7 @@ class FeatureServer:
         ```python
         redis = RedisConfig.localhost()
         server = FeatureSever.from_reference(
-            FileSource.from_path("./feature-store.json"),
+            FileSource.from_json("./feature-store.json"),
             online_source=redis.online_source()
         )
         ```

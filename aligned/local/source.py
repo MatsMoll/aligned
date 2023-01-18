@@ -247,7 +247,7 @@ class FileSource:
     """
 
     @staticmethod
-    def from_path(path: str) -> StorageFileSource:
+    def json_at(path: str) -> StorageFileSource:
         return StorageFileSource(path=path)
 
     @staticmethod
