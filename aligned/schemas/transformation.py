@@ -411,27 +411,19 @@ class GreaterThenValue(Transformation):
     dtype: FeatureType = FeatureType('').bool
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(df[self.key].isna() | df[self.key].isnull()),
-            transformation=lambda dfv: dfv[self.key] > self.value,
-        )
+        return df[self.key] > self.value
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
-        return df.with_column(
-            (
-                pl.when(pl.col(self.key).is_not_null() & pl.col(self.key).is_not_nan())
-                .then(pl.col(self.key) > self.value)
-                .otherwise(pl.lit(None))
-            ).alias(alias)
-        )
+        return df.with_column((pl.col(self.key) > self.value).alias(alias))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         from numpy import nan
 
         return TransformationTestDefinition(
-            GreaterThenValue(key='x', value=2), input={'x': [1, 2, 3, nan]}, output=[False, False, True, nan]
+            GreaterThenValue(key='x', value=2),
+            input={'x': [1, 2, 3, nan]},
+            output=[False, False, True, False],
         )
 
 
@@ -445,30 +437,10 @@ class GreaterThen(Transformation):
     dtype: FeatureType = field(default=FeatureType('').bool)
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(
-                df[self.left_key].isna()
-                | df[self.left_key].isnull()
-                | df[self.right_key].isna()
-                | df[self.right_key].isnull()
-            ),
-            transformation=lambda dfv: dfv[self.left_key] > dfv[self.right_key],
-        )
+        return df[self.left_key] > df[self.right_key]
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
-        return df.with_column(
-            (
-                pl.when(
-                    pl.col(self.left_key).is_not_null()
-                    & pl.col(self.right_key).is_not_null()
-                    & pl.col(self.left_key).is_not_nan()
-                    & pl.col(self.right_key).is_not_nan()
-                )
-                .then(pl.col(self.left_key) > pl.col(self.right_key))
-                .otherwise(pl.lit(None))
-            ).alias(alias)
-        )
+        return df.with_column((pl.col(self.left_key) > pl.col(self.right_key)).alias(alias))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -477,7 +449,7 @@ class GreaterThen(Transformation):
         return TransformationTestDefinition(
             GreaterThen(left_key='x', right_key='y'),
             input={'x': [1, 2, 3, nan, 5], 'y': [3, 2, 1, 5, nan]},
-            output=[False, False, True, nan, nan],
+            output=[False, False, True, False, False],
         )
 
 

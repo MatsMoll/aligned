@@ -52,6 +52,31 @@ def split(
     return index
 
 
+def split_polars(
+    data: pl.LazyFrame, start_ratio: float, end_ratio: float, event_timestamp_column: str | None = None
+) -> pl.DataFrame:
+    if event_timestamp_column:
+        values = data.select(
+            [
+                pl.col(event_timestamp_column).quantile(start_ratio).alias('start_value'),
+                pl.col(event_timestamp_column).quantile(end_ratio).alias('end_value'),
+            ]
+        )
+        return data.filter(
+            pl.col(event_timestamp_column).is_between(values[0, 'start_value'], values[0, 'end_value'])
+        ).collect()
+
+    collected = data.collect()
+    group_size = collected.shape[0]
+    start_index = round(group_size * start_ratio)
+    end_index = round(group_size * end_ratio)
+
+    if end_index >= group_size:
+        return collected[start_index:]
+    else:
+        return collected[start_index:end_index]
+
+
 @dataclass
 class SupervisedJob:
 
@@ -144,7 +169,7 @@ class SupervisedValidationJob:
         )
 
     async def to_polars(self) -> TrainTestValidateSet[pl.DataFrame]:
-        raise NotImplementedError()
+        return pl.from_pandas(await self.to_pandas())
 
 
 class RetrivalJob(ABC):
@@ -178,7 +203,6 @@ class RetrivalJob(ABC):
         return SupervisedJob(self, {target_column}).train_set(train_size=train_size)
 
     def validate(self, validator: Validator) -> ValidationJob:
-
         return ValidationJob(self, validator)
 
     def derive_features(self, requests: list[RetrivalRequest]) -> RetrivalJob:

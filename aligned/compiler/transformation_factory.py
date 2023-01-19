@@ -590,25 +590,6 @@ class PolarsTransformationFactory(TransformationFactory):
         return PolarsTransformation(method=dill.dumps(self.method), dtype=self.dtype.dtype)
 
 
-@dataclass
-class DillTransformationFactory(TransformationFactory):
-
-    dtype: FeatureFactory
-    method: Callable[[pd.DataFrame], pd.Series]
-    _using_features: list[FeatureFactory]
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        return self._using_features
-
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
-        import dill
-
-        from aligned.schemas.transformation import PandasTransformation
-
-        return PandasTransformation(method=dill.dumps(self.method, recurse=True), dtype=self.dtype.dtype)
-
-
 class AggregatableTransformation:
 
     group_by: list[FeatureFactory] | None = field(default=None)

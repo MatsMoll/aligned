@@ -2,6 +2,7 @@ import logging
 from typing import Callable
 
 import pandas as pd
+import polars as pl
 from pandera import Check, Column, DataFrameSchema  # type: ignore[attr-defined]
 
 from aligned.schemas.constraints import Constraint, Required
@@ -60,3 +61,6 @@ class PanderaValidator(Validator):
             return await self.validate_pandas(
                 features, df.loc[df.index.delete(error.failure_cases['index'])].reset_index()
             )
+
+    async def validate_polars(self, features: list[Feature], df: pl.DataFrame) -> pl.DataFrame:
+        return pl.from_pandas(await self.validate_pandas(features, df.to_pandas()))
