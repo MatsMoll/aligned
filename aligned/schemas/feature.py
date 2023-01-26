@@ -57,6 +57,26 @@ class FeatureType(Codable):
             'embedding': list,
         }[self.name]
 
+    @property
+    def polars_type(self) -> type:
+        import polars as pl
+
+        return {
+            'string': pl.Utf8,
+            'int32': pl.Int32,
+            'int64': pl.Int64,
+            'float': pl.Float64,
+            'double': pl.Float64,
+            'bool': pl.Boolean,
+            'date': pl.Date,
+            'datetime': pl.Datetime,
+            'time': pl.Time,
+            'timedelta': pl.Duration,
+            'uuid': pl.Utf8,
+            'array': pl.List,
+            'embedding': pl.List,
+        }[self.name]
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, FeatureType):
             return self.name == other.name

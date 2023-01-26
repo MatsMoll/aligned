@@ -265,7 +265,7 @@ class DerivedFeatureJob(RetrivalJob):
                 for feature in feature_round:
                     if feature.depending_on_views - {request.feature_view_name}:
                         continue
-                    logger.info(f'Computing feature: {feature.name}')
+                    logger.info(f'Adding feature to computation plan in polars: {feature.name}')
                     df = await feature.transformation.transform_polars(df, feature.name)
         return df
 
@@ -276,7 +276,7 @@ class DerivedFeatureJob(RetrivalJob):
                     if feature.depending_on_views - {request.feature_view_name}:
                         continue
 
-                    logger.info(f'Computing feature: {feature.name}')
+                    logger.info(f'Computing feature with pandas: {feature.name}')
                     df[feature.name] = await feature.transformation.transform_pandas(
                         df[feature.depending_on_names]
                     )
@@ -425,7 +425,14 @@ class EnsureTypesJob(RetrivalJob):
         return df
 
     async def to_polars(self) -> pl.LazyFrame:
-        return await self.job.to_polars()
+        df = await self.job.to_polars()
+        for request in self.requests:
+            for feature in request.all_required_features:
+                if feature.dtype == FeatureType('').bool:
+                    df = df.with_column(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
+                else:
+                    df = df.with_column(pl.col(feature.name).cast(feature.dtype.polars_type, strict=False))
+        return df
 
 
 @dataclass
@@ -571,4 +578,8 @@ class ListenForTriggers(RetrivalJob):
         return df
 
     async def to_polars(self) -> pl.LazyFrame:
-        raise NotImplementedError()
+        import asyncio
+
+        df = await self.job.to_polars()
+        await asyncio.gather(*[trigger.check_polars(df, self.request_result) for trigger in self.triggers])
+        return df

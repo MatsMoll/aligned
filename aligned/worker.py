@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import timeit
 from pathlib import Path
 
 from aligned import FeatureStore
@@ -98,10 +99,12 @@ async def single_processing(
 
         if not stream_values:
             continue
-
+        start_time = timeit.default_timer()
         _, values = stream_values[0]
         last_id = values[-1][0]
         await feature_view.batch_write([record for _, record in values])  # type: ignore [arg-type]
+        elapsed = timeit.default_timer() - start_time
+        logger.info(f'Wrote {len(values)} records in {elapsed} seconds')
 
 
 async def multi_processing(

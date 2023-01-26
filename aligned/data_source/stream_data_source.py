@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from mashumaro.types import SerializableType
 
@@ -16,7 +16,7 @@ class StreamDataSourceFactory:
 
     supported_data_sources: dict[str, type[StreamDataSource]]
 
-    _shared: Optional[StreamDataSourceFactory] = None
+    _shared: StreamDataSourceFactory | None = None
 
     def __init__(self) -> None:
         from aligned.redis.config import RedisStreamSource

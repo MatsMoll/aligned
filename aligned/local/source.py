@@ -263,7 +263,26 @@ class FileSource:
         return ParquetFileSource(path=path, mapping_keys=mapping_keys or {}, config=config or ParquetConfig())
 
 
-@dataclass
+# @dataclass
+# class LiteralReference(DataFileReference):
+#     """
+#     A class containing a in mem pandas frame.
+
+#     This makes it easier standardise the interface when writing data.
+#     """
+
+#     file: pd.DataFrame
+
+#     def job_group_key(self) -> str:
+#         return str(uuid4())
+
+#     async def read_pandas(self) -> pd.DataFrame:
+#         return self.file
+
+#     async def to_polars(self) -> pl.LazyFrame:
+#         return pl.from_pandas(self.file).lazy()
+
+
 class LiteralReference(DataFileReference):
     """
     A class containing a in mem pandas frame.
@@ -271,13 +290,19 @@ class LiteralReference(DataFileReference):
     This makes it easier standardise the interface when writing data.
     """
 
-    file: pd.DataFrame
+    file: pl.LazyFrame
+
+    def __init__(self, file: pl.LazyFrame | pd.DataFrame) -> None:
+        if isinstance(file, pl.DataFrame):
+            self.file = pl.from_pandas(file)
+        else:
+            self.file = file
 
     def job_group_key(self) -> str:
         return str(uuid4())
 
     async def read_pandas(self) -> pd.DataFrame:
-        return self.file
+        return self.file.collect().to_pandas()
 
     async def to_polars(self) -> pl.LazyFrame:
-        return pl.from_pandas(self.file).lazy()
+        return self.file

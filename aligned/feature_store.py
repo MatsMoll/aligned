@@ -497,7 +497,7 @@ class FeatureViewStore:
             logger.info('Feature Source is not writable')
             return
 
-        from pandas import DataFrame
+        import polars as pl
 
         from aligned.local.job import FileFullJob
         from aligned.local.source import LiteralReference
@@ -508,7 +508,7 @@ class FeatureViewStore:
         if self.only_write_model_features:
             request = self.view.request_for(features_in_models).needed_requests[0]
 
-        df = DataFrame.from_records(values)
+        df = pl.DataFrame(values).lazy()
 
         if request.entity_names - set(df.columns):
             missing = request.entity_names - set(df.columns)
@@ -522,7 +522,7 @@ Some features is missing.
 Will fill values with None, but it could be a potential problem: {missing}
 """
             )
-            df[list(missing)] = None
+            df = df.with_columns([pl.lit(None).alias(feature) for feature in missing])
 
         job = (
             FileFullJob(LiteralReference(df), request, limit=None)

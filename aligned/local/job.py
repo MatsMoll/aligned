@@ -10,21 +10,27 @@ from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJo
 from aligned.schemas.feature import Feature
 
 
-@dataclass
 class LiteralRetrivalJob(RetrivalJob):
 
-    df: pd.DataFrame
+    df: pl.LazyFrame
     result: RequestResult
+
+    def __init__(self, df: pl.LazyFrame | pd.DataFrame, result: RequestResult) -> None:
+        self.result = result
+        if isinstance(df, pd.DataFrame):
+            self.df = pl.from_pandas(df).lazy()
+        else:
+            self.df = df
 
     @property
     def request_result(self) -> RequestResult:
         return self.result
 
     async def to_pandas(self) -> pd.DataFrame:
-        return self.df
+        return self.df.collect().to_pandas()
 
     async def to_polars(self) -> pl.LazyFrame:
-        return pl.from_pandas(self.df)
+        return self.df
 
 
 @dataclass

@@ -1,6 +1,8 @@
 import logging
 from dataclasses import dataclass, field
 
+import polars as pl
+
 try:
     from redis.asyncio import Redis, StrictRedis  # type: ignore
 except ModuleNotFoundError:
@@ -16,7 +18,7 @@ from aligned.online_source import OnlineSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import RetrivalJob
 from aligned.schemas.codable import Codable
-from aligned.schemas.feature import FeatureType
+from aligned.schemas.feature import Feature, FeatureType
 from aligned.schemas.feature_view import CompiledFeatureView
 
 logger = logging.getLogger(__name__)
@@ -90,46 +92,49 @@ class RedisSource(FeatureSource, WritableFeatureSource):
     async def write(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
 
         redis = self.config.redis()
-        data = await job.to_pandas()
+        data = await job.to_polars()
 
         async with redis.pipeline(transaction=True) as pipe:
 
-            written_count = 0
-            # Run one query per row
             for request in requests:
-                entity_ids = (
-                    request.feature_view_name
-                    + ':'
-                    + data[sorted(request.entity_names)].astype('string').sum(axis=1).astype('string')
+                # Run one query per row
+                data = data.with_column(
+                    (
+                        pl.lit(request.feature_view_name)
+                        + pl.lit(':')
+                        + pl.concat_str(sorted(request.entity_names))
+                    ).alias('id')
                 )
 
+                features = ['id']
+
                 for feature in request.all_features:
-                    mask = ~data[feature.name].isnull()
 
-                    if feature.dtype == FeatureType('').bool:
-                        mask = mask | ~data[feature.name].isna()
-
-                    if mask.empty or (~mask).all():
-                        continue
-
-                    redis_values = data.loc[mask, feature.name].copy()
+                    expr = pl.col(feature.name).cast(pl.Utf8).alias(feature.name)
 
                     if feature.dtype == FeatureType('').bool:
                         # Redis do not support bools
-                        redis_values = redis_values.astype(int)
+                        expr = (
+                            pl.col(feature.name).cast(pl.Int8, strict=False).cast(pl.Utf8).alias(feature.name)
+                        )
                     elif feature.dtype == FeatureType('').datetime:
-                        redis_values = redis_values.astype('int64') // 10**9
+                        expr = pl.col(feature.name).dt.timestamp('ms').cast(pl.Utf8).alias(feature.name)
                     elif feature.dtype == FeatureType('').embedding:
-                        redis_values = redis_values.apply(lambda x: ','.join(map(str, x)))
+                        expr = (
+                            pl.col(feature.name)
+                            .apply(lambda x: ','.join(map(str, x)))
+                            .cast(pl.Utf8)
+                            .alias(feature.name)
+                        )
 
-                    redis_values = redis_values.astype(str)
+                    data = data.with_column(expr)
+                    features.append(feature.name)
 
-                    feature_key = entity_ids.loc[mask] + ':' + feature.name
-                    for keys, value in zip(feature_key.values, redis_values.values):
-                        pipe.set(keys, value)
-                    written_count += 1
+                redis_frame = data.select(features).collect()
 
-            await pipe.execute()
+                for record in redis_frame.to_dicts():
+                    pipe.hset(record['id'], mapping={key: value for key, value in record.items() if value})
+                await pipe.execute()
 
 
 @dataclass
@@ -147,25 +152,37 @@ class RedisStreamSource(StreamDataSource, SinkableDataSource):
             topic_name=self.topic_name, config=self.config, mappings=self.mappings | mappings
         )
 
-    async def write_to_stream(self, job: RetrivalJob) -> None:
-        import asyncio
+    def make_redis_friendly(self, data: pl.LazyFrame, features: set[Feature]) -> pl.LazyFrame:
+        # Run one query per row
+        for feature in features:
 
-        redis = self.config.redis()
-        df = await job.to_pandas()
-        for feature in job.request_result.features:
+            expr = pl.col(feature.name)
+
             if feature.dtype == FeatureType('').bool:
                 # Redis do not support bools
-                df[feature.name] = df[feature.name].astype(int).astype(str)
+                expr = pl.col(feature.name).cast(pl.Int8, strict=False)
             elif feature.dtype == FeatureType('').datetime:
-                df[feature.name] = (df[feature.name].astype('int64') // 10**9).astype(str)
+                expr = pl.col(feature.name).dt.timestamp('ms')
             elif feature.dtype == FeatureType('').embedding:
-                df[feature.name] = df[feature.name].apply(lambda x: ','.join(map(str, x)))
-        await asyncio.gather(
-            *[
-                redis.xadd(
+                expr = pl.col(feature.name).apply(lambda x: ','.join(map(str, x)))
+
+            data = data.with_column(expr.cast(pl.Utf8).alias(feature.name))
+
+        return data
+
+    async def write_to_stream(self, job: RetrivalJob) -> None:
+        redis = self.config.redis()
+        df = await job.to_polars()
+
+        df = self.make_redis_friendly(df, job.request_result.features.union(job.request_result.entities))
+        values = df.collect()
+
+        async with redis.pipeline(transaction=True) as pipe:
+            _ = [
+                pipe.xadd(
                     self.topic_name,
-                    {key: value if isinstance(value, str) else str(value) for key, value in record.items()},
+                    {key: value for key, value in record.items() if value},
                 )
-                for record in df.to_dict('records')
+                for record in values.to_dicts()
             ]
-        )
+            await pipe.execute()

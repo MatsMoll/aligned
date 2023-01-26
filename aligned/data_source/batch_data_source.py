@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional, TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 from mashumaro.types import SerializableType
 
@@ -18,7 +18,7 @@ class BatchDataSourceFactory:
 
     supported_data_sources: dict[str, type[BatchDataSource]]
 
-    _shared: Optional[BatchDataSourceFactory] = None
+    _shared: BatchDataSourceFactory | None = None
 
     def __init__(self) -> None:
         from aligned.local.source import CsvFileSource
