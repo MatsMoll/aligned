@@ -145,7 +145,7 @@ class RepoDefinition(Codable):
 
     feature_views: set[CompiledFeatureView] = field(default_factory=set)
     combined_feature_views: set[CompiledCombinedFeatureView] = field(default_factory=set)
-    models: set[Model] = field(default_factory=dict)
+    models: set[Model] = field(default_factory=set)
     enrichers: list[EnricherReference] = field(default_factory=list)
 
     @staticmethod

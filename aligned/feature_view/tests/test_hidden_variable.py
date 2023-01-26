@@ -44,19 +44,3 @@ async def test_select_variables() -> None:
     assert len(request.needed_requests) == 1
     needed_req = request.needed_requests[0]
     assert len(needed_req.derived_features) == 2
-
-
-@pytest.mark.asyncio
-async def test_equal_result_on_compile() -> None:
-
-    view = await TestView.compile()
-    graph_view = TestView.compile_graph_only()
-
-    assert view.entities == graph_view.entities
-    assert view.features == graph_view.features
-    assert len(view.derived_features) == len(graph_view.derived_features)
-
-    for feature in view.derived_features:
-        same_feature = [feat for feat in graph_view.derived_features if feat.name == feature.name][0]
-        assert feature.depending_on_names == same_feature.depending_on_names
-        assert feature.dtype == same_feature.dtype

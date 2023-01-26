@@ -1,20 +1,24 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Optional, TypeVar
+from typing import TYPE_CHECKING, Optional, TypeVar
 
 from mashumaro.types import SerializableType
 
-from aligned.request.retrival_request import RetrivalRequest
-from aligned.retrival_job import DateRangeJob, FullExtractJob, RetrivalJob
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import Feature
+
+if TYPE_CHECKING:
+    from aligned.request.retrival_request import RetrivalRequest
+    from aligned.retrival_job import DateRangeJob, FullExtractJob, RetrivalJob
 
 
 class BatchDataSourceFactory:
 
-    supported_data_sources: dict[str, type['BatchDataSource']]
+    supported_data_sources: dict[str, type[BatchDataSource]]
 
-    _shared: Optional['BatchDataSourceFactory'] = None
+    _shared: Optional[BatchDataSourceFactory] = None
 
     def __init__(self) -> None:
         from aligned.local.source import CsvFileSource
@@ -31,7 +35,7 @@ class BatchDataSourceFactory:
         }
 
     @classmethod
-    def shared(cls) -> 'BatchDataSourceFactory':
+    def shared(cls) -> BatchDataSourceFactory:
         if cls._shared:
             return cls._shared
         cls._shared = BatchDataSourceFactory()
@@ -62,7 +66,7 @@ class BatchDataSource(ABC, Codable, SerializableType):
         return hash(self.job_group_key())
 
     @classmethod
-    def _deserialize(cls, value: dict) -> 'BatchDataSource':
+    def _deserialize(cls, value: dict) -> BatchDataSource:
         name_type = value['type_name']
         if name_type not in BatchDataSourceFactory.shared().supported_data_sources:
             raise ValueError(

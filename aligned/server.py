@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Response
+from fastapi.responses import RedirectResponse
 from numpy import nan
 from pydantic import BaseModel
 
@@ -100,8 +101,11 @@ class FastAPIServer:
 
     @staticmethod
     def model_path(name: str, feature_store: FeatureStore, app: FastAPI) -> None:
-        model = feature_store.model_requests[name]
-        feature_request = feature_store.requests_for_model(model)
+        from aligned.feature_store import RawStringFeatureRequest
+
+        model = feature_store.models[name]
+        features = {f'{feature.feature_view}:{feature.name}' for feature in model.features}
+        feature_request = feature_store.requests_for(RawStringFeatureRequest(features))
 
         entities: set[Feature] = set()
         for request in feature_request.needed_requests:
@@ -152,7 +156,7 @@ class FastAPIServer:
                     for value in entity_values['event_timestamp']
                 ]
 
-            df = await feature_store.model(name).features_for(entity_values).to_pandas()
+            df = await feature_store.model(name).for_entities(entity_values).to_pandas()
             orient = 'values'
             body = ','.join([f'"{column}":{df[column].to_json(orient=orient)}' for column in df.columns])
             return Response(content=f'{{{body}}}', media_type='application/json')
@@ -202,6 +206,10 @@ class FastAPIServer:
                     'and can therefore not setup stream sources',
                 )
             )
+
+        @app.get('/')
+        async def root() -> RedirectResponse:
+            return RedirectResponse('/docs')
 
         @app.post('/features')
         async def features(payload: APIFeatureRequest) -> dict:

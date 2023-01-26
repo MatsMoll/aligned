@@ -42,7 +42,7 @@ class CombinedFeatureView(ABC, FeatureSelectable):
         ]
 
     @classmethod
-    async def compile(cls) -> CompiledCombinedFeatureView:
+    def compile(cls) -> CompiledCombinedFeatureView:
         transformations: set[DerivedFeature] = set()
         metadata = cls().metadata
         var_names = [name for name in cls().__dir__() if not name.startswith('_')]
@@ -55,7 +55,7 @@ class CombinedFeatureView(ABC, FeatureSelectable):
             if isinstance(feature, FeatureView):
                 # Needs to compile the view one more time. unfortunally..
                 # not optimal as the view will be duplicated in the definition file
-                feature_view_deps[feature.metadata.name] = await feature.compile()
+                feature_view_deps[feature.metadata.name] = feature.compile()
             if isinstance(feature, FeatureFactory):
                 feature._feature_view = metadata.name
                 feature._name = var_name  # Needed in some cases for later inferance and features
@@ -66,40 +66,7 @@ class CombinedFeatureView(ABC, FeatureSelectable):
                     feature.transformation.using_features, feature_view_deps
                 )
 
-                transformations.add(await feature.compile(list(feature_view_deps.values())))
-
-        return CompiledCombinedFeatureView(
-            name=metadata.name,
-            features=transformations,
-            feature_referances=requests,
-        )
-
-    @classmethod
-    def compile_only_graph(cls) -> CompiledCombinedFeatureView:
-        transformations: set[DerivedFeature] = set()
-        metadata = cls().metadata
-        var_names = [name for name in cls().__dir__() if not name.startswith('_')]
-
-        requests: dict[str, list[RetrivalRequest]] = {}
-        feature_view_deps: dict[str, CompiledFeatureView] = {}
-
-        for var_name in var_names:
-            feature = getattr(cls, var_name)
-            if isinstance(feature, FeatureView):
-                # Needs to compile the view one more time. unfortunally..
-                # not optimal as the view will be duplicated in the definition file
-                feature_view_deps[feature.metadata.name] = feature.compile_graph_only()
-            if isinstance(feature, FeatureFactory):
-                feature._feature_view = metadata.name
-                feature._name = var_name  # Needed in some cases for later inferance and features
-                if not feature.transformation:
-                    logger.info('Feature had no transformation, which do not make sense in a CombinedView')
-                    continue
-                requests[var_name] = CombinedFeatureView._needed_features(
-                    feature.transformation.using_features, feature_view_deps
-                )
-
-                transformations.add(feature.compile_graph_only())
+                transformations.add(feature.compile())
 
         return CompiledCombinedFeatureView(
             name=metadata.name,
@@ -111,10 +78,10 @@ class CombinedFeatureView(ABC, FeatureSelectable):
     def select(
         cls: type[FVType], features: Callable[[type[FVType]], list[FeatureFactory]]
     ) -> RetrivalRequest:
-        view: CompiledCombinedFeatureView = cls.compile_only_graph()  # type: ignore[attr-defined]
+        view: CompiledCombinedFeatureView = cls.compile()  # type: ignore[attr-defined]
         names = features(cls)
         return view.requests_for({feat.name for feat in names})
 
     @classmethod
     def select_all(cls: type[FVType]) -> RetrivalRequest:
-        return cls.compile_only_graph().request_all  # type: ignore[attr-defined]
+        return cls.compile().request_all  # type: ignore[attr-defined]

@@ -1,4 +1,4 @@
-import asyncio
+import logging
 from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any, Callable
@@ -7,10 +7,9 @@ import pandas as pd
 import polars as pl
 
 from aligned.compiler.feature_factory import FeatureFactory, Transformation, TransformationFactory
-from aligned.enricher import StatisticEricher, TimespanSelector
-from aligned.exceptions import InvalidStandardScalerArtefact
-from aligned.schemas.feature_view import CompiledFeatureView
-from aligned.schemas.transformation import StandardScalingTransformation, TextVectoriserModel
+from aligned.schemas.transformation import TextVectoriserModel
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -26,13 +25,28 @@ class EqualsFactory(TransformationFactory):
         else:
             return [self.left]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import Equals
 
         if isinstance(self.right, FeatureFactory):
             raise NotImplementedError()
         else:
             return Equals(self.left.name, self.right)
+
+
+@dataclass
+class NotNullFactory(TransformationFactory):
+
+    value: FeatureFactory
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.value]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import NotNull
+
+        return NotNull(self.value.name)
 
 
 @dataclass
@@ -45,7 +59,7 @@ class RatioFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.numerator, self.denumerator]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import Ratio
 
         return Ratio(self.numerator.name, self.denumerator.name)
@@ -61,7 +75,7 @@ class OrdinalFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import Ordinal
 
         return Ordinal(self.feature.name, self.orders)
@@ -77,7 +91,7 @@ class ContainsFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.in_feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import Contains as ContainsTransformation
 
         return ContainsTransformation(self.in_feature.name, self.text)
@@ -93,7 +107,7 @@ class NotEqualsFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.in_feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import NotEquals as NotEqualsTransformation
 
         return NotEqualsTransformation(self.in_feature.name, self.value)
@@ -112,7 +126,7 @@ class GreaterThenFactory(TransformationFactory):
         else:
             return [self.left_feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import GreaterThen, GreaterThenValue
 
         if isinstance(self.right, FeatureFactory):
@@ -131,7 +145,7 @@ class GreaterThenOrEqualFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.in_feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import GreaterThenOrEqual as GTETransformation
 
         return GTETransformation(self.in_feature.name, self.value)
@@ -147,7 +161,7 @@ class LowerThenFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.in_feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import LowerThen as LTTransformation
 
         return LTTransformation(self.in_feature.name, self.value)
@@ -163,7 +177,7 @@ class LowerThenOrEqualFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.in_feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import LowerThenOrEqual as LTETransformation
 
         return LTETransformation(self.in_feature.name, self.value)
@@ -216,7 +230,7 @@ class DateComponentFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import DateComponent as DCTransformation
 
         return DCTransformation(self.feature.name, self.component)
@@ -232,7 +246,7 @@ class DifferanceBetweenFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.first_feature, self.second_feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import Subtraction
 
         return Subtraction(self.first_feature.name, self.second_feature.name)
@@ -248,7 +262,7 @@ class AdditionBetweenFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.first_feature, self.second_feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import Addition
 
         return Addition(self.first_feature.name, self.second_feature.name)
@@ -264,7 +278,7 @@ class TimeDifferanceFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.first_feature, self.second_feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import TimeDifference as TDTransformation
 
         return TDTransformation(self.first_feature.name, self.second_feature.name)
@@ -279,7 +293,7 @@ class LogTransformFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import LogarithmOnePluss
 
         return LogarithmOnePluss(self.feature.name)
@@ -295,7 +309,7 @@ class ReplaceFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.source_feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import ReplaceStrings
 
         return ReplaceStrings(self.source_feature.name, self.values)
@@ -310,70 +324,10 @@ class ToNumericalFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.from_feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import ToNumerical as ToNumericalTransformation
 
         return ToNumericalTransformation(self.from_feature.name)
-
-
-@dataclass
-class StandardScalingFactory(TransformationFactory):
-
-    feature: FeatureFactory
-
-    limit: int | None = field(default=None)
-    timespan: timedelta | None = field(default=None)
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        return [self.feature]
-
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
-        from aligned.enricher import StatisticEricher
-
-        if self.feature.transformation:
-            raise ValueError('Standard scaling is not supported for derived features yet')
-
-        if len(source_views) != 1:
-            raise ValueError('Expected one source')
-
-        feature_view = source_views[0]
-
-        if not isinstance(feature_view.batch_data_source, StatisticEricher):
-            raise ValueError('The data source needs to conform to StatisticEricher')
-
-        timespan: TimespanSelector | None = None
-
-        feature_name = self.feature.name
-
-        if self.timespan:
-            if not feature_view.event_timestamp:
-                raise InvalidStandardScalerArtefact(
-                    'Unable to find a event_timestamp, this is needed'
-                    ' when using `timespan` for artefact generation.\n',
-                    'Make sure the event_timestamp is above the'
-                    ' transformation in the feature view decleration',
-                )
-            timespan = TimespanSelector(self.timespan, time_column=feature_view.event_timestamp.name)
-
-        std_enricher = feature_view.batch_data_source.std(
-            columns={feature_name}, time=timespan, limit=self.limit
-        )
-        mean_enricher = feature_view.batch_data_source.mean(
-            columns={feature_name}, time=timespan, limit=self.limit
-        )
-
-        std, mean = await asyncio.gather(std_enricher.as_df(), mean_enricher.as_df())
-
-        if std.isna().any() or (std == 0).any():
-            raise InvalidStandardScalerArtefact(
-                f'The standard deviation for {feature_name} is 0.'
-                'Therefore convaying no meaningful information.\n'
-                'This could be because the used dataset has no values,'
-                'so maybe consider changing `limit`,`timspan` or change the datasource'
-            )
-
-        return StandardScalingTransformation(mean[feature_name], std[feature_name], feature_name)
 
 
 @dataclass
@@ -386,7 +340,7 @@ class IsInFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import IsIn as IsInTransformation
 
         return IsInTransformation(self.values, self.feature.name)
@@ -402,7 +356,7 @@ class AndFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.first_feature, self.second_feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import And as AndTransformation
 
         return AndTransformation(self.first_feature.name, self.second_feature.name)
@@ -418,7 +372,7 @@ class OrFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.first_feature, self.second_feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import Or as OrTransformation
 
         return OrTransformation(self.first_feature.name, self.second_feature.name)
@@ -433,14 +387,14 @@ class InverseFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.from_feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import Inverse as InverseTransformation
 
         return InverseTransformation(self.from_feature.name)
 
 
 class FillNaStrategy:
-    async def compile(self, feature: FeatureFactory, source_views: list[CompiledFeatureView]) -> Any:
+    def compile(self) -> Any:
         pass
 
     @staticmethod
@@ -452,7 +406,7 @@ class FillNaStrategy:
 class ConstantFillNaStrategy(FillNaStrategy):
     value: Any
 
-    async def compile(self, feature: FeatureFactory, source_views: list[CompiledFeatureView]) -> Any:
+    def compile(self) -> Any:
         return self.value
 
 
@@ -461,20 +415,9 @@ class MeanFillNaStrategy(FillNaStrategy):
 
     limit: int | None = field(default=None)
 
-    async def compile(self, feature: FeatureFactory, source_views: list[CompiledFeatureView]) -> Any:
-        if len(source_views) != 1:
-            raise ValueError('Need exactly one source in order to compute mean fill value')
-
-        source = source_views[0]
-        if not isinstance(source.batch_data_source, StatisticEricher):
-            raise ValueError('The data source needs to be a StatisticEnricher')
-
-        mean = await source.batch_data_source.mean(columns={feature.name}, limit=self.limit).as_df()
-        value = mean[feature.name]
-        if isinstance(value, pd.Series):
-            return value.iloc[0]
-        else:
-            return value
+    def compile(self) -> Any:
+        logging.info('The Mean Fill strategy will be deprecated.')
+        return 0
 
 
 @dataclass
@@ -487,10 +430,11 @@ class FillMissingFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import FillNaValues
 
-        fill_value = await self.strategy.compile(self.feature, source_views)
+        fill_value = self.strategy.compile()
+
         return FillNaValues(key=self.feature.name, value=fill_value, dtype=self.feature.dtype)
 
 
@@ -503,7 +447,7 @@ class FloorFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import Floor
 
         return Floor(self.feature.name)
@@ -518,7 +462,7 @@ class CeilFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import Ceil
 
         return Ceil(self.feature.name)
@@ -533,7 +477,7 @@ class RoundFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import Round
 
         return Round(self.feature.name)
@@ -548,7 +492,7 @@ class AbsoluteFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import Absolute
 
         return Absolute(self.feature.name)
@@ -565,7 +509,7 @@ class PandasTransformationFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return self._using_features
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import PandasTransformation
 
         return PandasTransformation(method=self.method, dtype=self.dtype.dtype)
@@ -582,7 +526,7 @@ class PolarsTransformationFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return self._using_features
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         import dill
 
         from aligned.schemas.transformation import PolarsTransformation
@@ -612,11 +556,8 @@ class MeanTransfomrationFactory(TransformationFactory, AggregatableTransformatio
         else:
             return [self.feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import Mean
-
-        if len(source_views) != 1:
-            raise ValueError('Unable to compute mean for CombinedView')
 
         return Mean(
             key=self.feature.name, group_keys=[feat.name for feat in self.group_by] if self.group_by else None
@@ -636,7 +577,7 @@ class WordVectoriserFactory(TransformationFactory):
     def using_features(self) -> list[FeatureFactory]:
         return [self.feature]
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         from aligned.schemas.transformation import WordVectoriser
 
         return WordVectoriser(self.feature.name, self.model)

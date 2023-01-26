@@ -10,7 +10,7 @@ except ModuleNotFoundError:
 
     StrictRedis = Redis
 
-from aligned.data_source.stream_data_source import StreamDataSource
+from aligned.data_source.stream_data_source import SinkableDataSource, StreamDataSource
 from aligned.feature_source import FeatureSource, WritableFeatureSource
 from aligned.online_source import OnlineSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
@@ -59,8 +59,8 @@ class RedisConfig(Codable):
     def online_source(self) -> 'RedisOnlineSource':
         return RedisOnlineSource(config=self)
 
-    def stream_source(self, topic_name: str) -> 'RedisStreamSource':
-        return RedisStreamSource(topic_name=topic_name, config=self)
+    def stream(self, topic: str) -> 'RedisStreamSource':
+        return RedisStreamSource(topic_name=topic, config=self)
 
 
 @dataclass
@@ -133,7 +133,7 @@ class RedisSource(FeatureSource, WritableFeatureSource):
 
 
 @dataclass
-class RedisStreamSource(StreamDataSource):
+class RedisStreamSource(StreamDataSource, SinkableDataSource):
 
     topic_name: str
     config: RedisConfig
@@ -145,4 +145,27 @@ class RedisStreamSource(StreamDataSource):
     def map_values(self, mappings: dict[str, str]) -> 'RedisStreamSource':
         return RedisStreamSource(
             topic_name=self.topic_name, config=self.config, mappings=self.mappings | mappings
+        )
+
+    async def write_to_stream(self, job: RetrivalJob) -> None:
+        import asyncio
+
+        redis = self.config.redis()
+        df = await job.to_pandas()
+        for feature in job.request_result.features:
+            if feature.dtype == FeatureType('').bool:
+                # Redis do not support bools
+                df[feature.name] = df[feature.name].astype(int).astype(str)
+            elif feature.dtype == FeatureType('').datetime:
+                df[feature.name] = (df[feature.name].astype('int64') // 10**9).astype(str)
+            elif feature.dtype == FeatureType('').embedding:
+                df[feature.name] = df[feature.name].apply(lambda x: ','.join(map(str, x)))
+        await asyncio.gather(
+            *[
+                redis.xadd(
+                    self.topic_name,
+                    {key: value if isinstance(value, str) else str(value) for key, value in record.items()},
+                )
+                for record in df.to_dict('records')
+            ]
         )

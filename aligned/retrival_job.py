@@ -14,6 +14,7 @@ import polars as pl
 from aligned.exceptions import UnableToFindFileException
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.schemas.feature import FeatureType
+from aligned.schemas.model import EventTrigger
 from aligned.split_strategy import (
     SplitDataSet,
     SplitStrategy,
@@ -213,6 +214,9 @@ class RetrivalJob(ABC):
 
     def filter(self, include_features: set[str]) -> RetrivalJob:
         return FilterJob(include_features, self)
+
+    def listen_to_events(self, events: set[EventTrigger]) -> RetrivalJob:
+        return ListenForTriggers(self, events)
 
 
 @dataclass
@@ -547,3 +551,24 @@ class FilterJob(RetrivalJob):
 
     def with_subfeatures(self) -> RetrivalJob:
         return self.job.with_subfeatures()
+
+
+@dataclass
+class ListenForTriggers(RetrivalJob):
+
+    job: RetrivalJob
+    triggers: set[EventTrigger]
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.job.request_result
+
+    async def to_pandas(self) -> pd.DataFrame:
+        import asyncio
+
+        df = await self.job.to_pandas()
+        await asyncio.gather(*[trigger.check_pandas(df, self.request_result) for trigger in self.triggers])
+        return df
+
+    async def to_polars(self) -> pl.LazyFrame:
+        raise NotImplementedError()

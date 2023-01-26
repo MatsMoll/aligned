@@ -155,6 +155,7 @@ class SupportedTransformations:
         for tran_type in [
             Equals,
             NotEquals,
+            NotNull,
             PandasTransformation,
             PolarsTransformation,
             StandardScalingTransformation,
@@ -242,6 +243,29 @@ class PolarsTransformation(Transformation):
 
         expr: pl.Expr = dill.loads(self.method)
         return df.with_column(expr.alias(alias))
+
+
+@dataclass
+class NotNull(Transformation):
+
+    key: str
+
+    name: str = 'not_null'
+    dtype: FeatureType = FeatureType('').bool
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return df[self.key].notnull()
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+        return df.with_column(pl.col(self.key).is_not_null().alias(alias))
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            NotNull('x'),
+            input={'x': ['Hello', None, None, 'test', None]},
+            output=[False, True, False, False, True],
+        )
 
 
 @dataclass

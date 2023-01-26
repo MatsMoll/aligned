@@ -6,8 +6,25 @@ import polars as pl
 
 from aligned.local.source import DataFileReference
 from aligned.request.retrival_request import RetrivalRequest
-from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RequestResult
+from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RequestResult, RetrivalJob
 from aligned.schemas.feature import Feature
+
+
+@dataclass
+class LiteralRetrivalJob(RetrivalJob):
+
+    df: pd.DataFrame
+    result: RequestResult
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.result
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return self.df
+
+    async def to_polars(self) -> pl.LazyFrame:
+        return pl.from_pandas(self.df)
 
 
 @dataclass

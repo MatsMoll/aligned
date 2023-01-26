@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any
 
 from aligned.enricher import Enricher
-from aligned.model import Model
 from aligned.online_source import BatchOnlineSource, OnlineSource
 from aligned.schemas.repo_definition import EnricherReference, RepoDefinition, RepoReference
 
@@ -108,12 +107,7 @@ class RepoReader:
 
                 obj = getattr(module, attribute)
 
-                if isinstance(obj, Model):
-                    if not obj.name:
-                        obj.name = attribute
-                    repo.models.add(obj.schema())
-
-                elif isinstance(obj, Enricher):
+                if isinstance(obj, Enricher):
                     repo.enrichers.append(
                         EnricherReference(module=module_path, attribute_name=attribute, enricher=obj)
                     )
@@ -121,8 +115,10 @@ class RepoReader:
                     repo.online_source = obj
                 else:
                     classes = super_classes_in(obj)
-                    if 'FeatureView' in classes:
-                        fv = await obj.compile()
+                    if 'Model' in classes:
+                        repo.models.add(obj.compile())
+                    elif 'FeatureView' in classes:
+                        fv = obj.compile()
                         if fv.name in feature_view_names:
                             raise Exception(
                                 (
@@ -133,7 +129,7 @@ class RepoReader:
                         feature_view_names[fv.name] = py_file.as_posix()
                         repo.feature_views.add(fv)
                     elif 'CombinedFeatureView' in classes:
-                        fv = await obj.compile()
+                        fv = obj.compile()
                         if fv.name in feature_view_names:
                             raise Exception(
                                 (

@@ -21,6 +21,7 @@ from aligned.online_source import BatchOnlineSource, OnlineSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import DerivedFeatureJob, FilterJob, RetrivalJob, SupervisedJob
 from aligned.schemas.feature_view import CompiledFeatureView
+from aligned.schemas.model import EventTrigger
 from aligned.schemas.model import Model as ModelSchema
 from aligned.schemas.repo_definition import EnricherReference, RepoDefinition
 
@@ -226,6 +227,14 @@ class FeatureStore:
         model = self.models[name]
         return ModelFeatureStore(model, self)
 
+    def event_triggers_for(self, feature_view: str) -> set[EventTrigger]:
+        triggers = set()
+        for model in self.models.values():
+            for target in model.targets:
+                if target.event_trigger and target.estimating.feature_view == feature_view:
+                    triggers.add(target.event_trigger)
+        return triggers
+
     @staticmethod
     def _requests_for(
         feature_request: RawStringFeatureRequest,
@@ -280,23 +289,22 @@ class FeatureStore:
                 'You are trying to get a combined feature view. ',
                 'This is only possible through store.features_for(...), as of now.\n',
             )
-        view = self.feature_views[view]
-        return FeatureViewStore(self, view)
+        feature_view = self.feature_views[view]
+        return FeatureViewStore(self, feature_view, self.event_triggers_for(view))
 
     async def add_feature_view(self, feature_view: FeatureView) -> None:
-        compiled_view = await type(feature_view).compile()
+        compiled_view = type(feature_view).compile()
         self.feature_views[compiled_view.name] = compiled_view
         if isinstance(self.feature_source, BatchFeatureSource):
             self.feature_source.sources[compiled_view.name] = compiled_view.batch_data_source
 
     async def add_combined_feature_view(self, feature_view: CombinedFeatureView) -> None:
-        compiled_view = await type(feature_view).compile()
+        compiled_view = type(feature_view).compile()
         self.combined_feature_views[compiled_view.name] = compiled_view
 
     def add_model(self, model: Model) -> None:
-        if not model.name:
-            raise ValueError('Model name must be set')
-        self.models[model.name] = model.schema()
+        compiled_model = type(model).compile()
+        self.models[compiled_model.name] = compiled_model
 
     def with_source(self, source: OnlineSource | None = None) -> 'FeatureStore':
         """
@@ -368,10 +376,15 @@ class SupervisedModelFeatureStore:
     def for_entities(self, entities: dict[str, list]) -> SupervisedJob:
         feature_refs = self.model.features.union(self.model.targets)
         features = {f'{feature.feature_view}:{feature.name}' for feature in feature_refs}
-        targets = {feature.name for feature in self.model.targets}
-        request = self.store.requests_for(RawStringFeatureRequest(features))
+        target_features = {
+            f'{feature.estimating.feature_view}:{feature.estimating.name}' for feature in self.model.targets
+        }
+        targets = {feature.estimating.name for feature in self.model.targets}
+        request = self.store.requests_for(RawStringFeatureRequest(features.union(target_features)))
         return SupervisedJob(
-            self.store.features_for(entities, list(features)).filter(request.features_to_include),
+            self.store.features_for(entities, list(features.union(target_features))).filter(
+                request.features_to_include
+            ),
             target_columns=targets,
         )
 
@@ -381,6 +394,7 @@ class FeatureViewStore:
 
     store: FeatureStore
     view: CompiledFeatureView
+    event_triggers: set[EventTrigger] = field(default_factory=set)
     feature_filter: set[str] | None = field(default=None)
     only_write_model_features: bool = field(default=False)
 
@@ -390,7 +404,11 @@ class FeatureViewStore:
 
     def with_optimised_write(self, only_write_model_features: bool = True) -> 'FeatureViewStore':
         return FeatureViewStore(
-            self.store, self.view, self.feature_filter, only_write_model_features=only_write_model_features
+            self.store,
+            self.view,
+            self.event_triggers,
+            self.feature_filter,
+            only_write_model_features=only_write_model_features,
         )
 
     def all(self, limit: int | None = None) -> RetrivalJob:
@@ -429,7 +447,7 @@ class FeatureViewStore:
         return self.source.features_for(entities, self.view.request_all)
 
     def select(self, features: set[str]) -> 'FeatureViewStore':
-        return FeatureViewStore(self.store, self.view, features)
+        return FeatureViewStore(self.store, self.view, self.event_triggers, features)
 
     @property
     def write_input(self) -> set[str]:
@@ -460,9 +478,12 @@ class FeatureViewStore:
         if request.all_required_feature_names - set(df.columns):
             missing = request.all_required_feature_names - set(df.columns)
             df[list(missing)] = None
-        output = await DerivedFeatureJob(
-            FileFullJob(LiteralReference(df), request), requests=[request]
-        ).to_pandas()
+        output = (
+            await DerivedFeatureJob(FileFullJob(LiteralReference(df), request), requests=[request])
+            .listen_to_events(self.event_triggers)
+            .to_pandas()
+        )
+
         return output.to_dict('list')
 
     async def batch_write(self, values: dict[str, list[Any]]) -> None:
@@ -507,6 +528,7 @@ Will fill values with None, but it could be a potential problem: {missing}
             FileFullJob(LiteralReference(df), request, limit=None)
             .ensure_types([request])
             .derive_features([request])
+            .listen_to_events(self.event_triggers)
         )
 
         await self.source.write(job, [request])

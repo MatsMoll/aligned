@@ -122,7 +122,7 @@ def plan_command(repo_path: str, env_file: str) -> None:
 )
 @click.option(
     '--host',
-    default='127.0.0.1',
+    default=None,
     help='The host to serve on',
 )
 @click.option(
@@ -154,7 +154,7 @@ def plan_command(repo_path: str, env_file: str) -> None:
     help='The path to the feature store server',
 )
 def serve_command(
-    repo_path: str, host: str, port: int, workers: int, env_file: str, reload: bool, server_path: str
+    repo_path: str, port: int, workers: int, env_file: str, reload: bool, server_path: str, host: str | None
 ) -> None:
     """
     Starts a API serving the feature store
@@ -162,6 +162,8 @@ def serve_command(
     from logging.config import dictConfig
 
     import uvicorn
+
+    host = host or os.getenv('HOST', '127.0.0.1')
 
     handler = 'console'
     log_format = '%(levelname)s:\t\b%(asctime)s %(name)s:%(lineno)d [%(correlation_id)s] %(message)s'
@@ -265,6 +267,7 @@ def serve_worker_command(repo_path: str, worker_path: str, env_file: str) -> Non
     env_file_path = dir / env_file
     load_envs(env_file_path)
 
+    os.environ['ALADDIN_ENABLE_SERVER'] = 'True'
     worker = StreamWorker.from_object(dir, reference_file_path, obj)
 
     sync(worker.start())

@@ -64,9 +64,9 @@ class StreamWorker:
         module = import_module(module_path)
 
         try:
-            obj = getattr(module, obj)
-            if isinstance(obj, StreamWorker):
-                return obj
+            worker = getattr(module, obj)
+            if isinstance(worker, StreamWorker):
+                return worker
             raise ValueError('No reference found')
         except AttributeError:
             raise ValueError('No reference found')

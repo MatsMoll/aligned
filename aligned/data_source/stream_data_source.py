@@ -1,17 +1,22 @@
+from __future__ import annotations
+
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from mashumaro.types import SerializableType
 
 from aligned.schemas.codable import Codable
 
+if TYPE_CHECKING:
+    from aligned.retrival_job import RetrivalJob
+
 
 class StreamDataSourceFactory:
 
-    supported_data_sources: dict[str, type['StreamDataSource']]
+    supported_data_sources: dict[str, type[StreamDataSource]]
 
-    _shared: Optional['StreamDataSourceFactory'] = None
+    _shared: Optional[StreamDataSourceFactory] = None
 
     def __init__(self) -> None:
         from aligned.redis.config import RedisStreamSource
@@ -22,7 +27,7 @@ class StreamDataSourceFactory:
         }
 
     @classmethod
-    def shared(cls) -> 'StreamDataSourceFactory':
+    def shared(cls) -> StreamDataSourceFactory:
         if cls._shared:
             return cls._shared
         cls._shared = StreamDataSourceFactory()
@@ -41,7 +46,7 @@ class StreamDataSource(ABC, Codable, SerializableType):
         return self.to_dict()
 
     @classmethod
-    def _deserialize(cls, value: dict) -> 'StreamDataSource':
+    def _deserialize(cls, value: dict) -> StreamDataSource:
         name = value['name']
         if name not in StreamDataSourceFactory.shared().supported_data_sources:
             raise ValueError(
@@ -62,5 +67,10 @@ class HttpStreamSource(StreamDataSource):
 
     name: str = 'http'
 
-    def map_values(self, mappings: dict[str, str]) -> 'HttpStreamSource':
+    def map_values(self, mappings: dict[str, str]) -> HttpStreamSource:
         return HttpStreamSource(topic_name=self.topic_name, mappings=self.mappings | mappings)
+
+
+class SinkableDataSource:
+    async def write_to_stream(self, job: RetrivalJob) -> None:
+        pass

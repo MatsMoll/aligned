@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
@@ -7,6 +8,7 @@ import pandas as pd
 import polars as pl
 
 from aligned.compiler.constraint_factory import ConstraintFactory, LiteralFactory
+from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.exceptions import NotSupportedYet
 from aligned.schemas.constraints import (
     Constraint,
@@ -19,7 +21,6 @@ from aligned.schemas.constraints import (
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import EventTimestamp as EventTimestampFeature
 from aligned.schemas.feature import Feature, FeatureReferance, FeatureType
-from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.transformation import TextVectoriserModel, Transformation
 
 if TYPE_CHECKING:
@@ -41,15 +42,9 @@ class TransformationFactory:
 
     The batch data source will be provided when the compile method is run.
     leading to fetching a small sample, and compute the metrics needed in order to generate a
-
-    StandardScalerTransformation config. E.g:
-    StandardScalerTransformation(
-        mean=10,
-        std=0.3
-    )
     """
 
-    async def compile(self, source_views: list[CompiledFeatureView]) -> Transformation:
+    def compile(self) -> Transformation:
         pass
 
     @property
@@ -58,6 +53,26 @@ class TransformationFactory:
 
 
 T = TypeVar('T')
+
+
+@dataclass
+class EventTrigger:
+    condition: FeatureFactory
+    event: StreamDataSource
+
+
+@dataclass
+class Target:
+    feature: FeatureFactory
+    event_trigger: EventTrigger | None = None
+
+    def reference(self) -> FeatureReferance:
+        return self.feature.feature_referance()
+
+    def on_ground_truth(self, sink: StreamDataSource, when: Bool) -> Target:
+        assert when.dtype == FeatureType('').bool, 'A trigger needs a boolean condition'
+
+        return Target(self.feature, EventTrigger(when, sink))
 
 
 class FeatureFactory:
@@ -104,7 +119,7 @@ class FeatureFactory:
     def feature_referance(self) -> FeatureReferance:
         return FeatureReferance(self.name, self._feature_view, self.dtype)
 
-    async def feature(self) -> Feature:
+    def feature(self) -> Feature:
         return Feature(
             name=self.name,
             dtype=self.dtype,
@@ -113,25 +128,10 @@ class FeatureFactory:
             constraints=self.constraints,
         )
 
-    def compile_graph_only(self) -> DerivedFeature:
-        from aligned.schemas.transformation import CopyTransformation
+    def as_target(self) -> Target:
+        return Target(self)
 
-        if not self.transformation:
-            raise ValueError('Trying to create a derived feature with no transformation')
-
-        some_feature = self.transformation.using_features[0]
-        return DerivedFeature(
-            name=self.name,
-            dtype=self.dtype,
-            depending_on=[feat.feature_referance() for feat in self.transformation.using_features],
-            transformation=CopyTransformation(some_feature.name, dtype=some_feature.dtype),
-            depth=self.depth(),
-            description=self._description,
-            tags=None,
-            constraints=None,
-        )
-
-    async def compile(self, source_views: list[CompiledFeatureView]) -> DerivedFeature:
+    def compile(self) -> DerivedFeature:
 
         if not self.transformation:
             raise ValueError('Trying to create a derived feature with no transformation')
@@ -140,7 +140,7 @@ class FeatureFactory:
             name=self.name,
             dtype=self.dtype,
             depending_on=[feat.feature_referance() for feat in self.transformation.using_features],
-            transformation=await self.transformation.compile(source_views),
+            transformation=self.transformation.compile(),
             depth=self.depth(),
             description=self._description,
             tags=None,
@@ -245,6 +245,13 @@ class FeatureFactory:
             self.constraints.add(constraint)
         else:
             self.constraints.add(LiteralFactory(constraint))
+
+    def is_not_null(self) -> Bool:
+        from aligned.compiler.transformation_factory import NotNullFactory
+
+        instance = Bool()
+        instance.transformation = NotNullFactory(self)
+        return instance
 
 
 class EquatableFeature(FeatureFactory):
