@@ -187,6 +187,7 @@ class SupportedTransformations:
             Floor,
             CopyTransformation,
             WordVectoriser,
+            MapArgMax,
         ]:
             self.add(tran_type)
 
@@ -1236,13 +1237,15 @@ class Absolute(Transformation):
 class MapArgMax(Transformation):
 
     column_mappings: dict[str, LiteralValue]
+    name = 'map_arg_max'
 
     @property
     def dtype(self) -> FeatureType:
         return list(self.column_mappings.values())[0].dtype
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        raise NotImplementedError()
+        pl_df = await self.transform_polars(pl.from_pandas(df).lazy(), 'feature')
+        return pl_df.collect().to_pandas()['feature']
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
         expr: pl.Expr = pl.lit(None)
@@ -1257,27 +1260,35 @@ class MapArgMax(Transformation):
                 )
             else:
                 expr = pl.when(pl.col(key) > 0.5).then(value.python_value).otherwise(pl.lit(None))
+            return df.with_column(expr.alias(alias))
         else:
-            item_index = 1
-            items = list(self.column_mappings.items())
-            item_length = len(items)
-            when_expr = pl.when(pl.col(items[0][0]) > pl.col(items[1][0])).then(items[0][1].python_value)
-
-            while item_index < item_length - 2:
-                when_expr = when_expr.when(
-                    pl.col(items[item_index][0]) > pl.col(items[item_index + 1][0])
-                ).then(items[item_index][1])
-                item_index += 1
-
-            expr = when_expr.otherwise(items[item_length - 1][1])
-
-        return df.with_column(expr.alias(alias))
+            features = list(self.column_mappings.keys())
+            arg_max_alias = f'{alias}_arg_max'
+            array_row_alias = f'{alias}_row'
+            mapper = pl.DataFrame(
+                {
+                    alias: [self.column_mappings[feature].python_value for feature in features],
+                    arg_max_alias: list(range(0, len(features))),
+                }
+            ).with_column(pl.col(arg_max_alias).cast(pl.UInt32))
+            sub = df.with_column(pl.concat_list(pl.col(features)).alias(array_row_alias)).with_column(
+                pl.col(array_row_alias).arr.arg_max().alias(arg_max_alias)
+            )
+            return sub.join(mapper.lazy(), on=arg_max_alias, how='left').select(
+                pl.exclude([arg_max_alias, array_row_alias])
+            )
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
-            MapArgMax({'a_prob': 'a', 'b_prob': 'b', 'c_prob': 'c'}),
-            input={'a_prob': [0.01, 0.9, 0.2], 'b_prob': [0.9, 0.05, 0.2], 'c_prob': [0.09, 0.05, 0.06]},
+            MapArgMax(
+                {
+                    'a_prob': LiteralValue.from_value('a'),
+                    'b_prob': LiteralValue.from_value('b'),
+                    'c_prob': LiteralValue.from_value('c'),
+                }
+            ),
+            input={'a_prob': [0.01, 0.9, 0.25], 'b_prob': [0.9, 0.05, 0.15], 'c_prob': [0.09, 0.05, 0.6]},
             output=['b', 'a', 'c'],
         )
 

@@ -28,7 +28,6 @@ class SupportedLiteralValues:
         return cls._shared
 
 
-@dataclass
 class LiteralValue(Codable, SerializableType):
     name: str
 
@@ -70,7 +69,7 @@ class LiteralValue(Codable, SerializableType):
 
 
 @dataclass
-class IntValue(Codable):
+class IntValue(LiteralValue):
     value: int
     name = 'int'
 
@@ -80,7 +79,7 @@ class IntValue(Codable):
 
 
 @dataclass
-class FloatValue(Codable):
+class FloatValue(LiteralValue):
     value: float
     name = 'float'
 
@@ -90,7 +89,7 @@ class FloatValue(Codable):
 
 
 @dataclass
-class BoolValue(Codable):
+class BoolValue(LiteralValue):
     value: bool
     name = 'bool'
 
@@ -100,7 +99,7 @@ class BoolValue(Codable):
 
 
 @dataclass
-class DateValue(Codable):
+class DateValue(LiteralValue):
     value: date
     name = 'date'
 
@@ -110,7 +109,7 @@ class DateValue(Codable):
 
 
 @dataclass
-class DatetimeValue(Codable):
+class DatetimeValue(LiteralValue):
     value: datetime
     name = 'datetime'
 
@@ -120,7 +119,7 @@ class DatetimeValue(Codable):
 
 
 @dataclass
-class StringValue(Codable):
+class StringValue(LiteralValue):
     value: str
     name = 'string'
 
@@ -130,7 +129,7 @@ class StringValue(Codable):
 
 
 @dataclass
-class ArrayValue(Codable):
+class ArrayValue(LiteralValue):
     value: list[LiteralValue]
     name = 'array'
 
