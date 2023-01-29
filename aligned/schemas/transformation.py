@@ -3,7 +3,7 @@ from __future__ import annotations
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -12,6 +12,7 @@ from mashumaro.types import SerializableType
 
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import FeatureType
+from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.text_vectoriser import TextVectoriserModel
 
 
@@ -264,7 +265,7 @@ class NotNull(Transformation):
         return TransformationTestDefinition(
             NotNull('x'),
             input={'x': ['Hello', None, None, 'test', None]},
-            output=[False, True, False, False, True],
+            output=[True, False, False, True, False],
         )
 
 
@@ -272,7 +273,7 @@ class NotNull(Transformation):
 class Equals(Transformation):
 
     key: str
-    value: str
+    value: LiteralValue
 
     name: str = 'equals'
     dtype: FeatureType = FeatureType('').bool
@@ -282,15 +283,15 @@ class Equals(Transformation):
         self.value = value
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return df[self.key] == self.value
+        return df[self.key] == self.value.python_value
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
-        return df.with_column((pl.col(self.key) == self.value).alias(alias))
+        return df.with_column((pl.col(self.key) == self.value.python_value).alias(alias))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
-            Equals('x', 'Test'),
+            Equals('x', LiteralValue.from_value('Test')),
             input={'x': ['Hello', 'Test', 'nah', 'test', 'Test']},
             output=[False, True, False, False, True],
         )
@@ -401,7 +402,7 @@ class Inverse(Transformation):
 class NotEquals(Transformation):
 
     key: str
-    value: str
+    value: LiteralValue
 
     name: str = 'not-equals'
     dtype: FeatureType = FeatureType('').bool
@@ -411,15 +412,15 @@ class NotEquals(Transformation):
         self.value = value
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return df[self.key] != self.value
+        return df[self.key] != self.value.python_value
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
-        return df.with_column((pl.col(self.key) != self.value).alias(alias))
+        return df.with_column((pl.col(self.key) != self.value.python_value).alias(alias))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
-            NotEquals('x', 'Test'),
+            NotEquals('x', LiteralValue.from_value('Test')),
             input={'x': ['Hello', 'Test', 'nah', 'test', 'Test']},
             output=[True, False, True, True, False],
         )
@@ -1089,24 +1090,29 @@ class IsIn(Transformation):
 class FillNaValues(Transformation):
 
     key: str
-    value: Any
+    value: LiteralValue
     dtype: FeatureType
 
     name: str = 'fill_missing'
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return df[self.key].fillna(self.value)
+        return df[self.key].fillna(self.value.python_value)
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
         if self.dtype == FeatureType('').float:
-            return df.with_column(pl.col(self.key).fill_nan(self.value).fill_null(self.value).alias(alias))
+            return df.with_column(
+                pl.col(self.key)
+                .fill_nan(self.value.python_value)
+                .fill_null(self.value.python_value)
+                .alias(alias)
+            )
         else:
-            return df.with_column(pl.col(self.key).fill_null(self.value).alias(alias))
+            return df.with_column(pl.col(self.key).fill_null(self.value.python_value).alias(alias))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
-            FillNaValues('x', 3, dtype=FeatureType('').int32),
+            FillNaValues('x', LiteralValue.from_value(3), dtype=FeatureType('').int32),
             input={'x': [1, 1, None, None, 3, 3, None, 4, 5, None]},
             output=[1, 1, 3, 3, 3, 3, 3, 4, 5, 3],
         )
@@ -1223,6 +1229,56 @@ class Absolute(Transformation):
             Absolute('x'),
             input={'x': [-13, 19, None]},
             output=[13, 19, None],
+        )
+
+
+@dataclass
+class MapArgMax(Transformation):
+
+    column_mappings: dict[str, LiteralValue]
+
+    @property
+    def dtype(self) -> FeatureType:
+        return list(self.column_mappings.values())[0].dtype
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        raise NotImplementedError()
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+        expr: pl.Expr = pl.lit(None)
+
+        if len(self.column_mappings) == 1:
+            key, value = list(self.column_mappings.items())[0]
+            if self.dtype == FeatureType('').bool:
+                expr = pl.when(pl.col(key) > 0.5).then(value.python_value).otherwise(not value.python_value)
+            elif self.dtype == FeatureType('').string:
+                expr = (
+                    pl.when(pl.col(key) > 0.5).then(value.python_value).otherwise(f'not {value.python_value}')
+                )
+            else:
+                expr = pl.when(pl.col(key) > 0.5).then(value.python_value).otherwise(pl.lit(None))
+        else:
+            item_index = 1
+            items = list(self.column_mappings.items())
+            item_length = len(items)
+            when_expr = pl.when(pl.col(items[0][0]) > pl.col(items[1][0])).then(items[0][1].python_value)
+
+            while item_index < item_length - 2:
+                when_expr = when_expr.when(
+                    pl.col(items[item_index][0]) > pl.col(items[item_index + 1][0])
+                ).then(items[item_index][1])
+                item_index += 1
+
+            expr = when_expr.otherwise(items[item_length - 1][1])
+
+        return df.with_column(expr.alias(alias))
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            MapArgMax({'a_prob': 'a', 'b_prob': 'b', 'c_prob': 'c'}),
+            input={'a_prob': [0.01, 0.9, 0.2], 'b_prob': [0.9, 0.05, 0.2], 'c_prob': [0.09, 0.05, 0.06]},
+            output=['b', 'a', 'c'],
         )
 
 

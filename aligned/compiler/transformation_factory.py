@@ -7,7 +7,7 @@ import pandas as pd
 import polars as pl
 
 from aligned.compiler.feature_factory import FeatureFactory, Transformation, TransformationFactory
-from aligned.schemas.transformation import TextVectoriserModel
+from aligned.schemas.transformation import LiteralValue, TextVectoriserModel
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class EqualsFactory(TransformationFactory):
         if isinstance(self.right, FeatureFactory):
             raise NotImplementedError()
         else:
-            return Equals(self.left.name, self.right)
+            return Equals(self.left.name, LiteralValue.from_value(self.right))
 
 
 @dataclass
@@ -110,7 +110,7 @@ class NotEqualsFactory(TransformationFactory):
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import NotEquals as NotEqualsTransformation
 
-        return NotEqualsTransformation(self.in_feature.name, self.value)
+        return NotEqualsTransformation(self.in_feature.name, LiteralValue.from_value(self.value))
 
 
 @dataclass
@@ -435,7 +435,9 @@ class FillMissingFactory(TransformationFactory):
 
         fill_value = self.strategy.compile()
 
-        return FillNaValues(key=self.feature.name, value=fill_value, dtype=self.feature.dtype)
+        return FillNaValues(
+            key=self.feature.name, value=LiteralValue.from_value(fill_value), dtype=self.feature.dtype
+        )
 
 
 @dataclass

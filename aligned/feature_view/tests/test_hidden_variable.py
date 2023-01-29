@@ -27,7 +27,7 @@ class TestView(FeatureView):
 @pytest.mark.asyncio
 async def test_hidden_variable() -> None:
 
-    view = await TestView.compile()
+    view = TestView.compile()
 
     assert len(view.derived_features) == 9
 
@@ -35,7 +35,7 @@ async def test_hidden_variable() -> None:
 @pytest.mark.asyncio
 async def test_select_variables() -> None:
 
-    view = await TestView.compile()
+    view = TestView.compile()
 
     assert len(view.derived_features) == 9
 

@@ -6,12 +6,15 @@ from typing import Callable
 
 import polars as pl
 
-from aligned.compiler.feature_factory import EventTimestamp, Target
+from aligned.compiler.feature_factory import EventTimestamp, Target, TargetProbability
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.entity_data_source import EntityDataSource
+from aligned.feature_view.feature_view import FeatureView
 from aligned.request.retrival_request import FeatureRequest
-from aligned.schemas.feature import FeatureReferance
-from aligned.schemas.model import EventTrigger
+from aligned.schemas.derivied_feature import DerivedFeature
+from aligned.schemas.feature import Feature, FeatureReferance, FeatureType
+from aligned.schemas.literal_value import LiteralValue
+from aligned.schemas.model import EventTrigger, InferenceView
 from aligned.schemas.model import Model as ModelSchema
 from aligned.schemas.model import Target as TargetSchema
 
@@ -67,9 +70,12 @@ class Model(ABC):
         var_names = [name for name in cls().__dir__() if not name.startswith('_')]
         metadata = cls().metadata
 
-        targets: set[TargetSchema] = set()
         features: set[FeatureReferance] = set()
-        timestamp: EventTimestamp | None = None
+
+        inference_view: InferenceView = InferenceView(set(), set(), set(), set())
+        probability_features: dict[str, set[TargetProbability]] = {}
+
+        metadata.inference_source
 
         for request in metadata.features:
             features.update(
@@ -83,7 +89,10 @@ class Model(ABC):
         for var_name in var_names:
             feature = getattr(cls, var_name)
 
-            if isinstance(feature, Target):
+            if isinstance(feature, FeatureView):
+                compiled = feature.compile()
+                inference_view.entities.update(compiled.entities)
+            elif isinstance(feature, Target):
                 target_feature = feature.feature.copy_type()
                 target_feature._name = var_name
                 trigger: EventTrigger | None = None
@@ -96,7 +105,7 @@ class Model(ABC):
                     trigger = EventTrigger(
                         event.condition.compile(), event=event.event, payload={feature.feature.feature()}
                     )
-                targets.add(
+                inference_view.target.add(
                     TargetSchema(
                         estimating=feature.reference(),
                         feature=target_feature.feature(),
@@ -105,12 +114,35 @@ class Model(ABC):
                 )
             elif isinstance(feature, EventTimestamp):
                 feature._name = var_name
-                timestamp = feature.event_timestamp()
+                inference_view.event_timestamp = feature.event_timestamp
 
-        return ModelSchema(
-            name=metadata.name,
-            features=features,
-            targets=targets,
-            inference_source=metadata.inference_source,
-            event_timestamp=timestamp,
-        )
+            elif isinstance(feature, TargetProbability):
+                feature_name = feature.target.feature.name
+                feature._name = var_name
+                inference_view.features.add(
+                    Feature(
+                        var_name,
+                        FeatureType('').float,
+                        f"The probability of target named {feature_name} being '{feature.of_value}'.",
+                    )
+                )
+                probability_features[feature_name] = probability_features.get(feature_name, set()).union(
+                    {feature}
+                )
+
+        for target, probabilities in probability_features.items():
+            from aligned.schemas.transformation import MapArgMax
+
+            transformation = MapArgMax(
+                {probs._name: LiteralValue.from_value(probs.of_value) for probs in probabilities}
+            )
+
+            arg_max_feature = DerivedFeature(
+                name=target,
+                dtype=transformation.dtype,
+                depending_on=list(transformation.column_mappings.keys()),
+                depth=2,
+            )
+            inference_view.derived_features.add(arg_max_feature)
+
+        return ModelSchema(name=metadata.name, features=features, inference_view=inference_view)

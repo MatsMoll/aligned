@@ -1,8 +1,6 @@
-from asyncio import Future
-
 import numpy as np
 import pytest
-from redis.asyncio import StrictRedis  # type: ignore
+from redis.asyncio.client import Pipeline  # type: ignore
 
 from aligned.redis.config import RedisConfig
 from aligned.redis.job import FactualRedisJob
@@ -29,10 +27,8 @@ def retrival_request() -> RetrivalRequest:
 @pytest.mark.asyncio
 async def test_factual_redis_job(mocker, retrival_request) -> None:  # type: ignore[no-untyped-def]
     values = ['20', '44']
-    redis_values: Future = Future()
-    redis_values.set_result(values)
 
-    redis_mock = mocker.patch.object(StrictRedis, 'mget', return_value=redis_values)
+    redis_mock = mocker.patch.object(Pipeline, 'execute', return_value=values)
 
     job = FactualRedisJob(
         RedisConfig.localhost(),
@@ -42,18 +38,15 @@ async def test_factual_redis_job(mocker, retrival_request) -> None:  # type: ign
 
     result = await job.to_pandas()
     redis_mock.assert_called_once()
-    assert np.all(redis_mock.call_args[0][0] == ['test:1.0a:x', 'test:2.0b:x'])
     x_result = [int(value) for value in values] + [0, 0]
-    assert np.all(result['x'].fillna(0).values == x_result)
+    assert np.all(result['x'].fillna(0).values == x_result), f'Got {result}'
 
 
 @pytest.mark.asyncio
 async def test_factual_redis_job_int_as_str(mocker, retrival_request) -> None:  # type: ignore[no-untyped-def]
     values = ['20', '44']
-    redis_values: Future = Future()
-    redis_values.set_result(values)
 
-    redis_mock = mocker.patch.object(StrictRedis, 'mget', return_value=redis_values)
+    redis_mock = mocker.patch.object(Pipeline, 'execute', return_value=values)
 
     job = FactualRedisJob(
         RedisConfig.localhost(),
@@ -63,7 +56,6 @@ async def test_factual_redis_job_int_as_str(mocker, retrival_request) -> None:  
 
     result = await job.to_pandas()
     redis_mock.assert_called_once()
-    assert np.all(redis_mock.call_args[0][0] == ['test:1.0a:x', 'test:2.0b:x'])
     x_result = [int(value) for value in values] + [0, 0]
     assert np.all(result['x'].fillna(0).values == x_result)
 
@@ -71,10 +63,8 @@ async def test_factual_redis_job_int_as_str(mocker, retrival_request) -> None:  
 @pytest.mark.asyncio
 async def test_nan_entities_job(mocker, retrival_request) -> None:  # type: ignore[no-untyped-def]
     values = ['20', '44']
-    redis_values: Future = Future()
-    redis_values.set_result(values)
 
-    redis_mock = mocker.patch.object(StrictRedis, 'mget', return_value=redis_values)
+    redis_mock = mocker.patch.object(Pipeline, 'execute', return_value=values)
 
     job = FactualRedisJob(
         RedisConfig.localhost(),
@@ -89,10 +79,8 @@ async def test_nan_entities_job(mocker, retrival_request) -> None:  # type: igno
 @pytest.mark.asyncio
 async def test_no_entities_job(mocker, retrival_request) -> None:  # type: ignore[no-untyped-def]
     values = ['20', '44']
-    redis_values: Future = Future()
-    redis_values.set_result(values)
 
-    redis_mock = mocker.patch.object(StrictRedis, 'mget', return_value=redis_values)
+    redis_mock = mocker.patch.object(Pipeline, 'execute', return_value=values)
 
     job = FactualRedisJob(
         RedisConfig.localhost(),
@@ -118,10 +106,8 @@ async def test_factual_redis_job_int_entity(mocker) -> None:  # type: ignore[no-
     )
 
     values = ['20', '44', '55']
-    redis_values: Future = Future()
-    redis_values.set_result(values)
 
-    redis_mock = mocker.patch.object(StrictRedis, 'mget', return_value=redis_values)
+    redis_mock = mocker.patch.object(Pipeline, 'execute', return_value=values)
 
     job = FactualRedisJob(
         RedisConfig.localhost(),
@@ -131,6 +117,5 @@ async def test_factual_redis_job_int_entity(mocker) -> None:  # type: ignore[no-
 
     result = await job.to_pandas()
     redis_mock.assert_called_once()
-    assert np.all(redis_mock.call_args[0][0] == ['test:1.0:x', 'test:2.0:x', 'test:4.0:x'])
     x_result = [int(value) for value in values] + [0]
     assert np.all(result['x'].fillna(0).values == x_result)

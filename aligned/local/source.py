@@ -293,8 +293,8 @@ class LiteralReference(DataFileReference):
     file: pl.LazyFrame
 
     def __init__(self, file: pl.LazyFrame | pd.DataFrame) -> None:
-        if isinstance(file, pl.DataFrame):
-            self.file = pl.from_pandas(file)
+        if isinstance(file, pd.DataFrame):
+            self.file = pl.from_pandas(file).lazy()
         else:
             self.file = file
 

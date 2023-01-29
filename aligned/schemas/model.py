@@ -10,6 +10,7 @@ from aligned.retrival_job import RequestResult
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureReferance
+from aligned.schemas.literal_value import LiteralValue
 
 logger = logging.getLogger(__name__)
 
@@ -80,12 +81,27 @@ class Target(Codable):
 
 
 @dataclass
+class TargetProbability(Codable):
+    outcome: LiteralValue
+    feature: Feature
+
+
+@dataclass
+class InferenceView(Codable):
+    target: set[Target]
+    entities: set[Feature]
+    features: set[Feature]
+    derived_features: set[DerivedFeature]
+    event_timestamp: EventTimestamp | None = field(default=None)
+    source: BatchDataSource | None = field(default=None)
+    probabilities: set[TargetProbability] | None = field(default=None)
+
+
+@dataclass
 class Model(Codable):
     name: str
     features: set[FeatureReferance]
-    event_timestamp: EventTimestamp | None = field(default=None)
-    targets: set[Target] | None = field(default=None)
-    inference_source: BatchDataSource | None = field(default=None)
+    inference_view: InferenceView
 
     def __hash__(self) -> int:
         return self.name.__hash__()

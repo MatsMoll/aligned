@@ -62,6 +62,16 @@ class EventTrigger:
 
 
 @dataclass
+class TargetProbability:
+    of_value: Any
+    target: Target
+    _name: str | None = None
+
+    def __hash__(self) -> int:
+        return self._name.__hash__()
+
+
+@dataclass
 class Target:
     feature: FeatureFactory
     event_trigger: EventTrigger | None = None
@@ -73,6 +83,18 @@ class Target:
         assert when.dtype == FeatureType('').bool, 'A trigger needs a boolean condition'
 
         return Target(self.feature, EventTrigger(when, sink))
+
+    def probability_of(self, value: Any) -> TargetProbability:
+
+        if not isinstance(value, self.feature.dtype.python_type):
+            raise ValueError(
+                (
+                    'Probability of target is of incorrect data type. ',
+                    f'Target is {self.feature.dtype}, but value is {type(value)}.',
+                )
+            )
+
+        return TargetProbability(value, self)
 
 
 class FeatureFactory:

@@ -29,26 +29,39 @@ class FactualRedisJob(FactualRetrivalJob):
         result_df = pl.DataFrame(self.facts)
 
         for request in self.requests:
+            redis_combine_id = 'redis_combine_entity_id'
             entities = result_df.select(
-                (
-                    pl.lit(request.feature_view_name)
-                    + pl.lit(':')
-                    + pl.concat_str(sorted(request.entity_names))
-                ).alias('id')
-            )
+                [
+                    (
+                        pl.lit(request.feature_view_name)
+                        + pl.lit(':')
+                        + pl.concat_str(sorted(request.entity_names))
+                    ).alias(redis_combine_id),
+                    pl.col(list(request.entity_names)),
+                ]
+            ).filter(pl.col(redis_combine_id).is_not_null())
 
-            features = request.all_feature_names
+            if entities.shape[0] == 0:
+                # Do not connect to redis if there are no entities to fetch
+                continue
+
+            features = list(request.all_feature_names)
 
             async with redis.pipeline(transaction=False) as pipe:
-                for entity in entities['id']:
+                for entity in entities[redis_combine_id]:
                     pipe.hmget(entity, keys=features)
                 result = await pipe.execute()
 
-            reqs = pl.DataFrame(result, columns=features)
+            reqs: pl.DataFrame = pl.concat(
+                [entities, pl.DataFrame(result, columns=features)], how='horizontal'
+            ).select(pl.exclude(redis_combine_id))
+
             for feature in request.all_features:
                 if feature.dtype == FeatureType('').bool:
                     reqs = reqs.with_column(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
-                elif feature.dtype == FeatureType('').int32 or feature.dtype == FeatureType('').int64:
+                elif reqs[feature.name].dtype == pl.Utf8 and (
+                    feature.dtype == FeatureType('').int32 or feature.dtype == FeatureType('').int64
+                ):
                     reqs = reqs.with_column(
                         pl.col(feature.name)
                         .str.splitn('.', 2)
@@ -67,6 +80,6 @@ class FactualRedisJob(FactualRetrivalJob):
                 # .apply(lambda x: [float(i) for i in x])
                 #     )
 
-            result_df = pl.concat([reqs, result_df], how='horizontal')
+            result_df = result_df.join(reqs, on=list(request.entity_names), how='left')
 
         return result_df.lazy()

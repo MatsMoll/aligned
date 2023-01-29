@@ -6,7 +6,7 @@ from aligned import FeatureView
 @pytest.mark.asyncio
 async def test_fetch_all_request(titanic_feature_view: FeatureView) -> None:
 
-    compiled_view = await type(titanic_feature_view).compile()
+    compiled_view = type(titanic_feature_view).compile()
     request = compiled_view.request_all
 
     expected_features = {
@@ -37,7 +37,7 @@ async def test_fetch_all_request(titanic_feature_view: FeatureView) -> None:
 @pytest.mark.asyncio
 async def test_fetch_features_request(titanic_feature_view: FeatureView) -> None:
 
-    compiled_view = await type(titanic_feature_view).compile()
+    compiled_view = type(titanic_feature_view).compile()
     wanted_features = {'cabin', 'is_male'}
     request = compiled_view.request_for(wanted_features)
     expected_features = {'sex', 'cabin', 'is_male'}
