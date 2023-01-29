@@ -116,7 +116,7 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, StatisticEric
         return DateRangePsqlJob(self, start_date, end_date, request)
 
     @classmethod
-    def feature_for(
+    def multi_source_features_for(
         cls, facts: dict[str, list], requests: dict[PostgreSQLDataSource, RetrivalRequest]
     ) -> FactualRetrivalJob:
         # Group based on config

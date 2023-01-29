@@ -67,7 +67,7 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
         ]
         jobs = [
             self.source_types[source_group]
-            .feature_for(
+            .multi_source_features_for(
                 facts=facts,
                 requests={
                     source: req

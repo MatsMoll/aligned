@@ -126,7 +126,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
         return FileDateJob(source=self, request=request, start_date=start_date, end_date=end_date)
 
     @classmethod
-    def feature_for(
+    def multi_source_features_for(
         cls, facts: dict[str, list], requests: dict[CsvFileSource, RetrivalRequest]
     ) -> FactualRetrivalJob:
         if len(requests.keys()) != 1:
@@ -198,7 +198,7 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable):
         return FileDateJob(source=self, request=request, start_date=start_date, end_date=end_date)
 
     @classmethod
-    def feature_for(
+    def multi_source_features_for(
         cls, facts: dict[str, list], requests: dict[ParquetFileSource, RetrivalRequest]
     ) -> FactualRetrivalJob:
         if len(requests.keys()) != 1:
