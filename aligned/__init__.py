@@ -21,6 +21,7 @@ from aligned.feature_view import (
     FeatureViewMetadata,
 )
 from aligned.local.source import FileSource
+from aligned.model import Model
 from aligned.psql.data_source import PostgreSQLConfig
 from aligned.redis.config import RedisConfig
 from aligned.redshift.data_source import RedshiftSQLConfig
@@ -52,4 +53,5 @@ __all__ = [
     'Float',
     'EventTimestamp',
     'Timestamp',
+    'Model',
 ]

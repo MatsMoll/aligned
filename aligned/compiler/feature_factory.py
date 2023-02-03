@@ -71,14 +71,24 @@ class TargetProbability:
         return self._name.__hash__()
 
 
+class FeatureReferencable:
+    def feature_referance(self) -> FeatureReferance:
+        pass
+
+
 @dataclass
-class Target:
+class Target(FeatureReferencable):
     feature: FeatureFactory
     event_trigger: EventTrigger | None = None
     _name: str | None = None
+    _location: FeatureLocation | None = None
 
-    def reference(self) -> FeatureReferance:
-        return self.feature.feature_referance()
+    def feature_referance(self) -> FeatureReferance:
+        if not self._name:
+            raise ValueError('Missing name, can not create reference')
+        if not self._location:
+            raise ValueError('Missing location, can not create reference')
+        return FeatureReferance(self._name, self._location, self.feature.dtype)
 
     def on_ground_truth(self, when: Bool, sink_to: StreamDataSource) -> Target:
         assert when.dtype == FeatureType('').bool, 'A trigger needs a boolean condition'
@@ -98,7 +108,7 @@ class Target:
         return TargetProbability(value, self)
 
 
-class FeatureFactory:
+class FeatureFactory(FeatureReferencable):
     """
     Represents the information needed to generate a feature definition
 

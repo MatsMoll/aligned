@@ -87,7 +87,7 @@ class TargetProbability(Codable):
 
 
 @dataclass
-class InferenceView(Codable):
+class PredictionsView(Codable):
     target: set[Target]
     entities: set[Feature]
     features: set[Feature]
@@ -101,7 +101,8 @@ class InferenceView(Codable):
 class Model(Codable):
     name: str
     features: set[FeatureReferance]
-    inference_view: InferenceView
+    predictions_view: PredictionsView
+    description: str | None = field(default=None)
 
     def __hash__(self) -> int:
         return self.name.__hash__()

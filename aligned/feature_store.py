@@ -231,7 +231,7 @@ class FeatureStore:
     def event_triggers_for(self, feature_view: str) -> set[EventTrigger]:
         triggers = set()
         for model in self.models.values():
-            for target in model.inference_view.target:
+            for target in model.predictions_view.target:
                 if target.event_trigger and target.estimating.feature_view == feature_view:
                     triggers.add(target.event_trigger)
         return triggers
@@ -378,14 +378,14 @@ class SupervisedModelFeatureStore:
 
     def for_entities(self, entities: dict[str, list]) -> SupervisedJob:
         feature_refs = self.model.features.union(
-            {target.estimating for target in self.model.inference_view.target}
+            {target.estimating for target in self.model.predictions_view.target}
         )
         features = {f'{feature.feature_view}:{feature.name}' for feature in feature_refs}
         target_features = {
             f'{feature.estimating.feature_view}:{feature.estimating.name}'
-            for feature in self.model.inference_view.target
+            for feature in self.model.predictions_view.target
         }
-        targets = {feature.estimating.name for feature in self.model.inference_view.target}
+        targets = {feature.estimating.name for feature in self.model.predictions_view.target}
         request = self.store.requests_for(RawStringFeatureRequest(features.union(target_features)))
         return SupervisedJob(
             self.store.features_for(entities, list(features.union(target_features))).filter(

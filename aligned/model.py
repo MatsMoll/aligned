@@ -6,7 +6,13 @@ from typing import Callable
 
 import polars as pl
 
-from aligned.compiler.feature_factory import EventTimestamp, FeatureFactory, Target, TargetProbability
+from aligned.compiler.feature_factory import (
+    EventTimestamp,
+    FeatureFactory,
+    FeatureReferencable,
+    Target,
+    TargetProbability,
+)
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.entity_data_source import EntityDataSource
@@ -14,8 +20,9 @@ from aligned.feature_view.feature_view import FeatureView
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
 from aligned.schemas.literal_value import LiteralValue
-from aligned.schemas.model import EventTrigger, InferenceView
+from aligned.schemas.model import EventTrigger
 from aligned.schemas.model import Model as ModelSchema
+from aligned.schemas.model import PredictionsView
 from aligned.schemas.model import Target as TargetSchema
 
 logger = logging.getLogger(__name__)
@@ -48,11 +55,12 @@ class SqlEntityDataSource(EntityDataSource):
 @dataclass
 class ModelMetedata:
     name: str
-    features: list[FeatureFactory]
+    features: list[FeatureReferencable]
     # Will log the feature inputs to a model. Therefore, enabling log and wait etc.
     # feature_logger: WritableBatchSource | None = field(default=None)
-    inference_source: BatchDataSource | None = field(default=None)
-    inference_stream: StreamDataSource | None = field(default=None)
+    description: str | None = field(default=None)
+    predictions_source: BatchDataSource | None = field(default=None)
+    predictions_stream: StreamDataSource | None = field(default=None)
 
 
 class Model(ABC):
@@ -60,11 +68,11 @@ class Model(ABC):
     def metadata_with(
         name: str,
         description: str,
-        features: list[FeatureFactory],
-        inference_source: BatchDataSource | None = None,
-        inference_stream: StreamDataSource | None = None,
+        features: list[FeatureReferencable],
+        predictions_source: BatchDataSource | None = None,
+        predictions_stream: StreamDataSource | None = None,
     ) -> ModelMetedata:
-        return ModelMetedata(name, features, inference_source, inference_stream)
+        return ModelMetedata(name, features, description, predictions_source, predictions_stream)
 
     @abstractproperty
     def metadata(self) -> ModelMetedata:
@@ -75,8 +83,8 @@ class Model(ABC):
         var_names = [name for name in cls().__dir__() if not name.startswith('_')]
         metadata = cls().metadata
 
-        inference_view: InferenceView = InferenceView(
-            set(), set(), set(), set(), source=metadata.inference_source
+        inference_view: PredictionsView = PredictionsView(
+            set(), set(), set(), set(), source=metadata.predictions_source
         )
         probability_features: dict[str, set[TargetProbability]] = {}
 
@@ -85,15 +93,20 @@ class Model(ABC):
 
             if isinstance(feature, FeatureFactory):
                 feature._name = var_name
-                feature._location = FeatureLocation(metadata.name, 'model')
+                feature._location = FeatureLocation.model(metadata.name)
 
             if isinstance(feature, FeatureView):
                 compiled = feature.compile()
                 inference_view.entities.update(compiled.entities)
+            elif isinstance(feature, Model):
+                compiled = feature.compile()
+                inference_view.entities.update(compiled.predictions_view.entities)
             elif isinstance(feature, Target):
                 feature._name = var_name
+                feature._location = FeatureLocation.model(metadata.name)
                 target_feature = feature.feature.copy_type()
                 target_feature._name = var_name
+                target_feature._location = FeatureLocation.model(metadata.name)
                 trigger: EventTrigger | None = None
 
                 if feature.event_trigger:
@@ -106,7 +119,7 @@ class Model(ABC):
                     )
                 inference_view.target.add(
                     TargetSchema(
-                        estimating=feature.reference(),
+                        estimating=feature.feature.feature_referance(),
                         feature=target_feature.feature(),
                         event_trigger=trigger,
                     )
@@ -145,9 +158,7 @@ class Model(ABC):
                 dtype=transformation.dtype,
                 transformation=transformation,
                 depending_on={
-                    FeatureReferance(
-                        feat, FeatureLocation(metadata.name, 'model'), dtype=FeatureType('').float
-                    )
+                    FeatureReferance(feat, FeatureLocation.model(metadata.name), dtype=FeatureType('').float)
                     for feat in transformation.column_mappings.keys()
                 },
                 depth=1,
@@ -156,4 +167,4 @@ class Model(ABC):
         if not probability_features:
             inference_view.features.update({target.feature for target in inference_view.target})
 
-        return ModelSchema(name=metadata.name, features=features, inference_view=inference_view)
+        return ModelSchema(name=metadata.name, features=features, predictions_view=inference_view)
