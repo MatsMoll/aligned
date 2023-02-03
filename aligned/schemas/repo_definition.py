@@ -76,14 +76,16 @@ class RepoReference:
         from aligned.local.source import StorageFileReference
 
         module_path = path_to_py_module(file, repo)
-        module = import_module(module_path)
 
         try:
+            module = import_module(module_path)
             obj = getattr(module, object)
             if isinstance(obj, StorageFileReference):
                 return RepoReference(env_var_name='const', repo_paths={'const': obj})
             raise ValueError('No reference found')
         except AttributeError:
+            raise ValueError('No reference found')
+        except ModuleNotFoundError:
             raise ValueError('No reference found')
 
 

@@ -11,7 +11,7 @@ from aligned.schemas.feature import Feature, FeatureType
 @pytest.fixture
 def retrival_request() -> RetrivalRequest:
     return RetrivalRequest(
-        feature_view_name='test',
+        location='test',
         entities={
             Feature(name='id_int', dtype=FeatureType('').int32),
             Feature(name='id_str', dtype=FeatureType('').string),
@@ -96,7 +96,7 @@ async def test_no_entities_job(mocker, retrival_request) -> None:  # type: ignor
 async def test_factual_redis_job_int_entity(mocker) -> None:  # type: ignore[no-untyped-def]
 
     retrival_request = RetrivalRequest(
-        feature_view_name='test',
+        location='test',
         entities={Feature(name='id_int', dtype=FeatureType('').int32)},
         features={
             Feature(name='x', dtype=FeatureType('').int32),

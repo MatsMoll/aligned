@@ -7,6 +7,7 @@ from mashumaro.types import SerializableType
 
 from aligned.feature_source import FeatureSource, InMemoryFeatureSource
 from aligned.schemas.codable import Codable
+from aligned.schemas.feature import FeatureLocation
 from aligned.schemas.feature_view import CompiledFeatureView
 
 logger = logging.getLogger(__name__)
@@ -88,7 +89,9 @@ class BatchOnlineSource(OnlineSource):
         from aligned.feature_source import BatchFeatureSource
 
         return BatchFeatureSource(
-            sources={fv.name: fv.batch_data_source for fv in feature_views},
+            sources={
+                FeatureLocation.feature_view(fv.name).location: fv.batch_data_source for fv in feature_views
+            }
         )
 
 

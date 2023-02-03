@@ -20,13 +20,13 @@ from aligned.feature_view.combined_view import CombinedFeatureView, CombinedFeat
 from aligned.local.source import CsvFileSource, FileFullJob, LiteralReference, ParquetFileSource
 from aligned.retrival_job import DerivedFeatureJob, RetrivalJob, RetrivalRequest
 from aligned.schemas.derivied_feature import DerivedFeature
-from aligned.schemas.feature import Feature, FeatureReferance, FeatureType
+from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
 
 
 @pytest.fixture
 def retrival_request_without_derived() -> RetrivalRequest:
     return RetrivalRequest(
-        feature_view_name='test',
+        location=FeatureLocation.feature_view('test'),
         entities={Feature(name='id', dtype=FeatureType('').int32)},
         features={
             Feature(name='a', dtype=FeatureType('').int32),
@@ -53,7 +53,7 @@ def retrival_request_with_derived() -> RetrivalRequest:
     from aligned.schemas.transformation import Addition
 
     return RetrivalRequest(
-        feature_view_name='test_with_ts',
+        location=FeatureLocation.feature_view('test_with_ts'),
         entities={Feature(name='id', dtype=FeatureType('').int32)},
         features={
             Feature(name='c', dtype=FeatureType('').int32),
@@ -64,8 +64,16 @@ def retrival_request_with_derived() -> RetrivalRequest:
                 name='c+d',
                 dtype=FeatureType('').int32,
                 depending_on={
-                    FeatureReferance(name='c', feature_view='test_with_ts', dtype=FeatureType('').int32),
-                    FeatureReferance(name='d', feature_view='test_with_ts', dtype=FeatureType('').int32),
+                    FeatureReferance(
+                        name='c',
+                        location=FeatureLocation.feature_view('test_with_ts'),
+                        dtype=FeatureType('').int32,
+                    ),
+                    FeatureReferance(
+                        name='d',
+                        location=FeatureLocation.feature_view('test_with_ts'),
+                        dtype=FeatureType('').int32,
+                    ),
                 },
                 transformation=Addition(front='c', behind='d'),
                 depth=1,
@@ -106,7 +114,7 @@ def combined_retrival_request() -> RetrivalRequest:
     from aligned.schemas.transformation import Addition
 
     return RetrivalRequest(
-        feature_view_name='combined',
+        location=FeatureLocation.combined_view('combined'),
         entities={Feature(name='id', dtype=FeatureType('').int32)},
         features=set(),
         derived_features={
@@ -114,8 +122,14 @@ def combined_retrival_request() -> RetrivalRequest:
                 name='a+c+d',
                 dtype=FeatureType('').int32,
                 depending_on={
-                    FeatureReferance(name='c+d', feature_view='test_with_ts', dtype=FeatureType('').int32),
-                    FeatureReferance(name='a', feature_view='test', dtype=FeatureType('').int32),
+                    FeatureReferance(
+                        name='c+d',
+                        location=FeatureLocation.feature_view('test_with_ts'),
+                        dtype=FeatureType('').int32,
+                    ),
+                    FeatureReferance(
+                        name='a', location=FeatureLocation.feature_view('test'), dtype=FeatureType('').int32
+                    ),
                 },
                 transformation=Addition(front='c+d', behind='a'),
                 depth=2,

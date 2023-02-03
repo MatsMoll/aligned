@@ -33,9 +33,7 @@ class FactualRedisJob(FactualRetrivalJob):
             entities = result_df.select(
                 [
                     (
-                        pl.lit(request.feature_view_name)
-                        + pl.lit(':')
-                        + pl.concat_str(sorted(request.entity_names))
+                        pl.lit(request.location) + pl.lit(':') + pl.concat_str(sorted(request.entity_names))
                     ).alias(redis_combine_id),
                     pl.col(list(request.entity_names)),
                 ]

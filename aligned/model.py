@@ -6,13 +6,13 @@ from typing import Callable
 
 import polars as pl
 
-from aligned.compiler.feature_factory import EventTimestamp, Target, TargetProbability
+from aligned.compiler.feature_factory import EventTimestamp, FeatureFactory, Target, TargetProbability
 from aligned.data_source.batch_data_source import BatchDataSource
+from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.entity_data_source import EntityDataSource
 from aligned.feature_view.feature_view import FeatureView
-from aligned.request.retrival_request import FeatureRequest
 from aligned.schemas.derivied_feature import DerivedFeature
-from aligned.schemas.feature import Feature, FeatureReferance, FeatureType
+from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
 from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.model import EventTrigger, InferenceView
 from aligned.schemas.model import Model as ModelSchema
@@ -48,18 +48,23 @@ class SqlEntityDataSource(EntityDataSource):
 @dataclass
 class ModelMetedata:
     name: str
-    features: list[FeatureRequest]
+    features: list[FeatureFactory]
     # Will log the feature inputs to a model. Therefore, enabling log and wait etc.
     # feature_logger: WritableBatchSource | None = field(default=None)
     inference_source: BatchDataSource | None = field(default=None)
+    inference_stream: StreamDataSource | None = field(default=None)
 
 
 class Model(ABC):
     @staticmethod
     def metadata_with(
-        name: str, features: list[FeatureRequest], inference_source: BatchDataSource | None = None
+        name: str,
+        description: str,
+        features: list[FeatureFactory],
+        inference_source: BatchDataSource | None = None,
+        inference_stream: StreamDataSource | None = None,
     ) -> ModelMetedata:
-        return ModelMetedata(name, features, inference_source)
+        return ModelMetedata(name, features, inference_source, inference_stream)
 
     @abstractproperty
     def metadata(self) -> ModelMetedata:
@@ -70,29 +75,23 @@ class Model(ABC):
         var_names = [name for name in cls().__dir__() if not name.startswith('_')]
         metadata = cls().metadata
 
-        features: set[FeatureReferance] = set()
-
-        inference_view: InferenceView = InferenceView(set(), set(), set(), set())
+        inference_view: InferenceView = InferenceView(
+            set(), set(), set(), set(), source=metadata.inference_source
+        )
         probability_features: dict[str, set[TargetProbability]] = {}
-
-        metadata.inference_source
-
-        for request in metadata.features:
-            features.update(
-                {
-                    FeatureReferance(feature.name, request.name, feature.dtype)
-                    for feature in request.request_result.features
-                    if feature.name in request.features_to_include
-                }
-            )
 
         for var_name in var_names:
             feature = getattr(cls, var_name)
+
+            if isinstance(feature, FeatureFactory):
+                feature._name = var_name
+                feature._location = FeatureLocation(metadata.name, 'model')
 
             if isinstance(feature, FeatureView):
                 compiled = feature.compile()
                 inference_view.entities.update(compiled.entities)
             elif isinstance(feature, Target):
+                feature._name = var_name
                 target_feature = feature.feature.copy_type()
                 target_feature._name = var_name
                 trigger: EventTrigger | None = None
@@ -113,11 +112,10 @@ class Model(ABC):
                     )
                 )
             elif isinstance(feature, EventTimestamp):
-                feature._name = var_name
-                inference_view.event_timestamp = feature.event_timestamp
+                inference_view.event_timestamp = feature.event_timestamp()
 
             elif isinstance(feature, TargetProbability):
-                feature_name = feature.target.feature.name
+                feature_name = feature.target._name
                 feature._name = var_name
                 inference_view.features.add(
                     Feature(
@@ -129,6 +127,11 @@ class Model(ABC):
                 probability_features[feature_name] = probability_features.get(feature_name, set()).union(
                     {feature}
                 )
+            elif isinstance(feature, FeatureFactory):
+                inference_view.features.add(feature.feature())
+
+        # Needs to run after the feature views have compiled
+        features: set[FeatureReferance] = {feature.feature_referance() for feature in metadata.features}
 
         for target, probabilities in probability_features.items():
             from aligned.schemas.transformation import MapArgMax
@@ -140,9 +143,17 @@ class Model(ABC):
             arg_max_feature = DerivedFeature(
                 name=target,
                 dtype=transformation.dtype,
-                depending_on=list(transformation.column_mappings.keys()),
-                depth=2,
+                transformation=transformation,
+                depending_on={
+                    FeatureReferance(
+                        feat, FeatureLocation(metadata.name, 'model'), dtype=FeatureType('').float
+                    )
+                    for feat in transformation.column_mappings.keys()
+                },
+                depth=1,
             )
             inference_view.derived_features.add(arg_max_feature)
+        if not probability_features:
+            inference_view.features.update({target.feature for target in inference_view.target})
 
         return ModelSchema(name=metadata.name, features=features, inference_view=inference_view)

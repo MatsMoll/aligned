@@ -32,6 +32,6 @@ class RedshiftJobFactory(JobFactory):
         # Group based on config
         return FactPsqlJob(
             facts=facts,
-            sources={request.feature_view_name: source for source, request in requests.items()},
+            sources={request.location: source for source, request in requests.items()},
             requests=list(requests.values()),
         )

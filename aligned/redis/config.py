@@ -100,9 +100,7 @@ class RedisSource(FeatureSource, WritableFeatureSource):
                 # Run one query per row
                 data = data.with_column(
                     (
-                        pl.lit(request.feature_view_name)
-                        + pl.lit(':')
-                        + pl.concat_str(sorted(request.entity_names))
+                        pl.lit(request.location) + pl.lit(':') + pl.concat_str(sorted(request.entity_names))
                     ).alias('id')
                 )
 
@@ -163,8 +161,10 @@ class RedisStreamSource(StreamDataSource, SinkableDataSource):
                 expr = pl.col(feature.name).cast(pl.Int8, strict=False)
             elif feature.dtype == FeatureType('').datetime:
                 expr = pl.col(feature.name).dt.timestamp('ms')
-            elif feature.dtype == FeatureType('').embedding:
-                expr = pl.col(feature.name).apply(lambda x: ','.join(map(str, x)))
+            elif feature.dtype == FeatureType('').embedding or feature.dtype == FeatureType('').array:
+                import json
+
+                expr = pl.col(feature.name).apply(lambda x: json.dumps(x.to_list()))
 
             data = data.with_column(expr.cast(pl.Utf8).alias(feature.name))
 

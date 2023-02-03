@@ -52,18 +52,19 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
         from aligned.retrival_job import CombineFactualJob
 
         core_requests = {
-            self.sources[request.feature_view_name]: request
+            self.sources[request.location.identifier]: request
             for request in request.needed_requests
-            if request.feature_view_name in self.sources
+            if request.location.identifier in self.sources
         }
         source_groupes = {
-            self.sources[request.feature_view_name].job_group_key()
+            self.sources[request.location.identifier].job_group_key()
             for request in request.needed_requests
-            if request.feature_view_name in self.sources
+            if request.location.identifier in self.sources
         }
+
         # The combined views basicly, as they have no direct
         combined_requests = [
-            request for request in request.needed_requests if request.feature_view_name not in self.sources
+            request for request in request.needed_requests if request.location.identifier not in self.sources
         ]
         jobs = [
             self.source_types[source_group]
@@ -82,15 +83,19 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
             )
             for source_group in source_groupes
         ]
-        return CombineFactualJob(
-            jobs=jobs,
-            combined_requests=combined_requests,
-        ).ensure_types(request.needed_requests)
+        return (
+            CombineFactualJob(
+                jobs=jobs,
+                combined_requests=combined_requests,
+            )
+            .ensure_types(request.needed_requests)
+            .derive_features(request.needed_requests)
+        )
 
     def all_for(self, request: FeatureRequest, limit: int | None = None) -> RetrivalJob:
         if len(request.needed_requests) != 1:
             raise ValueError("Can't use all_for with a request that has subrequests")
-        if request.name not in self.sources:
+        if request.location.identifier not in self.sources:
             raise ValueError(
                 (
                     f"Unable to find feature view named '{request.name}'.",
@@ -98,7 +103,7 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
                 )
             )
         return (
-            self.sources[request.name]
+            self.sources[request.location.identifier]
             .all_data(request.needed_requests[0], limit)
             .derive_features(request.needed_requests)
             .ensure_types(request.needed_requests)
@@ -107,15 +112,15 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
     def all_between(self, start_date: datetime, end_date: datetime, request: FeatureRequest) -> RetrivalJob:
         if len(request.needed_requests) != 1:
             raise ValueError("Can't use all_for with a request that has subrequests")
-        if request.name not in self.sources:
+        if request.location.identifier not in self.sources:
             raise ValueError(
                 (
-                    f"Unable to find feature view named '{request.name}'.",
+                    f"Unable to find feature view named '{request.location.identifier}'.",
                     'Make sure it is added to the featuer store',
                 )
             )
         return (
-            self.sources[request.name]
+            self.sources[request.location.identifier]
             .all_between_dates(request.needed_requests[0], start_date, end_date)
             .derive_features(requests=request.needed_requests)
             .ensure_types(request.needed_requests)
@@ -156,7 +161,7 @@ class FactualInMemoryJob(FactualRetrivalJob):
         self.facts = facts
 
     def key(self, request: RetrivalRequest, entity: str, feature_name: str) -> str:
-        return f'{request.feature_view_name}:{entity}:{feature_name}'
+        return f'{request.location}:{entity}:{feature_name}'
 
     async def to_pandas(self) -> pd.DataFrame:
 
@@ -194,7 +199,7 @@ class InMemoryFeatureSource(FeatureSource, WritableFeatureSource):
         return FactualInMemoryJob(self.values, request.needed_requests, facts)
 
     def key(self, request: RetrivalRequest, entity: str, feature_name: str) -> str:
-        return f'{request.feature_view_name}:{entity}:{feature_name}'
+        return f'{request.location}:{entity}:{feature_name}'
 
     async def write(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
         data = await job.to_pandas()

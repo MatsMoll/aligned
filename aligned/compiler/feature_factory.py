@@ -20,7 +20,7 @@ from aligned.schemas.constraints import (
 )
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import EventTimestamp as EventTimestampFeature
-from aligned.schemas.feature import Feature, FeatureReferance, FeatureType
+from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
 from aligned.schemas.transformation import TextVectoriserModel, Transformation
 
 if TYPE_CHECKING:
@@ -75,14 +75,15 @@ class TargetProbability:
 class Target:
     feature: FeatureFactory
     event_trigger: EventTrigger | None = None
+    _name: str | None = None
 
     def reference(self) -> FeatureReferance:
         return self.feature.feature_referance()
 
-    def on_ground_truth(self, sink: StreamDataSource, when: Bool) -> Target:
+    def on_ground_truth(self, when: Bool, sink_to: StreamDataSource) -> Target:
         assert when.dtype == FeatureType('').bool, 'A trigger needs a boolean condition'
 
-        return Target(self.feature, EventTrigger(when, sink))
+        return Target(self.feature, EventTrigger(when, sink_to))
 
     def probability_of(self, value: Any) -> TargetProbability:
 
@@ -116,7 +117,7 @@ class FeatureFactory:
     """
 
     _name: str | None = None
-    _feature_view: str | None = None
+    _location: FeatureLocation | None = None
     _description: str | None = None
 
     transformation: TransformationFactory | None = None
@@ -139,7 +140,7 @@ class FeatureFactory:
         return [feat._name for feat in self.transformation.using_features if feat._name]
 
     def feature_referance(self) -> FeatureReferance:
-        return FeatureReferance(self.name, self._feature_view, self.dtype)
+        return FeatureReferance(self.name, self._location, self.dtype)
 
     def feature(self) -> Feature:
         return Feature(
@@ -274,6 +275,14 @@ class FeatureFactory:
         instance = Bool()
         instance.transformation = NotNullFactory(self)
         return instance
+
+
+class CouldBeEntityFeature:
+    def as_entity(self) -> Entity:
+        if isinstance(self, FeatureFactory):
+            return Entity(self)
+
+        raise ValueError(f'{self} is not a feature factory, and can therefore not be an entity')
 
 
 class EquatableFeature(FeatureFactory):
@@ -556,7 +565,7 @@ class NumericalAggregation(Generic[NumericType], ArithmeticFeature, DecimalOpera
         return feature
 
 
-class Int32(ArithmeticFeature):
+class Int32(ArithmeticFeature, CouldBeEntityFeature):
     def copy_type(self) -> Int32:
         return Int32()
 
@@ -565,7 +574,7 @@ class Int32(ArithmeticFeature):
         return FeatureType('').int32
 
 
-class Int64(ArithmeticFeature):
+class Int64(ArithmeticFeature, CouldBeEntityFeature):
     def copy_type(self) -> Int64:
         return Int64()
 
@@ -574,7 +583,7 @@ class Int64(ArithmeticFeature):
         return FeatureType('').int64
 
 
-class UUID(FeatureFactory):
+class UUID(FeatureFactory, CouldBeEntityFeature):
     def copy_type(self) -> UUID:
         return UUID()
 
@@ -583,7 +592,7 @@ class UUID(FeatureFactory):
         return FeatureType('').uuid
 
 
-class String(CategoricalEncodableFeature, NumberConvertableFeature):
+class String(CategoricalEncodableFeature, NumberConvertableFeature, CouldBeEntityFeature):
     def copy_type(self) -> String:
         return String()
 

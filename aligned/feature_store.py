@@ -20,6 +20,7 @@ from aligned.model import Model
 from aligned.online_source import BatchOnlineSource, OnlineSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import DerivedFeatureJob, FilterJob, RetrivalJob, SupervisedJob
+from aligned.schemas.feature import FeatureLocation
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.model import EventTrigger
 from aligned.schemas.model import Model as ModelSchema
@@ -212,7 +213,7 @@ class FeatureStore:
                 feature_names.update(feature_set)
             else:
                 for request in requests.needed_requests:
-                    if request.feature_view_name == view:
+                    if request.location.name == view:
                         feature_names.update(request.all_feature_names)
         for request in requests.needed_requests:
             feature_names.update(request.entity_names)
@@ -230,7 +231,7 @@ class FeatureStore:
     def event_triggers_for(self, feature_view: str) -> set[EventTrigger]:
         triggers = set()
         for model in self.models.values():
-            for target in model.targets:
+            for target in model.inference_view.target:
                 if target.event_trigger and target.estimating.feature_view == feature_view:
                     triggers.add(target.event_trigger)
         return triggers
@@ -275,7 +276,7 @@ class FeatureStore:
             entity_names.add('event_timestamp')
 
         return FeatureRequest(
-            'some_name',
+            FeatureLocation.model('custom features'),
             feature_request.feature_names.union(entity_names),
             RetrivalRequest.combine(requests),
         )
@@ -296,7 +297,9 @@ class FeatureStore:
         compiled_view = type(feature_view).compile()
         self.feature_views[compiled_view.name] = compiled_view
         if isinstance(self.feature_source, BatchFeatureSource):
-            self.feature_source.sources[compiled_view.name] = compiled_view.batch_data_source
+            self.feature_source.sources[
+                FeatureLocation.feature_view(compiled_view.name).identifier
+            ] = compiled_view.batch_data_source
 
     async def add_combined_feature_view(self, feature_view: CombinedFeatureView) -> None:
         compiled_view = type(feature_view).compile()
@@ -374,12 +377,15 @@ class SupervisedModelFeatureStore:
     store: FeatureStore
 
     def for_entities(self, entities: dict[str, list]) -> SupervisedJob:
-        feature_refs = self.model.features.union(self.model.targets)
+        feature_refs = self.model.features.union(
+            {target.estimating for target in self.model.inference_view.target}
+        )
         features = {f'{feature.feature_view}:{feature.name}' for feature in feature_refs}
         target_features = {
-            f'{feature.estimating.feature_view}:{feature.estimating.name}' for feature in self.model.targets
+            f'{feature.estimating.feature_view}:{feature.estimating.name}'
+            for feature in self.model.inference_view.target
         }
-        targets = {feature.estimating.name for feature in self.model.targets}
+        targets = {feature.estimating.name for feature in self.model.inference_view.target}
         request = self.store.requests_for(RawStringFeatureRequest(features.union(target_features)))
         return SupervisedJob(
             self.store.features_for(entities, list(features.union(target_features))).filter(
@@ -420,7 +426,11 @@ class FeatureViewStore:
             return FilterJob(include_features=self.feature_filter, job=self.source.all_for(request, limit))
 
         request = self.view.request_all
-        return self.source.all_for(request, limit)
+        return (
+            self.source.all_for(request, limit)
+            .ensure_types(request.needed_requests)
+            .derive_features(request.needed_requests)
+        )
 
     def between_dates(self, start_date: datetime, end_date: datetime) -> RetrivalJob:
         if not isinstance(self.source, RangeFeatureSource):

@@ -171,10 +171,7 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
 
         for request in self.requests:
             final_select_names = final_select_names.union(
-                {
-                    f'{request.feature_view_name}_cte.{feature}'
-                    for feature in request.all_required_feature_names
-                }
+                {f'{request.location}_cte.{feature}' for feature in request.all_required_feature_names}
             )
             final_select_names = final_select_names.union(
                 {f'entities.{entity}' for entity in request.entity_names}
@@ -220,7 +217,7 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
 
         tables = []
         for request in self.requests:
-            source = self.sources[request.feature_view_name]
+            source = self.sources[request.location]
             field_selects = request.all_required_feature_names.union(
                 {f'entities.{entity}' for entity in request.entity_names}
             ).union({'entities.row_id'})
@@ -247,7 +244,7 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
                     'name': source.table,
                     'joins': join_conditions,
                     'features': selects,
-                    'fv': request.feature_view_name,
+                    'fv': request.location,
                 }
             )
 

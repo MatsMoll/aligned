@@ -123,7 +123,7 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, StatisticEric
         from aligned.psql.jobs import FactPsqlJob
 
         return FactPsqlJob(
-            sources={request.feature_view_name: source for source, request in requests.items()},
+            sources={request.location: source for source, request in requests.items()},
             requests=list(requests.values()),
             facts=facts,
         )

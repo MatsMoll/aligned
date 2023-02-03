@@ -17,6 +17,7 @@ class SupportedLiteralValues:
     _shared: SupportedLiteralValues | None = None
 
     def __init__(self) -> None:
+        self.values = {}
         for lit in [IntValue, FloatValue, BoolValue, DateValue, DatetimeValue, StringValue, ArrayValue]:
             self.values[lit.name] = lit
 
@@ -51,12 +52,12 @@ class LiteralValue(Codable, SerializableType):
 
     @staticmethod
     def from_value(value: Any) -> LiteralValue:
-        if isinstance(value, int):
+        if isinstance(value, bool):
+            return BoolValue(value)
+        elif isinstance(value, int):
             return IntValue(value)
         elif isinstance(value, float):
             return FloatValue(value)
-        elif isinstance(value, bool):
-            return BoolValue(value)
         elif isinstance(value, date):
             return DateValue(value)
         elif isinstance(value, datetime):

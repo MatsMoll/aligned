@@ -6,6 +6,7 @@ from aligned.compiler.feature_factory import Entity, EventTimestamp, FeatureFact
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
+from aligned.schemas.feature import FeatureLocation
 from aligned.schemas.feature_view import CompiledFeatureView
 
 # Enables code compleation in the select method
@@ -107,7 +108,7 @@ class FeatureView(ABC, FeatureSelectable):
                 continue
 
             feature._name = var_name
-            feature._feature_view = metadata.name
+            feature._location = FeatureLocation.feature_view(metadata.name)
             compiled_feature = feature.feature()
 
             if feature.transformation:
@@ -128,8 +129,8 @@ class FeatureView(ABC, FeatureSelectable):
 
                 for depth, feature_dep in sorted(feature_deps, key=sort_key):
 
-                    if not feature_dep._feature_view:
-                        feature_dep._feature_view = metadata.name
+                    if not feature_dep._location:
+                        feature_dep._location = FeatureLocation.feature_view(metadata.name)
 
                     if feature_dep._name:
                         feat_dep = feature_dep.feature()

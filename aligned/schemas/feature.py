@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Literal
 
 from aligned.schemas.codable import Codable
 from aligned.schemas.constraints import Constraint
@@ -165,9 +166,37 @@ class EventTimestamp(Codable):
 
 
 @dataclass
+class FeatureLocation(Codable):
+    name: str
+    location: Literal['feature_view', 'combined_view', 'model']
+
+    @property
+    def identifier(self) -> str:
+        return str(self)
+
+    def __str__(self) -> str:
+        return f'{self.location}:{self.name}'
+
+    def __hash__(self) -> int:
+        return (self.name + self.location).__hash__()
+
+    @staticmethod
+    def feature_view(name: str) -> 'FeatureLocation':
+        return FeatureLocation(name, 'feature_view')
+
+    @staticmethod
+    def combined_view(name: str) -> 'FeatureLocation':
+        return FeatureLocation(name, 'combined_view')
+
+    @staticmethod
+    def model(name: str) -> 'FeatureLocation':
+        return FeatureLocation(name, 'model')
+
+
+@dataclass
 class FeatureReferance(Codable):
     name: str
-    feature_view: str
+    location: FeatureLocation
     dtype: FeatureType
     # is_derived: bool
 

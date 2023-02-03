@@ -7,6 +7,7 @@ from aligned.compiler.feature_factory import FeatureFactory
 from aligned.feature_view.feature_view import FeatureSelectable, FeatureView, FVType
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.schemas.derivied_feature import DerivedFeature
+from aligned.schemas.feature import FeatureLocation
 from aligned.schemas.feature_view import CompiledCombinedFeatureView, CompiledFeatureView
 
 logger = logging.getLogger(__name__)
@@ -27,13 +28,13 @@ class CombinedFeatureView(ABC, FeatureSelectable):
 
     @staticmethod
     def _needed_features(
-        depending_on: list[FeatureFactory], feature_views: dict[str, CompiledFeatureView]
+        depending_on: list[FeatureFactory], feature_views: dict[FeatureLocation, CompiledFeatureView]
     ) -> list[RetrivalRequest]:
 
         feature_refs: dict[CompiledFeatureView, set[str]] = {}
 
         for feature_dep in depending_on:
-            view = feature_views[feature_dep._feature_view]
+            view = feature_views[feature_dep._location]
             feature_refs.setdefault(view, set()).add(feature_dep.name)
 
         return [
@@ -48,16 +49,16 @@ class CombinedFeatureView(ABC, FeatureSelectable):
         var_names = [name for name in cls().__dir__() if not name.startswith('_')]
 
         requests: dict[str, list[RetrivalRequest]] = {}
-        feature_view_deps: dict[str, CompiledFeatureView] = {}
+        feature_view_deps: dict[FeatureLocation, CompiledFeatureView] = {}
 
         for var_name in var_names:
             feature = getattr(cls, var_name)
             if isinstance(feature, FeatureView):
                 # Needs to compile the view one more time. unfortunally..
                 # not optimal as the view will be duplicated in the definition file
-                feature_view_deps[feature.metadata.name] = feature.compile()
+                feature_view_deps[FeatureLocation.feature_view(feature.metadata.name)] = feature.compile()
             if isinstance(feature, FeatureFactory):
-                feature._feature_view = metadata.name
+                feature._location = FeatureLocation.combined_view(var_name)
                 feature._name = var_name  # Needed in some cases for later inferance and features
                 if not feature.transformation:
                     logger.info('Feature had no transformation, which do not make sense in a CombinedView')

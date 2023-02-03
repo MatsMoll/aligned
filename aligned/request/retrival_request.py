@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import DerivedFeature
-from aligned.schemas.feature import EventTimestamp, Feature
+from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
 
 
 @dataclass
@@ -14,7 +14,7 @@ class RetrivalRequest(Codable):
     as there may be some features that depend on other features.
     """
 
-    feature_view_name: str
+    location: FeatureLocation
     entities: set[Feature]
     features: set[Feature]
     derived_features: set[DerivedFeature]
@@ -86,10 +86,10 @@ class RetrivalRequest(Codable):
         entities = set()
         for request in requests:
             entities.update(request.entities)
-            fv_name = request.feature_view_name
+            fv_name = request.location
             if fv_name not in grouped_requests:
                 grouped_requests[fv_name] = RetrivalRequest(
-                    feature_view_name=fv_name,
+                    location=fv_name,
                     entities=request.entities,
                     features=request.features,
                     derived_features=request.derived_features,
@@ -106,7 +106,7 @@ class RetrivalRequest(Codable):
     def unsafe_combine(requests: list['RetrivalRequest']) -> list['RetrivalRequest']:
 
         result_request = RetrivalRequest(
-            feature_view_name='random',
+            location='random',
             entities=set(),
             features=set(),
             derived_features=set(),
@@ -224,7 +224,7 @@ class FeatureRequest(Codable):
     ]
     """
 
-    name: str
+    location: FeatureLocation
     features_to_include: set[str]
     needed_requests: list[RetrivalRequest]
 

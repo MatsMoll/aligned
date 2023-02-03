@@ -5,7 +5,7 @@ from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import DerivedFeature
-from aligned.schemas.feature import EventTimestamp, Feature
+from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
 
 
 @dataclass
@@ -34,11 +34,11 @@ class CompiledFeatureView(Codable):
     @property
     def request_all(self) -> FeatureRequest:
         return FeatureRequest(
-            self.name,
+            FeatureLocation.feature_view(self.name),
             {feature.name for feature in self.full_schema},
             needed_requests=[
                 RetrivalRequest(
-                    feature_view_name=self.name,
+                    location=FeatureLocation.feature_view(self.name),
                     entities=self.entities,
                     features=self.features,
                     derived_features=self.derived_features,
@@ -87,11 +87,11 @@ class CompiledFeatureView(Codable):
             derived_features.update(intermediate)
 
         return FeatureRequest(
-            self.name,
+            FeatureLocation.feature_view(self.name),
             feature_names,
             needed_requests=[
                 RetrivalRequest(
-                    feature_view_name=self.name,
+                    location=FeatureLocation.feature_view(self.name),
                     entities=self.entities,
                     features=features - self.entities,
                     derived_features=derived_features,
@@ -151,20 +151,20 @@ class CompiledCombinedFeatureView(Codable):
         for sub_requests in self.feature_referances.values():
             for request in sub_requests:
                 entities.update(request.entities)
-                if request.feature_view_name not in requests:
-                    requests[request.feature_view_name] = RetrivalRequest(
-                        feature_view_name=request.feature_view_name,
+                if request.location not in requests:
+                    requests[request.location] = RetrivalRequest(
+                        location=request.location,
                         entities=request.entities,
                         features=set(),
                         derived_features=set(),
                         event_timestamp=request.event_timestamp,
                     )
-                requests[request.feature_view_name].derived_features.update(request.derived_features)
-                requests[request.feature_view_name].features.update(request.features)
-                requests[request.feature_view_name].entities.update(request.entities)
+                requests[request.location].derived_features.update(request.derived_features)
+                requests[request.location].features.update(request.features)
+                requests[request.location].entities.update(request.entities)
 
         requests[self.name] = RetrivalRequest(
-            feature_view_name=self.name,
+            location=FeatureLocation.combined_view(self.name),
             entities=entities,
             features=set(),
             derived_features=self.features,
@@ -189,21 +189,21 @@ class CompiledCombinedFeatureView(Codable):
 
             requests = self.feature_referances[feature]
             for request in requests:
-                if request.feature_view_name not in dependent_views:
-                    dependent_views[request.feature_view_name] = RetrivalRequest(
-                        feature_view_name=request.feature_view_name,
+                if request.location not in dependent_views:
+                    dependent_views[request.location] = RetrivalRequest(
+                        location=request.location,
                         entities=request.entities,
                         features=set(),
                         derived_features=set(),
                         event_timestamp=request.event_timestamp,
                     )
-                current = dependent_views[request.feature_view_name]
+                current = dependent_views[request.location]
                 current.derived_features = current.derived_features.union(request.derived_features)
                 current.features = current.features.union(request.features)
-                dependent_views[request.feature_view_name] = current
+                dependent_views[request.location] = current
 
         dependent_views[self.name] = RetrivalRequest(  # Add the request we want
-            feature_view_name=self.name,
+            location=FeatureLocation.combined_view(self.name),
             entities=self.entity_features,
             features=set(),
             derived_features=[feature for feature in self.features if feature.name in feature_names],
@@ -211,7 +211,7 @@ class CompiledCombinedFeatureView(Codable):
         )
 
         return FeatureRequest(
-            self.name,
+            FeatureLocation.combined_view(self.name),
             features_to_include=feature_names,
             needed_requests=list(dependent_views.values()),
         )

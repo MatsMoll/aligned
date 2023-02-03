@@ -260,11 +260,10 @@ class DerivedFeatureJob(RetrivalJob):
         return self.job.request_result
 
     async def compute_derived_features_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
+
         for request in self.requests:
             for feature_round in request.derived_features_order():
                 for feature in feature_round:
-                    if feature.depending_on_views - {request.feature_view_name}:
-                        continue
                     logger.info(f'Adding feature to computation plan in polars: {feature.name}')
                     df = await feature.transformation.transform_polars(df, feature.name)
         return df
@@ -273,9 +272,6 @@ class DerivedFeatureJob(RetrivalJob):
         for request in self.requests:
             for feature_round in request.derived_features_order():
                 for feature in feature_round:
-                    if feature.depending_on_views - {request.feature_view_name}:
-                        continue
-
                     logger.info(f'Computing feature with pandas: {feature.name}')
                     df[feature.name] = await feature.transformation.transform_pandas(
                         df[feature.depending_on_names]

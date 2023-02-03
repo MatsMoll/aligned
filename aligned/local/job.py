@@ -167,14 +167,15 @@ class FileFactualJob(FactualRetrivalJob):
     def request_result(self) -> RequestResult:
         return RequestResult.from_request_list(self.requests)
 
-    def file_transformations(self, df: pd.DataFrame) -> pd.DataFrame:
+    def file_transformations(self, df: pl.LazyFrame) -> pl.LazyFrame:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
 
         all_features: set[Feature] = set()
         for request in self.requests:
             all_features.update(request.all_required_features)
 
-        result = pd.DataFrame(self.facts)
+        result = pl.DataFrame(self.facts).lazy()
+        event_timestamp_col = 'event_timestamp'
 
         for request in self.requests:
             entity_names = request.entity_names
@@ -184,28 +185,38 @@ class FileFactualJob(FactualRetrivalJob):
             if isinstance(self.source, ColumnFeatureMappable):
                 request_features = self.source.feature_identifier_for(all_names)
 
-            mask = pd.Series.repeat(pd.Series([True]), df.shape[0]).reset_index(drop=True)
-            set_mask = pd.Series.repeat(pd.Series([True]), result.shape[0]).reset_index(drop=True)
-            for entity in entity_names:
-                entity
-                if isinstance(self.source, ColumnFeatureMappable):
-                    entity_source_name = self.source.feature_identifier_for([entity])[0]
-
-                mask = mask & (df[entity_source_name].isin(self.facts[entity]))
-
-                set_mask = set_mask & (pd.Series(self.facts[entity]).isin(df[entity_source_name]))
-
-            feature_df = df.loc[mask, request_features]
+            feature_df = df.select(request_features)
             feature_df = feature_df.rename(
-                columns={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)},
+                {org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)},
             )
-            result.loc[set_mask, list(all_names)] = feature_df.reset_index(drop=True)
+
+            for entity in request.entities:
+                feature_df = feature_df.with_column(pl.col(entity.name).cast(entity.dtype.polars_type))
+                result = result.with_column(pl.col(entity.name).cast(entity.dtype.polars_type))
+
+            new_result: pl.LazyFrame = result.join(feature_df, on=list(entity_names), how='left')
+
+            if request.event_timestamp:
+                field = request.event_timestamp.name
+                ttl = request.event_timestamp.ttl
+                if ttl:
+                    ttl_request = (pl.col(field) <= pl.col(event_timestamp_col)) & (
+                        pl.col(field) >= pl.col(event_timestamp_col) - ttl
+                    )
+                    new_result = new_result.filter(pl.col(field).is_null() | ttl_request)
+                else:
+                    new_result = new_result.filter(
+                        pl.col(field).is_null() | pl.col(field) <= pl.col(event_timestamp_col)
+                    )
+
+            unique = new_result.unique(subset=list(entity_names), keep='first')
+
+            result = result.join(unique, on=list(entity_names), how='left')
 
         return result
 
     async def to_pandas(self) -> pd.DataFrame:
-        file = await self.source.read_pandas()
-        return self.file_transformations(file)
+        return (await self.to_polars()).collect().to_pandas()
 
     async def to_polars(self) -> pl.LazyFrame:
-        return pl.from_pandas(await self.to_pandas())
+        return self.file_transformations(await self.source.to_polars())

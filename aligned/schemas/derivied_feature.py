@@ -1,4 +1,4 @@
-from aligned.schemas.feature import Constraint, Feature, FeatureReferance, FeatureType
+from aligned.schemas.feature import Constraint, Feature, FeatureLocation, FeatureReferance, FeatureType
 from aligned.schemas.transformation import Transformation
 
 
@@ -33,8 +33,8 @@ class DerivedFeature(Feature):
         return [feature.name for feature in self.depending_on]
 
     @property
-    def depending_on_views(self) -> set[str]:
-        return {feature.feature_view for feature in self.depending_on}
+    def depending_on_views(self) -> set[FeatureLocation]:
+        return {feature.location for feature in self.depending_on}
 
     @property
     def feature(self) -> Feature:
