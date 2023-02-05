@@ -397,9 +397,9 @@ class SupervisedModelFeatureStore:
         feature_refs = self.model.features.union(
             {target.estimating for target in self.model.predictions_view.target}
         )
-        features = {f'{feature.feature_view}:{feature.name}' for feature in feature_refs}
+        features = {f'{feature.location.identifier}:{feature.name}' for feature in feature_refs}
         target_features = {
-            f'{feature.estimating.feature_view}:{feature.estimating.name}'
+            f'{feature.estimating.location.identifier}:{feature.estimating.name}'
             for feature in self.model.predictions_view.target
         }
         targets = {feature.estimating.name for feature in self.model.predictions_view.target}

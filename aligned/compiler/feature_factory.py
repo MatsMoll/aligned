@@ -674,9 +674,41 @@ class Embedding(FeatureFactory):
 
     sub_type: FeatureFactory
 
-    def copy_type(self) -> UUID:
+    def copy_type(self) -> Embedding:
         return Embedding()
 
     @property
     def dtype(self) -> FeatureType:
         return FeatureType('').embedding
+
+
+class ImageUrl(FeatureFactory):
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType('').string
+
+    def copy_type(self) -> ImageUrl:
+        return ImageUrl()
+
+    def load_image(self) -> Image:
+        from aligned.compiler.transformation_factory import LoadImageFactory
+
+        image = Image()
+        image.transformation = LoadImageFactory(self)
+        return image
+
+
+class Image(FeatureFactory):
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType('').array
+
+    def copy_type(self) -> Image:
+        return Image()
+
+    def to_grayscale(self) -> Image:
+        from aligned.compiler.transformation_factory import GrayscaleImageFactory
+
+        image = Image()
+        image.transformation = GrayscaleImageFactory(self)
+        return image

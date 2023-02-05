@@ -58,6 +58,7 @@ pandera = {version = "^0.13.3", optional = true}
 httpx = "^0.23.0"
 polars = { version = "^0.15.6", extras = ["all"] }
 connectorx = { version = "^0.3.1", optional = true }
+pillow = "^9.4.0"
 
 [tool.poetry.extras]
 aws = ["aioaws", "connectorx"]

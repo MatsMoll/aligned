@@ -583,3 +583,33 @@ class WordVectoriserFactory(TransformationFactory):
         from aligned.schemas.transformation import WordVectoriser
 
         return WordVectoriser(self.feature.name, self.model)
+
+
+@dataclass
+class LoadImageFactory(TransformationFactory):
+
+    url_feature: FeatureFactory
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.url_feature]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import LoadImageUrl
+
+        return LoadImageUrl(self.url_feature.name)
+
+
+@dataclass
+class GrayscaleImageFactory(TransformationFactory):
+
+    image_feature: FeatureFactory
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.image_feature]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import GrayscaleImage
+
+        return GrayscaleImage(self.image_feature.name)

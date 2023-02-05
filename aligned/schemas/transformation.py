@@ -188,6 +188,8 @@ class SupportedTransformations:
             CopyTransformation,
             WordVectoriser,
             MapArgMax,
+            LoadImageUrl,
+            GrayscaleImage,
         ]:
             self.add(tran_type)
 
@@ -1340,3 +1342,47 @@ class WordVectoriser(Transformation):
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
         return await self.model.vectorise_polars(df, self.key, alias)
+
+
+@dataclass
+class LoadImageUrl(Transformation):
+
+    image_url_key: str
+
+    name = 'load_image'
+    dtype = FeatureType('').array
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+        import asyncio
+        from io import BytesIO
+
+        import numpy as np
+        from PIL import Image
+
+        from aligned.local.source import StorageFileSource
+
+        urls = df.select(self.image_url_key).collect()[self.image_url_key]
+
+        images = await asyncio.gather(*[StorageFileSource(url).read() for url in urls.to_list()])
+        data = [np.asarray(Image.open(BytesIO(buffer))) for buffer in images]
+        image_dfs = pl.DataFrame({alias: data})
+        return df.with_context(image_dfs.lazy()).select(pl.all())
+
+
+@dataclass
+class GrayscaleImage(Transformation):
+
+    image_key: str
+
+    name = 'grayscale_image'
+    dtype = FeatureType('').array
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+        import numpy as np
+
+        def grayscale(images):
+            return pl.Series(
+                [np.mean(image, axis=2) if len(image.shape) == 3 else image for image in images.to_list()]
+            )
+
+        return df.with_columns(pl.col(self.image_key).map(grayscale).alias(alias))
