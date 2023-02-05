@@ -204,7 +204,7 @@ def breast_scan_feature_viewout_with_datetime(scan_without_datetime: CsvFileSour
 @pytest_asyncio.fixture
 async def breast_scan_without_timestamp_feature_store(breast_scan_feature_viewout_with_datetime: FeatureView):
     store = FeatureStore.experimental()
-    await store.add_feature_view(breast_scan_feature_viewout_with_datetime)
+    store.add_feature_view(breast_scan_feature_viewout_with_datetime)
     return store
 
 
@@ -343,7 +343,7 @@ def breast_scan_feature_view_with_datetime_and_aggregation(scan_with_datetime: C
 @pytest_asyncio.fixture
 async def breast_scan_with_timestamp_feature_store(breast_scan_feature_view_with_datetime: FeatureView):
     store = FeatureStore.experimental()
-    await store.add_feature_view(breast_scan_feature_view_with_datetime)
+    store.add_feature_view(breast_scan_feature_view_with_datetime)
     return store
 
 
@@ -352,7 +352,7 @@ async def breast_scan_with_timestamp_and_aggregation_feature_store(
     breast_scan_feature_view_with_datetime_and_aggregation: FeatureView,
 ):
     store = FeatureStore.experimental()
-    await store.add_feature_view(breast_scan_feature_view_with_datetime_and_aggregation)
+    store.add_feature_view(breast_scan_feature_view_with_datetime_and_aggregation)
     return store
 
 
@@ -456,8 +456,8 @@ async def titanic_feature_store(
     titanic_feature_view: FeatureView, titanic_feature_view_parquet: FeatureView
 ) -> FeatureStore:
     feature_store = FeatureStore.experimental()
-    await feature_store.add_feature_view(titanic_feature_view)
-    await feature_store.add_feature_view(titanic_feature_view_parquet)
+    feature_store.add_feature_view(titanic_feature_view)
+    feature_store.add_feature_view(titanic_feature_view_parquet)
     return feature_store
 
 
@@ -504,7 +504,7 @@ async def alot_of_transforation_feature_store(
     alot_of_transforations_feature_view: FeatureView,
 ) -> FeatureStore:
     feature_store = FeatureStore.experimental()
-    await feature_store.add_feature_view(alot_of_transforations_feature_view)
+    feature_store.add_feature_view(alot_of_transforations_feature_view)
     return feature_store
 
 
@@ -534,7 +534,7 @@ async def combined_feature_store(
     combined_view: CombinedFeatureView,
 ) -> FeatureStore:
     feature_store = FeatureStore.experimental()
-    await feature_store.add_feature_view(titanic_feature_view)
-    await feature_store.add_feature_view(breast_scan_feature_viewout_with_datetime)
+    feature_store.add_feature_view(titanic_feature_view)
+    feature_store.add_feature_view(breast_scan_feature_viewout_with_datetime)
     await feature_store.add_combined_feature_view(combined_view)
     return feature_store

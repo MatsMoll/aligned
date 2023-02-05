@@ -90,7 +90,7 @@ class BatchOnlineSource(OnlineSource):
 
         return BatchFeatureSource(
             sources={
-                FeatureLocation.feature_view(fv.name).location: fv.batch_data_source for fv in feature_views
+                FeatureLocation.feature_view(fv.name).identifier: fv.batch_data_source for fv in feature_views
             }
         )
 

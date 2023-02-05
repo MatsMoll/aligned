@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime
@@ -25,6 +25,8 @@ from aligned.split_strategy import (
 from aligned.validation.interface import Validator
 
 if TYPE_CHECKING:
+    from typing import AsyncIterator
+
     from aligned.local.source import DataFileReference
 
 
@@ -174,9 +176,17 @@ class SupervisedValidationJob:
 
 
 class RetrivalJob(ABC):
-    @abstractproperty
+    @property
     def request_result(self) -> RequestResult:
-        pass
+        if isinstance(self, ModificationJob):
+            return self.job.request_result
+        raise NotImplementedError()
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        if isinstance(self, ModificationJob):
+            return self.job.retrival_requests
+        raise NotImplementedError()
 
     @abstractmethod
     async def to_pandas(self) -> pd.DataFrame:
@@ -186,7 +196,20 @@ class RetrivalJob(ABC):
     async def to_polars(self) -> pl.LazyFrame:
         raise NotImplementedError()
 
+    def remove_derived_features(self) -> RetrivalJob:
+        return self
+
+    def log_each_job(self) -> RetrivalJob:
+        if isinstance(self, ModificationJob):
+            return self.copy_with(self.job.log_each_job())
+        return LogJob(self)
+
+    def chuncked(self, size: int) -> DataLoaderJob:
+        return DataLoaderJob(self, size)
+
     def with_subfeatures(self) -> RetrivalJob:
+        if isinstance(self, ModificationJob):
+            return self.copy_with(self.job.with_subfeatures())
         return self
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
@@ -219,8 +242,49 @@ class RetrivalJob(ABC):
         return ListenForTriggers(self, events)
 
 
+class ModificationJob:
+
+    job: RetrivalJob
+
+    def copy_with(self, job: RetrivalJob) -> RetrivalJob:
+        self.job = job
+        return job
+
+
 @dataclass
-class ValidationJob(RetrivalJob):
+class LogJob(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.job.request_result
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.job.retrival_requests
+
+    async def to_pandas(self) -> pd.DataFrame:
+        df = await self.job.to_pandas()
+        logger.info(f'Results from {type(self.job)}')
+        logger.info(df)
+        return df
+
+    async def to_polars(self) -> pl.LazyFrame:
+        df = await self.job.to_polars()
+        logger.info(f'Results from {type(self.job)}')
+        logger.info(df.head(10).collect())
+        return df
+
+    def remove_derived_features(self) -> RetrivalJob:
+        return self.job.remove_derived_features()
+
+    def log_each_job(self) -> RetrivalJob:
+        return self.job
+
+
+@dataclass
+class ValidationJob(RetrivalJob, ModificationJob):
 
     job: RetrivalJob
     validator: Validator
@@ -228,6 +292,10 @@ class ValidationJob(RetrivalJob):
     @property
     def request_result(self) -> RequestResult:
         return self.job.request_result
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.job.retrival_requests
 
     async def to_pandas(self) -> pd.DataFrame:
         return await self.validator.validate_pandas(
@@ -248,9 +316,12 @@ class ValidationJob(RetrivalJob):
         else:
             return FileCachedJob(location, self)
 
+    def remove_derived_features(self) -> RetrivalJob:
+        return self.job.remove_derived_features()
+
 
 @dataclass
-class DerivedFeatureJob(RetrivalJob):
+class DerivedFeatureJob(RetrivalJob, ModificationJob):
 
     job: RetrivalJob
     requests: list[RetrivalRequest]
@@ -259,11 +330,18 @@ class DerivedFeatureJob(RetrivalJob):
     def request_result(self) -> RequestResult:
         return self.job.request_result
 
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.job.retrival_requests
+
     async def compute_derived_features_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
 
         for request in self.requests:
             for feature_round in request.derived_features_order():
                 for feature in feature_round:
+                    if feature.name in df.columns:
+                        logger.info(f'Skipped adding feature {feature.name} to computation plan')
+                        continue
                     logger.info(f'Adding feature to computation plan in polars: {feature.name}')
                     df = await feature.transformation.transform_polars(df, feature.name)
         return df
@@ -272,6 +350,9 @@ class DerivedFeatureJob(RetrivalJob):
         for request in self.requests:
             for feature_round in request.derived_features_order():
                 for feature in feature_round:
+                    if feature.name in df.columns:
+                        logger.info(f'Skipping to compute {feature.name} as it is aleady computed')
+                        continue
                     logger.info(f'Computing feature with pandas: {feature.name}')
                     df[feature.name] = await feature.transformation.transform_pandas(
                         df[feature.depending_on_names]
@@ -291,9 +372,45 @@ class DerivedFeatureJob(RetrivalJob):
     async def to_polars(self) -> pl.LazyFrame:
         return await self.compute_derived_features_polars(await self.job.to_polars())
 
+    def remove_derived_features(self) -> RetrivalJob:
+        return self.job
+
 
 @dataclass
-class RawFileCachedJob(RetrivalJob):
+class DataLoaderJob:
+
+    job: RetrivalJob
+    chunk_size: int
+
+    async def to_polars(self) -> AsyncIterator[pl.LazyFrame]:
+        from math import ceil
+
+        from aligned.local.job import LiteralRetrivalJob
+
+        needed_requests = self.job.retrival_requests
+        without_derived = self.job.remove_derived_features()
+        raw_files = (await without_derived.to_polars()).collect()
+
+        iterations = ceil(raw_files.shape[0] / self.chunk_size)
+        for i in range(iterations):
+            start = i * self.chunk_size
+            end = (i + 1) * self.chunk_size
+            df = raw_files[start:end, :]
+
+            chunked_job = LiteralRetrivalJob(
+                df.lazy(), RequestResult.from_request_list(needed_requests)
+            ).derive_features(needed_requests)
+
+            chunked_df = await chunked_job.to_polars()
+            yield chunked_df
+
+    async def to_pandas(self) -> AsyncIterator[pd.DataFrame]:
+        async for chunk in self.to_polars():
+            yield chunk.collect().to_pandas()
+
+
+@dataclass
+class RawFileCachedJob(RetrivalJob, ModificationJob):
 
     location: DataFileReference
     job: DerivedFeatureJob
@@ -301,6 +418,10 @@ class RawFileCachedJob(RetrivalJob):
     @property
     def request_result(self) -> RequestResult:
         return self.job.request_result
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.job.retrival_requests
 
     async def to_pandas(self) -> pd.DataFrame:
         from aligned.local.job import FileFullJob
@@ -326,9 +447,12 @@ class RawFileCachedJob(RetrivalJob):
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         return self
 
+    def remove_derived_features(self) -> RetrivalJob:
+        return self.job.remove_derived_features()
+
 
 @dataclass
-class FileCachedJob(RetrivalJob):
+class FileCachedJob(RetrivalJob, ModificationJob):
 
     location: DataFileReference
     job: RetrivalJob
@@ -336,6 +460,10 @@ class FileCachedJob(RetrivalJob):
     @property
     def request_result(self) -> RequestResult:
         return self.job.request_result
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.job.retrival_requests
 
     async def to_pandas(self) -> pd.DataFrame:
         try:
@@ -354,6 +482,9 @@ class FileCachedJob(RetrivalJob):
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         return self
 
+    def remove_derived_features(self) -> RetrivalJob:
+        return self.job.remove_derived_features()
+
 
 @dataclass
 class SplitJob:
@@ -366,9 +497,16 @@ class SplitJob:
     def request_result(self) -> RequestResult:
         return self.job.request_result
 
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.job.retrival_requests
+
     async def use_pandas(self) -> SplitDataSet[pd.DataFrame]:
         data = await self.job.to_pandas()
         return self.strategy.split_pandas(data, self.target_column)
+
+    def remove_derived_features(self) -> RetrivalJob:
+        return self.job.remove_derived_features()
 
 
 class FullExtractJob(RetrivalJob):
@@ -385,7 +523,7 @@ class FactualRetrivalJob(RetrivalJob):
 
 
 @dataclass
-class EnsureTypesJob(RetrivalJob):
+class EnsureTypesJob(RetrivalJob, ModificationJob):
 
     job: RetrivalJob
     requests: list[RetrivalRequest]
@@ -393,6 +531,10 @@ class EnsureTypesJob(RetrivalJob):
     @property
     def request_result(self) -> RequestResult:
         return self.job.request_result
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.requests
 
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.job.to_pandas()
@@ -429,6 +571,9 @@ class EnsureTypesJob(RetrivalJob):
                 else:
                     df = df.with_column(pl.col(feature.name).cast(feature.dtype.polars_type, strict=False))
         return df
+
+    def remove_derived_features(self) -> RetrivalJob:
+        return self.job.remove_derived_features()
 
 
 @dataclass
@@ -474,6 +619,10 @@ class CombineFactualJob(RetrivalJob):
             [job.request_result for job in self.jobs]
         ) + RequestResult.from_request_list(self.combined_requests)
 
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return [job.retrival_requests for job in self.jobs] + [self.combined_requests]
+
     async def combine_data(self, df: pd.DataFrame) -> pd.DataFrame:
         for request in self.combined_requests:
             for feature in request.derived_features:
@@ -508,6 +657,13 @@ class CombineFactualJob(RetrivalJob):
             )
 
     async def to_polars(self) -> pl.LazyFrame:
+        if not self.jobs:
+            raise ValueError(
+                'Have no jobs to fetch. This is probably an internal error.\n'
+                'Please submit an issue, and describe how to reproduce it.\n'
+                'Or maybe even submit a PR'
+            )
+
         dfs: list[pl.LazyFrame] = await asyncio.gather(*[job.to_polars() for job in self.jobs])
 
         df = dfs[0]
@@ -521,9 +677,12 @@ class CombineFactualJob(RetrivalJob):
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         return CombineFactualJob([job.cached_at(location) for job in self.jobs], self.combined_requests)
 
+    def remove_derived_features(self) -> RetrivalJob:
+        return CombineFactualJob([job.remove_derived_features() for job in self.jobs], self.combined_requests)
+
 
 @dataclass
-class FilterJob(RetrivalJob):
+class FilterJob(RetrivalJob, ModificationJob):
 
     include_features: set[str]
     job: RetrivalJob
@@ -531,6 +690,10 @@ class FilterJob(RetrivalJob):
     @property
     def request_result(self) -> RequestResult:
         return self.job.request_result.filter_features(self.include_features)
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.job.retrival_requests
 
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.job.to_pandas()
@@ -555,9 +718,12 @@ class FilterJob(RetrivalJob):
     def with_subfeatures(self) -> RetrivalJob:
         return self.job.with_subfeatures()
 
+    def remove_derived_features(self) -> RetrivalJob:
+        return self.job.remove_derived_features()
+
 
 @dataclass
-class ListenForTriggers(RetrivalJob):
+class ListenForTriggers(RetrivalJob, ModificationJob):
 
     job: RetrivalJob
     triggers: set[EventTrigger]
@@ -565,6 +731,10 @@ class ListenForTriggers(RetrivalJob):
     @property
     def request_result(self) -> RequestResult:
         return self.job.request_result
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.job.retrival_requests
 
     async def to_pandas(self) -> pd.DataFrame:
         import asyncio
@@ -579,3 +749,6 @@ class ListenForTriggers(RetrivalJob):
         df = await self.job.to_polars()
         await asyncio.gather(*[trigger.check_polars(df, self.request_result) for trigger in self.triggers])
         return df
+
+    def remove_derived_features(self) -> RetrivalJob:
+        return self.job.remove_derived_features()

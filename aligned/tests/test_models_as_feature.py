@@ -1,4 +1,4 @@
-from aligned import Bool, FeatureView, FileSource, Int32, Model, String
+from aligned import Bool, FeatureStore, FeatureView, FileSource, Int32, Model, String
 from aligned.schemas.feature import FeatureLocation
 
 
@@ -46,3 +46,15 @@ def test_model_referenced_as_feature() -> None:
     assert feature.location == FeatureLocation.model('test_model')
     assert feature.name == 'target'
     assert len(model.predictions_view.entities) == 2
+
+
+def test_model_request() -> None:
+    store = FeatureStore.experimental()
+    store.add_feature_view(View())
+    store.add_feature_view(OtherView())
+    store.add_model(First())
+
+    assert len(store.feature_views) == 2
+
+    model_request = store.model('test_model').request
+    assert model_request.features_to_include == {'feature_a', 'feature_b', 'view_id', 'other_id'}

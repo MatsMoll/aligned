@@ -2,7 +2,7 @@ import logging
 from abc import abstractproperty
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, TypeVar
+from typing import Any
 
 import pandas as pd
 import polars as pl
@@ -10,16 +10,9 @@ import polars as pl
 from aligned.psql.data_source import PostgreSQLConfig, PostgreSQLDataSource
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
-from aligned.schemas.feature import FeatureType
+from aligned.schemas.feature import FeatureLocation, FeatureType
 
 logger = logging.getLogger(__name__)
-
-try:
-    import dask.dataframe as dd
-except ModuleNotFoundError:
-    import pandas as dd
-
-GenericDataFrame = TypeVar('GenericDataFrame', pd.DataFrame, dd.DataFrame)
 
 
 @dataclass
@@ -54,6 +47,10 @@ class FullExtractPsqlJob(PostgreSQLRetrivalJob, FullExtractJob):
     @property
     def request_result(self) -> RequestResult:
         return RequestResult.from_request(self.request)
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return [self.request]
 
     @property
     def config(self) -> PostgreSQLConfig:
@@ -92,6 +89,10 @@ class DateRangePsqlJob(PostgreSQLRetrivalJob, DateRangeJob):
     @property
     def request_result(self) -> RequestResult:
         return RequestResult.from_request(self.request)
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return [self.request]
 
     @property
     def config(self) -> PostgreSQLConfig:
@@ -133,13 +134,17 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
     NB: It is expected that the data sources are for the same psql instance
     """
 
-    sources: dict[str, PostgreSQLDataSource]
+    sources: dict[FeatureLocation, PostgreSQLDataSource]
     requests: list[RetrivalRequest]
     facts: dict[str, list]
 
     @property
     def request_result(self) -> RequestResult:
         return RequestResult.from_request_list(self.requests)
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.requests
 
     @property
     def config(self) -> PostgreSQLConfig:
@@ -171,7 +176,7 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
 
         for request in self.requests:
             final_select_names = final_select_names.union(
-                {f'{request.location}_cte.{feature}' for feature in request.all_required_feature_names}
+                {f'{request.location.name}_cte.{feature}' for feature in request.all_required_feature_names}
             )
             final_select_names = final_select_names.union(
                 {f'entities.{entity}' for entity in request.entity_names}
@@ -212,7 +217,7 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
                     all_entities.append(fact_df.columns[column_index])
             query_values.append(row_placeholders)
 
-        feature_view_names: list[str] = list(self.sources.keys())
+        feature_view_names: list[str] = [location.name for location in self.sources.keys()]
         # Add the joins to the fact
 
         tables = []
@@ -229,11 +234,13 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
 
             entities = list(request.entity_names)
             entity_db_name = source.feature_identifier_for(entities)
+            sort_query = 'entities.row_id'
 
             event_timestamp_clause = ''
             if request.event_timestamp:
                 event_timestamp_column = source.feature_identifier_for([request.event_timestamp.name])[0]
                 event_timestamp_clause = f'AND entities.event_timestamp >= ta.{event_timestamp_column}'
+                sort_query += f', {event_timestamp_column} DESC'
 
             join_conditions = [
                 f'ta.{entity_db_name} = entities.{entity} {event_timestamp_clause}'
@@ -244,7 +251,8 @@ class FactPsqlJob(PostgreSQLRetrivalJob, FactualRetrivalJob):
                     'name': source.table,
                     'joins': join_conditions,
                     'features': selects,
-                    'fv': request.location,
+                    'sort_query': sort_query,
+                    'fv': request.location.name,
                 }
             )
 
@@ -275,9 +283,10 @@ VALUES {% for row in values %}
 
 {% for table in tables %}
     {{table.fv}}_cte AS (
-        SELECT {{ table.features | join(', ') }}
+        SELECT DISTINCT ON (entities.row_id) {{ table.features | join(', ') }}
         FROM entities
         LEFT JOIN {{table.name}} ta on {{ table.joins | join(' AND ') }}
+        ORDER BY {{table.sort_query}}
     ){% if loop.last %}{% else %},{% endif %}
 {% endfor %}
 

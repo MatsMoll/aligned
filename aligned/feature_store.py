@@ -34,11 +34,11 @@ class RawStringFeatureRequest:
     features: set[str]
 
     @property
-    def feature_view_names(self) -> set[str]:
+    def locations(self) -> set[FeatureLocation]:
         return {RawStringFeatureRequest.unpack_feature(feature)[0] for feature in self.features}
 
     @property
-    def grouped_features(self) -> dict[str, set[str]]:
+    def grouped_features(self) -> dict[FeatureLocation, set[str]]:
         unpacked_features = [RawStringFeatureRequest.unpack_feature(feature) for feature in self.features]
         grouped = defaultdict(set)
         for feature_view, feature in unpacked_features:
@@ -50,11 +50,14 @@ class RawStringFeatureRequest:
         return {RawStringFeatureRequest.unpack_feature(feature)[1] for feature in self.features}
 
     @staticmethod
-    def unpack_feature(feature: str) -> tuple[str, str]:
+    def unpack_feature(feature: str) -> tuple[FeatureLocation, str]:
         splits = feature.split(':')
-        if len(splits) != 2:
-            raise ValueError(f'Invalid feature name: {feature}')
-        return (splits[0], splits[1])
+        if len(splits) == 3:
+            return (FeatureLocation(splits[1], splits[0]), splits[2])
+        if len(splits) == 2:
+            return (FeatureLocation(splits[0], 'feature_view'), splits[1])
+        else:
+            raise ValueError(f'Unable to decode {splits}')
 
 
 class FeatureStore:
@@ -232,7 +235,7 @@ class FeatureStore:
         triggers = set()
         for model in self.models.values():
             for target in model.predictions_view.target:
-                if target.event_trigger and target.estimating.feature_view == feature_view:
+                if target.event_trigger and target.estimating.location.location == feature_view:
                     triggers.add(target.event_trigger)
         return triggers
 
@@ -247,30 +250,36 @@ class FeatureStore:
         entity_names = set()
         needs_event_timestamp = False
 
-        for feature_view_name in feature_request.feature_view_names:
+        for location in feature_request.locations:
+            feature_view_name = location.name
             if feature_view_name in combined_feature_views:
                 cfv = combined_feature_views[feature_view_name]
-                if len(features[feature_view_name]) == 1 and list(features[feature_view_name])[0] == '*':
+                if len(features[location]) == 1 and list(features[location])[0] == '*':
                     sub_requests = cfv.request_all
                 else:
-                    sub_requests = cfv.requests_for(features[feature_view_name])
+                    sub_requests = cfv.requests_for(features[location])
                 requests.extend(sub_requests.needed_requests)
                 for request in sub_requests.needed_requests:
                     entity_names.update(request.entity_names)
                     if request.event_timestamp:
                         needs_event_timestamp = True
 
-            else:
+            elif feature_view_name in feature_views:
                 feature_view = feature_views[feature_view_name]
-                if len(features[feature_view_name]) == 1 and list(features[feature_view_name])[0] == '*':
+                if len(features[location]) == 1 and list(features[location])[0] == '*':
                     sub_requests = feature_view.request_all
                 else:
-                    sub_requests = feature_view.request_for(features[feature_view_name])
+                    sub_requests = feature_view.request_for(features[location])
                 requests.extend(sub_requests.needed_requests)
                 for request in sub_requests.needed_requests:
                     entity_names.update(request.entity_names)
                     if request.event_timestamp:
                         needs_event_timestamp = True
+            else:
+                raise ValueError(
+                    f'Unable to find: {feature_view_name}, '
+                    f'availible views are: {combined_feature_views.keys()}, and: {feature_views.keys()}'
+                )
 
         if needs_event_timestamp:
             entity_names.add('event_timestamp')
@@ -293,7 +302,7 @@ class FeatureStore:
         feature_view = self.feature_views[view]
         return FeatureViewStore(self, feature_view, self.event_triggers_for(view))
 
-    async def add_feature_view(self, feature_view: FeatureView) -> None:
+    def add_feature_view(self, feature_view: FeatureView) -> None:
         compiled_view = type(feature_view).compile()
         self.feature_views[compiled_view.name] = compiled_view
         if isinstance(self.feature_source, BatchFeatureSource):
@@ -301,7 +310,7 @@ class FeatureStore:
                 FeatureLocation.feature_view(compiled_view.name).identifier
             ] = compiled_view.batch_data_source
 
-    async def add_combined_feature_view(self, feature_view: CombinedFeatureView) -> None:
+    def add_combined_feature_view(self, feature_view: CombinedFeatureView) -> None:
         compiled_view = type(feature_view).compile()
         self.combined_feature_views[compiled_view.name] = compiled_view
 
@@ -340,7 +349,7 @@ class FeatureStore:
         all_model_features: set[str] = set()
         for model in self.models.values():
             all_model_features.update(
-                {feature.name for feature in model.features if feature.feature_view == view_name}
+                {feature.name for feature in model.features if feature.location.name == view_name}
             )
         return all_model_features
 
@@ -351,9 +360,17 @@ class ModelFeatureStore:
     model: ModelSchema
     store: FeatureStore
 
+    @property
+    def raw_string_features(self) -> set[str]:
+        return {f'{feature.location.identifier}:{feature.name}' for feature in self.model.features}
+
+    @property
+    def request(self) -> FeatureRequest:
+        return self.store.requests_for(RawStringFeatureRequest(self.raw_string_features))
+
     def for_entities(self, entities: dict[str, list]) -> RetrivalJob:
-        features = {f'{feature.feature_view}:{feature.name}' for feature in self.model.features}
-        request = self.store.requests_for(RawStringFeatureRequest(features))
+        request = self.request
+        features = self.raw_string_features
         return self.store.features_for(entities, list(features)).filter(request.features_to_include)
 
     def with_target(self) -> 'SupervisedModelFeatureStore':
@@ -362,7 +379,7 @@ class ModelFeatureStore:
     def cached_at(self, location: DataFileReference) -> RetrivalJob:
         from aligned.local.job import FileFullJob
 
-        features = {f'{feature.feature_view}:{feature.name}' for feature in self.model.features}
+        features = {f'{feature.location.identifier}:{feature.name}' for feature in self.model.features}
         request = self.store.requests_for(RawStringFeatureRequest(features))
 
         return FileFullJob(location, RetrivalRequest.unsafe_combine(request.needed_requests)).filter(
