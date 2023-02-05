@@ -176,19 +176,24 @@ class FileFactualJob(FactualRetrivalJob):
 
         result = pl.DataFrame(self.facts).lazy()
         event_timestamp_col = 'event_timestamp'
+        row_id_name = 'row_id'
+        result = result.with_row_count(row_id_name)
 
         for request in self.requests:
             entity_names = request.entity_names
             all_names = request.all_required_feature_names.union(entity_names)
+
+            if request.event_timestamp:
+                all_names.add(request.event_timestamp.name)
 
             request_features = all_names
             if isinstance(self.source, ColumnFeatureMappable):
                 request_features = self.source.feature_identifier_for(all_names)
 
             feature_df = df.select(request_features)
-            feature_df = feature_df.rename(
-                {org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)},
-            )
+
+            renames = {org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)}
+            feature_df = feature_df.rename(renames)
 
             for entity in request.entities:
                 feature_df = feature_df.with_column(pl.col(entity.name).cast(entity.dtype.polars_type))
@@ -197,6 +202,11 @@ class FileFactualJob(FactualRetrivalJob):
             new_result: pl.LazyFrame = result.join(feature_df, on=list(entity_names), how='left')
 
             if request.event_timestamp:
+                new_result = new_result.with_columns(
+                    pl.col(request.event_timestamp.name)
+                    .str.strptime(pl.Datetime, '%+')
+                    .alias(request.event_timestamp.name)
+                )
                 field = request.event_timestamp.name
                 ttl = request.event_timestamp.ttl
                 if ttl:
@@ -206,12 +216,11 @@ class FileFactualJob(FactualRetrivalJob):
                     new_result = new_result.filter(pl.col(field).is_null() | ttl_request)
                 else:
                     new_result = new_result.filter(
-                        pl.col(field).is_null() | pl.col(field) <= pl.col(event_timestamp_col)
+                        pl.col(field).is_null() | (pl.col(field) <= pl.col(event_timestamp_col))
                     )
 
-            unique = new_result.unique(subset=list(entity_names), keep='first')
-
-            result = result.join(unique, on=list(entity_names), how='left')
+            unique = new_result.unique(subset=row_id_name, keep='first')
+            result = result.join(unique, on=row_id_name, how='left')
 
         return result
 

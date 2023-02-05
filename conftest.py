@@ -12,6 +12,7 @@ from aligned import (
     FileSource,
     Float,
     Int32,
+    Model,
     String,
 )
 from aligned.compiler.transformation_factory import FillNaStrategy
@@ -373,6 +374,21 @@ def titanic_source() -> CsvFileSource:
 
 
 @pytest.fixture
+def titanic_source_scd() -> CsvFileSource:
+    return FileSource.csv_at(
+        'test_data/titanic_scd_data.csv',
+        mapping_keys={
+            'PassengerId': 'passenger_id',
+            'Age': 'age',
+            'Sex': 'sex',
+            'Survived': 'survived',
+            'SibSp': 'sibsp',
+            'UpdatedAt': 'updated_at',
+        },
+    )
+
+
+@pytest.fixture
 def titanic_source_parquet() -> CsvFileSource:
     return FileSource.parquet_at('test_data/titanic.parquet')
 
@@ -411,6 +427,23 @@ def titanic_feature_view(titanic_source: CsvFileSource) -> FeatureView:
         is_mr = name.contains('Mr.')
 
     return TitanicPassenger()
+
+
+@pytest.fixture
+def titanic_model(titanic_feature_view: FeatureView) -> Model:
+    class Titanic(Model):
+
+        features = titanic_feature_view
+
+        metadata = Model.metadata_with(
+            'titanic',
+            'A model predicting if a passenger will survive',
+            features=[features.age, features.sibsp, features.has_siblings, features.is_male, features.is_mr],
+        )
+
+        will_survive = features.survived.as_target()
+
+    return Titanic()
 
 
 @pytest.fixture
@@ -453,11 +486,12 @@ def titanic_feature_view_parquet(titanic_source_parquet: ParquetFileSource) -> F
 
 @pytest_asyncio.fixture
 async def titanic_feature_store(
-    titanic_feature_view: FeatureView, titanic_feature_view_parquet: FeatureView
+    titanic_feature_view: FeatureView, titanic_feature_view_parquet: FeatureView, titanic_model: Model
 ) -> FeatureStore:
     feature_store = FeatureStore.experimental()
     feature_store.add_feature_view(titanic_feature_view)
     feature_store.add_feature_view(titanic_feature_view_parquet)
+    feature_store.add_model(titanic_model)
     return feature_store
 
 
@@ -537,4 +571,71 @@ async def combined_feature_store(
     feature_store.add_feature_view(titanic_feature_view)
     feature_store.add_feature_view(breast_scan_feature_viewout_with_datetime)
     await feature_store.add_combined_feature_view(combined_view)
+    return feature_store
+
+
+@pytest.fixture
+def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureView:
+    class TitanicPassenger(FeatureView):
+
+        metadata = FeatureViewMetadata(
+            name='titanic',
+            description='Some features from the titanic dataset',
+            batch_source=titanic_source_scd,
+        )
+
+        passenger_id = Entity(dtype=Int32())
+
+        # Input values
+        age = (
+            Float().is_required().lower_bound(0).upper_bound(100).description('A float as some have decimals')
+        )
+        updated_at = EventTimestamp()
+
+        name = String()
+        sex = String().accepted_values(['male', 'female'])
+        survived = Bool().description('If the passenger survived')
+
+        sibsp = (
+            Int32()
+            .lower_bound(0, is_inclusive=True)
+            .upper_bound(20, is_inclusive=True)
+            .description('Number of siblings on titanic')
+        )
+
+        cabin = String()
+
+        # Transformed features
+        has_siblings = sibsp != 0
+        is_male, is_female = sex.one_hot_encode(['male', 'female'])
+        is_mr = name.contains('Mr.')
+
+    return TitanicPassenger()
+
+
+@pytest.fixture
+def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> Model:
+    class Titanic(Model):
+
+        features = titanic_feature_view_scd
+
+        metadata = Model.metadata_with(
+            'titanic',
+            'A model predicting if a passenger will survive',
+            features=[features.age, features.sibsp, features.has_siblings, features.is_male],
+        )
+
+        will_survive = features.survived.as_target()
+
+    return Titanic()
+
+
+@pytest_asyncio.fixture
+async def titanic_feature_store_scd(
+    titanic_feature_view_scd: FeatureView, titanic_feature_view_parquet: FeatureView, titanic_model_scd: Model
+) -> FeatureStore:
+    feature_store = FeatureStore.experimental()
+    feature_store.add_feature_view(titanic_feature_view_scd)
+    feature_store.add_feature_view(titanic_feature_view_parquet)
+    feature_store.add_model(titanic_model_scd)
     return feature_store

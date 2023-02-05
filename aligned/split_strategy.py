@@ -1,6 +1,7 @@
 import math
 from typing import Generic, TypeVar
 
+import polars as pl
 from pandas import DataFrame, Index, concat
 from pandas.core.generic import NDFrame
 
@@ -86,14 +87,20 @@ class SupervisedDataSet(Generic[DatasetType]):
 
     @property
     def entities(self) -> DatasetType:
+        if isinstance(self.data, pl.LazyFrame):
+            return self.data.select(list(self.entity_columns))
         return self.data[list(self.entity_columns)]
 
     @property
     def input(self) -> DatasetType:
+        if isinstance(self.data, pl.LazyFrame):
+            return self.data.select(list(self.features))
         return self.data[list(self.features)]
 
     @property
     def target(self) -> DatasetType:
+        if isinstance(self.data, pl.LazyFrame):
+            return self.data.select(list(self.target_columns))
         return self.data[list(self.target_columns)]
 
 
