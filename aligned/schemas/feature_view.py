@@ -134,6 +134,7 @@ class CompiledCombinedFeatureView(Codable):
     name: str
     features: set[DerivedFeature]  # FIXME: Should combine this and feature_referances into one class.
     feature_referances: dict[str, list[RetrivalRequest]]
+    event_triggers: set[EventTrigger] | None = field(default=None)
 
     @property
     def entity_features(self) -> set[Feature]:

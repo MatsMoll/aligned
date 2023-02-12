@@ -109,6 +109,8 @@ class Model(ABC):
                 target_feature._location = FeatureLocation.model(metadata.name)
                 trigger: EventTrigger | None = None
 
+                on_ground_truth_event = feature.ground_truth_event
+
                 if feature.event_trigger:
                     event = feature.event_trigger
                     if not event.condition._name:
@@ -117,10 +119,14 @@ class Model(ABC):
                     trigger = EventTrigger(
                         event.condition.compile(), event=event.event, payload={feature.feature.feature()}
                     )
+                    if not on_ground_truth_event:
+                        on_ground_truth_event = event.event
+
                 inference_view.target.add(
                     TargetSchema(
                         estimating=feature.feature.feature_referance(),
                         feature=target_feature.feature(),
+                        on_ground_truth_event=on_ground_truth_event,
                         event_trigger=trigger,
                     )
                 )

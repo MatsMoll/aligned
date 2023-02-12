@@ -24,7 +24,7 @@ class EventTrigger(Codable):
         from aligned.local.job import LiteralRetrivalJob
 
         if not isinstance(self.event, SinkableDataSource):
-            logger.info(f'Event: {self.event.topic_name} is not sinkable will return')
+            logger.info(f'Event: {self.event.topic_name} is not sinkable, will return')
             return
 
         logger.info(f'Checking for event: {self.event.topic_name}')
@@ -45,7 +45,7 @@ class EventTrigger(Codable):
         from aligned.local.job import LiteralRetrivalJob
 
         if not isinstance(self.event, SinkableDataSource):
-            logger.info(f'Event: {self.event.topic_name} is not sinkable will return')
+            logger.info(f'Event: {self.event.topic_name} is not sinkable, will return')
             return
 
         logger.info(f'Checking for event: {self.event.topic_name}')

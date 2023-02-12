@@ -92,7 +92,11 @@ class Target(FeatureReferencable):
         return FeatureReferance(self._name, self._location, self.feature.dtype)
 
     def listen_to_ground_truth_event(self, stream: StreamDataSource) -> Target:
-        return Target(self.feature, EventTrigger(self.feature, stream))
+        return Target(
+            feature=self.feature,
+            event_trigger=self.event_trigger,
+            ground_truth_event=stream,
+        )
 
     def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> Target:
         assert when.dtype == FeatureType('').bool, 'A trigger needs a boolean condition'
@@ -415,6 +419,13 @@ class ArithmeticFeature(ComparableFeature):
         feature.transformation = AbsoluteFactory(self)
         return feature
 
+    def __pow__(self, other: FeatureFactory | Any) -> Float:
+        from aligned.compiler.transformation_factory import PowerFactory
+
+        feature = Float()
+        feature.transformation = PowerFactory(self, other)
+        return feature
+
     def log1p(self) -> Float:
         from aligned.compiler.transformation_factory import LogTransformFactory
 
@@ -716,3 +727,13 @@ class Image(FeatureFactory):
         image = Image()
         image.transformation = GrayscaleImageFactory(self)
         return image
+
+
+@dataclass
+class Coordinate:
+
+    x: ArithmeticFeature
+    y: ArithmeticFeature
+
+    def eucledian_distance(self, to: Coordinate) -> Float:
+        return ((self.x - to.x) ** 2 + (self.y - to.y) ** 2) ** 0.5

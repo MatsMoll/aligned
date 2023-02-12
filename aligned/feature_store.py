@@ -237,7 +237,7 @@ class FeatureStore:
         return ModelFeatureStore(model, self)
 
     def event_triggers_for(self, feature_view: str) -> set[EventTrigger]:
-        triggers = set()
+        triggers = self.feature_views[feature_view].event_triggers or set()
         for model in self.models.values():
             for target in model.predictions_view.target:
                 if target.event_trigger and target.estimating.location.location == feature_view:

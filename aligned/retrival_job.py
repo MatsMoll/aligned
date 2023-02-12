@@ -14,7 +14,6 @@ import polars as pl
 from aligned.exceptions import UnableToFindFileException
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.schemas.feature import FeatureType
-from aligned.schemas.model import EventTrigger
 from aligned.split_strategy import (
     SplitDataSet,
     SplitStrategy,
@@ -28,6 +27,7 @@ if TYPE_CHECKING:
     from typing import AsyncIterator
 
     from aligned.local.source import DataFileReference
+    from aligned.schemas.model import EventTrigger
 
 
 logger = logging.getLogger(__name__)
@@ -415,6 +415,8 @@ class DataLoaderJob:
         needed_requests = self.job.retrival_requests
         without_derived = self.job.remove_derived_features()
         raw_files = (await without_derived.to_polars()).collect()
+        features_to_include = self.job.request_result.features.union(self.job.request_result.entities)
+        features_to_include_names = [feature.name for feature in features_to_include]
 
         iterations = ceil(raw_files.shape[0] / self.chunk_size)
         for i in range(iterations):
@@ -422,9 +424,11 @@ class DataLoaderJob:
             end = (i + 1) * self.chunk_size
             df = raw_files[start:end, :]
 
-            chunked_job = LiteralRetrivalJob(
-                df.lazy(), RequestResult.from_request_list(needed_requests)
-            ).derive_features(needed_requests)
+            chunked_job = (
+                LiteralRetrivalJob(df.lazy(), RequestResult.from_request_list(needed_requests))
+                .derive_features(needed_requests)
+                .filter(features_to_include_names)
+            )
 
             chunked_df = await chunked_job.to_polars()
             yield chunked_df

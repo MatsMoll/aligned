@@ -223,9 +223,9 @@ class FactPsqlJob(FactualRetrivalJob):
 
         # Need to replace nan as it will not be encoded
         fact_df = await self.facts.to_pandas()
-        fact_df = pd.DataFrame(self.facts).replace(np.nan, None)
+        fact_df = fact_df.replace(np.nan, None)
 
-        number_of_values = max(len(values) for values in self.facts.values())
+        number_of_values = fact_df.shape[0]
         # + 1 is needed as 0 is evaluated for null
         fact_df['row_id'] = list(range(1, number_of_values + 1))
 

@@ -269,6 +269,28 @@ class AdditionBetweenFactory(TransformationFactory):
 
 
 @dataclass
+class PowerFactory(TransformationFactory):
+
+    first: FeatureFactory
+    second: FeatureFactory | Any
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        if isinstance(self.second, FeatureFactory):
+            return [self.first, self.second]
+        return [self.first]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import Power, PowerFeature
+
+        if isinstance(self.second, FeatureFactory):
+            return PowerFeature(self.first.name, self.second.name)
+        else:
+            value = LiteralValue.from_value(self.second)
+            return Power(self.first.name, value)
+
+
+@dataclass
 class TimeDifferanceFactory(TransformationFactory):
 
     first_feature: FeatureFactory

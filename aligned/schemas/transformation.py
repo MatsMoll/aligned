@@ -190,6 +190,8 @@ class SupportedTransformations:
             MapArgMax,
             LoadImageUrl,
             GrayscaleImage,
+            Power,
+            PowerFeature,
         ]:
             self.add(tran_type)
 
@@ -1386,3 +1388,33 @@ class GrayscaleImage(Transformation):
             )
 
         return df.with_columns(pl.col(self.image_key).map(grayscale).alias(alias))
+
+
+@dataclass
+class Power(Transformation):
+
+    key: str
+    power: LiteralValue
+    name = 'power'
+    dtype = FeatureType('').float
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return df[self.key] ** self.power.python_value
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+        return df.with_column(pl.col(self.key).pow(self.power.python_value).alias(alias))
+
+
+@dataclass
+class PowerFeature(Transformation):
+
+    key: str
+    power_key: float
+    name = 'power_feat'
+    dtype = FeatureType('').float
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return df[self.key] ** df[self.power_key]
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+        return df.with_column(pl.col(self.key).pow(pl.col(self.power_key)).alias(alias))
