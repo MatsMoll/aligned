@@ -12,6 +12,7 @@ from aligned.compiler.feature_factory import (
     String,
     Timestamp,
 )
+from aligned.compiler.model import Model
 from aligned.data_source.stream_data_source import HttpStreamSource
 from aligned.feature_store import FeatureStore
 from aligned.feature_view import (
@@ -21,7 +22,6 @@ from aligned.feature_view import (
     FeatureViewMetadata,
 )
 from aligned.local.source import FileSource
-from aligned.model import Model
 from aligned.psql.data_source import PostgreSQLConfig
 from aligned.redis.config import RedisConfig
 from aligned.redshift.data_source import RedshiftSQLConfig

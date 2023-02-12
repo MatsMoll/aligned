@@ -3,9 +3,9 @@ from datetime import datetime, timedelta
 from typing import Callable
 
 from aligned import RedisConfig
+from aligned.compiler.model import EntityDataSource, SqlEntityDataSource
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.enricher import Enricher
-from aligned.model import EntityDataSource, SqlEntityDataSource
 from aligned.psql.data_source import PostgreSQLConfig
 from aligned.retrival_job import DateRangeJob, RetrivalRequest
 from aligned.schemas.codable import Codable

@@ -48,7 +48,7 @@ class PostgreSQLConfig(Codable):
         return SqlDatabaseEnricher(self.env_var, sql, values)
 
     def entity_source(self, timestamp_column: str, sql: Callable[[str], str]) -> EntityDataSource:
-        from aligned.model import SqlEntityDataSource
+        from aligned.compiler.model import SqlEntityDataSource
 
         return SqlEntityDataSource(sql, self.env_var, timestamp_column)
 

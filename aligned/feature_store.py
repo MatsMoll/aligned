@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from importlib import import_module
 from typing import Any
 
+from aligned.compiler.model import Model
 from aligned.data_file import DataFileReference
 from aligned.enricher import Enricher
 from aligned.exceptions import CombinedFeatureViewQuerying
@@ -16,7 +17,6 @@ from aligned.feature_source import (
 )
 from aligned.feature_view.combined_view import CombinedFeatureView, CompiledCombinedFeatureView
 from aligned.feature_view.feature_view import FeatureView
-from aligned.model import Model
 from aligned.online_source import BatchOnlineSource, OnlineSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import DerivedFeatureJob, FilterJob, RetrivalJob, SupervisedJob
