@@ -104,7 +104,7 @@ class FastAPIServer:
         from aligned.feature_store import RawStringFeatureRequest
 
         model = feature_store.models[name]
-        features = {f'{feature.feature_view}:{feature.name}' for feature in model.features}
+        features = {f'{feature.location.identifier}:{feature.name}' for feature in model.features}
         feature_request = feature_store.requests_for(RawStringFeatureRequest(features))
 
         entities: set[Feature] = set()
@@ -166,9 +166,19 @@ class FastAPIServer:
         from asgi_correlation_id import CorrelationIdMiddleware
         from fastapi import FastAPI
         from fastapi.middleware import Middleware
+        from prometheus_fastapi_instrumentator import Instrumentator
+        from starlette.status import HTTP_200_OK
 
         app = FastAPI(middleware=[Middleware(CorrelationIdMiddleware)])
         app.docs_url = '/docs'
+
+        @app.on_event('startup')
+        async def startup():
+            Instrumentator().instrument(app).expose(app)
+
+        @app.get('health', status_code=HTTP_200_OK)
+        def health() -> None:
+            return
 
         for model in feature_store.all_models:
             FastAPIServer.model_path(model, feature_store, app)

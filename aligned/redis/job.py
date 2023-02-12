@@ -5,7 +5,7 @@ import polars as pl
 
 from aligned.redis.config import RedisConfig
 from aligned.request.retrival_request import RetrivalRequest
-from aligned.retrival_job import FactualRetrivalJob, RequestResult
+from aligned.retrival_job import FactualRetrivalJob, RequestResult, RetrivalJob
 from aligned.schemas.feature import FeatureType
 
 
@@ -14,7 +14,7 @@ class FactualRedisJob(FactualRetrivalJob):
 
     config: RedisConfig
     requests: list[RetrivalRequest]
-    facts: dict[str, list]
+    facts: RetrivalJob
 
     @property
     def request_result(self) -> RequestResult:
@@ -26,14 +26,16 @@ class FactualRedisJob(FactualRetrivalJob):
     async def to_polars(self) -> pl.LazyFrame:
         redis = self.config.redis()
 
-        result_df = pl.DataFrame(self.facts)
+        result_df = (await self.facts.to_polars()).collect()
 
         for request in self.requests:
             redis_combine_id = 'redis_combine_entity_id'
             entities = result_df.select(
                 [
                     (
-                        pl.lit(request.location) + pl.lit(':') + pl.concat_str(sorted(request.entity_names))
+                        pl.lit(request.location.identifier)
+                        + pl.lit(':')
+                        + pl.concat_str(sorted(request.entity_names))
                     ).alias(redis_combine_id),
                     pl.col(list(request.entity_names)),
                 ]

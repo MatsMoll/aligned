@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
@@ -79,9 +79,10 @@ class FeatureReferencable:
 @dataclass
 class Target(FeatureReferencable):
     feature: FeatureFactory
-    event_trigger: EventTrigger | None = None
-    _name: str | None = None
-    _location: FeatureLocation | None = None
+    event_trigger: EventTrigger | None = field(default=None)
+    ground_truth_event: StreamDataSource | None = field(default=None)
+    _name: str | None = field(default=None)
+    _location: FeatureLocation | None = field(default=None)
 
     def feature_referance(self) -> FeatureReferance:
         if not self._name:
@@ -90,7 +91,10 @@ class Target(FeatureReferencable):
             raise ValueError('Missing location, can not create reference')
         return FeatureReferance(self._name, self._location, self.feature.dtype)
 
-    def on_ground_truth(self, when: Bool, sink_to: StreamDataSource) -> Target:
+    def listen_to_ground_truth_event(self, stream: StreamDataSource) -> Target:
+        return Target(self.feature, EventTrigger(self.feature, stream))
+
+    def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> Target:
         assert when.dtype == FeatureType('').bool, 'A trigger needs a boolean condition'
 
         return Target(self.feature, EventTrigger(when, sink_to))

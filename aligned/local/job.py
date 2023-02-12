@@ -161,20 +161,32 @@ class FileFactualJob(FactualRetrivalJob):
 
     source: DataFileReference
     requests: list[RetrivalRequest]
-    facts: dict[str, list]
+    facts: RetrivalJob
 
     @property
     def request_result(self) -> RequestResult:
         return RequestResult.from_request_list(self.requests)
 
-    def file_transformations(self, df: pl.LazyFrame) -> pl.LazyFrame:
+    async def file_transformations(self, df: pl.LazyFrame) -> pl.LazyFrame:
+        """Selects only the wanted subset from the loaded source
+
+        ```python
+        await self.file_transformations(await self.source.to_polars())
+        ```
+
+        Args:
+            df (pl.LazyFrame): The loaded file source which contains all features
+
+        Returns:
+            pl.LazyFrame: The subset of the source which is needed for the request
+        """
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
 
         all_features: set[Feature] = set()
         for request in self.requests:
             all_features.update(request.all_required_features)
 
-        result = pl.DataFrame(self.facts).lazy()
+        result = await self.facts.to_polars()
         event_timestamp_col = 'event_timestamp'
         row_id_name = 'row_id'
         result = result.with_row_count(row_id_name)
@@ -228,4 +240,4 @@ class FileFactualJob(FactualRetrivalJob):
         return (await self.to_polars()).collect().to_pandas()
 
     async def to_polars(self) -> pl.LazyFrame:
-        return self.file_transformations(await self.source.to_polars())
+        return await self.file_transformations(await self.source.to_polars())

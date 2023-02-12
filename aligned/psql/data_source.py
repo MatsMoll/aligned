@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Callable
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.enricher import SqlDatabaseEnricher, StatisticEricher
 from aligned.request.retrival_request import RetrivalRequest
-from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob
+from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
 from aligned.schemas.codable import Codable
 
 if TYPE_CHECKING:
@@ -51,6 +51,11 @@ class PostgreSQLConfig(Codable):
         from aligned.model import SqlEntityDataSource
 
         return SqlEntityDataSource(sql, self.env_var, timestamp_column)
+
+    def fetch(self, query: str) -> RetrivalJob:
+        from aligned.psql.jobs import PostgreSqlJob
+
+        return PostgreSqlJob(self, query)
 
 
 @dataclass
@@ -117,7 +122,7 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, StatisticEric
 
     @classmethod
     def multi_source_features_for(
-        cls, facts: dict[str, list], requests: dict[PostgreSQLDataSource, RetrivalRequest]
+        cls, facts: RetrivalJob, requests: dict[PostgreSQLDataSource, RetrivalRequest]
     ) -> FactualRetrivalJob:
         # Group based on config
         from aligned.psql.jobs import FactPsqlJob

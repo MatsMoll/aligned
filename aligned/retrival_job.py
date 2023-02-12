@@ -102,7 +102,7 @@ class SupervisedJob:
         data = await self.job.to_polars()
         features = [
             feature.name
-            for feature in self.job.request_result.features.union(self.job.request_result.entities)
+            for feature in self.job.request_result.features
             if feature.name not in self.target_columns
         ]
         entities = [feature.name for feature in self.job.request_result.entities]
@@ -241,6 +241,10 @@ class RetrivalJob(ABC):
     def listen_to_events(self, events: set[EventTrigger]) -> RetrivalJob:
         return ListenForTriggers(self, events)
 
+    @staticmethod
+    def from_dict(data: dict[str, list], request: list[RetrivalRequest]) -> RetrivalJob:
+        return LiteralDictJob(data, request)
+
 
 class ModificationJob:
 
@@ -248,7 +252,28 @@ class ModificationJob:
 
     def copy_with(self, job: RetrivalJob) -> RetrivalJob:
         self.job = job
-        return job
+        return self
+
+
+@dataclass
+class LiteralDictJob(RetrivalJob):
+
+    data: dict[str, list]
+    requests: list[RetrivalRequest]
+
+    @property
+    def request_result(self) -> RequestResult:
+        return RequestResult.from_request_list(self.requests)
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.requests
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return pd.DataFrame(self.data)
+
+    async def to_polars(self) -> pl.LazyFrame:
+        return pl.DataFrame(self.data).lazy()
 
 
 @dataclass
@@ -517,9 +542,16 @@ class DateRangeJob(RetrivalJob):
     start_date: datetime
     end_date: datetime
 
+    """
+    ```
+    psql_config = PsqlConfig(...)
+    entites = psql_config.fetch("SELECT * FROM entities WHERE ...")
+    ```
+    """
+
 
 class FactualRetrivalJob(RetrivalJob):
-    facts: dict[str, list]
+    facts: RetrivalJob
 
 
 @dataclass

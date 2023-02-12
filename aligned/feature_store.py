@@ -198,15 +198,21 @@ class FeatureStore:
         definition = await RepoDefinition.from_path(path)
         return FeatureStore.from_definition(definition)
 
-    def features_for(self, entities: dict[str, list], features: list[str]) -> RetrivalJob:
+    def features_for(self, entities: dict[str, list] | RetrivalJob, features: list[str]) -> RetrivalJob:
 
         feature_request = RawStringFeatureRequest(features=set(features))
-        entities_names: set[str] = set(entities.keys())
         requests = self.requests_for(feature_request)
-        feature_names = set()
+        entity_request: RetrivalJob
 
-        if requests.needs_event_timestamp and self.event_timestamp_column not in entities:
-            raise ValueError(f'Missing {self.event_timestamp_column} in entities')
+        if isinstance(entities, dict):
+            if requests.needs_event_timestamp and self.event_timestamp_column not in entities:
+                raise ValueError(f'Missing {self.event_timestamp_column} in entities')
+
+            entity_request = RetrivalJob.from_dict(entities, requests)
+        else:
+            entity_request = entities
+
+        feature_names = set()
 
         if requests.needs_event_timestamp:
             feature_names.add(self.event_timestamp_column)
@@ -220,11 +226,10 @@ class FeatureStore:
                         feature_names.update(request.all_feature_names)
         for request in requests.needed_requests:
             feature_names.update(request.entity_names)
-            entities_names.update(request.entity_names)
 
         return FilterJob(
             feature_names,
-            self.feature_source.features_for(entities, requests),
+            self.feature_source.features_for(entity_request, requests),
         )
 
     def model(self, name: str) -> 'ModelFeatureStore':
@@ -368,7 +373,7 @@ class ModelFeatureStore:
     def request(self) -> FeatureRequest:
         return self.store.requests_for(RawStringFeatureRequest(self.raw_string_features))
 
-    def for_entities(self, entities: dict[str, list]) -> RetrivalJob:
+    def for_entities(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
         request = self.request
         features = self.raw_string_features
         return self.store.features_for(entities, list(features)).filter(request.features_to_include)
@@ -393,7 +398,7 @@ class SupervisedModelFeatureStore:
     model: ModelSchema
     store: FeatureStore
 
-    def for_entities(self, entities: dict[str, list]) -> SupervisedJob:
+    def for_entities(self, entities: dict[str, list] | RetrivalJob) -> SupervisedJob:
         feature_refs = self.model.features.union(
             {target.estimating for target in self.model.predictions_view.target}
         )

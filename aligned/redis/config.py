@@ -4,13 +4,14 @@ from dataclasses import dataclass, field
 import polars as pl
 
 try:
-    from redis.asyncio import Redis, StrictRedis  # type: ignore
+    from redis.asyncio import ConnectionPool, Redis, StrictRedis  # type: ignore
 except ModuleNotFoundError:
 
     class Redis:  # type: ignore
         pass
 
     StrictRedis = Redis
+    ConnectionPool = Redis
 
 from aligned.data_source.stream_data_source import SinkableDataSource, StreamDataSource
 from aligned.feature_source import FeatureSource, WritableFeatureSource
@@ -24,7 +25,7 @@ from aligned.schemas.feature_view import CompiledFeatureView
 logger = logging.getLogger(__name__)
 
 
-redis_manager: dict[str, StrictRedis] = {}
+redis_manager: dict[str, ConnectionPool] = {}
 
 
 @dataclass
@@ -54,9 +55,9 @@ class RedisConfig(Codable):
 
     def redis(self) -> Redis:
         if self.env_var not in redis_manager:
-            redis_manager[self.env_var] = StrictRedis.from_url(self.url, decode_responses=True)
+            redis_manager[self.env_var] = ConnectionPool.from_url(self.url, decode_responses=True)
 
-        return redis_manager[self.env_var]
+        return StrictRedis(connection_pool=redis_manager[self.env_var])
 
     def online_source(self) -> 'RedisOnlineSource':
         return RedisOnlineSource(config=self)
@@ -100,7 +101,9 @@ class RedisSource(FeatureSource, WritableFeatureSource):
                 # Run one query per row
                 data = data.with_column(
                     (
-                        pl.lit(request.location) + pl.lit(':') + pl.concat_str(sorted(request.entity_names))
+                        pl.lit(request.location.identifier)
+                        + pl.lit(':')
+                        + pl.concat_str(sorted(request.entity_names))
                     ).alias('id')
                 )
 

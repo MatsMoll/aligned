@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class FeatureSource:
-    def features_for(self, facts: dict[str, list], request: FeatureRequest) -> RetrivalJob:
+    def features_for(self, facts: RetrivalJob, request: FeatureRequest) -> RetrivalJob:
         raise NotImplementedError()
 
 
@@ -48,7 +48,7 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
     def source_types(self) -> dict[str, type[BatchDataSource]]:
         return {source.job_group_key(): type(source) for source in self.sources.values()}
 
-    def features_for(self, facts: dict[str, list], request: FeatureRequest) -> RetrivalJob:
+    def features_for(self, facts: RetrivalJob, request: FeatureRequest) -> RetrivalJob:
         from aligned.retrival_job import CombineFactualJob
 
         core_requests = {
@@ -195,7 +195,7 @@ class InMemoryFeatureSource(FeatureSource, WritableFeatureSource):
 
     values: dict[str, Any]
 
-    def features_for(self, facts: dict[str, list], request: FeatureRequest) -> RetrivalJob:
+    def features_for(self, facts: RetrivalJob, request: FeatureRequest) -> RetrivalJob:
         return FactualInMemoryJob(self.values, request.needed_requests, facts)
 
     def key(self, request: RetrivalRequest, entity: str, feature_name: str) -> str:

@@ -17,7 +17,7 @@ from aligned.exceptions import UnableToFindFileException
 from aligned.feature_store import FeatureStore
 from aligned.local.job import FileDateJob, FileFactualJob, FileFullJob
 from aligned.request.retrival_request import RetrivalRequest
-from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob
+from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
 from aligned.s3.storage import FileStorage, HttpStorage
 from aligned.schemas.codable import Codable
 from aligned.schemas.repo_definition import RepoDefinition
@@ -84,6 +84,15 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
             raise UnableToFindFileException()
 
     async def to_polars(self) -> pl.LazyFrame:
+
+        if self.path.startswith('http'):
+            from io import BytesIO
+
+            buffer = await HttpStorage().read(self.path)
+            io_buffer = BytesIO(buffer)
+            io_buffer.seek(0)
+            return pl.read_csv(io_buffer, sep=self.csv_config.seperator).lazy()
+
         return pl.scan_csv(self.path, sep=self.csv_config.seperator)
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
@@ -127,7 +136,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
 
     @classmethod
     def multi_source_features_for(
-        cls, facts: dict[str, list], requests: dict[CsvFileSource, RetrivalRequest]
+        cls, facts: RetrivalJob, requests: dict[CsvFileSource, RetrivalRequest]
     ) -> FactualRetrivalJob:
         if len(requests.keys()) != 1:
             raise ValueError(f'Only able to load one {requests} at a time')

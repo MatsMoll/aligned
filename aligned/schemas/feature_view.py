@@ -5,6 +5,7 @@ from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import DerivedFeature
+from aligned.schemas.event_trigger import EventTrigger
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
 
 
@@ -20,6 +21,8 @@ class CompiledFeatureView(Codable):
     derived_features: set[DerivedFeature]
     event_timestamp: EventTimestamp | None = field(default=None)
     stream_data_source: StreamDataSource | None = field(default=None)
+
+    event_triggers: set[EventTrigger] | None = field(default=None)
 
     # valid_from: datetime
 

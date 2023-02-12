@@ -91,11 +91,11 @@ class BatchDataSource(ABC, Codable, SerializableType):
 
     @classmethod
     def multi_source_features_for(
-        cls: type[T], facts: dict[str, list], requests: dict[T, RetrivalRequest]
+        cls: type[T], facts: RetrivalJob, requests: dict[T, RetrivalRequest]
     ) -> RetrivalJob:
         raise NotImplementedError()
 
-    def features_for(self, facts: dict[str, list], request: RetrivalRequest) -> RetrivalJob:
+    def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
         return type(self).multi_source_features_for(facts, {self: request})
 
 

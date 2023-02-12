@@ -59,12 +59,13 @@ httpx = "^0.23.0"
 polars = { version = "^0.15.6", extras = ["all"] }
 connectorx = { version = "^0.3.1", optional = true }
 pillow = { version = "^9.4.0", optional = true }
+prometheus-fastapi-instrumentator = { version="^5.9.1", optional = true }
 
 [tool.poetry.extras]
 aws = ["aioaws", "connectorx"]
 psql = ["connectorx"]
 redis = ["redis"]
-server = ["asgi-correlation-id", "fastapi", "uvicorn"]
+server = ["asgi-correlation-id", "fastapi", "uvicorn", "prometheus-fastapi-instrumentator"]
 pandera = ["pandera"]
 image = ["pillow"]
 
