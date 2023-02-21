@@ -1,7 +1,6 @@
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
 
 import pandas as pd
 import polars as pl
@@ -9,6 +8,7 @@ import polars as pl
 from aligned.psql.data_source import PostgreSQLConfig, PostgreSQLDataSource
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
+from aligned.schemas.derivied_feature import AggregationConfig
 from aligned.schemas.feature import FeatureLocation, FeatureType
 
 logger = logging.getLogger(__name__)
@@ -17,6 +17,38 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SQLQuery:
     sql: str
+
+
+@dataclass
+class SqlColumn:
+    selection: str
+    alias: str
+
+    @property
+    def sql_select(self) -> str:
+        if self.selection == self.alias:
+            return f'{self.selection}'
+        return f'{self.selection} AS {self.alias}'
+
+    def __hash__(self) -> int:
+        return hash(self.sql_select)
+
+
+@dataclass
+class SqlJoin:
+    table: str
+    conditions: list[str]
+
+
+@dataclass
+class TableFetch:
+    name: str
+    table_name: str
+    columns: set[SqlColumn]
+    joins: list[SqlJoin] = field(default_factory=list)
+    conditions: list[str] = field(default_factory=list)
+    group_by: list[str] = field(default_factory=list)
+    order_by: str = field(default='')
 
 
 @dataclass
@@ -143,6 +175,19 @@ class DateRangePsqlJob(DateRangeJob):
 
 
 @dataclass
+class SqlValue:
+    value: str | None
+    data_type: str
+
+    @property
+    def to_sql(self) -> str:
+        if self.value:
+            return f"'{self.value}'::{self.data_type}"
+        else:
+            return f'NULL::{self.data_type}'
+
+
+@dataclass
 class FactPsqlJob(FactualRetrivalJob):
     """Fetches features for defined facts within a postgres DB
 
@@ -194,12 +239,63 @@ class FactPsqlJob(FactualRetrivalJob):
             return 'TIMESTAMP WITH TIME ZONE'
         return 'uuid'
 
+    def value_selection(self, request: RetrivalRequest, entities_has_event_timestamp: bool) -> TableFetch:
+
+        source = self.sources[request.location]
+
+        entity_selects = {f'entities.{entity}' for entity in request.entity_names}
+        field_selects = request.all_required_feature_names.union(entity_selects).union({'entities.row_id'})
+        field_identifiers = source.feature_identifier_for(field_selects)
+        selects = {
+            SqlColumn(db_field_name, feature)
+            for feature, db_field_name in zip(field_selects, field_identifiers)
+        }
+
+        entities = list(request.entity_names)
+        entity_db_name = source.feature_identifier_for(entities)
+        sort_query = 'entities.row_id'
+
+        event_timestamp_clause = ''
+        if request.event_timestamp and entities_has_event_timestamp:
+            event_timestamp_column = source.feature_identifier_for([request.event_timestamp.name])[0]
+            event_timestamp_clause = f'AND entities.event_timestamp >= ta.{event_timestamp_column}'
+            sort_query += f', {event_timestamp_column} DESC'
+
+        join_conditions = [
+            f'ta.{entity_db_name} = entities.{entity} {event_timestamp_clause}'
+            for entity, entity_db_name in zip(entities, entity_db_name)
+        ]
+
+        return TableFetch(
+            name=f'{request.name}_cte',
+            table_name=source.table,
+            columns=selects,
+            joins=join_conditions,
+            order_by=sort_query,
+        )
+
+    def aggregated_values_from_request(self, request: RetrivalRequest, table: str) -> list[str]:
+
+        tables: dict[AggregationConfig, dict] = {}
+
+        for aggregate in request.aggregated_features:
+            aggregate.aggregate_over.time_window
+
+        return {
+            'name': 'featurestore',
+            'features': [
+                {
+                    'aggregation': 'sum',
+                    'name': 'feature1',
+                }
+            ],
+            'joins': ['table1'],
+            'filter': 'table1.id = table2.id',
+            'group_by': ['table1.id'],
+        }
+
     async def build_request(self) -> str:
         import numpy as np
-        from jinja2 import BaseLoader, Environment
-
-        template = Environment(loader=BaseLoader()).from_string(self.__sql_template())
-        template_context: dict[str, Any] = {}
 
         final_select_names: set[str] = set()
         entity_types: dict[str, FeatureType] = {}
@@ -234,17 +330,12 @@ class FactPsqlJob(FactualRetrivalJob):
             for entity in fact_df.columns
         ]
 
-        query_values = []
+        query_values: list[list[SqlValue]] = []
         all_entities = []
         for values in fact_df.values:
             row_placeholders = []
             for column_index, value in enumerate(values):
-                row_placeholders.append(
-                    {
-                        'value': value,  # Could in theory lead to SQL injection (?)
-                        'dtype': entity_type_list[column_index],
-                    }
-                )
+                row_placeholders.append(SqlValue(value, entity_type_list[column_index]))
                 if fact_df.columns[column_index] not in all_entities:
                     all_entities.append(fact_df.columns[column_index])
             query_values.append(row_placeholders)
@@ -252,123 +343,65 @@ class FactPsqlJob(FactualRetrivalJob):
         feature_view_names: list[str] = [location.name for location in self.sources.keys()]
         # Add the joins to the fact
 
-        tables = []
+        tables: list[TableFetch] = []
+        all_entities = set()
         for request in self.requests:
-            source = self.sources[request.location]
-            field_selects = request.all_required_feature_names.union(
-                {f'entities.{entity}' for entity in request.entity_names}
-            ).union({'entities.row_id'})
-            field_identifiers = source.feature_identifier_for(field_selects)
-            selects = {
-                feature if feature == db_field_name else f'{db_field_name} AS {feature}'
-                for feature, db_field_name in zip(field_selects, field_identifiers)
-            }
+            fetch = self.value_selection(request, has_event_timestamp)
+            tables.append(fetch)
+            all_entities.update(request.entity_names)
 
-            entities = list(request.entity_names)
-            entity_db_name = source.feature_identifier_for(entities)
-            sort_query = 'entities.row_id'
-
-            event_timestamp_clause = ''
-            if request.event_timestamp:
-                event_timestamp_column = source.feature_identifier_for([request.event_timestamp.name])[0]
-                event_timestamp_clause = f'AND entities.event_timestamp >= ta.{event_timestamp_column}'
-                sort_query += f', {event_timestamp_column} DESC'
-
-            join_conditions = [
-                f'ta.{entity_db_name} = entities.{entity} {event_timestamp_clause}'
-                for entity, entity_db_name in zip(entities, entity_db_name)
-            ]
-            tables.append(
-                {
-                    'name': source.table,
-                    'joins': join_conditions,
-                    'features': selects,
-                    'sort_query': sort_query,
-                    'fv': request.location.name,
-                }
-            )
-
-        template_context['selects'] = list(final_select_names)
-        template_context['tables'] = tables
-        template_context['joins'] = [
+        joins = [
             f'INNER JOIN {feature_view}_cte ON {feature_view}_cte.row_id = entities.row_id'
             for feature_view in feature_view_names
         ]
-        template_context['values'] = query_values
-        template_context['entities'] = list(all_entities)
+        entity_values = self.build_entities_from_values(query_values)
 
-        # should insert the values as a value variable
-        # As this can lead to sql injection
-        return template.render(template_context)
+        return self.generate_query(
+            entity_columns=list(all_entities),
+            entity_query=entity_values,
+            tables=tables,
+            final_select=list(final_select_names),
+            final_joins=joins,
+        )
+
+    def build_entities_from_values(self, values: list[list[SqlValue]]) -> str:
+        query = '('
+        for row in values:
+            query += '\n    ('
+            for value in row:
+                query += value.to_sql() + ', '
+            query = query[:-1]
+            query += '),'
+        query = query[:-1]
+        return query + ')'
 
     def build_sql_entity_query(self, sql_facts: PostgreSqlJob) -> str:
-        from jinja2 import BaseLoader, Environment
-
-        template = Environment(loader=BaseLoader()).from_string(self.__sql_entities_template())
-        template_context: dict[str, Any] = {}
 
         final_select_names: set[str] = set()
-        entity_types: dict[str, FeatureType] = {}
         has_event_timestamp = False
+        all_entities = set()
+
+        if 'event_timestamp' in sql_facts.query:
+            has_event_timestamp = True
+            all_entities.add('event_timestamp')
 
         for request in self.requests:
             final_select_names = final_select_names.union(
-                {f'{request.location.name}_cte.{feature}' for feature in request.all_required_feature_names}
-            )
-            final_select_names = final_select_names.union(
                 {f'entities.{entity}' for entity in request.entity_names}
             )
-            for entity in request.entities:
-                entity_types[entity.name] = entity.dtype
-            if request.event_timestamp:
-                has_event_timestamp = True
 
         if has_event_timestamp:
             final_select_names.add('event_timestamp')
-            entity_types['event_timestamp'] = FeatureType('').datetime
 
-        # Need to replace nan as it will not be encoded
-
-        feature_view_names: list[str] = [location.name for location in self.sources.keys()]
         # Add the joins to the fact
 
-        tables = []
-        all_entities = set()
+        tables: list[TableFetch] = []
         for request in self.requests:
-            source = self.sources[request.location]
-            field_selects = request.all_required_feature_names.union(
-                {f'entities.{entity}' for entity in request.entity_names}
-            ).union({'entities.row_id'})
-            field_identifiers = source.feature_identifier_for(field_selects)
-            selects = {
-                feature if feature == db_field_name else f'{db_field_name} AS {feature}'
-                for feature, db_field_name in zip(field_selects, field_identifiers)
-            }
-
-            entities = list(request.entity_names)
+            fetch = self.value_selection(request, has_event_timestamp)
+            tables.append(fetch)
             all_entities.update(request.entity_names)
-            entity_db_name = source.feature_identifier_for(entities)
-            sort_query = 'entities.row_id'
-
-            event_timestamp_clause = ''
-            if request.event_timestamp:
-                all_entities.add('event_timestamp')
-                event_timestamp_column = source.feature_identifier_for([request.event_timestamp.name])[0]
-                event_timestamp_clause = f'AND entities.event_timestamp >= ta.{event_timestamp_column}'
-                sort_query += f', {event_timestamp_column} DESC'
-
-            join_conditions = [
-                f'ta.{entity_db_name} = entities.{entity} {event_timestamp_clause}'
-                for entity, entity_db_name in zip(entities, entity_db_name)
-            ]
-            tables.append(
-                {
-                    'name': source.table,
-                    'joins': join_conditions,
-                    'features': selects,
-                    'sort_query': sort_query,
-                    'fv': request.location.name,
-                }
+            final_select_names = final_select_names.union(
+                {f'{fetch.name}.{feature}' for feature in request.all_required_feature_names}
             )
 
         all_entities_list = list(all_entities)
@@ -378,19 +411,74 @@ class FactPsqlJob(FactualRetrivalJob):
             f'SELECT {all_entities_str}, ROW_NUMBER() OVER (ORDER BY '
             f'{list(request.entity_names)[0]}) AS row_id FROM ({sql_facts.query}) AS entities'
         )
+        joins = '\n    '.join(
+            [f'INNER JOIN {table.name} ON {table.name}.row_id = entities.row_id' for table in tables]
+        )
 
-        template_context['selects'] = list(final_select_names)
-        template_context['tables'] = tables
-        template_context['joins'] = [
-            f'INNER JOIN {feature_view}_cte ON {feature_view}_cte.row_id = entities.row_id'
-            for feature_view in feature_view_names
-        ]
-        template_context['entities_sql'] = entity_query
-        template_context['entities'] = all_entities_list
+        return self.generate_query(
+            entity_columns=all_entities_list,
+            entity_query=entity_query,
+            tables=tables,
+            final_select=list(final_select_names),
+            final_joins=joins,
+        )
 
-        # should insert the values as a value variable
-        # As this can lead to sql injection
-        return template.render(template_context)
+    def generate_query(
+        self,
+        entity_columns: list[str],
+        entity_query: str,
+        tables: list[TableFetch],
+        final_select: list[str],
+        final_joins: str,
+    ) -> str:
+
+        aggregations: list[TableFetch] = []
+
+        query = f"""
+WITH entities (
+    { ', '.join(entity_columns) }
+) AS (
+    { entity_query }
+),"""
+
+        # Select the core features
+        for table in tables:
+            wheres = ''
+            if table.conditions:
+                wheres = 'WHERE ' + ' AND '.join(table.conditions)
+
+            table_columns = [col.sql_select for col in table.columns]
+            query += f"""
+{table.name} AS (
+        SELECT DISTINCT ON (entities.row_id) { ', '.join(table_columns) }
+        FROM entities
+        LEFT JOIN { table.table_name } ta ON { ' AND '.join(table.joins) }
+        { wheres }
+        ORDER BY { table.order_by }
+    ),"""
+
+        # Add aggregation values
+        for agg in aggregations:
+            wheres = ''
+            if agg.conditions:
+                wheres = 'WHERE ' + ' AND '.join(agg.conditions)
+
+            query += f"""
+{agg.name} AS (
+        SELECT { ', '.join(table_columns) }
+        FROM entities
+        LEFT JOIN { agg.table_name } ta ON { ' AND '.join(agg.joins) }
+        { wheres }
+        GROUP BY { ', '.join(agg.group_by) }
+    ),"""
+
+        query = query[:-1]  # Dropping the last comma
+        query += f"""
+SELECT { ', '.join(final_select) }
+FROM entities
+{ final_joins }
+"""
+        return query
 
     def __sql_entities_template(self) -> str:
         return """
@@ -399,34 +487,19 @@ WITH entities (
 ) AS (
     {{ entities_sql }}
 ),
-
-{% for table in tables %}
-    {{table.fv}}_cte AS (
-        SELECT DISTINCT ON (entities.row_id) {{ table.features | join(', ') }}
+{% for agg in aggregates %}
+    {{agg.name}}_agg AS (
+        SELECT entities.row_id, {{agg.aggregate}} as {{agg.feature}}
         FROM entities
-        LEFT JOIN {{table.name}} ta on {{ table.joins | join(' AND ') }}
-        ORDER BY {{table.sort_query}}
-    ){% if loop.last %}{% else %},{% endif %}
+        LEFT JOIN {{agg.table}} ta on {{ agg.joins | join(' AND ') }}
+        GROUP BY 1
+    )
 {% endfor %}
-
-SELECT {{ selects | join(', ') }}
-FROM entities
-{{ joins | join('\n    ') }}
-
-"""
-
-    def __sql_template(self) -> str:
-        return """
-WITH entities (
-    {{ entities | join(', ') }}
-) AS (
-VALUES {% for row in values %}
-    ({% for value in row %}
-        {% if value.value %}'{{value.value}}'::{{value.dtype}}{% else %}null::{{value.dtype}}{% endif %}
-        {% if loop.last %}{% else %},{% endif %}{% endfor %}){% if loop.last %}{% else %},{% endif %}
-{% endfor %}
-),
-
+solutions_agg AS (
+    SELECT entities."taskID", array_to_string(array_agg(ts.solution), '\n') as all_solutions FROM entities
+    LEFT JOIN "TaskSolution" ts ON ts."taskID" = entities."taskID"
+    GROUP BY 1
+)
 {% for table in tables %}
     {{table.fv}}_cte AS (
         SELECT DISTINCT ON (entities.row_id) {{ table.features | join(', ') }}

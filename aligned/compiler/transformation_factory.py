@@ -635,3 +635,25 @@ class GrayscaleImageFactory(TransformationFactory):
         from aligned.schemas.transformation import GrayscaleImage
 
         return GrayscaleImage(self.image_feature.name)
+
+
+@dataclass
+class AppendStrings(TransformationFactory):
+
+    first_feature: FeatureFactory
+    second_feature: FeatureFactory | LiteralValue
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        if isinstance(self.second_feature, LiteralValue):
+            return [self.first_feature]
+        else:
+            return [self.first_feature, self.second_feature]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import AppendConstString, AppendStrings
+
+        if isinstance(self.second_feature, LiteralValue):
+            return AppendConstString(self.first_feature.name, self.second_feature.value)
+        else:
+            return AppendStrings(self.first_feature.name, self.second_feature.name)

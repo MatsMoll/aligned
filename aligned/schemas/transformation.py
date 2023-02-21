@@ -56,6 +56,11 @@ def gracefull_transformation(
     return result
 
 
+class SqlTransformation:
+    def as_sql(self) -> str:
+        raise NotImplementedError()
+
+
 class Transformation(Codable, SerializableType):
     name: str
     dtype: FeatureType
@@ -192,6 +197,8 @@ class SupportedTransformations:
             GrayscaleImage,
             Power,
             PowerFeature,
+            AppendConstString,
+            AppendStrings,
         ]:
             self.add(tran_type)
 
@@ -1418,3 +1425,60 @@ class PowerFeature(Transformation):
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
         return df.with_column(pl.col(self.key).pow(pl.col(self.power_key)).alias(alias))
+
+
+@dataclass
+class AppendConstString(Transformation):
+
+    key: str
+    string: str
+
+    name = 'append_const_string'
+    dtype = FeatureType('').string
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return df[self.key] + self.string
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+        return df.with_column(pl.concat_str([pl.col(self.key), pl.lit(self.string)], sep='').alias(alias))
+
+
+@dataclass
+class AppendStrings(Transformation):
+
+    first_key: str
+    second_key: str
+    sep: str
+
+    name = 'append_strings'
+    dtype = FeatureType('').string
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return df[self.first_key] + self.sep + df[self.second_key]
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+        return df.with_column(
+            pl.concat_str([pl.col(self.first_key), pl.col(self.second_key)], sep=self.sep).alias(alias)
+        )
+
+
+@dataclass
+class ConcatStringAggregation(Transformation, SqlTransformation):
+
+    key: str
+    group_keys: list[str]
+    separator: str = field(default=' ')
+
+    name = 'concat_string_agg'
+    dtype = FeatureType('').string
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return (await self.transform_polars(pl.from_pandas(df).lazy())).collect().to_pandas()[self.name]
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+        return df.with_columns(
+            pl.concat_str(pl.col(self.key), sep=self.separator).over(self.group_keys).alias(alias)
+        )
+
+    def as_sql(self) -> str:
+        return f"array_to_string(array_agg({self.key}), '{self.separator}')"

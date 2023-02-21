@@ -2,11 +2,17 @@ from abc import ABC, abstractproperty
 from dataclasses import dataclass, field
 from typing import Callable, TypeVar
 
-from aligned.compiler.feature_factory import Entity, EventTimestamp, FeatureFactory
+from aligned.compiler.feature_factory import (
+    AggregationTransformationFactory,
+    Entity,
+    EventTimestamp,
+    FeatureFactory,
+)
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
-from aligned.schemas.feature import FeatureLocation
+from aligned.schemas.derivied_feature import AggregatedFeature, AggregationConfig
+from aligned.schemas.feature import FeatureLocation, FeatureReferance
 from aligned.schemas.feature_view import CompiledFeatureView
 
 # Enables code compleation in the select method
@@ -97,9 +103,11 @@ class FeatureView(ABC, FeatureSelectable):
             entities=set(),
             features=set(),
             derived_features=set(),
+            aggregated_features=set(),
             event_timestamp=None,
             stream_data_source=metadata.stream_source,
         )
+        aggregations: list[FeatureFactory] = []
 
         for var_name in var_names:
             feature = getattr(cls, var_name)
@@ -147,13 +155,19 @@ class FeatureView(ABC, FeatureSelectable):
                         feature_dep._name = str(hidden_features)
                         hidden_features += 1
 
-                    feature_graph = feature_dep.compile()  # Should decide on which payload to send
-                    if feature_graph in view.derived_features:
-                        continue
+                    if isinstance(feature_dep.transformation, AggregationTransformationFactory):
+                        aggregations.append(feature_dep)
+                    else:
+                        feature_graph = feature_dep.compile()  # Should decide on which payload to send
+                        if feature_graph in view.derived_features:
+                            continue
 
-                    view.derived_features.add(feature_dep.compile())
+                        view.derived_features.add(feature_dep.compile())
 
-                view.derived_features.add(feature.compile())  # Should decide on which payload to send
+                if isinstance(feature.transformation, AggregationTransformationFactory):
+                    aggregations.append(feature)
+                else:
+                    view.derived_features.add(feature.compile())  # Should decide on which payload to send
 
             elif isinstance(feature, Entity):
                 view.entities.add(compiled_feature)
@@ -171,5 +185,32 @@ class FeatureView(ABC, FeatureSelectable):
 
         if not view.entities:
             raise ValueError(f'FeatureView {metadata.name} must contain at least one Entity')
+
+        aggregation_group_by = [
+            FeatureReferance(entity.name, FeatureLocation.feature_view(view.name), entity.dtype)
+            for entity in view.entities
+        ]
+        if view.event_timestamp:
+            aggregation_group_by.append(
+                FeatureReferance(
+                    view.event_timestamp.name,
+                    FeatureLocation.feature_view(view.name),
+                    view.event_timestamp.dtype,
+                )
+            )
+
+        for aggr in aggregations:
+            agg_trans = aggr.transformation
+            if not isinstance(agg_trans, AggregationTransformationFactory):
+                continue
+            window = agg_trans.time_window
+            aggr.transformation = agg_trans.with_group_by(aggregation_group_by)
+            config = AggregationConfig(aggregation_group_by, time_window=window)
+            feature = aggr.compile()
+            feat = AggregatedFeature(
+                derived_feature=feature,
+                aggregate_over=config,
+            )
+            view.aggregated_features.add(feat)
 
         return view

@@ -172,7 +172,18 @@ class SupervisedValidationJob:
         )
 
     async def to_polars(self) -> TrainTestValidateSet[pl.DataFrame]:
-        return pl.from_pandas(await self.to_pandas())
+        data = await self.to_pandas()
+
+        return TrainTestValidateSet(
+            data=data.data,
+            entity_columns=data.entity_columns,
+            features=data.features,
+            target=data.target,
+            train_index=data.train_index,
+            test_index=data.test_index,
+            validate_index=data.validate_index,
+            event_timestamp_column=data.event_timestamp_column,
+        )
 
 
 class RetrivalJob(ABC):

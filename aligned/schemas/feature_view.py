@@ -4,7 +4,7 @@ from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.schemas.codable import Codable
-from aligned.schemas.derivied_feature import DerivedFeature
+from aligned.schemas.derivied_feature import AggregatedFeature, DerivedFeature
 from aligned.schemas.event_trigger import EventTrigger
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
 
@@ -19,6 +19,8 @@ class CompiledFeatureView(Codable):
     entities: set[Feature]
     features: set[Feature]
     derived_features: set[DerivedFeature]
+    aggregated_features: set[AggregatedFeature] = field(default_factory=set)
+
     event_timestamp: EventTimestamp | None = field(default=None)
     stream_data_source: StreamDataSource | None = field(default=None)
 
@@ -41,6 +43,7 @@ class CompiledFeatureView(Codable):
             {feature.name for feature in self.full_schema},
             needed_requests=[
                 RetrivalRequest(
+                    name=self.name,
                     location=FeatureLocation.feature_view(self.name),
                     entities=self.entities,
                     features=self.features,
@@ -94,6 +97,7 @@ class CompiledFeatureView(Codable):
             feature_names,
             needed_requests=[
                 RetrivalRequest(
+                    name=self.name,
                     location=FeatureLocation.feature_view(self.name),
                     entities=self.entities,
                     features=features - self.entities,
@@ -126,7 +130,7 @@ Input features:
 
 Transformed features:
 {transformed_features}
-        """
+"""
 
 
 @dataclass
@@ -157,6 +161,7 @@ class CompiledCombinedFeatureView(Codable):
                 entities.update(request.entities)
                 if request.location not in requests:
                     requests[request.location] = RetrivalRequest(
+                        name=request.name,
                         location=request.location,
                         entities=request.entities,
                         features=set(),
@@ -168,6 +173,7 @@ class CompiledCombinedFeatureView(Codable):
                 requests[request.location].entities.update(request.entities)
 
         requests[self.name] = RetrivalRequest(
+            name=self.name,
             location=FeatureLocation.combined_view(self.name),
             entities=entities,
             features=set(),
@@ -195,6 +201,7 @@ class CompiledCombinedFeatureView(Codable):
             for request in requests:
                 if request.location not in dependent_views:
                     dependent_views[request.location] = RetrivalRequest(
+                        name=request.name,
                         location=request.location,
                         entities=request.entities,
                         features=set(),
@@ -207,6 +214,7 @@ class CompiledCombinedFeatureView(Codable):
                 dependent_views[request.location] = current
 
         dependent_views[self.name] = RetrivalRequest(  # Add the request we want
+            name=self.name,
             location=FeatureLocation.combined_view(self.name),
             entities=self.entity_features,
             features=set(),

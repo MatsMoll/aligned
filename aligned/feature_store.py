@@ -198,10 +198,9 @@ class FeatureStore:
         definition = await RepoDefinition.from_path(path)
         return FeatureStore.from_definition(definition)
 
-    def features_for(self, entities: dict[str, list] | RetrivalJob, features: list[str]) -> RetrivalJob:
-
-        feature_request = RawStringFeatureRequest(features=set(features))
-        requests = self.requests_for(feature_request)
+    def features_for_request(
+        self, requests: FeatureRequest, entities: dict[str, list] | RetrivalJob, feature_names: set[set]
+    ) -> RetrivalJob:
         entity_request: RetrivalJob
 
         if isinstance(entities, dict):
@@ -211,6 +210,16 @@ class FeatureStore:
             entity_request = RetrivalJob.from_dict(entities, requests)
         else:
             entity_request = entities
+
+        return FilterJob(
+            feature_names,
+            self.feature_source.features_for(entity_request, requests),
+        )
+
+    def features_for(self, entities: dict[str, list] | RetrivalJob, features: list[str]) -> RetrivalJob:
+
+        feature_request = RawStringFeatureRequest(features=set(features))
+        requests = self.requests_for(feature_request)
 
         feature_names = set()
 
@@ -227,10 +236,7 @@ class FeatureStore:
         for request in requests.needed_requests:
             feature_names.update(request.entity_names)
 
-        return FilterJob(
-            feature_names,
-            self.feature_source.features_for(entity_request, requests),
-        )
+        return self.features_for_request(requests, entities, feature_names)
 
     def model(self, name: str) -> 'ModelFeatureStore':
         model = self.models[name]
@@ -399,20 +405,26 @@ class SupervisedModelFeatureStore:
     store: FeatureStore
 
     def for_entities(self, entities: dict[str, list] | RetrivalJob) -> SupervisedJob:
-        feature_refs = self.model.features.union(
-            {target.estimating for target in self.model.predictions_view.target}
-        )
+        feature_refs = self.model.features
         features = {f'{feature.location.identifier}:{feature.name}' for feature in feature_refs}
         target_features = {
             f'{feature.estimating.location.identifier}:{feature.estimating.name}'
             for feature in self.model.predictions_view.target
         }
         targets = {feature.estimating.name for feature in self.model.predictions_view.target}
-        request = self.store.requests_for(RawStringFeatureRequest(features.union(target_features)))
+        request = self.store.requests_for(RawStringFeatureRequest(features))
+        target_request = self.store.requests_for(
+            RawStringFeatureRequest(target_features)
+        ).without_event_timestamp(name_sufix='target')
+
+        total_request = FeatureRequest(
+            FeatureLocation.model(self.model.name),
+            request.features_to_include.union(target_request.features_to_include),
+            request.needed_requests + target_request.needed_requests,
+        )
+        job = self.store.features_for_request(total_request, entities, total_request.features_to_include)
         return SupervisedJob(
-            self.store.features_for(entities, list(features.union(target_features))).filter(
-                request.features_to_include
-            ),
+            job,
             target_columns=targets,
         )
 

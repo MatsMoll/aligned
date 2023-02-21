@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 import pandas as pd
 import polars as pl
 
 from aligned.compiler.constraint_factory import ConstraintFactory, LiteralFactory
 from aligned.data_source.stream_data_source import StreamDataSource
-from aligned.exceptions import NotSupportedYet
 from aligned.schemas.constraints import (
     Constraint,
     InDomain,
@@ -49,6 +48,15 @@ class TransformationFactory:
 
     @property
     def using_features(self) -> list[FeatureFactory]:
+        pass
+
+
+class AggregationTransformationFactory:
+    @property
+    def time_window(self) -> timedelta | None:
+        pass
+
+    def with_group_by(self, entities: list[FeatureReferance]) -> TransformationFactory:
         pass
 
 
@@ -433,15 +441,6 @@ class ArithmeticFeature(ComparableFeature):
         feature.transformation = LogTransformFactory(self)
         return feature
 
-    def mean(self: T, over: timedelta | None = None) -> NumericalAggregation[T]:
-        from aligned.compiler.transformation_factory import MeanTransfomrationFactory
-
-        if over:
-            raise NotSupportedYet('Computing mean with a time window is not supported yet')
-        feature = NumericalAggregation(self)
-        feature.transformation = MeanTransfomrationFactory(self)
-        return feature
-
 
 class DecimalOperations(FeatureFactory):
     def __round__(self) -> Int64:
@@ -559,35 +558,8 @@ class Float(ArithmeticFeature, DecimalOperations):
     def dtype(self) -> FeatureType:
         return FeatureType('').float
 
-
-NumericType = TypeVar('NumericType', bound=ArithmeticFeature)
-
-
-class NumericalAggregation(Generic[NumericType], ArithmeticFeature, DecimalOperations):
-    def __init__(self, dtype: NumericType):
-        self._dtype = dtype
-
-    _dtype: NumericType
-
-    def copy_type(self: NumericalAggregation) -> NumericalAggregation:
-        return NumericalAggregation()
-
-    @property
-    def dtype(self) -> FeatureType:
-        return self._dtype.dtype
-
-    def grouped_by(self, keys: FeatureFactory | list[FeatureFactory]) -> NumericType:
-        from aligned.compiler.transformation_factory import AggregatableTransformation
-
-        if not isinstance(self.transformation, AggregatableTransformation):
-            raise ValueError(
-                f'Can only group by on aggregatable transformations. This is a {self.transformation}'
-            )
-
-        feature = self._dtype.copy_type()
-        feature.transformation = self.transformation.copy()
-        feature.transformation.group_by = keys if isinstance(keys, list) else [keys]
-        return feature
+    def aggregate(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
 
 
 class Int32(ArithmeticFeature, CouldBeEntityFeature):
@@ -598,6 +570,9 @@ class Int32(ArithmeticFeature, CouldBeEntityFeature):
     def dtype(self) -> FeatureType:
         return FeatureType('').int32
 
+    def aggregate(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
+
 
 class Int64(ArithmeticFeature, CouldBeEntityFeature):
     def copy_type(self) -> Int64:
@@ -606,6 +581,9 @@ class Int64(ArithmeticFeature, CouldBeEntityFeature):
     @property
     def dtype(self) -> FeatureType:
         return FeatureType('').int64
+
+    def aggregate(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
 
 
 class UUID(FeatureFactory, CouldBeEntityFeature):
@@ -624,6 +602,9 @@ class String(CategoricalEncodableFeature, NumberConvertableFeature, CouldBeEntit
     @property
     def dtype(self) -> FeatureType:
         return FeatureType('').string
+
+    def aggregate(self) -> StringAggregation:
+        return StringAggregation(self)
 
     def split(self, pattern: str, max_splits: int | None = None) -> String:
         raise NotImplementedError()
@@ -647,6 +628,13 @@ class String(CategoricalEncodableFeature, NumberConvertableFeature, CouldBeEntit
 
         feature = Embedding()
         feature.transformation = WordVectoriserFactory(self, model)
+        return feature
+
+    def append(self, feature: FeatureFactory | str) -> String:
+        from aligned.compiler.transformation_factory import AppendStrings
+
+        feature = String()
+        feature.transformation = AppendStrings(self, feature)
         return feature
 
 
@@ -737,3 +725,64 @@ class Coordinate:
 
     def eucledian_distance(self, to: Coordinate) -> Float:
         return ((self.x - to.x) ** 2 + (self.y - to.y) ** 2) ** 0.5
+
+
+@dataclass
+class StringAggregation:
+
+    feature: String
+    time_window: timedelta | None = None
+
+    def over(self, time_window: timedelta) -> StringAggregation:
+        self.time_window = time_window
+        return self
+
+    def concat(self, separator: str | None = None) -> String:
+        from aligned.compiler.aggregation_factory import ConcatStringsAggrigationFactory
+
+        feature = String()
+        feature.transformation = ConcatStringsAggrigationFactory(
+            self.feature, group_by=[], separator=separator, time_window=self.time_window
+        )
+        return feature
+
+
+@dataclass
+class ArithmeticAggregation:
+
+    feature: ArithmeticFeature
+    time_window: timedelta | None = None
+
+    def over(self, time_window: timedelta) -> ArithmeticFeature:
+        self.time_window = time_window
+        return self
+
+    def sum(self) -> Float:
+        pass
+
+    def mean(self) -> Float:
+        pass
+
+    def min(self) -> Float:
+        pass
+
+    def max(self) -> Float:
+        pass
+
+    def count(self) -> Int64:
+        pass
+
+    def count_distinct(self) -> Int64:
+        pass
+
+    def std(self) -> Float:
+        pass
+
+    def variance(self) -> Float:
+        pass
+
+    def median(self) -> Float:
+        pass
+
+    def percentile(self, percentile: float) -> Float:
+        pass

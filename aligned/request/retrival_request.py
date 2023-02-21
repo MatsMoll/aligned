@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
 from aligned.schemas.codable import Codable
-from aligned.schemas.derivied_feature import DerivedFeature
+from aligned.schemas.derivied_feature import AggregatedFeature, DerivedFeature
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
 
 
@@ -14,10 +14,12 @@ class RetrivalRequest(Codable):
     as there may be some features that depend on other features.
     """
 
+    name: str
     location: FeatureLocation
     entities: set[Feature]
     features: set[Feature]
     derived_features: set[DerivedFeature]
+    aggregated_features: set[AggregatedFeature] = field(default_factory=set)
     event_timestamp: EventTimestamp | None = field(default=None)
 
     @property
@@ -80,15 +82,26 @@ class RetrivalRequest(Codable):
 
         return feature_orders
 
+    def without_event_timestamp(self, name_sufix: str | None = None) -> 'RetrivalRequest':
+        return RetrivalRequest(
+            name=f'{self.name}{name_sufix or ""}',
+            location=self.location,
+            entities=self.entities,
+            features=self.features,
+            derived_features=self.derived_features,
+            aggregated_features=self.aggregated_features,
+        )
+
     @staticmethod
     def combine(requests: list['RetrivalRequest']) -> list['RetrivalRequest']:
-        grouped_requests: dict[str, RetrivalRequest] = {}
+        grouped_requests: dict[FeatureLocation, RetrivalRequest] = {}
         entities = set()
         for request in requests:
             entities.update(request.entities)
             fv_name = request.location
             if fv_name not in grouped_requests:
                 grouped_requests[fv_name] = RetrivalRequest(
+                    name=request.name,
                     location=fv_name,
                     entities=request.entities,
                     features=request.features,
@@ -106,7 +119,8 @@ class RetrivalRequest(Codable):
     def unsafe_combine(requests: list['RetrivalRequest']) -> list['RetrivalRequest']:
 
         result_request = RetrivalRequest(
-            location='random',
+            name=requests[0].name,
+            location=requests[0].location,
             entities=set(),
             features=set(),
             derived_features=set(),
@@ -235,3 +249,10 @@ class FeatureRequest(Codable):
     @property
     def request_result(self) -> RequestResult:
         return RequestResult.from_request_list(self.needed_requests)
+
+    def without_event_timestamp(self, name_sufix: str | None = None) -> 'FeatureRequest':
+        return FeatureRequest(
+            location=self.location,
+            features_to_include=self.features_to_include,
+            needed_requests=[request.without_event_timestamp(name_sufix) for request in self.needed_requests],
+        )
