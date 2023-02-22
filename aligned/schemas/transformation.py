@@ -56,7 +56,7 @@ def gracefull_transformation(
     return result
 
 
-class SqlTransformation:
+class PsqlTransformation:
     def as_sql(self) -> str:
         raise NotImplementedError()
 
@@ -572,7 +572,7 @@ class LowerThenOrEqual(Transformation):
         self.value = value
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column((pl.col(self.key) <= self.value).alias(alias))
+        return pl.col(self.key) <= self.value
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return gracefull_transformation(
@@ -604,7 +604,7 @@ class Subtraction(Transformation):
         self.behind = behind
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column((pl.col(self.front) - pl.col(self.behind)).alias(alias))
+        return pl.col(self.front) - pl.col(self.behind)
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return gracefull_transformation(
@@ -645,7 +645,7 @@ class Addition(Transformation):
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column((pl.col(self.front) + pl.col(self.behind)).alias(alias))
+        return pl.col(self.front) + pl.col(self.behind)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -794,7 +794,7 @@ class ToNumerical(Transformation):
         return to_numeric(df[self.key], errors='coerce')
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column((pl.col(self.key).cast(pl.Float64)).alias(alias))
+        return pl.col(self.key).cast(pl.Float64)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -882,7 +882,7 @@ class DateComponent(Transformation):
                 raise NotImplementedError(
                     f'Date component {self.component} is not implemented. Maybe setup a PR and contribute?'
                 )
-        return df.with_column(expr.alias(alias))
+        return expr
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -926,7 +926,7 @@ class Contains(Transformation):
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column(pl.col(self.key).str.contains(self.value).alias(alias))
+        return pl.col(self.key).str.contains(self.value)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -1032,12 +1032,10 @@ class Ratio(Transformation):
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column(
-            (
-                pl.when(pl.col(self.denumerator) != 0)
-                .then(pl.col(self.numerator) / pl.col(self.denumerator))
-                .otherwise(pl.lit(None))
-            ).alias(alias)
+        return (
+            pl.when(pl.col(self.denumerator) != 0)
+            .then(pl.col(self.numerator) / pl.col(self.denumerator))
+            .otherwise(pl.lit(None))
         )
 
     @staticmethod
@@ -1065,7 +1063,7 @@ class StandardScalingTransformation(Transformation):
         return (df[self.key] - self.mean) / self.std
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column(((pl.col(self.key) - self.mean) / self.std).alias(alias))
+        return (pl.col(self.key) - self.mean) / self.std
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -1089,7 +1087,7 @@ class IsIn(Transformation):
         return df[self.key].isin(self.values)
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column(pl.col(self.key).is_in(self.values).alias(alias))
+        return pl.col(self.key).is_in(self.values)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -1114,14 +1112,10 @@ class FillNaValues(Transformation):
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         if self.dtype == FeatureType('').float:
-            return df.with_column(
-                pl.col(self.key)
-                .fill_nan(self.value.python_value)
-                .fill_null(self.value.python_value)
-                .alias(alias)
-            )
+            return pl.col(self.key).fill_nan(self.value.python_value).fill_null(self.value.python_value)
+
         else:
-            return df.with_column(pl.col(self.key).fill_null(self.value.python_value).alias(alias))
+            return pl.col(self.key).fill_null(self.value.python_value)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -1143,7 +1137,7 @@ class CopyTransformation(Transformation):
         return df[self.key]
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column(pl.col(self.key).alias(alias))
+        return pl.col(self.key).alias(alias)
 
 
 @dataclass
@@ -1160,7 +1154,7 @@ class Floor(Transformation):
         return floor(df[self.key])
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column(pl.col(self.key).floor().alias(alias))
+        return pl.col(self.key).floor().alias(alias)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -1185,7 +1179,7 @@ class Ceil(Transformation):
         return ceil(df[self.key])
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column(pl.col(self.key).ceil().alias(alias))
+        return pl.col(self.key).ceil().alias(alias)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -1210,7 +1204,7 @@ class Round(Transformation):
         return round(df[self.key])
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column(pl.col(self.key).round(0).alias(alias))
+        return pl.col(self.key).round(0).alias(alias)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -1235,7 +1229,7 @@ class Absolute(Transformation):
         return abs(df[self.key])
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column(pl.col(self.key).abs().alias(alias))
+        return pl.col(self.key).abs().alias(alias)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -1307,40 +1301,6 @@ class MapArgMax(Transformation):
 
 
 @dataclass
-class Mean(Transformation):
-
-    key: str
-    group_keys: list[str] | None = field(default=None)
-    # sliding_window: float | None = field(default=None)
-    name: str = 'mean'
-
-    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-
-        # df.set_index("event_timestamp").rolling(2).mean()
-
-        if self.group_keys:
-            if len(self.group_keys) == 1:
-                group_key = self.group_keys[0]
-                group_by_result = df.groupby(group_key)[self.key].mean()
-                return df[group_key].map(group_by_result)
-            else:
-                raise ValueError('Group by with multiple keys is not suppported yet')
-        else:
-            return df[self.key].mean()
-
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-
-        if self.group_keys:
-            # if len(self.group_keys) == 1:
-            #     group_key = self.group_keys[0]
-            # return df.join(df.groupby(group_key).agg(pl.col(self.key).mean()
-            # .alias("agg_mean")), on=group_key, how="left").select("agg_mean_right")
-            raise ValueError('Group by is not supported for polars yet')
-        else:
-            return df.with_column(pl.col(self.key).mean().alias(alias))
-
-
-@dataclass
 class WordVectoriser(Transformation):
     key: str
     model: TextVectoriserModel
@@ -1396,7 +1356,7 @@ class GrayscaleImage(Transformation):
                 [np.mean(image, axis=2) if len(image.shape) == 3 else image for image in images.to_list()]
             )
 
-        return df.with_columns(pl.col(self.image_key).map(grayscale).alias(alias))
+        return pl.col(self.image_key).map(grayscale).alias(alias)
 
 
 @dataclass
@@ -1411,7 +1371,7 @@ class Power(Transformation):
         return df[self.key] ** self.power.python_value
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column(pl.col(self.key).pow(self.power.python_value).alias(alias))
+        return pl.col(self.key).pow(self.power.python_value)
 
 
 @dataclass
@@ -1426,7 +1386,7 @@ class PowerFeature(Transformation):
         return df[self.key] ** df[self.power_key]
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column(pl.col(self.key).pow(pl.col(self.power_key)).alias(alias))
+        return pl.col(self.key).pow(pl.col(self.power_key))
 
 
 @dataclass
@@ -1442,7 +1402,7 @@ class AppendConstString(Transformation):
         return df[self.key] + self.string
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column(pl.concat_str([pl.col(self.key), pl.lit(self.string)], sep='').alias(alias))
+        return pl.concat_str([pl.col(self.key), pl.lit(self.string)], sep='').alias(alias)
 
 
 @dataclass
@@ -1465,7 +1425,7 @@ class AppendStrings(Transformation):
 
 
 @dataclass
-class ConcatStringAggregation(Transformation, SqlTransformation):
+class ConcatStringAggregation(Transformation, PsqlTransformation):
 
     key: str
     group_keys: list[str]
@@ -1487,7 +1447,7 @@ class ConcatStringAggregation(Transformation, SqlTransformation):
 
 
 @dataclass
-class SumAggregation(Transformation, SqlTransformation):
+class SumAggregation(Transformation, PsqlTransformation):
 
     key: str
     group_keys: list[str]
@@ -1496,10 +1456,182 @@ class SumAggregation(Transformation, SqlTransformation):
     dtype = FeatureType('').float
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return (await self.transform_polars(pl.from_pandas(df).lazy())).collect().to_pandas()[self.name]
+        raise NotImplementedError()
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.sum(self.key).alias(alias)
 
     def as_sql(self) -> str:
         return f'SUM({self.key})'
+
+
+@dataclass
+class MeanAggregation(Transformation, PsqlTransformation):
+
+    key: str
+    group_keys: list[str]
+
+    name = 'mean_agg'
+    dtype = FeatureType('').float
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        raise NotImplementedError()
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        raise NotImplementedError()
+
+    def as_sql(self) -> str:
+        return f'AVG({self.key})'
+
+
+@dataclass
+class MinAggregation(Transformation, PsqlTransformation):
+
+    key: str
+    group_keys: list[str]
+
+    name = 'min_agg'
+    dtype = FeatureType('').float
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        raise NotImplementedError()
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        raise NotImplementedError()
+
+    def as_sql(self) -> str:
+        return f'MIN({self.key})'
+
+
+@dataclass
+class MaxAggregation(Transformation, PsqlTransformation):
+
+    key: str
+    group_keys: list[str]
+
+    name = 'max_agg'
+    dtype = FeatureType('').float
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        raise NotImplementedError()
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        return pl.sum(self.key).alias(alias)
+
+    def as_sql(self) -> str:
+        return f'MAX({self.key})'
+
+
+@dataclass
+class CountAggregation(Transformation, PsqlTransformation):
+
+    key: str
+    group_keys: list[str]
+
+    name = 'count_agg'
+    dtype = FeatureType('').float
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        raise NotImplementedError()
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        raise NotImplementedError()
+
+    def as_sql(self) -> str:
+        return f'COUNT({self.key})'
+
+
+@dataclass
+class CountDistinctAggregation(Transformation, PsqlTransformation):
+
+    key: str
+    group_keys: list[str]
+
+    name = 'count_distinct_agg'
+    dtype = FeatureType('').float
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        raise NotImplementedError()
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        raise NotImplementedError()
+
+    def as_sql(self) -> str:
+        return f'COUNT(DISTINCT {self.key})'
+
+
+@dataclass
+class StdAggregation(Transformation, PsqlTransformation):
+
+    key: str
+    group_keys: list[str]
+
+    name = 'std_agg'
+    dtype = FeatureType('').float
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        raise NotImplementedError()
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        raise NotImplementedError()
+
+    def as_sql(self) -> str:
+        return f'STDDEV({self.key})'
+
+
+@dataclass
+class VarianceAggregation(Transformation, PsqlTransformation):
+
+    key: str
+    group_keys: list[str]
+
+    name = 'var_agg'
+    dtype = FeatureType('').float
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        raise NotImplementedError()
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        raise NotImplementedError()
+
+    def as_sql(self) -> str:
+        return f'variance({self.key})'
+
+
+@dataclass
+class MedianAggregation(Transformation, PsqlTransformation):
+
+    key: str
+    group_keys: list[str]
+
+    name = 'median_agg'
+    dtype = FeatureType('').float
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        raise NotImplementedError()
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        raise NotImplementedError()
+
+    def as_sql(self) -> str:
+        return f'PERCENTILE_CONT(0.5) WITHIN GROUP(ORDER BY {self.key})'
+
+
+@dataclass
+class PercentileAggregation(Transformation, PsqlTransformation):
+
+    key: str
+    percentile: float
+    group_keys: list[str]
+
+    name = 'percentile_agg'
+    dtype = FeatureType('').float
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        raise NotImplementedError()
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        raise NotImplementedError()
+
+    def as_sql(self) -> str:
+        return f'PERCENTILE_CONT({self.percentile}) WITHIN GROUP(ORDER BY {self.key})'

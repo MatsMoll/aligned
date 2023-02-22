@@ -12,7 +12,7 @@ from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregationConfig
 from aligned.schemas.feature import FeatureLocation, FeatureType
-from aligned.schemas.transformation import SqlTransformation
+from aligned.schemas.transformation import PsqlTransformation
 
 logger = logging.getLogger(__name__)
 
@@ -320,9 +320,9 @@ class FactPsqlJob(FactualRetrivalJob):
         name = f'{request.name}_agg_cte'
 
         if not all(
-            [isinstance(feature.derived_feature.transformation, SqlTransformation) for feature in features]
+            [isinstance(feature.derived_feature.transformation, PsqlTransformation) for feature in features]
         ):
-            raise ValueError('All features must have a SqlTransformation')
+            raise ValueError('All features must have a PsqlTransformation')
 
         group_by_names = {feature.name for feature in window.group_by}
         if window.time_window:
@@ -406,7 +406,7 @@ class FactPsqlJob(FactualRetrivalJob):
             )
             is_sql_aggregates = all(
                 [
-                    isinstance(feature.derived_feature.transformation, SqlTransformation)
+                    isinstance(feature.derived_feature.transformation, PsqlTransformation)
                     for feature in aggregates
                 ]
             )
@@ -586,7 +586,7 @@ WITH entities (
     { table.sql_query(distinct='entities.row_id') }
     ),"""
 
-        # Select the core features
+        # Select the aggregate features
         for table in aggregates:
             query += f"""
 {table.name} AS (

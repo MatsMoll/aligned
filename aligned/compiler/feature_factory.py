@@ -765,28 +765,72 @@ class ArithmeticAggregation:
         return feat
 
     def mean(self) -> Float:
-        pass
+        from aligned.compiler.aggregation_factory import MeanAggregationFactory
+
+        feat = Float()
+        feat.transformation = MeanAggregationFactory(self.feature, group_by=[], time_window=self.time_window)
+        return feat
 
     def min(self) -> Float:
-        pass
+        from aligned.compiler.aggregation_factory import MinAggregationFactory
+
+        feat = Float()
+        feat.transformation = MinAggregationFactory(self.feature, group_by=[], time_window=self.time_window)
+        return feat
 
     def max(self) -> Float:
-        pass
+        from aligned.compiler.aggregation_factory import MaxAggregationFactory
+
+        feat = Float()
+        feat.transformation = MaxAggregationFactory(self.feature, group_by=[], time_window=self.time_window)
+        return feat
 
     def count(self) -> Int64:
-        pass
+        from aligned.compiler.aggregation_factory import CountAggregationFactory
+
+        feat = Float()
+        feat.transformation = CountAggregationFactory(self.feature, group_by=[], time_window=self.time_window)
+        return feat
 
     def count_distinct(self) -> Int64:
-        pass
+        from aligned.compiler.aggregation_factory import CountDistinctAggregationFactory
+
+        feat = Float()
+        feat.transformation = CountDistinctAggregationFactory(
+            self.feature, group_by=[], time_window=self.time_window
+        )
+        return feat
 
     def std(self) -> Float:
-        pass
+        from aligned.compiler.aggregation_factory import StdAggregationFactory
+
+        feat = Float()
+        feat.transformation = StdAggregationFactory(self.feature, group_by=[], time_window=self.time_window)
+        return feat
 
     def variance(self) -> Float:
-        pass
+        from aligned.compiler.aggregation_factory import VarianceAggregationFactory
+
+        feat = Float()
+        feat.transformation = VarianceAggregationFactory(
+            self.feature, group_by=[], time_window=self.time_window
+        )
+        return feat
 
     def median(self) -> Float:
-        pass
+        from aligned.compiler.aggregation_factory import MedianAggregationFactory
+
+        feat = Float()
+        feat.transformation = MedianAggregationFactory(
+            self.feature, group_by=[], time_window=self.time_window
+        )
+        return feat
 
     def percentile(self, percentile: float) -> Float:
-        pass
+        from aligned.compiler.aggregation_factory import PercentileAggregationFactory
+
+        feat = Float()
+        feat.transformation = PercentileAggregationFactory(
+            self.feature, percentile=percentile, group_by=[], time_window=self.time_window
+        )
+        return feat

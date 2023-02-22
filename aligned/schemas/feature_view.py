@@ -62,12 +62,14 @@ class CompiledFeatureView(Codable):
         aggregated_features = {
             feature for feature in self.aggregated_features if feature.name in feature_names
         }
+        derived_aggregated_feautres = {feature.derived_feature for feature in self.aggregated_features}
 
         def dependent_features_for(
             feature: DerivedFeature,
         ) -> tuple[set[Feature], set[Feature]]:
             core_features = set()
-            intermediate_features = set()
+            derived_features = set()
+            aggregated_features = set()
 
             for dep_ref in feature.depending_on:
                 dep_feature = [
@@ -77,28 +79,41 @@ class CompiledFeatureView(Codable):
                     core_features.add(dep_feature[0])
                     continue
 
-                dep_features = [feat for feat in self.derived_features if feat.name == dep_ref.name]
+                dep_features = [
+                    feat
+                    for feat in self.derived_features.union(derived_aggregated_feautres)
+                    if feat.name == dep_ref.name
+                ]
                 if not dep_features:
                     raise ValueError(
                         'Unable to find the referenced feature. This is most likely a bug in the systemd'
                     )
                 dep_feature = dep_features[0]
-                intermediate_features.add(dep_feature)
-                core, intermediate = dependent_features_for(dep_feature)
+                if dep_feature in derived_aggregated_feautres:
+                    agg_feat = [
+                        feat for feat in self.aggregated_features if feat.derived_feature == dep_feature
+                    ][0]
+                    aggregated_features.add(agg_feat)
+                else:
+                    derived_features.add(dep_feature)
+                core, derived, aggregated = dependent_features_for(dep_feature)
                 features.update(core)
-                intermediate_features.update(intermediate)
+                derived_features.update(derived)
+                aggregated_features.update(aggregated)
 
-            return core_features, intermediate_features
+            return core_features, derived_features, aggregated_features
 
         for dep_feature in derived_features.copy():
-            core, intermediate = dependent_features_for(dep_feature)
+            core, intermediate, aggregated = dependent_features_for(dep_feature)
             features.update(core)
             derived_features.update(intermediate)
+            aggregated_features.update(aggregated)
 
         for dep_feature in aggregated_features.copy():
-            core, intermediate = dependent_features_for(dep_feature)
+            core, intermediate, aggregated = dependent_features_for(dep_feature)
             features.update(core)
             derived_features.update(intermediate)
+            aggregated_features.update(aggregated)
 
         return FeatureRequest(
             FeatureLocation.feature_view(self.name),
