@@ -68,7 +68,7 @@ class Transformation(Codable, SerializableType):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         pass
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr | pl.Expr:
         raise NotImplementedError()
 
     def _serialize(self) -> dict:
@@ -199,6 +199,8 @@ class SupportedTransformations:
             PowerFeature,
             AppendConstString,
             AppendStrings,
+            ConcatStringAggregation,
+            SumAggregation,
         ]:
             self.add(tran_type)
 
@@ -226,7 +228,7 @@ class PandasTransformation(Transformation):
         loaded = dill.loads(self.method)
         return await loaded(df)
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         import dill
 
         pandas_df = df.collect().to_pandas()
@@ -251,7 +253,7 @@ class PolarsTransformation(Transformation):
         pl_df = pl_df.with_column((loaded).alias('polars_tran_column'))
         return pl_df['polars_tran_column'].to_pandas()
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         import dill
 
         expr: pl.Expr = dill.loads(self.method)
@@ -269,7 +271,7 @@ class NotNull(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key].notnull()
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(pl.col(self.key).is_not_null().alias(alias))
 
     @staticmethod
@@ -297,7 +299,7 @@ class Equals(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key] == self.value.python_value
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column((pl.col(self.key) == self.value.python_value).alias(alias))
 
     @staticmethod
@@ -329,7 +331,7 @@ class And(Transformation):
             transformation=lambda dfv: dfv[self.first_key] & dfv[self.second_key],
         )
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(
             (
                 pl.when(pl.col(self.first_key).is_not_null() & pl.col(self.second_key).is_not_null())
@@ -360,7 +362,7 @@ class Or(Transformation):
         self.first_key = first_key
         self.second_key = second_key
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column((pl.col(self.first_key) | pl.col(self.second_key)).alias(alias))
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
@@ -398,7 +400,7 @@ class Inverse(Transformation):
             transformation=lambda dfv: dfv[self.key] != True,  # noqa: E712
         )
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column((~pl.col(self.key)).alias(alias))
 
     @staticmethod
@@ -426,7 +428,7 @@ class NotEquals(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key] != self.value.python_value
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column((pl.col(self.key) != self.value.python_value).alias(alias))
 
     @staticmethod
@@ -450,7 +452,7 @@ class GreaterThenValue(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key] > self.value
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column((pl.col(self.key) > self.value).alias(alias))
 
     @staticmethod
@@ -476,7 +478,7 @@ class GreaterThen(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.left_key] > df[self.right_key]
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column((pl.col(self.left_key) > pl.col(self.right_key)).alias(alias))
 
     @staticmethod
@@ -510,7 +512,7 @@ class GreaterThenOrEqual(Transformation):
             transformation=lambda dfv: dfv[self.key] >= self.value,
         )
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column((pl.col(self.key) >= self.value).alias(alias))
 
     @staticmethod
@@ -544,7 +546,7 @@ class LowerThen(Transformation):
             transformation=lambda dfv: dfv[self.key] < self.value,
         )
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column((pl.col(self.key) < self.value).alias(alias))
 
     @staticmethod
@@ -569,7 +571,7 @@ class LowerThenOrEqual(Transformation):
         self.key = key
         self.value = value
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column((pl.col(self.key) <= self.value).alias(alias))
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
@@ -601,7 +603,7 @@ class Subtraction(Transformation):
         self.front = front
         self.behind = behind
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column((pl.col(self.front) - pl.col(self.behind)).alias(alias))
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
@@ -642,7 +644,7 @@ class Addition(Transformation):
             transformation=lambda dfv: dfv[self.front] + dfv[self.behind],
         )
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column((pl.col(self.front) + pl.col(self.behind)).alias(alias))
 
     @staticmethod
@@ -678,7 +680,7 @@ class TimeDifference(Transformation):
             transformation=lambda dfv: (dfv[self.front] - dfv[self.behind]) / np.timedelta64(1, self.unit),
         )
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column((pl.col(self.front) - pl.col(self.behind)).dt.seconds().alias(alias))
 
     @staticmethod
@@ -725,7 +727,7 @@ class Logarithm(Transformation):
             transformation=lambda dfv: np.log(dfv[self.key]),
         )
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(
             (pl.when(pl.col(self.key) > 0).then(pl.col(self.key).log()).otherwise(pl.lit(None))).alias(alias)
         )
@@ -757,7 +759,7 @@ class LogarithmOnePluss(Transformation):
             transformation=lambda dfv: np.log1p(dfv[self.key]),
         )
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(
             (pl.when(pl.col(self.key) > -1).then((pl.col(self.key) + 1).log()).otherwise(pl.lit(None))).alias(
                 alias
@@ -791,7 +793,7 @@ class ToNumerical(Transformation):
 
         return to_numeric(df[self.key], errors='coerce')
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column((pl.col(self.key).cast(pl.Float64)).alias(alias))
 
     @staticmethod
@@ -826,7 +828,7 @@ class DateComponent(Transformation):
             transformation=lambda dfv: getattr(dfv[self.key].dt, self.component),
         )
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         pl.col(self.key).str.strptime(pl.Datetime, strict=False)
         pl.when(pl.col(self.key))
 
@@ -923,7 +925,7 @@ class Contains(Transformation):
             transformation=lambda dfv: dfv[self.key].astype('str').str.contains(self.value),
         )
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(pl.col(self.key).str.contains(self.value).alias(alias))
 
     @staticmethod
@@ -955,7 +957,7 @@ class Ordinal(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key].map(self.orders_dict)
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         mapper = pl.DataFrame({self.key: list(self.orders), alias: list(range(0, len(self.orders)))})
         return df.join(mapper.lazy(), on=self.key, how='left')
 
@@ -992,7 +994,7 @@ class ReplaceStrings(Transformation):
 
         return temp_df
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         raise NotImplementedError()
 
     @staticmethod
@@ -1029,7 +1031,7 @@ class Ratio(Transformation):
             / dfv[self.denumerator].astype(float),
         )
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(
             (
                 pl.when(pl.col(self.denumerator) != 0)
@@ -1062,7 +1064,7 @@ class StandardScalingTransformation(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return (df[self.key] - self.mean) / self.std
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(((pl.col(self.key) - self.mean) / self.std).alias(alias))
 
     @staticmethod
@@ -1086,7 +1088,7 @@ class IsIn(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key].isin(self.values)
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(pl.col(self.key).is_in(self.values).alias(alias))
 
     @staticmethod
@@ -1110,7 +1112,7 @@ class FillNaValues(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key].fillna(self.value.python_value)
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         if self.dtype == FeatureType('').float:
             return df.with_column(
                 pl.col(self.key)
@@ -1140,7 +1142,7 @@ class CopyTransformation(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key]
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(pl.col(self.key).alias(alias))
 
 
@@ -1157,7 +1159,7 @@ class Floor(Transformation):
 
         return floor(df[self.key])
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(pl.col(self.key).floor().alias(alias))
 
     @staticmethod
@@ -1182,7 +1184,7 @@ class Ceil(Transformation):
 
         return ceil(df[self.key])
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(pl.col(self.key).ceil().alias(alias))
 
     @staticmethod
@@ -1207,7 +1209,7 @@ class Round(Transformation):
 
         return round(df[self.key])
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(pl.col(self.key).round(0).alias(alias))
 
     @staticmethod
@@ -1232,7 +1234,7 @@ class Absolute(Transformation):
 
         return abs(df[self.key])
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(pl.col(self.key).abs().alias(alias))
 
     @staticmethod
@@ -1258,7 +1260,7 @@ class MapArgMax(Transformation):
         pl_df = await self.transform_polars(pl.from_pandas(df).lazy(), 'feature')
         return pl_df.collect().to_pandas()['feature']
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         expr: pl.Expr = pl.lit(None)
 
         if len(self.column_mappings) == 1:
@@ -1326,7 +1328,7 @@ class Mean(Transformation):
         else:
             return df[self.key].mean()
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
 
         if self.group_keys:
             # if len(self.group_keys) == 1:
@@ -1349,7 +1351,7 @@ class WordVectoriser(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return await self.model.vectorise_pandas(df[self.key])
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return await self.model.vectorise_polars(df, self.key, alias)
 
 
@@ -1361,7 +1363,7 @@ class LoadImageUrl(Transformation):
     name = 'load_image'
     dtype = FeatureType('').array
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         import asyncio
         from io import BytesIO
 
@@ -1386,7 +1388,7 @@ class GrayscaleImage(Transformation):
     name = 'grayscale_image'
     dtype = FeatureType('').array
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         import numpy as np
 
         def grayscale(images):
@@ -1408,7 +1410,7 @@ class Power(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key] ** self.power.python_value
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(pl.col(self.key).pow(self.power.python_value).alias(alias))
 
 
@@ -1423,7 +1425,7 @@ class PowerFeature(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key] ** df[self.power_key]
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(pl.col(self.key).pow(pl.col(self.power_key)).alias(alias))
 
 
@@ -1439,7 +1441,7 @@ class AppendConstString(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key] + self.string
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(pl.concat_str([pl.col(self.key), pl.lit(self.string)], sep='').alias(alias))
 
 
@@ -1456,7 +1458,7 @@ class AppendStrings(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.first_key] + self.sep + df[self.second_key]
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(
             pl.concat_str([pl.col(self.first_key), pl.col(self.second_key)], sep=self.sep).alias(alias)
         )
@@ -1475,10 +1477,29 @@ class ConcatStringAggregation(Transformation, SqlTransformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return (await self.transform_polars(pl.from_pandas(df).lazy())).collect().to_pandas()[self.name]
 
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame:
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_columns(
             pl.concat_str(pl.col(self.key), sep=self.separator).over(self.group_keys).alias(alias)
         )
 
     def as_sql(self) -> str:
         return f"array_to_string(array_agg({self.key}), '{self.separator}')"
+
+
+@dataclass
+class SumAggregation(Transformation, SqlTransformation):
+
+    key: str
+    group_keys: list[str]
+
+    name = 'sum_agg'
+    dtype = FeatureType('').float
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return (await self.transform_polars(pl.from_pandas(df).lazy())).collect().to_pandas()[self.name]
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        return pl.sum(self.key).alias(alias)
+
+    def as_sql(self) -> str:
+        return f'SUM({self.key})'

@@ -31,7 +31,13 @@ class RetrivalRequest(Codable):
         return RequestResult.from_request(self)
 
     def derived_feature_map(self) -> dict[str, DerivedFeature]:
-        return {feature.name: feature for feature in self.derived_features}
+        return {
+            feature.name: feature for feature in self.derived_features.union(self.derived_aggregated_features)
+        }
+
+    @property
+    def derived_aggregated_features(self) -> set[DerivedFeature]:
+        return {feature.derived_feature for feature in self.aggregated_features}
 
     @property
     def all_required_features(self) -> set[Feature]:
@@ -43,7 +49,9 @@ class RetrivalRequest(Codable):
 
     @property
     def all_features(self) -> set[Feature]:
-        return self.features.union(self.derived_features)
+        return self.features.union(self.derived_features).union(
+            {feature.derived_feature for feature in self.aggregated_features}
+        )
 
     @property
     def all_feature_names(self) -> set[str]:
@@ -106,11 +114,13 @@ class RetrivalRequest(Codable):
                     entities=request.entities,
                     features=request.features,
                     derived_features=request.derived_features,
+                    aggregated_features=request.aggregated_features,
                     event_timestamp=request.event_timestamp,
                 )
             else:
                 grouped_requests[fv_name].derived_features.update(request.derived_features)
                 grouped_requests[fv_name].features.update(request.features)
+                grouped_requests[fv_name].aggregated_features.update(request.aggregated_features)
                 grouped_requests[fv_name].entities.update(request.entities)
 
         return list(grouped_requests.values())
@@ -124,12 +134,14 @@ class RetrivalRequest(Codable):
             entities=set(),
             features=set(),
             derived_features=set(),
+            aggregated_features=set(),
             event_timestamp=None,
         )
         for request in requests:
             result_request.derived_features.update(request.derived_features)
             result_request.features.update(request.features)
             result_request.entities.update(request.entities)
+            result_request.aggregated_features.update(request.aggregated_features)
 
         return result_request
 

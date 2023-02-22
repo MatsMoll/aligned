@@ -753,12 +753,16 @@ class ArithmeticAggregation:
     feature: ArithmeticFeature
     time_window: timedelta | None = None
 
-    def over(self, time_window: timedelta) -> ArithmeticFeature:
+    def over(self, time_window: timedelta) -> ArithmeticAggregation:
         self.time_window = time_window
         return self
 
     def sum(self) -> Float:
-        pass
+        from aligned.compiler.aggregation_factory import SumAggregationFactory
+
+        feat = Float()
+        feat.transformation = SumAggregationFactory(self.feature, group_by=[], time_window=self.time_window)
+        return feat
 
     def mean(self) -> Float:
         pass

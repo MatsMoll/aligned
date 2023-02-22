@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -8,8 +10,9 @@ import polars as pl
 from aligned.psql.data_source import PostgreSQLConfig, PostgreSQLDataSource
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
-from aligned.schemas.derivied_feature import AggregationConfig
+from aligned.schemas.derivied_feature import AggregatedFeature, AggregationConfig
 from aligned.schemas.feature import FeatureLocation, FeatureType
+from aligned.schemas.transformation import SqlTransformation
 
 logger = logging.getLogger(__name__)
 
@@ -43,12 +46,46 @@ class SqlJoin:
 @dataclass
 class TableFetch:
     name: str
-    table_name: str
+    table: str | TableFetch
     columns: set[SqlColumn]
     joins: list[SqlJoin] = field(default_factory=list)
     conditions: list[str] = field(default_factory=list)
     group_by: list[str] = field(default_factory=list)
-    order_by: str = field(default='')
+    order_by: str | None = field(default=None)
+
+    def sql_query(self, distinct: str | None = None) -> str:
+        # Select the core features
+        wheres = ''
+        order_by = ''
+        group_by = ''
+        select = 'SELECT'
+
+        if distinct:
+            select = f'SELECT DISTINCT ON ({distinct})'
+
+        if self.conditions:
+            wheres = 'WHERE ' + ' AND '.join(self.conditions)
+
+        if self.order_by:
+            order_by = 'ORDER BY ' + self.order_by
+
+        if self.group_by:
+            group_by = 'GROUP BY ' + ', '.join(self.group_by)
+
+        table_columns = [col.sql_select for col in self.columns]
+
+        if isinstance(self.table, TableFetch):
+            from_sql = f'FROM ({self.table.sql_query()}) as entities'
+        else:
+            from_sql = f"""FROM entities
+    LEFT JOIN { self.table } ta ON { ' AND '.join(self.joins) }"""
+
+        return f"""
+    { select } { ', '.join(table_columns) }
+    { from_sql }
+    { wheres }
+    { order_by }
+    { group_by }"""
 
 
 @dataclass
@@ -255,44 +292,132 @@ class FactPsqlJob(FactualRetrivalJob):
         entity_db_name = source.feature_identifier_for(entities)
         sort_query = 'entities.row_id'
 
-        event_timestamp_clause = ''
+        event_timestamp_clause: str | None = None
         if request.event_timestamp and entities_has_event_timestamp:
             event_timestamp_column = source.feature_identifier_for([request.event_timestamp.name])[0]
-            event_timestamp_clause = f'AND entities.event_timestamp >= ta.{event_timestamp_column}'
+            event_timestamp_clause = f'entities.event_timestamp >= ta.{event_timestamp_column}'
             sort_query += f', {event_timestamp_column} DESC'
 
         join_conditions = [
-            f'ta.{entity_db_name} = entities.{entity} {event_timestamp_clause}'
+            f'ta.{entity_db_name} = entities.{entity}'
             for entity, entity_db_name in zip(entities, entity_db_name)
         ]
+        if event_timestamp_clause:
+            join_conditions.append(event_timestamp_clause)
 
         return TableFetch(
             name=f'{request.name}_cte',
-            table_name=source.table,
+            table=source.table,
             columns=selects,
             joins=join_conditions,
             order_by=sort_query,
         )
 
-    def aggregated_values_from_request(self, request: RetrivalRequest, table: str) -> list[str]:
+    def sql_aggregated_request(
+        self, window: AggregationConfig, features: set[AggregatedFeature], request: RetrivalRequest
+    ) -> TableFetch:
+        source = self.sources[request.location]
+        name = f'{request.name}_agg_cte'
 
-        tables: dict[AggregationConfig, dict] = {}
+        if not all(
+            [isinstance(feature.derived_feature.transformation, SqlTransformation) for feature in features]
+        ):
+            raise ValueError('All features must have a SqlTransformation')
+
+        group_by_names = {feature.name for feature in window.group_by}
+        if window.time_window:
+            name = f'{request.name}_agg_{window.time_window.seconds}_cte'
+            group_by_names = {'entities.row_id'}
+
+        group_by_identifiers = source.feature_identifier_for(group_by_names)
+        group_by_selects = {
+            SqlColumn(db_field_name, feature)
+            for feature, db_field_name in zip(group_by_names, group_by_identifiers)
+        }
+
+        aggregates = {
+            SqlColumn(
+                feature.derived_feature.transformation.as_sql(),
+                feature.name,
+            )
+            for feature in features
+        }
+
+        event_timestamp_clause: str | None = None
+        if request.event_timestamp:
+            # Use row_id as the main join key
+            event_timestamp_name = request.event_timestamp.name
+            if window.time_window:
+                window_in_seconds = window.time_window.seconds
+                event_timestamp_clause = (
+                    f'ta.{event_timestamp_name} BETWEEN entities.event_timestamp'
+                    f" - interval '{window_in_seconds} seconds' AND entities.event_timestamp"
+                )
+            else:
+                event_timestamp_clause = f'ta.{event_timestamp_name} <= entities.event_timestamp'
+
+        entities = list(request.entity_names)
+        entity_db_name = source.feature_identifier_for(entities)
+        join_conditions = [
+            f'ta.{entity_db_name} = entities.{entity}'
+            for entity, entity_db_name in zip(entities, entity_db_name)
+        ]
+        if event_timestamp_clause:
+            join_conditions.append(event_timestamp_clause)
+
+        field_selects = request.all_required_feature_names.union({'entities.*'})
+        field_identifiers = source.feature_identifier_for(field_selects)
+        selects = {
+            SqlColumn(db_field_name, feature)
+            for feature, db_field_name in zip(field_selects, field_identifiers)
+        }
+
+        return TableFetch(
+            name=name,
+            # Need to do a subquery, in order to renmae the core features
+            table=TableFetch(
+                name='ta',
+                table=source.table,
+                columns=selects,
+                joins=join_conditions,
+            ),
+            columns=aggregates.union(group_by_selects),
+            group_by=group_by_names,
+        )
+
+    def aggregated_values_from_request(self, request: RetrivalRequest) -> list[TableFetch]:
+
+        aggregation_windows: dict[AggregationConfig, set[AggregatedFeature]] = {}
 
         for aggregate in request.aggregated_features:
-            aggregate.aggregate_over.time_window
+            if aggregate.aggregate_over not in aggregation_windows:
+                aggregation_windows[aggregate.aggregate_over] = {aggregate}
+            else:
+                aggregation_windows[aggregate.aggregate_over].add(aggregate)
 
-        return {
-            'name': 'featurestore',
-            'features': [
-                {
-                    'aggregation': 'sum',
-                    'name': 'feature1',
-                }
-            ],
-            'joins': ['table1'],
-            'filter': 'table1.id = table2.id',
-            'group_by': ['table1.id'],
-        }
+        fetches: list[TableFetch] = []
+        for window, aggregates in aggregation_windows.items():
+
+            only_using_core_features = all(
+                [
+                    all([ref.name in request.feature_names for ref in feature.derived_feature.depending_on])
+                    for feature in aggregates
+                ]
+            )
+            is_sql_aggregates = all(
+                [
+                    isinstance(feature.derived_feature.transformation, SqlTransformation)
+                    for feature in aggregates
+                ]
+            )
+
+            if only_using_core_features and is_sql_aggregates:
+                fetches.append(self.sql_aggregated_request(window, aggregates, request))
+            else:
+                raise ValueError('Only SQL aggregates are supported at the moment')
+                # fetches.append(self.fetch_all_aggregate_values(window, aggregates, request))
+
+        return fetches
 
     async def build_request(self) -> str:
         import numpy as np
@@ -396,9 +521,17 @@ class FactPsqlJob(FactualRetrivalJob):
         # Add the joins to the fact
 
         tables: list[TableFetch] = []
+        aggregates: list[TableFetch] = []
         for request in self.requests:
             fetch = self.value_selection(request, has_event_timestamp)
             tables.append(fetch)
+            aggregate_fetches = self.aggregated_values_from_request(request)
+            aggregates.extend(aggregate_fetches)
+            for aggregate in aggregate_fetches:
+                final_select_names = final_select_names.union(
+                    {column.alias for column in aggregate.columns if column.alias != 'entites.row_id'}
+                )
+
             all_entities.update(request.entity_names)
             final_select_names = final_select_names.union(
                 {f'{fetch.name}.{feature}' for feature in request.all_required_feature_names}
@@ -414,11 +547,17 @@ class FactPsqlJob(FactualRetrivalJob):
         joins = '\n    '.join(
             [f'INNER JOIN {table.name} ON {table.name}.row_id = entities.row_id' for table in tables]
         )
+        if aggregates:
+            joins += '\n    '
+            joins += '\n    '.join(
+                [f'INNER JOIN {table.name} ON {table.name}.row_id = entities.row_id' for table in aggregates]
+            )
 
         return self.generate_query(
             entity_columns=all_entities_list,
             entity_query=entity_query,
             tables=tables,
+            aggregates=aggregates,
             final_select=list(final_select_names),
             final_joins=joins,
         )
@@ -428,11 +567,10 @@ class FactPsqlJob(FactualRetrivalJob):
         entity_columns: list[str],
         entity_query: str,
         tables: list[TableFetch],
+        aggregates: list[TableFetch],
         final_select: list[str],
         final_joins: str,
     ) -> str:
-
-        aggregations: list[TableFetch] = []
 
         query = f"""
 WITH entities (
@@ -443,33 +581,16 @@ WITH entities (
 
         # Select the core features
         for table in tables:
-            wheres = ''
-            if table.conditions:
-                wheres = 'WHERE ' + ' AND '.join(table.conditions)
-
-            table_columns = [col.sql_select for col in table.columns]
             query += f"""
 {table.name} AS (
-        SELECT DISTINCT ON (entities.row_id) { ', '.join(table_columns) }
-        FROM entities
-        LEFT JOIN { table.table_name } ta ON { ' AND '.join(table.joins) }
-        { wheres }
-        ORDER BY { table.order_by }
+    { table.sql_query(distinct='entities.row_id') }
     ),"""
 
-        # Add aggregation values
-        for agg in aggregations:
-            wheres = ''
-            if agg.conditions:
-                wheres = 'WHERE ' + ' AND '.join(agg.conditions)
-
+        # Select the core features
+        for table in aggregates:
             query += f"""
-{agg.name} AS (
-        SELECT { ', '.join(table_columns) }
-        FROM entities
-        LEFT JOIN { agg.table_name } ta ON { ' AND '.join(agg.joins) }
-        { wheres }
-        GROUP BY { ', '.join(agg.group_by) }
+{table.name} AS (
+    { table.sql_query() }
     ),"""
 
         query = query[:-1]  # Dropping the last comma
@@ -479,38 +600,3 @@ FROM entities
 { final_joins }
 """
         return query
-
-    def __sql_entities_template(self) -> str:
-        return """
-WITH entities (
-    {{ entities | join(', ') }}
-) AS (
-    {{ entities_sql }}
-),
-{% for agg in aggregates %}
-    {{agg.name}}_agg AS (
-        SELECT entities.row_id, {{agg.aggregate}} as {{agg.feature}}
-        FROM entities
-        LEFT JOIN {{agg.table}} ta on {{ agg.joins | join(' AND ') }}
-        GROUP BY 1
-    )
-{% endfor %}
-solutions_agg AS (
-    SELECT entities."taskID", array_to_string(array_agg(ts.solution), '\n') as all_solutions FROM entities
-    LEFT JOIN "TaskSolution" ts ON ts."taskID" = entities."taskID"
-    GROUP BY 1
-)
-{% for table in tables %}
-    {{table.fv}}_cte AS (
-        SELECT DISTINCT ON (entities.row_id) {{ table.features | join(', ') }}
-        FROM entities
-        LEFT JOIN {{table.name}} ta on {{ table.joins | join(' AND ') }}
-        ORDER BY {{table.sort_query}}
-    ){% if loop.last %}{% else %},{% endif %}
-{% endfor %}
-
-SELECT {{ selects | join(', ') }}
-FROM entities
-{{ joins | join('\n    ') }}
-
-"""

@@ -136,19 +136,19 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
 
     @classmethod
     def multi_source_features_for(
-        cls, facts: RetrivalJob, requests: dict[CsvFileSource, RetrivalRequest]
+        cls, facts: RetrivalJob, requests: list[tuple[CsvFileSource, RetrivalRequest]]
     ) -> FactualRetrivalJob:
-        if len(requests.keys()) != 1:
+        if len(requests) != 1:
             raise ValueError(f'Only able to load one {requests} at a time')
 
-        source = list(requests.keys())[0]
+        source = requests[0][0]
         if not isinstance(source, cls):
             raise ValueError(f'Only {cls} is supported, recived: {source}')
 
         # Group based on config
         return FileFactualJob(
             source=source,
-            requests=list(requests.values()),
+            requests=[request for _, request in requests],
             facts=facts,
         )
 
@@ -208,19 +208,19 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable):
 
     @classmethod
     def multi_source_features_for(
-        cls, facts: dict[str, list], requests: dict[ParquetFileSource, RetrivalRequest]
+        cls, facts: dict[str, list], requests: list[tuple[ParquetFileSource, RetrivalRequest]]
     ) -> FactualRetrivalJob:
-        if len(requests.keys()) != 1:
+        if len(requests) != 1:
             raise ValueError(f'Only able to load one {requests} at a time')
 
-        source = list(requests.keys())[0]
+        source = requests[0][0]
         if not isinstance(source, cls):
             raise ValueError(f'Only {cls} is supported, recived: {source}')
 
         # Group based on config
         return FileFactualJob(
             source=source,
-            requests=list(requests.values()),
+            requests=[request for _, request in requests],
             facts=facts,
         )
 

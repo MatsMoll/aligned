@@ -35,3 +35,27 @@ class ConcatStringsAggrigationFactory(TransformationFactory, AggregationTransfor
     def with_group_by(self, values: list[FeatureReferance]) -> TransformationFactory:
         self.group_by = values
         return self
+
+
+@dataclass
+class SumAggregationFactory(TransformationFactory, AggregationTransformationFactory):
+
+    feature: FeatureFactory
+    group_by: list[FeatureReferance]
+    time_window: timedelta | None = None
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.feature]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import SumAggregation
+
+        return SumAggregation(
+            key=self.feature.feature_referance().name,
+            group_keys=[feature.name for feature in self.group_by],
+        )
+
+    def with_group_by(self, values: list[FeatureReferance]) -> TransformationFactory:
+        self.group_by = values
+        return self

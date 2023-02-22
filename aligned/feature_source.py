@@ -51,11 +51,11 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
     def features_for(self, facts: RetrivalJob, request: FeatureRequest) -> RetrivalJob:
         from aligned.retrival_job import CombineFactualJob
 
-        core_requests = {
-            self.sources[request.location.identifier]: request
+        core_requests = [
+            (self.sources[request.location.identifier], request)
             for request in request.needed_requests
             if request.location.identifier in self.sources
-        }
+        ]
         source_groupes = {
             self.sources[request.location.identifier].job_group_key()
             for request in request.needed_requests
@@ -70,16 +70,12 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
             self.source_types[source_group]
             .multi_source_features_for(
                 facts=facts,
-                requests={
-                    source: req
-                    for source, req in core_requests.items()
-                    if source.job_group_key() == source_group
-                },
+                requests=[
+                    (source, req) for source, req in core_requests if source.job_group_key() == source_group
+                ],
             )
             .derive_features(
-                requests=[
-                    req for source, req in core_requests.items() if source.job_group_key() == source_group
-                ]
+                requests=[req for source, req in core_requests if source.job_group_key() == source_group]
             )
             for source_group in source_groupes
         ]

@@ -122,13 +122,13 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, StatisticEric
 
     @classmethod
     def multi_source_features_for(
-        cls, facts: RetrivalJob, requests: dict[PostgreSQLDataSource, RetrivalRequest]
+        cls, facts: RetrivalJob, requests: list[tuple[PostgreSQLDataSource, RetrivalRequest]]
     ) -> FactualRetrivalJob:
         # Group based on config
         from aligned.psql.jobs import FactPsqlJob
 
         return FactPsqlJob(
-            sources={request.location: source for source, request in requests.items()},
-            requests=list(requests.values()),
+            sources={request.location: source for source, request in requests},
+            requests=[request for _, request in requests],
             facts=facts,
         )

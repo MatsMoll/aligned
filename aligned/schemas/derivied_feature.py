@@ -84,3 +84,7 @@ class AggregatedFeature(Codable):
     @property
     def feature(self) -> Feature:
         return self.derived_feature.feature
+
+    @property
+    def name(self) -> str:
+        return self.derived_feature.name

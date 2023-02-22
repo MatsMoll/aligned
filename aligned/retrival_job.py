@@ -374,12 +374,25 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
 
         for request in self.requests:
             for feature_round in request.derived_features_order():
+
+                round_expressions: list[pl.Expr] = []
+
                 for feature in feature_round:
                     if feature.name in df.columns:
                         logger.info(f'Skipped adding feature {feature.name} to computation plan')
                         continue
                     logger.info(f'Adding feature to computation plan in polars: {feature.name}')
-                    df = await feature.transformation.transform_polars(df, feature.name)
+
+                    method = await feature.transformation.transform_polars(df, feature.name)
+                    if isinstance(method, pl.LazyFrame):
+                        df = method
+                    elif isinstance(method, pl.Expr):
+                        round_expressions.append(method.alias(feature.name))
+                    else:
+                        raise ValueError('Invalid result from transformation')
+
+                if round_expressions:
+                    df = df.with_columns(round_expressions)
         return df
 
     async def compute_derived_features_pandas(self, df: pd.DataFrame) -> pd.DataFrame:

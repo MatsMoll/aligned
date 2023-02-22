@@ -59,6 +59,9 @@ class CompiledFeatureView(Codable):
             self.entities
         )
         derived_features = {feature for feature in self.derived_features if feature.name in feature_names}
+        aggregated_features = {
+            feature for feature in self.aggregated_features if feature.name in feature_names
+        }
 
         def dependent_features_for(
             feature: DerivedFeature,
@@ -92,6 +95,11 @@ class CompiledFeatureView(Codable):
             features.update(core)
             derived_features.update(intermediate)
 
+        for dep_feature in aggregated_features.copy():
+            core, intermediate = dependent_features_for(dep_feature)
+            features.update(core)
+            derived_features.update(intermediate)
+
         return FeatureRequest(
             FeatureLocation.feature_view(self.name),
             feature_names,
@@ -102,6 +110,7 @@ class CompiledFeatureView(Codable):
                     entities=self.entities,
                     features=features - self.entities,
                     derived_features=derived_features,
+                    aggregated_features=aggregated_features,
                     event_timestamp=self.event_timestamp,
                 )
             ],
