@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
     from typing import AsyncIterator
 
     from aligned.local.source import DataFileReference
+    from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver
     from aligned.schemas.model import EventTrigger
 
 
@@ -252,8 +254,16 @@ class RetrivalJob(ABC):
     def listen_to_events(self, events: set[EventTrigger]) -> RetrivalJob:
         return ListenForTriggers(self, events)
 
+    def validate_entites(self) -> RetrivalJob:
+        return ValidateEntitiesJob(self)
+
+    def fill_missing_columns(self) -> RetrivalJob:
+        return FillMissingColumnsJob(self)
+
     @staticmethod
-    def from_dict(data: dict[str, list], request: list[RetrivalRequest]) -> RetrivalJob:
+    def from_dict(data: dict[str, list], request: list[RetrivalRequest] | RetrivalRequest) -> RetrivalJob:
+        if isinstance(request, RetrivalRequest):
+            request = [request]
         return LiteralDictJob(data, request)
 
 
@@ -423,6 +433,156 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
 
     def remove_derived_features(self) -> RetrivalJob:
         return self.job
+
+
+@dataclass
+class ValidateEntitiesJob(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+
+    async def to_pandas(self) -> pd.DataFrame:
+        data = await self.job.to_pandas()
+
+        for request in self.retrival_requests:
+            if request.entity_names - set(data.columns):
+                return pd.DataFrame({})
+
+        return data
+
+    async def to_polars(self) -> pl.DataFrame:
+        data = await self.job.to_polars()
+
+        for request in self.retrival_requests:
+            if request.entity_names - set(data.columns):
+                return pl.DataFrame({})
+
+        return data
+
+
+@dataclass
+class FillMissingColumnsJob(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+
+    async def to_pandas(self) -> pd.DataFrame:
+        data = await self.job.to_pandas()
+        for request in self.retrival_requests:
+
+            missing = request.all_required_feature_names - set(data.columns)
+            if not missing:
+                continue
+
+            logger.info(
+                f"""
+Some features is missing.
+Will fill values with None, but it could be a potential problem: {missing}
+"""
+            )
+            for feature in missing:
+                data[feature] = None
+        return data
+
+    async def to_polars(self) -> pl.LazyFrame:
+        data = await self.job.to_polars()
+        for request in self.retrival_requests:
+
+            missing = request.all_required_feature_names - set(data.columns)
+            if not missing:
+                continue
+
+            logger.info(
+                f"""
+Some features is missing.
+Will fill values with None, but it could be a potential problem: {missing}
+"""
+            )
+            data = data.with_columns([pl.lit(None).alias(feature) for feature in missing])
+        return data
+
+
+@dataclass
+class StreamAggregationJob(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+    checkpoints: dict[AggregateOver, DataFileReference]
+
+    @property
+    def time_windows(self) -> set[AggregateOver]:
+        windows = set()
+        for request in self.retrival_requests:
+            for feature in request.aggregated_features:
+                windows.add(feature.aggregate_over)
+        return windows
+
+    @property
+    def aggregated_features(self) -> dict[AggregateOver, set[AggregatedFeature]]:
+        features = defaultdict(set)
+        for request in self.retrival_requests:
+            for feature in request.aggregated_features:
+                features[feature.aggregate_over].add(feature)
+        return features
+
+    async def data_windows(self, window: AggregateOver, data: pl.DataFrame, now: datetime) -> pl.DataFrame:
+        checkpoint = self.checkpoints[window]
+        filter_expr = pl.col(window.time_column.name) > now - window.time_window
+
+        try:
+            window_data = (await checkpoint.to_polars()).collect()
+
+            if window.time_window:
+                window_data = pl.concat([window_data.filter(filter_expr), data.filter(filter_expr)])
+            else:
+                window_data = pl.concat([window_data, data])
+
+            await checkpoint.write_polars(window_data.lazy())
+            return window_data
+        except FileNotFoundError:
+
+            window_data = data.filter(filter_expr)
+            await checkpoint.write_polars(window_data.lazy())
+            return window_data
+
+    async def to_pandas(self) -> pd.DataFrame:
+        raise NotImplementedError()
+
+    async def to_polars(self) -> pl.LazyFrame:
+        data = (await self.job.to_polars()).collect()
+
+        # This is used as a dummy frame, as the pl abstraction is not good enough
+        lazy_df = pl.DataFrame({}).lazy()
+        now = datetime.now()
+
+        for window in self.time_windows:
+
+            aggregations = self.aggregated_features[window]
+
+            required_features = set(window.group_by).union([window.time_column])
+            for agg in aggregations:
+                required_features.update(agg.derived_feature.depending_on)
+
+            required_features_name = sorted({feature.name for feature in required_features})
+
+            agg_transformations = await asyncio.gather(
+                *[
+                    agg.derived_feature.transformation.transform_polars(lazy_df, 'dummy')
+                    for agg in aggregations
+                ]
+            )
+            agg_expr = [
+                agg.alias(feature.name)
+                for agg, feature in zip(agg_transformations, aggregations)
+                if isinstance(agg, pl.Expr)
+            ]
+
+            window_data = await self.data_windows(window, data.select(required_features_name), now)
+
+            agg_data = window_data.lazy().groupby(window.group_by_names).agg(agg_expr).collect()
+            data = data.join(agg_data, on=window.group_by_names, how='left')
+
+        return data.lazy()
+
+    def remove_derived_features(self) -> RetrivalJob:
+        return self.job.remove_derived_features()
 
 
 @dataclass

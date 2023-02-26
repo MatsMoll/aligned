@@ -19,7 +19,7 @@ from aligned.feature_view.combined_view import CombinedFeatureView, CompiledComb
 from aligned.feature_view.feature_view import FeatureView
 from aligned.online_source import BatchOnlineSource, OnlineSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
-from aligned.retrival_job import DerivedFeatureJob, FilterJob, RetrivalJob, SupervisedJob
+from aligned.retrival_job import FilterJob, RetrivalJob, SupervisedJob
 from aligned.schemas.feature import FeatureLocation
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.model import EventTrigger
@@ -484,11 +484,17 @@ class FeatureViewStore:
         start_date = end_date - timedelta(days=days, minutes=minutes, seconds=seconds)
         return self.between_dates(start_date, end_date)
 
-    def for_entities(self, entities: dict[str, list]) -> RetrivalJob:
-        if self.feature_filter:
-            return self.source.features_for(entities, self.view.request_for(self.feature_filter))
+    def for_entities(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
 
-        return self.source.features_for(entities, self.view.request_all)
+        request = self.view.request_all
+        if self.feature_filter:
+            request = self.view.request_for(self.feature_filter)
+
+        entity_job = entities
+        if isinstance(entities, dict):
+            entity_job = RetrivalJob.from_dict(entities, request)
+
+        return self.source.features_for(entity_job, request)
 
     def select(self, features: set[str]) -> 'FeatureViewStore':
         return FeatureViewStore(self.store, self.view, self.event_triggers, features)
@@ -507,30 +513,23 @@ class FeatureViewStore:
         await self.batch_write(values)
 
     async def process_input(self, values: dict[str, list[Any]]) -> dict[str, list[Any]]:
-        from pandas import DataFrame
-
-        from aligned.local.job import FileFullJob
-        from aligned.local.source import LiteralReference
 
         request = self.view.request_all.needed_requests[0]
-        df = DataFrame.from_records(values)
 
-        if request.entity_names - set(df.columns):
-            missing = request.entity_names - set(df.columns)
-            raise ValueError(f'Missing entities: {missing}')
+        job = RetrivalJob.from_dict(values, request)
 
-        if request.all_required_feature_names - set(df.columns):
-            missing = request.all_required_feature_names - set(df.columns)
-            df[list(missing)] = None
         output = (
-            await DerivedFeatureJob(FileFullJob(LiteralReference(df), request), requests=[request])
+            await job.validate_entites()
+            .fill_missing_columns()
+            .ensure_types(request)
+            .derive_features(request)
             .listen_to_events(self.event_triggers)
-            .to_pandas()
-        )
+            .to_polars()
+        ).collect()
 
-        return output.to_dict('list')
+        return output.to_dict()
 
-    async def batch_write(self, values: dict[str, list[Any]]) -> None:
+    async def batch_write(self, values: dict[str, list[Any]] | RetrivalJob) -> None:
 
         features_in_models = self.store.model_features_for(self.view.name)
         if self.only_write_model_features and not features_in_models:
@@ -541,38 +540,19 @@ class FeatureViewStore:
             logger.info('Feature Source is not writable')
             return
 
-        import polars as pl
-
-        from aligned.local.job import FileFullJob
-        from aligned.local.source import LiteralReference
-
         # As it is a feature view, should it only contain one request
         request = self.view.request_all.needed_requests[0]
 
         if self.only_write_model_features:
             request = self.view.request_for(features_in_models).needed_requests[0]
 
-        df = pl.DataFrame(values).lazy()
+        core_job: RetrivalJob
 
-        if request.entity_names - set(df.columns):
-            missing = request.entity_names - set(df.columns)
-            raise ValueError(f'Missing entities: {missing}')
+        if isinstance(values, RetrivalJob):
+            core_job = values
+        else:
+            core_job = RetrivalJob.from_dict(values, request)
 
-        if request.all_required_feature_names - set(df.columns):
-            missing = request.all_required_feature_names - set(df.columns)
-            logger.info(
-                f"""
-Some features is missing.
-Will fill values with None, but it could be a potential problem: {missing}
-"""
-            )
-            df = df.with_columns([pl.lit(None).alias(feature) for feature in missing])
-
-        job = (
-            FileFullJob(LiteralReference(df), request, limit=None)
-            .ensure_types([request])
-            .derive_features([request])
-            .listen_to_events(self.event_triggers)
-        )
+        job = core_job.derive_features([request]).listen_to_events(self.event_triggers)
 
         await self.source.write(job, [request])

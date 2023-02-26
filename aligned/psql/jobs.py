@@ -31,7 +31,7 @@ class SqlColumn:
     def sql_select(self) -> str:
         if self.selection == self.alias:
             return f'{self.selection}'
-        return f'{self.selection} AS {self.alias}'
+        return f'{self.selection} AS "{self.alias}"'
 
     def __hash__(self) -> int:
         return hash(self.sql_select)
@@ -46,6 +46,7 @@ class SqlJoin:
 @dataclass
 class TableFetch:
     name: str
+    id_column: str
     table: str | TableFetch
     columns: set[SqlColumn]
     joins: list[SqlJoin] = field(default_factory=list)
@@ -78,7 +79,7 @@ class TableFetch:
             from_sql = f'FROM ({self.table.sql_query()}) as entities'
         else:
             from_sql = f"""FROM entities
-    LEFT JOIN { self.table } ta ON { ' AND '.join(self.joins) }"""
+    LEFT JOIN "{ self.table }" ta ON { ' AND '.join(self.joins) }"""
 
         return f"""
     { select } { ', '.join(table_columns) }
@@ -299,7 +300,7 @@ class FactPsqlJob(FactualRetrivalJob):
             sort_query += f', {event_timestamp_column} DESC'
 
         join_conditions = [
-            f'ta.{entity_db_name} = entities.{entity}'
+            f'ta."{entity_db_name}" = entities.{entity}'
             for entity, entity_db_name in zip(entities, entity_db_name)
         ]
         if event_timestamp_clause:
@@ -307,6 +308,7 @@ class FactPsqlJob(FactualRetrivalJob):
 
         return TableFetch(
             name=f'{request.name}_cte',
+            id_column='row_id',
             table=source.table,
             columns=selects,
             joins=join_conditions,
@@ -326,14 +328,11 @@ class FactPsqlJob(FactualRetrivalJob):
 
         group_by_names = {feature.name for feature in window.group_by}
         if window.time_window:
-            name = f'{request.name}_agg_{window.time_window.seconds}_cte'
+            time_window = int(window.time_window.total_seconds())
+            name = f'{request.name}_agg_{time_window}_cte'
             group_by_names = {'entities.row_id'}
 
-        group_by_identifiers = source.feature_identifier_for(group_by_names)
-        group_by_selects = {
-            SqlColumn(db_field_name, feature)
-            for feature, db_field_name in zip(group_by_names, group_by_identifiers)
-        }
+        group_by_selects = {SqlColumn(feature, feature) for feature in group_by_names}
 
         aggregates = {
             SqlColumn(
@@ -343,12 +342,14 @@ class FactPsqlJob(FactualRetrivalJob):
             for feature in features
         }
 
+        id_column = window.group_by[0].name
         event_timestamp_clause: str | None = None
         if request.event_timestamp:
+            id_column = 'row_id'
             # Use row_id as the main join key
             event_timestamp_name = request.event_timestamp.name
             if window.time_window:
-                window_in_seconds = window.time_window.seconds
+                window_in_seconds = int(window.time_window.total_seconds())
                 event_timestamp_clause = (
                     f'ta.{event_timestamp_name} BETWEEN entities.event_timestamp'
                     f" - interval '{window_in_seconds} seconds' AND entities.event_timestamp"
@@ -359,7 +360,7 @@ class FactPsqlJob(FactualRetrivalJob):
         entities = list(request.entity_names)
         entity_db_name = source.feature_identifier_for(entities)
         join_conditions = [
-            f'ta.{entity_db_name} = entities.{entity}'
+            f'ta."{entity_db_name}" = entities.{entity}'
             for entity, entity_db_name in zip(entities, entity_db_name)
         ]
         if event_timestamp_clause:
@@ -374,9 +375,11 @@ class FactPsqlJob(FactualRetrivalJob):
 
         return TableFetch(
             name=name,
+            id_column=id_column,
             # Need to do a subquery, in order to renmae the core features
             table=TableFetch(
                 name='ta',
+                id_column='row_id',
                 table=source.table,
                 columns=selects,
                 joins=join_conditions,
@@ -400,7 +403,12 @@ class FactPsqlJob(FactualRetrivalJob):
 
             only_using_core_features = all(
                 [
-                    all([ref.name in request.feature_names for ref in feature.derived_feature.depending_on])
+                    all(
+                        [
+                            ref.name in request.feature_names or ref.name in request.entity_names
+                            for ref in feature.derived_feature.depending_on
+                        ]
+                    )
                     for feature in aggregates
                 ]
             )
@@ -469,36 +477,53 @@ class FactPsqlJob(FactualRetrivalJob):
         # Add the joins to the fact
 
         tables: list[TableFetch] = []
-        all_entities = set()
+        aggregates: list[TableFetch] = []
         for request in self.requests:
             fetch = self.value_selection(request, has_event_timestamp)
             tables.append(fetch)
-            all_entities.update(request.entity_names)
+            aggregate_fetches = self.aggregated_values_from_request(request)
+            aggregates.extend(aggregate_fetches)
+            for aggregate in aggregate_fetches:
+                final_select_names = final_select_names.union(
+                    {column.alias for column in aggregate.columns if column.alias != aggregate.id_column}
+                )
 
-        joins = [
-            f'INNER JOIN {feature_view}_cte ON {feature_view}_cte.row_id = entities.row_id'
-            for feature_view in feature_view_names
-        ]
+        joins = '\n    '.join(
+            [
+                f'INNER JOIN {feature_view}_cte ON {feature_view}_cte.row_id = entities.row_id'
+                for feature_view in feature_view_names
+            ]
+        )
+        if aggregates:
+            joins += '\n    '
+            joins += '\n    '.join(
+                [
+                    f'INNER JOIN {table.name} ON {table.name}.{table.id_column} = entities.{table.id_column}'
+                    for table in aggregates
+                ]
+            )
+
         entity_values = self.build_entities_from_values(query_values)
 
         return self.generate_query(
             entity_columns=list(all_entities),
             entity_query=entity_values,
             tables=tables,
+            aggregates=aggregates,
             final_select=list(final_select_names),
             final_joins=joins,
         )
 
     def build_entities_from_values(self, values: list[list[SqlValue]]) -> str:
-        query = '('
+        query = 'VALUES '
         for row in values:
             query += '\n    ('
             for value in row:
-                query += value.to_sql() + ', '
-            query = query[:-1]
+                query += value.to_sql + ', '
+            query = query[:-2]
             query += '),'
         query = query[:-1]
-        return query + ')'
+        return query
 
     def build_sql_entity_query(self, sql_facts: PostgreSqlJob) -> str:
 
@@ -540,6 +565,7 @@ class FactPsqlJob(FactualRetrivalJob):
         all_entities_list = list(all_entities)
         all_entities_str = ', '.join(all_entities_list)
         all_entities_list.append('row_id')
+
         entity_query = (
             f'SELECT {all_entities_str}, ROW_NUMBER() OVER (ORDER BY '
             f'{list(request.entity_names)[0]}) AS row_id FROM ({sql_facts.query}) AS entities'
@@ -550,7 +576,10 @@ class FactPsqlJob(FactualRetrivalJob):
         if aggregates:
             joins += '\n    '
             joins += '\n    '.join(
-                [f'INNER JOIN {table.name} ON {table.name}.row_id = entities.row_id' for table in aggregates]
+                [
+                    f'INNER JOIN {table.name} ON {table.name}.{table.id_column} = entities.{table.id_column}'
+                    for table in aggregates
+                ]
             )
 
         return self.generate_query(

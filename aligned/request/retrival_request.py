@@ -1,7 +1,8 @@
+from collections import defaultdict
 from dataclasses import dataclass, field
 
 from aligned.schemas.codable import Codable
-from aligned.schemas.derivied_feature import AggregatedFeature, DerivedFeature
+from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, DerivedFeature
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
 
 
@@ -89,6 +90,12 @@ class RetrivalRequest(Codable):
             feature_orders[depth].add(feature_map[feature.name])
 
         return feature_orders
+
+    def aggregate_over(self) -> dict[AggregateOver, set[AggregatedFeature]]:
+        features = defaultdict(set)
+        for feature in self.aggregated_features:
+            features[feature.aggregate_over].add(feature)
+        return features
 
     def without_event_timestamp(self, name_sufix: str | None = None) -> 'RetrivalRequest':
         return RetrivalRequest(

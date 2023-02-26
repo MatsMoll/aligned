@@ -165,7 +165,7 @@ class ParquetConfig(Codable):
 
 
 @dataclass
-class ParquetFileSource(BatchDataSource, ColumnFeatureMappable):
+class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference):
     """
     A source pointing to a Parquet file
     """
@@ -197,6 +197,12 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable):
             compression=self.config.compression,
             index=self.config.should_write_index,
         )
+
+    async def to_polars(self) -> pl.LazyFrame:
+        return pl.scan_parquet(self.path)
+
+    async def write_polars(self, df: pl.LazyFrame) -> None:
+        df.sink_parquet(self.path)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
         return FileFullJob(self, request, limit)
@@ -270,26 +276,6 @@ class FileSource:
         path: str, mapping_keys: dict[str, str] | None = None, config: ParquetConfig | None = None
     ) -> ParquetFileSource:
         return ParquetFileSource(path=path, mapping_keys=mapping_keys or {}, config=config or ParquetConfig())
-
-
-# @dataclass
-# class LiteralReference(DataFileReference):
-#     """
-#     A class containing a in mem pandas frame.
-
-#     This makes it easier standardise the interface when writing data.
-#     """
-
-#     file: pd.DataFrame
-
-#     def job_group_key(self) -> str:
-#         return str(uuid4())
-
-#     async def read_pandas(self) -> pd.DataFrame:
-#         return self.file
-
-#     async def to_polars(self) -> pl.LazyFrame:
-#         return pl.from_pandas(self.file).lazy()
 
 
 class LiteralReference(DataFileReference):

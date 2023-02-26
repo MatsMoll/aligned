@@ -649,6 +649,9 @@ class Entity(FeatureFactory):
     def __init__(self, dtype: FeatureFactory):
         self._dtype = dtype
 
+    def aggregate(self) -> CategoricalAggregation:
+        return CategoricalAggregation(self)
+
 
 class Timestamp(DateFeature, ArithmeticFeature):
     @property
@@ -745,6 +748,24 @@ class StringAggregation:
             self.feature, group_by=[], separator=separator, time_window=self.time_window
         )
         return feature
+
+
+@dataclass
+class CategoricalAggregation:
+
+    feature: FeatureFactory
+    time_window: timedelta | None = None
+
+    def over(self, time_window: timedelta) -> CategoricalAggregation:
+        self.time_window = time_window
+        return self
+
+    def count(self) -> Int64:
+        from aligned.compiler.aggregation_factory import CountAggregationFactory
+
+        feat = Float()
+        feat.transformation = CountAggregationFactory(self.feature, group_by=[], time_window=self.time_window)
+        return feat
 
 
 @dataclass

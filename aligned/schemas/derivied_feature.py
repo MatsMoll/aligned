@@ -52,9 +52,14 @@ class DerivedFeature(Feature):
 
 
 @dataclass
-class AggregationConfig(Codable):
+class AggregateOver(Codable):
     group_by: list[FeatureReferance]
-    time_window: timedelta | None
+    time_window: timedelta
+    time_column: FeatureReferance
+
+    @property
+    def group_by_names(self) -> list[str]:
+        return [feature.name for feature in self.group_by]
 
     def __hash__(self) -> int:
         return self.time_window.__hash__()
@@ -64,7 +69,7 @@ class AggregationConfig(Codable):
 class AggregatedFeature(Codable):
 
     derived_feature: DerivedFeature
-    aggregate_over: AggregationConfig
+    aggregate_over: AggregateOver
 
     def __hash__(self) -> int:
         return self.derived_feature.name.__hash__()

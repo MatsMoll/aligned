@@ -48,6 +48,7 @@ class CompiledFeatureView(Codable):
                     entities=self.entities,
                     features=self.features,
                     derived_features=self.derived_features,
+                    aggregated_features=self.aggregated_features,
                     event_timestamp=self.event_timestamp,
                 )
             ],

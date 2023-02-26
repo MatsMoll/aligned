@@ -13,14 +13,14 @@ class DataFileReference:
     async def read_pandas(self) -> pd.DataFrame:
         raise NotImplementedError()
 
-    async def to_df(self) -> pd.DataFrame:
+    async def to_pandas(self) -> pd.DataFrame:
         await self.read_pandas()
 
     async def to_polars(self) -> pl.LazyFrame:
         raise NotImplementedError()
 
-    async def write_pandas(self, df: pd.DataFrame) -> None:
+    async def write_polars(self, df: pl.LazyFrame) -> None:
         raise NotImplementedError()
 
-    async def write_dask(self, df: pd.DataFrame) -> None:
+    async def write_pandas(self, df: pd.DataFrame) -> None:
         raise NotImplementedError()

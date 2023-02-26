@@ -12,6 +12,7 @@ from aligned.local.source import StorageFileReference
 from aligned.online_source import OnlineSource
 from aligned.redis.config import RedisStreamSource
 from aligned.redis.stream import RedisStream
+from aligned.retrival_job import RetrivalJob, StreamAggregationJob
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class StreamWorker:
         self.views_to_process = views_to_process
 
     @staticmethod
-    def from_reference(
+    async def from_reference(
         source: StorageFileReference, online_source: OnlineSource, views_to_process: set[str] | None = None
     ) -> StreamWorker | None:
         """
@@ -47,25 +48,23 @@ class StreamWorker:
         """
         import os
 
-        from aligned.cli import sync
-
         if os.environ.get('ALADDIN_ENABLE_SERVER', 'False').lower() == 'false':
             return None
 
-        feature_store: FeatureStore = sync(source.feature_store())
+        feature_store: FeatureStore = await source.feature_store()
         feature_store = feature_store.with_source(online_source)
 
         return StreamWorker(feature_store, views_to_process)
 
     @staticmethod
-    def from_object(repo: Path, file: Path, obj: str) -> StreamWorker:
+    async def from_object(repo: Path, file: Path, obj: str) -> StreamWorker:
         from aligned.compiler.repo_reader import import_module, path_to_py_module
 
         module_path = path_to_py_module(file, repo)
         module = import_module(module_path)
 
         try:
-            worker = getattr(module, obj)
+            worker = await getattr(module, obj)
             if isinstance(worker, StreamWorker):
                 return worker
             raise ValueError('No reference found')
@@ -92,8 +91,16 @@ class StreamWorker:
 async def single_processing(
     stream_source: RedisStream, topic_name: str, feature_view: FeatureViewStore
 ) -> None:
+    from aligned import FileSource
+
     last_id = '$'
     logger.info(f'Started listning to {topic_name}')
+    request = feature_view.view.request_all.needed_requests[0]
+    aggregations = request.aggregate_over()
+    checkpoints = {
+        window: FileSource.parquet_at(f'{feature_view.view.name}_agg_{window.time_window.total_seconds()}')
+        for window in aggregations.keys()
+    }
     while True:
         stream_values = await stream_source.read_from_timestamp({topic_name: last_id})
 
@@ -102,9 +109,37 @@ async def single_processing(
         start_time = timeit.default_timer()
         _, values = stream_values[0]
         last_id = values[-1][0]
-        await feature_view.batch_write([record for _, record in values])  # type: ignore [arg-type]
+        records = [record for _, record in values]
+
+        job = RetrivalJob.from_dict(records, request)
+        if checkpoints:
+            job = StreamAggregationJob(job, checkpoints)
+
+        await feature_view.batch_write(job)  # type: ignore [arg-type]
         elapsed = timeit.default_timer() - start_time
         logger.info(f'Wrote {len(values)} records in {elapsed} seconds')
+
+
+def stream_job(values: list[dict], feature_view: FeatureViewStore) -> RetrivalJob:
+    from aligned import FileSource
+
+    request = feature_view.view.request_all.needed_requests[0]
+    job = (
+        RetrivalJob.from_dict(values, request)
+        .validate_entites()
+        .fill_missing_columns()
+        .ensure_types([request])
+    )
+
+    aggregations = request.aggregate_over()
+    if not aggregations:
+        return job
+
+    checkpoints = {
+        window: FileSource.parquet_at(f'{feature_view.view.name}_agg_{window.time_window.total_seconds()}')
+        for window in aggregations.keys()
+    }
+    return StreamAggregationJob(job, checkpoints)
 
 
 async def multi_processing(
@@ -121,9 +156,8 @@ async def multi_processing(
         _, values = stream_values[0]
         last_id = values[-1][0]
         mapped_values = [record for _, record in values]
-        await asyncio.gather(
-            *[view.batch_write(mapped_values) for view in feature_views]  # type: ignore [arg-type]
-        )
+
+        await asyncio.gather(*[view.batch_write(stream_job(mapped_values, view)) for view in feature_views])
 
 
 async def process(stream_source: RedisStream, topic_name: str, feature_views: list[FeatureViewStore]) -> None:

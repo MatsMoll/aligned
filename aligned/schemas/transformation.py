@@ -201,6 +201,15 @@ class SupportedTransformations:
             AppendStrings,
             ConcatStringAggregation,
             SumAggregation,
+            MeanAggregation,
+            MinAggregation,
+            MaxAggregation,
+            MedianAggregation,
+            CountAggregation,
+            CountDistinctAggregation,
+            StdAggregation,
+            VarianceAggregation,
+            PercentileAggregation,
         ]:
             self.add(tran_type)
 
@@ -1459,7 +1468,7 @@ class SumAggregation(Transformation, PsqlTransformation):
         raise NotImplementedError()
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return pl.sum(self.key).alias(alias)
+        return pl.sum(self.key)
 
     def as_sql(self) -> str:
         return f'SUM({self.key})'
@@ -1478,7 +1487,7 @@ class MeanAggregation(Transformation, PsqlTransformation):
         raise NotImplementedError()
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        raise NotImplementedError()
+        return pl.col(self.key).mean()
 
     def as_sql(self) -> str:
         return f'AVG({self.key})'
@@ -1497,7 +1506,7 @@ class MinAggregation(Transformation, PsqlTransformation):
         raise NotImplementedError()
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        raise NotImplementedError()
+        return pl.col(self.key).min()
 
     def as_sql(self) -> str:
         return f'MIN({self.key})'
@@ -1516,7 +1525,7 @@ class MaxAggregation(Transformation, PsqlTransformation):
         raise NotImplementedError()
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return pl.sum(self.key).alias(alias)
+        return pl.col(self.key).max()
 
     def as_sql(self) -> str:
         return f'MAX({self.key})'
@@ -1535,7 +1544,7 @@ class CountAggregation(Transformation, PsqlTransformation):
         raise NotImplementedError()
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        raise NotImplementedError()
+        return pl.col(self.key).count()
 
     def as_sql(self) -> str:
         return f'COUNT({self.key})'
@@ -1554,7 +1563,7 @@ class CountDistinctAggregation(Transformation, PsqlTransformation):
         raise NotImplementedError()
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        raise NotImplementedError()
+        return pl.col(self.key).unique_counts()
 
     def as_sql(self) -> str:
         return f'COUNT(DISTINCT {self.key})'
@@ -1573,7 +1582,7 @@ class StdAggregation(Transformation, PsqlTransformation):
         raise NotImplementedError()
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        raise NotImplementedError()
+        return pl.col(self.key).std()
 
     def as_sql(self) -> str:
         return f'STDDEV({self.key})'
@@ -1592,7 +1601,7 @@ class VarianceAggregation(Transformation, PsqlTransformation):
         raise NotImplementedError()
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        raise NotImplementedError()
+        return pl.col(self.key).var()
 
     def as_sql(self) -> str:
         return f'variance({self.key})'
@@ -1611,7 +1620,7 @@ class MedianAggregation(Transformation, PsqlTransformation):
         raise NotImplementedError()
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        raise NotImplementedError()
+        return pl.col(self.key).median()
 
     def as_sql(self) -> str:
         return f'PERCENTILE_CONT(0.5) WITHIN GROUP(ORDER BY {self.key})'
@@ -1631,7 +1640,7 @@ class PercentileAggregation(Transformation, PsqlTransformation):
         raise NotImplementedError()
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        raise NotImplementedError()
+        return pl.col(self.key).quantile(self.percentile)
 
     def as_sql(self) -> str:
         return f'PERCENTILE_CONT({self.percentile}) WITHIN GROUP(ORDER BY {self.key})'

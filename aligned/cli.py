@@ -2,11 +2,13 @@ import asyncio
 import logging
 import os
 import sys
+from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime
+from functools import wraps
 from pathlib import Path
-from typing import Any, Coroutine
+from typing import Any
 
 import click
 from pytz import utc  # type: ignore
@@ -19,8 +21,12 @@ from aligned.schemas.repo_definition import RepoDefinition
 from aligned.worker import StreamWorker
 
 
-def sync(method: Coroutine) -> Any:
-    return asyncio.get_event_loop().run_until_complete(method)
+def coro(func: Callable) -> Callable:
+    @wraps(func)
+    def wrapper(*args, **kwargs: Any) -> Any:
+        return asyncio.run(func(*args, **kwargs))
+
+    return wrapper
 
 
 def make_tzaware(t: datetime) -> datetime:
@@ -51,6 +57,7 @@ def cli() -> None:
 
 
 @cli.command('apply')
+@coro
 @click.option(
     '--repo-path',
     default='.',
@@ -66,7 +73,7 @@ def cli() -> None:
     default='.env',
     help='The path to env variables',
 )
-def apply_command(repo_path: str, reference_file: str, env_file: str) -> None:
+async def apply_command(repo_path: str, reference_file: str, env_file: str) -> None:
     """
     Create or update a feature store deployment
     """
@@ -85,9 +92,9 @@ def apply_command(repo_path: str, reference_file: str, env_file: str) -> None:
     if file := repo_ref.selected_file:
         click.echo(f'Updating file at: {file}')
 
-        repo_def = sync(RepoReader.definition_from_path(dir))
+        repo_def = await RepoReader.definition_from_path(dir)
 
-        sync(file.write(repo_def.to_json(omit_none=True).encode('utf-8')))
+        await file.write(repo_def.to_json(omit_none=True).encode('utf-8'))
     else:
         click.echo(f'No repo file found at {dir}')
 
@@ -150,7 +157,7 @@ def plan_command(repo_path: str, env_file: str) -> None:
 )
 @click.option(
     '--server-path',
-    default='feature_store_location:feature_server',
+    default='server:server',
     help='The path to the feature store server',
 )
 def serve_command(
@@ -210,6 +217,7 @@ def serve_command(
 
 
 @cli.command('serve-worker')
+@coro
 @click.option(
     '--repo-path',
     default='.',
@@ -217,7 +225,7 @@ def serve_command(
 )
 @click.option(
     '--worker-path',
-    default='feature_store_location.py:worker',
+    default='worker.py:worker',
     help='The path to the `StreamWorker`',
 )
 @click.option(
@@ -225,7 +233,7 @@ def serve_command(
     default='.env',
     help='The path to env variables',
 )
-def serve_worker_command(repo_path: str, worker_path: str, env_file: str) -> None:
+async def serve_worker_command(repo_path: str, worker_path: str, env_file: str) -> None:
     """
     Starts a API serving the feature store
     """
@@ -268,12 +276,13 @@ def serve_worker_command(repo_path: str, worker_path: str, env_file: str) -> Non
     load_envs(env_file_path)
 
     os.environ['ALADDIN_ENABLE_SERVER'] = 'True'
-    worker = StreamWorker.from_object(dir, reference_file_path, obj)
+    worker = await StreamWorker.from_object(dir, reference_file_path, obj)
 
-    sync(worker.start())
+    await worker.start()
 
 
 @cli.command('materialize')
+@coro
 @click.option(
     '--repo-path',
     default='.',
@@ -292,7 +301,7 @@ def serve_worker_command(repo_path: str, worker_path: str, env_file: str) -> Non
     '--view',
     help='The feature view to materialize',
 )
-def materialize_command(repo_path: str, env_file: str, days: str, view: str) -> None:
+async def materialize_command(repo_path: str, env_file: str, days: str, view: str) -> None:
     """
     Materializes the feature store
     """
@@ -302,7 +311,7 @@ def materialize_command(repo_path: str, env_file: str, days: str, view: str) -> 
     load_envs(dir / env_file)
 
     sys.path.append(str(dir))
-    repo_def = sync(RepoDefinition.from_path(repo_path))
+    repo_def = await RepoDefinition.from_path(repo_path)
     store = FeatureStore.from_definition(repo_def)
     batch_store = store.offline_store()
 
@@ -316,10 +325,8 @@ def materialize_command(repo_path: str, env_file: str, days: str, view: str) -> 
     for feature_view in views:
         fv_store = batch_store.feature_view(feature_view)
         click.echo(f'Materializing {feature_view}')
-        sync(
-            store.feature_source.write(
-                fv_store.previous(days=number_of_days), fv_store.view.request_all.needed_requests
-            )
+        await store.feature_source.write(
+            fv_store.previous(days=number_of_days), fv_store.view.request_all.needed_requests
         )
 
 
@@ -352,6 +359,7 @@ class ProfilingResult(Codable):
 # Should add some way of profiling models, not feature views.
 # Or maybe both
 @cli.command('profile')
+@coro
 @click.option(
     '--repo-path',
     default='.',
@@ -369,7 +377,7 @@ class ProfilingResult(Codable):
     default='.env',
     help='The path to env variables',
 )
-def profile(repo_path: str, reference_file: str, env_file: str, output: str, dataset_size: int) -> None:
+async def profile(repo_path: str, reference_file: str, env_file: str, output: str, dataset_size: int) -> None:
     import numpy as np
     from pandas import DataFrame
 
@@ -381,7 +389,7 @@ def profile(repo_path: str, reference_file: str, env_file: str, output: str, dat
     env_file_path = dir / env_file
     load_envs(env_file_path)
 
-    online_store: FeatureStore = sync(FeatureStore.from_reference_at_path(repo_path, reference_file))
+    online_store: FeatureStore = await FeatureStore.from_reference_at_path(repo_path, reference_file)
     feature_store = online_store.offline_store()
 
     results = ProfilingResult(numeric_features={}, categorical_features={})
@@ -389,7 +397,7 @@ def profile(repo_path: str, reference_file: str, env_file: str, output: str, dat
     for feature_view_name in sorted(feature_store.feature_views.keys()):
         click.echo(f'Profiling: {feature_view_name}')
         feature_view = feature_store.feature_view(feature_view_name)
-        data_set: DataFrame = sync(feature_view.all(limit=dataset_size).to_pandas())
+        data_set: DataFrame = feature_view.all(limit=dataset_size).to_pandas()
 
         all_features: list[Feature] = list(feature_view.view.features) + list(
             feature_view.view.derived_features
