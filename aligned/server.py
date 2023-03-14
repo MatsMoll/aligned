@@ -156,7 +156,7 @@ class FastAPIServer:
                     for value in entity_values['event_timestamp']
                 ]
 
-            df = await feature_store.model(name).for_entities(entity_values).to_polars()
+            df = await feature_store.model(name).features_for(entity_values).to_polars()
             pandas_df = df.collect().to_pandas()
             orient = 'values'
             body = ','.join(

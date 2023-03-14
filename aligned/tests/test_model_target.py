@@ -15,7 +15,7 @@ async def test_titanic_model_with_targets(titanic_feature_store: FeatureStore) -
     dataset = (
         await titanic_feature_store.model('titanic')
         .with_target()
-        .for_entities({'passenger_id': entity_list})
+        .features_for({'passenger_id': entity_list})
         .to_pandas()
     )
 
@@ -54,7 +54,7 @@ async def test_titanic_model_with_targets_and_scd(titanic_feature_store_scd: Fea
     dataset = (
         await titanic_feature_store_scd.model('titanic')
         .with_target()
-        .for_entities(entities.to_dict())
+        .features_for(entities.to_dict())
         .to_polars()
     )
 

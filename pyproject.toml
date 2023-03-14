@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aligned"
-version = "0.0.1"
+version = "0.0.2"
 description = "A scalable feature store that makes it easy to align offline and online ML systems"
 authors = ["Mats E. Mollestad <mats@mollestad.no>"]
 license = "Apache-2.0"

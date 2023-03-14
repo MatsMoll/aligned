@@ -379,7 +379,7 @@ class ModelFeatureStore:
     def request(self) -> FeatureRequest:
         return self.store.requests_for(RawStringFeatureRequest(self.raw_string_features))
 
-    def for_entities(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
+    def features_for(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
         request = self.request
         features = self.raw_string_features
         return self.store.features_for(entities, list(features)).filter(request.features_to_include)
@@ -420,7 +420,7 @@ class SupervisedModelFeatureStore:
     model: ModelSchema
     store: FeatureStore
 
-    def for_entities(self, entities: dict[str, list] | RetrivalJob) -> SupervisedJob:
+    def features_for(self, entities: dict[str, list] | RetrivalJob) -> SupervisedJob:
         feature_refs = self.model.features
         features = {f'{feature.location.identifier}:{feature.name}' for feature in feature_refs}
         target_features = {
@@ -500,7 +500,7 @@ class FeatureViewStore:
         start_date = end_date - timedelta(days=days, minutes=minutes, seconds=seconds)
         return self.between_dates(start_date, end_date)
 
-    def for_entities(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
+    def features_for(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
 
         request = self.view.request_all
         if self.feature_filter:
