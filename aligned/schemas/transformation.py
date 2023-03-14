@@ -103,10 +103,10 @@ class Transformation(Codable, SerializableType):
         try:
             test = cls.test_definition()
             alias = 'something'
-            output_df = (
-                await test.transformation.transform_polars(test.input_polars.lazy(), alias=alias)
-            ).collect()
-            output = output_df.select(pl.col(alias)).to_series()
+            output_df = await test.transformation.transform_polars(test.input_polars.lazy(), alias=alias)
+            if isinstance(output_df, pl.Expr):
+                output_df = test.input_polars.lazy().with_columns([output_df.alias(alias)])
+            output = output_df.select(pl.col(alias)).collect().to_series()
             assert (set(test.input_polars.columns) - set(output_df.columns)) == set()
 
             expected = test.output_polars
@@ -171,7 +171,6 @@ class SupportedTransformations:
             NotNull,
             PandasTransformation,
             PolarsTransformation,
-            StandardScalingTransformation,
             Ratio,
             Contains,
             GreaterThen,
@@ -1068,31 +1067,6 @@ class Ratio(Transformation):
             Ratio('x', 'y'),
             input={'x': [1, 2, 0, 1, None, 9], 'y': [1, 0, 1, 4, 2, None]},
             output=[1, nan, 0, 0.25, nan, nan],
-        )
-
-
-@dataclass
-class StandardScalingTransformation(Transformation):
-
-    mean: float
-    std: float
-    key: str
-
-    name = 'standard_scaling'
-    dtype = FeatureType('').float
-
-    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return (df[self.key] - self.mean) / self.std
-
-    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return (pl.col(self.key) - self.mean) / self.std
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            StandardScalingTransformation(mean=1, std=0.5, key='x'),
-            input={'x': [1, 1.5, 0.5, 1, 2, 3]},
-            output=[0, 1, -1, 0, 2, 4],
         )
 
 

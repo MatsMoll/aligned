@@ -5,13 +5,15 @@ from redis.asyncio.client import Pipeline  # type: ignore
 from aligned.redis.config import RedisConfig
 from aligned.redis.job import FactualRedisJob
 from aligned.request.retrival_request import RetrivalRequest
-from aligned.schemas.feature import Feature, FeatureType
+from aligned.retrival_job import RetrivalJob
+from aligned.schemas.feature import Feature, FeatureLocation, FeatureType
 
 
 @pytest.fixture
 def retrival_request() -> RetrivalRequest:
     return RetrivalRequest(
-        location='test',
+        name='test',
+        location=FeatureLocation.feature_view('test'),
         entities={
             Feature(name='id_int', dtype=FeatureType('').int32),
             Feature(name='id_str', dtype=FeatureType('').string),
@@ -30,11 +32,11 @@ async def test_factual_redis_job(mocker, retrival_request) -> None:  # type: ign
 
     redis_mock = mocker.patch.object(Pipeline, 'execute', return_value=values)
 
-    job = FactualRedisJob(
-        RedisConfig.localhost(),
-        requests=[retrival_request],
-        facts={'id_int': [1.0, 2.0, None, 4.0], 'id_str': ['a', 'b', 'c', None]},
+    facts = RetrivalJob.from_dict(
+        data={'id_int': [1.0, 2.0, None, 4.0], 'id_str': ['a', 'b', 'c', None]},
+        request=retrival_request,
     )
+    job = FactualRedisJob(RedisConfig.localhost(), requests=[retrival_request], facts=facts)
 
     result = await job.to_pandas()
     redis_mock.assert_called_once()
@@ -48,11 +50,12 @@ async def test_factual_redis_job_int_as_str(mocker, retrival_request) -> None:  
 
     redis_mock = mocker.patch.object(Pipeline, 'execute', return_value=values)
 
-    job = FactualRedisJob(
-        RedisConfig.localhost(),
-        requests=[retrival_request],
-        facts={'id_int': ['1', '2', None, '4'], 'id_str': ['a', 'b', 'c', None]},
+    facts = RetrivalJob.from_dict(
+        data={'id_int': ['1', '2', None, '4'], 'id_str': ['a', 'b', 'c', None]},
+        request=retrival_request,
     )
+
+    job = FactualRedisJob(RedisConfig.localhost(), requests=[retrival_request], facts=facts)
 
     result = await job.to_pandas()
     redis_mock.assert_called_once()
@@ -66,11 +69,11 @@ async def test_nan_entities_job(mocker, retrival_request) -> None:  # type: igno
 
     redis_mock = mocker.patch.object(Pipeline, 'execute', return_value=values)
 
-    job = FactualRedisJob(
-        RedisConfig.localhost(),
-        requests=[retrival_request],
-        facts={'id_int': [None, '4'], 'id_str': ['c', None]},
+    facts = RetrivalJob.from_dict(
+        data={'id_int': [None, '4'], 'id_str': ['c', None]},
+        request=retrival_request,
     )
+    job = FactualRedisJob(RedisConfig.localhost(), requests=[retrival_request], facts=facts)
 
     _ = await job.to_pandas()
     redis_mock.assert_not_called()
@@ -82,11 +85,11 @@ async def test_no_entities_job(mocker, retrival_request) -> None:  # type: ignor
 
     redis_mock = mocker.patch.object(Pipeline, 'execute', return_value=values)
 
-    job = FactualRedisJob(
-        RedisConfig.localhost(),
-        requests=[retrival_request],
-        facts={'id_int': [], 'id_str': []},
+    facts = RetrivalJob.from_dict(
+        data={'id_int': [], 'id_str': []},
+        request=retrival_request,
     )
+    job = FactualRedisJob(RedisConfig.localhost(), requests=[retrival_request], facts=facts)
 
     _ = await job.to_pandas()
     redis_mock.assert_not_called()
@@ -96,7 +99,8 @@ async def test_no_entities_job(mocker, retrival_request) -> None:  # type: ignor
 async def test_factual_redis_job_int_entity(mocker) -> None:  # type: ignore[no-untyped-def]
 
     retrival_request = RetrivalRequest(
-        location='test',
+        name='test',
+        location=FeatureLocation.feature_view('test'),
         entities={Feature(name='id_int', dtype=FeatureType('').int32)},
         features={
             Feature(name='x', dtype=FeatureType('').int32),
@@ -109,11 +113,11 @@ async def test_factual_redis_job_int_entity(mocker) -> None:  # type: ignore[no-
 
     redis_mock = mocker.patch.object(Pipeline, 'execute', return_value=values)
 
-    job = FactualRedisJob(
-        RedisConfig.localhost(),
-        requests=[retrival_request],
-        facts={'id_int': [1.0, 2.0, 4.0, None]},
+    facts = RetrivalJob.from_dict(
+        data={'id_int': [1.0, 2.0, 4.0, None]},
+        request=retrival_request,
     )
+    job = FactualRedisJob(RedisConfig.localhost(), requests=[retrival_request], facts=facts)
 
     result = await job.to_pandas()
     redis_mock.assert_called_once()

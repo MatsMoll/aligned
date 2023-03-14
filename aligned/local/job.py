@@ -211,7 +211,17 @@ class FileFactualJob(FactualRetrivalJob):
                 feature_df = feature_df.with_column(pl.col(entity.name).cast(entity.dtype.polars_type))
                 result = result.with_column(pl.col(entity.name).cast(entity.dtype.polars_type))
 
-            new_result: pl.LazyFrame = result.join(feature_df, on=list(entity_names), how='left')
+            column_selects = list(entity_names.union({'row_id'}))
+            if request.event_timestamp:
+                column_selects.append('event_timestamp')
+
+            # Need to only select the relevent entities and row_id
+            # Otherwise will we get a duplicate column error
+            # We also need to remove the entities after the row_id is joined
+            new_result: pl.LazyFrame = result.select(column_selects).join(
+                feature_df, on=list(entity_names), how='left'
+            )
+            new_result = new_result.select(pl.exclude(list(entity_names)))
 
             if request.event_timestamp:
                 new_result = new_result.with_columns(
@@ -233,8 +243,9 @@ class FileFactualJob(FactualRetrivalJob):
 
             unique = new_result.unique(subset=row_id_name, keep='first')
             result = result.join(unique, on=row_id_name, how='left')
+            result = result.select(pl.exclude('.*_right$'))
 
-        return result
+        return result.select([pl.exclude('row_id')])
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_polars()).collect().to_pandas()

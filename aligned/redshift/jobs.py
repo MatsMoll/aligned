@@ -51,7 +51,7 @@ class TableFetch:
     table: str | TableFetch
     columns: set[SqlColumn]
     schema: str | None = field(default=None)
-    joins: list[SqlJoin] = field(default_factory=list)
+    joins: list[str] = field(default_factory=list)
     conditions: list[str] = field(default_factory=list)
     group_by: list[str] = field(default_factory=list)
     order_by: str | None = field(default=None)
@@ -438,7 +438,7 @@ class FactRedshiftJob(FactualRetrivalJob):
             table=select_table,
             columns=aggregates.union(group_by_selects),
             schema=source.config.schema,
-            group_by=group_by_names,
+            group_by=list(group_by_names),
         )
 
     def aggregated_values_from_request(self, request: RetrivalRequest) -> list[TableFetch]:

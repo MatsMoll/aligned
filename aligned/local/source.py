@@ -138,10 +138,11 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
     def multi_source_features_for(
         cls, facts: RetrivalJob, requests: list[tuple[CsvFileSource, RetrivalRequest]]
     ) -> FactualRetrivalJob:
-        if len(requests) != 1:
+        sources = {source for source, _ in requests}
+        if len(sources) != 1:
             raise ValueError(f'Only able to load one {requests} at a time')
 
-        source = requests[0][0]
+        source = list(sources)[0]
         if not isinstance(source, cls):
             raise ValueError(f'Only {cls} is supported, recived: {source}')
 
@@ -214,7 +215,7 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
 
     @classmethod
     def multi_source_features_for(
-        cls, facts: dict[str, list], requests: list[tuple[ParquetFileSource, RetrivalRequest]]
+        cls, facts: RetrivalJob, requests: list[tuple[ParquetFileSource, RetrivalRequest]]
     ) -> FactualRetrivalJob:
         if len(requests) != 1:
             raise ValueError(f'Only able to load one {requests} at a time')
@@ -247,10 +248,10 @@ class StorageFileSource(StorageFileReference):
         return hash(self.path)
 
     async def read(self) -> bytes:
-        return await self.storage.read(self.path)
+        await self.storage.read(self.path)
 
     async def write(self, content: bytes) -> None:
-        return await self.storage.write(self.path, content)
+        await self.storage.write(self.path, content)
 
 
 class FileSource:

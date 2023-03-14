@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -10,10 +10,7 @@ import polars as pl
 
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.request.retrival_request import FeatureRequest, RequestResult, RetrivalRequest
-from aligned.retrival_job import FactualRetrivalJob
-
-if TYPE_CHECKING:
-    from aligned.retrival_job import RetrivalJob
+from aligned.retrival_job import RetrivalJob
 
 
 class FeatureSource:
@@ -123,7 +120,7 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
         )
 
 
-class FactualInMemoryJob(FactualRetrivalJob):
+class FactualInMemoryJob(RetrivalJob):
     """
     A job using a in mem storage, aka a dict.
 
@@ -143,15 +140,13 @@ class FactualInMemoryJob(FactualRetrivalJob):
 
     values: dict[str, Any]
     requests: list[RetrivalRequest]
-    facts: dict[str, list]
+    facts: RetrivalJob
 
     @property
     def request_result(self) -> RequestResult:
         return RequestResult.from_request_list(self.requests)
 
-    def __init__(
-        self, values: dict[str, Any], requests: list[RetrivalRequest], facts: dict[str, list]
-    ) -> None:
+    def __init__(self, values: dict[str, Any], requests: list[RetrivalRequest], facts: RetrivalJob) -> None:
         self.values = values
         self.requests = requests
         self.facts = facts
@@ -166,7 +161,7 @@ class FactualInMemoryJob(FactualRetrivalJob):
             for feature in request.all_feature_names:
                 columns.add(feature)
 
-        result_df = pd.DataFrame(self.facts)
+        result_df = await self.facts.to_pandas()
 
         for request in self.requests:
             entity_ids = result_df[list(request.entity_names)]

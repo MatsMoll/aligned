@@ -7,7 +7,7 @@ from collections import defaultdict
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 import pandas as pd
 import polars as pl
@@ -267,12 +267,15 @@ class RetrivalJob(ABC):
         return LiteralDictJob(data, request)
 
 
+JobType = TypeVar('JobType')
+
+
 class ModificationJob:
 
     job: RetrivalJob
 
-    def copy_with(self, job: RetrivalJob) -> RetrivalJob:
-        self.job = job
+    def copy_with(self: JobType, job: RetrivalJob) -> JobType:
+        self.job = job  # type: ignore
         return self
 
 
@@ -610,7 +613,7 @@ class DataLoaderJob:
         without_derived = self.job.remove_derived_features()
         raw_files = (await without_derived.to_polars()).collect()
         features_to_include = self.job.request_result.features.union(self.job.request_result.entities)
-        features_to_include_names = [feature.name for feature in features_to_include]
+        features_to_include_names = {feature.name for feature in features_to_include}
 
         iterations = ceil(raw_files.shape[0] / self.chunk_size)
         for i in range(iterations):
@@ -861,6 +864,9 @@ class CombineFactualJob(RetrivalJob):
     async def combine_data(self, df: pd.DataFrame) -> pd.DataFrame:
         for request in self.combined_requests:
             for feature in request.derived_features:
+                if feature.name in df.columns:
+                    logger.info(f'Skipping feature {feature.name}, already computed')
+                    continue
                 logger.info(f'Computing feature: {feature.name}')
                 df[feature.name] = await feature.transformation.transform_pandas(
                     df[feature.depending_on_names]
@@ -870,8 +876,17 @@ class CombineFactualJob(RetrivalJob):
     async def combine_polars_data(self, df: pl.LazyFrame) -> pl.LazyFrame:
         for request in self.combined_requests:
             for feature in request.derived_features:
+                if feature.name in df.columns:
+                    logger.info(f'Skipping feature {feature.name}, already computed')
+                    continue
                 logger.info(f'Computing feature: {feature.name}')
-                df = await feature.transformation.transform_polars(df, feature.name)
+                result = await feature.transformation.transform_polars(df, feature.name)
+                if isinstance(result, pl.Expr):
+                    df = df.with_columns([result.alias(feature.name)])
+                elif isinstance(result, pl.LazyFrame):
+                    df = result
+                else:
+                    raise ValueError(f'Unsupported transformation result type, got {type(result)}')
         return df
 
     async def to_pandas(self) -> pd.DataFrame:

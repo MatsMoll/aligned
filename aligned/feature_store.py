@@ -199,7 +199,7 @@ class FeatureStore:
         return FeatureStore.from_definition(definition)
 
     def features_for_request(
-        self, requests: FeatureRequest, entities: dict[str, list] | RetrivalJob, feature_names: set[set]
+        self, requests: FeatureRequest, entities: dict[str, list] | RetrivalJob, feature_names: set[str]
     ) -> RetrivalJob:
         entity_request: RetrivalJob
 
@@ -231,7 +231,7 @@ class FeatureStore:
                 feature_names.update(feature_set)
             else:
                 for request in requests.needed_requests:
-                    if request.location.name == view:
+                    if view.name == request.location.name:
                         feature_names.update(request.all_feature_names)
         for request in requests.needed_requests:
             feature_names.update(request.entity_names)
@@ -506,9 +506,12 @@ class FeatureViewStore:
         if self.feature_filter:
             request = self.view.request_for(self.feature_filter)
 
-        entity_job = entities
         if isinstance(entities, dict):
             entity_job = RetrivalJob.from_dict(entities, request)
+        elif isinstance(entities, RetrivalJob):
+            entity_job = entities
+        else:
+            raise ValueError(f'entities must be a dict or a RetrivalJob, was {type(entities)}')
 
         return self.source.features_for(entity_job, request)
 
@@ -527,6 +530,8 @@ class FeatureViewStore:
 
     async def write(self, values: dict[str, list[Any]]) -> None:
         from aligned import FileSource
+        from aligned.data_file import DataFileReference
+        from aligned.schemas.derivied_feature import AggregateOver
 
         request = self.view.request_all.needed_requests[0]
         job = (
@@ -537,23 +542,22 @@ class FeatureViewStore:
         )
 
         aggregations = request.aggregate_over()
-        if not aggregations:
-            return job
+        if aggregations:
+            checkpoints: dict[AggregateOver, DataFileReference] = {}
 
-        checkpoints = {}
+            for aggregation in aggregations.keys():
+                name = f'{self.view.name}_agg'
 
-        for aggregation in aggregations.keys():
-            name = f'{self.view.name}_agg'
+                if aggregation.window:
+                    name += f'_{aggregation.window.time_window.total_seconds()}'
 
-            if aggregation.window:
-                name += f'_{aggregation.window.time_window.total_seconds()}'
+                if aggregation.condition:
+                    name += f'_{aggregation.condition.name}'
 
-            if aggregation.condition:
-                name += f'_{aggregation.condition.name}'
+                checkpoints[aggregation] = FileSource.parquet_at(name)
 
-            checkpoints[aggregation] = FileSource.parquet_at(name)
+            job = StreamAggregationJob(job, checkpoints)
 
-        job = StreamAggregationJob(job, checkpoints)
         await self.batch_write(job)
 
     async def process_input(self, values: dict[str, list[Any]]) -> dict[str, list[Any]]:

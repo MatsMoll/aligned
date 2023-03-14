@@ -49,7 +49,7 @@ class TableFetch:
     id_column: str
     table: str | TableFetch
     columns: set[SqlColumn]
-    joins: list[SqlJoin] = field(default_factory=list)
+    joins: list[str] = field(default_factory=list)
     conditions: list[str] = field(default_factory=list)
     group_by: list[str] = field(default_factory=list)
     order_by: str | None = field(default=None)
@@ -98,9 +98,6 @@ class PostgreSqlJob(RetrivalJob):
 
     def request_result(self) -> RequestResult:
         return RequestResult.from_request_list(self.retrival_requests)
-
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return self.retrival_requests
 
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.to_polars()
@@ -404,7 +401,7 @@ class FactPsqlJob(FactualRetrivalJob):
                 joins=join_conditions,
             ),
             columns=aggregates.union(group_by_selects),
-            group_by=group_by_names,
+            group_by=list(group_by_names),
         )
 
     def aggregated_values_from_request(self, request: RetrivalRequest) -> list[TableFetch]:

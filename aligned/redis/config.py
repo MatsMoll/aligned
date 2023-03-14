@@ -87,7 +87,7 @@ class RedisSource(FeatureSource, WritableFeatureSource):
     def all_for(self, request: FeatureRequest, limit: int | None = None) -> RetrivalJob:
         raise NotImplementedError()
 
-    def features_for(self, facts: dict[str, list], request: FeatureRequest) -> RetrivalJob:
+    def features_for(self, facts: RetrivalJob, request: FeatureRequest) -> RetrivalJob:
         from aligned.redis.job import FactualRedisJob
 
         return FactualRedisJob(self.config, request.needed_requests, facts)

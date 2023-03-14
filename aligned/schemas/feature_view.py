@@ -243,7 +243,7 @@ class CompiledCombinedFeatureView(Codable):
             location=FeatureLocation.combined_view(self.name),
             entities=self.entity_features,
             features=set(),
-            derived_features=[feature for feature in self.features if feature.name in feature_names],
+            derived_features={feature for feature in self.features if feature.name in feature_names},
             event_timestamp=None,
         )
 

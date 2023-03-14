@@ -27,6 +27,7 @@ from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, 
 @pytest.fixture
 def retrival_request_without_derived() -> RetrivalRequest:
     return RetrivalRequest(
+        name='test',
         location=FeatureLocation.feature_view('test'),
         entities={Feature(name='id', dtype=FeatureType('').int32)},
         features={
@@ -54,6 +55,7 @@ def retrival_request_with_derived() -> RetrivalRequest:
     from aligned.schemas.transformation import Addition
 
     return RetrivalRequest(
+        name='test_with_ts',
         location=FeatureLocation.feature_view('test_with_ts'),
         entities={Feature(name='id', dtype=FeatureType('').int32)},
         features={
@@ -115,6 +117,7 @@ def combined_retrival_request() -> RetrivalRequest:
     from aligned.schemas.transformation import Addition
 
     return RetrivalRequest(
+        name='combined',
         location=FeatureLocation.combined_view('combined'),
         entities={Feature(name='id', dtype=FeatureType('').int32)},
         features=set(),
@@ -161,7 +164,7 @@ def breast_scan_feature_viewout_with_datetime(scan_without_datetime: CsvFileSour
 
         radius_mean = Float()
         radius_se = Float()
-        radius_worst = Float().fill_na(FillNaStrategy.mean())
+        radius_worst = Float()
 
         texture_mean = Float()
         texture_se = Float()
@@ -272,8 +275,6 @@ def breast_scan_feature_view_with_datetime(scan_with_datetime: CsvFileSource) ->
         fractal_dimension_se = Float()
         fractal_dimension_worst = Float()
 
-        mean_fd_worst = fractal_dimension_worst.mean()
-
     return BreastDiagnoseFeatureView()
 
 
@@ -334,9 +335,6 @@ def breast_scan_feature_view_with_datetime_and_aggregation(scan_with_datetime: C
         fractal_dimension_mean = Float()
         fractal_dimension_se = Float()
         fractal_dimension_worst = Float()
-
-        mean_fd_worst = fractal_dimension_worst.mean()
-        mean_fd_worst_for_group = mean_fd_worst.grouped_by(diagnosis)
 
     return BreastDiagnoseFeatureView()
 
@@ -570,7 +568,7 @@ async def combined_feature_store(
     feature_store = FeatureStore.experimental()
     feature_store.add_feature_view(titanic_feature_view)
     feature_store.add_feature_view(breast_scan_feature_viewout_with_datetime)
-    await feature_store.add_combined_feature_view(combined_view)
+    feature_store.add_combined_feature_view(combined_view)
     return feature_store
 
 
