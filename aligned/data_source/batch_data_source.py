@@ -21,13 +21,14 @@ class BatchDataSourceFactory:
     _shared: BatchDataSourceFactory | None = None
 
     def __init__(self) -> None:
-        from aligned.local.source import CsvFileSource
+        from aligned.local.source import CsvFileSource, ParquetFileSource
         from aligned.psql.data_source import PostgreSQLDataSource
         from aligned.redshift.data_source import RedshiftSQLDataSource
         from aligned.s3.config import AwsS3CsvDataSource, AwsS3ParquetDataSource
 
         self.supported_data_sources = {
             PostgreSQLDataSource.type_name: PostgreSQLDataSource,
+            ParquetFileSource.type_name: ParquetFileSource,
             CsvFileSource.type_name: CsvFileSource,
             AwsS3CsvDataSource.type_name: AwsS3CsvDataSource,
             AwsS3ParquetDataSource.type_name: AwsS3ParquetDataSource,
@@ -60,6 +61,9 @@ class BatchDataSource(ABC, Codable, SerializableType):
         pass
 
     def _serialize(self) -> dict:
+        assert (
+            self.type_name in BatchDataSourceFactory.shared().supported_data_sources
+        ), f'Unknown type_name: {self.type_name}'
         return self.to_dict()
 
     def __hash__(self) -> int:

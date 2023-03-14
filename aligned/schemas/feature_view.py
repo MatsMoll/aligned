@@ -28,6 +28,28 @@ class CompiledFeatureView(Codable):
 
     # valid_from: datetime
 
+    def to_dict(self, **kwargs: dict) -> dict:
+        assert isinstance(self.name, str)
+        assert isinstance(self.description, str)
+        assert isinstance(self.tags, dict)
+        assert isinstance(self.batch_data_source, BatchDataSource)
+        for entity in self.entities:
+            assert isinstance(entity, Feature)
+        for feature in self.features:
+            assert isinstance(feature, Feature)
+        for derived_feature in self.derived_features:
+            assert isinstance(derived_feature, DerivedFeature)
+        for aggregated_feature in self.aggregated_features:
+            assert isinstance(aggregated_feature, AggregatedFeature)
+        if self.event_timestamp is not None:
+            assert isinstance(self.event_timestamp, EventTimestamp)
+        if self.stream_data_source is not None:
+            assert isinstance(self.stream_data_source, StreamDataSource)
+        if self.event_triggers is not None:
+            for event_trigger in self.event_triggers:
+                assert isinstance(event_trigger, EventTrigger)
+        return super().to_dict(**kwargs)
+
     @property
     def full_schema(self) -> set[Feature]:
         return self.entities.union(self.features).union(self.derived_features)

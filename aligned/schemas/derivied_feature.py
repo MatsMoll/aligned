@@ -32,6 +32,17 @@ class DerivedFeature(Feature):
         self.tags = tags
         self.constraints = constraints
 
+    def to_dict(self, **kwargs: dict) -> dict:
+        from aligned.schemas.transformation import SupportedTransformations
+
+        for feature in self.depending_on:
+            assert isinstance(feature, FeatureReferance)
+
+        assert isinstance(self.transformation, Transformation)
+        assert self.transformation.name in SupportedTransformations.shared().types
+
+        return super().to_dict(**kwargs)
+
     @property
     def depending_on_names(self) -> list[str]:
         return [feature.name for feature in self.depending_on]

@@ -150,6 +150,20 @@ class RepoDefinition(Codable):
     models: set[Model] = field(default_factory=set)
     enrichers: list[EnricherReference] = field(default_factory=list)
 
+    def to_dict(self, **kwargs: dict) -> dict:
+        for view in self.feature_views:
+            assert isinstance(view, CompiledFeatureView)
+
+        for view in self.combined_feature_views:
+            assert isinstance(view, CompiledCombinedFeatureView)
+
+        for model in self.models:
+            assert isinstance(model, Model)
+
+        for enricher in self.enrichers:
+            assert isinstance(enricher, EnricherReference)
+        return super().to_dict(**kwargs)
+
     @staticmethod
     async def from_file(file: StorageFileReference) -> RepoDefinition:
         repo = await file.read()

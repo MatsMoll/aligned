@@ -157,6 +157,15 @@ class FeatureStore:
             feature_source=source,
         )
 
+    def repo_definition(self) -> RepoDefinition:
+        return RepoDefinition(
+            feature_views=set(self.feature_views.values()),
+            combined_feature_views=set(self.combined_feature_views.values()),
+            models=set(self.models.values()),
+            online_source=BatchOnlineSource(),
+            enrichers=[],
+        )
+
     @staticmethod
     async def from_reference_at_path(
         path: str = '.', reference_file: str = 'feature_store_location.py'

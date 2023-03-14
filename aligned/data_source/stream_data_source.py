@@ -43,6 +43,7 @@ class StreamDataSource(ABC, Codable, SerializableType):
     topic_name: str
 
     def _serialize(self) -> dict:
+        assert self.name in StreamDataSourceFactory.shared().supported_data_sources
         return self.to_dict()
 
     @classmethod

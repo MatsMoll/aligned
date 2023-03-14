@@ -15,7 +15,6 @@ from aligned import (
     Model,
     String,
 )
-from aligned.compiler.transformation_factory import FillNaStrategy
 from aligned.feature_store import FeatureStore
 from aligned.feature_view.combined_view import CombinedFeatureView, CombinedFeatureViewMetadata
 from aligned.local.source import CsvFileSource, FileFullJob, LiteralReference, ParquetFileSource
@@ -515,7 +514,7 @@ def alot_of_transforations_feature_view(titanic_source: CsvFileSource) -> Featur
         has_siblings = sibsp != 0
         is_male, is_female = sex.one_hot_encode(['male', 'female'])
         ordinal_sex = sex.ordinal_categories(['male', 'female'])
-        filled_age = age.fill_na(FillNaStrategy.mean(limit=100))
+        filled_age = age.fill_na(0)
         is_mr = name.contains('Mr.')
 
         adding = sibsp + age

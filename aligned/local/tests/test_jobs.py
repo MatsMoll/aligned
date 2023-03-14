@@ -1,6 +1,7 @@
 import pandas as pd
 import pytest
 
+from aligned import FeatureStore, FileSource
 from aligned.local.job import FileFullJob
 from aligned.local.source import LiteralReference
 from aligned.retrival_job import RetrivalRequest
@@ -35,3 +36,12 @@ async def test_file_full_job_polars(retrival_request_without_derived: RetrivalRe
 
     assert set(data.columns) == {'id', 'a', 'b'}
     assert data.shape[0] == 5
+
+
+@pytest.mark.asyncio
+async def test_write_and_read_feature_store(titanic_feature_store_scd: FeatureStore) -> None:
+    source = FileSource.json_at('test_data/feature-store.json')
+    definition = titanic_feature_store_scd.repo_definition()
+    await source.write(definition.to_json().encode('utf-8'))
+    store = await source.feature_store()
+    assert store is not None

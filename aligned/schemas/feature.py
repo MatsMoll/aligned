@@ -137,6 +137,16 @@ class Feature(Codable):
 
     constraints: set[Constraint] | None = None
 
+    def to_dict(self, **kwargs: dict) -> dict:
+        assert isinstance(self.name, str)
+        assert isinstance(self.dtype, FeatureType)
+        assert isinstance(self.description, str) or self.description is None
+        assert isinstance(self.tags, dict) or self.tags is None
+        for constraint in self.constraints:
+            assert isinstance(constraint, Constraint)
+
+        return super().to_dict(**kwargs)
+
     def __hash__(self) -> int:
         return hash(self.name)
 

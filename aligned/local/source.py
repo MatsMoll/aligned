@@ -248,7 +248,7 @@ class StorageFileSource(StorageFileReference):
         return hash(self.path)
 
     async def read(self) -> bytes:
-        await self.storage.read(self.path)
+        return await self.storage.read(self.path)
 
     async def write(self, content: bytes) -> None:
         await self.storage.write(self.path, content)
