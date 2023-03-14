@@ -96,7 +96,7 @@ class BatchDataSource(ABC, Codable, SerializableType):
         raise NotImplementedError()
 
     def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
-        return type(self).multi_source_features_for(facts, {self: request})
+        return type(self).multi_source_features_for(facts, [(self, request)])
 
 
 class ColumnFeatureMappable:

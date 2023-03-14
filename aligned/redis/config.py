@@ -50,7 +50,9 @@ class RedisConfig(Codable):
     def localhost() -> 'RedisConfig':
         import os
 
-        os.environ['REDIS_URL'] = 'redis://localhost:6379'
+        if 'REDIS_URL' not in os.environ:
+            os.environ['REDIS_URL'] = 'redis://localhost:6379'
+
         return RedisConfig(env_var='REDIS_URL')
 
     def redis(self) -> Redis:
@@ -120,13 +122,10 @@ class RedisSource(FeatureSource, WritableFeatureSource):
                         )
                     elif feature.dtype == FeatureType('').datetime:
                         expr = pl.col(feature.name).dt.timestamp('ms').cast(pl.Utf8).alias(feature.name)
-                    elif feature.dtype == FeatureType('').embedding:
-                        expr = (
-                            pl.col(feature.name)
-                            .apply(lambda x: ','.join(map(str, x)))
-                            .cast(pl.Utf8)
-                            .alias(feature.name)
-                        )
+                    elif feature.dtype == FeatureType('').embedding or feature.dtype == FeatureType('').array:
+                        import json
+
+                        expr = pl.col(feature.name).apply(lambda x: json.dumps(x.to_list()))
 
                     data = data.with_column(expr)
                     features.append(feature.name)
@@ -135,6 +134,9 @@ class RedisSource(FeatureSource, WritableFeatureSource):
 
                 for record in redis_frame.to_dicts():
                     pipe.hset(record['id'], mapping={key: value for key, value in record.items() if value})
+                    for key in record.items():
+                        if record[key] is None:
+                            pipe.hdel(record['id'], key)
                 await pipe.execute()
 
 

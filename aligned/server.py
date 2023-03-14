@@ -156,9 +156,12 @@ class FastAPIServer:
                     for value in entity_values['event_timestamp']
                 ]
 
-            df = await feature_store.model(name).for_entities(entity_values).to_pandas()
+            df = await feature_store.model(name).for_entities(entity_values).to_polars()
+            pandas_df = df.collect().to_pandas()
             orient = 'values'
-            body = ','.join([f'"{column}":{df[column].to_json(orient=orient)}' for column in df.columns])
+            body = ','.join(
+                [f'"{column}":{pandas_df[column].to_json(orient=orient)}' for column in pandas_df.columns]
+            )
             return Response(content=f'{{{body}}}', media_type='application/json')
 
     @staticmethod

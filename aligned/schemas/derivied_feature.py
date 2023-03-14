@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 
 from aligned.schemas.codable import Codable
@@ -52,8 +52,7 @@ class DerivedFeature(Feature):
 
 
 @dataclass
-class AggregateOver(Codable):
-    group_by: list[FeatureReferance]
+class AggregationTimeWindow(Codable):
     time_window: timedelta
     time_column: FeatureReferance
 
@@ -63,6 +62,26 @@ class AggregateOver(Codable):
 
     def __hash__(self) -> int:
         return self.time_window.__hash__()
+
+
+@dataclass
+class AggregateOver(Codable):
+    group_by: list[FeatureReferance]
+    window: AggregationTimeWindow | None = field(default=None)
+    condition: DerivedFeature | None = field(default=None)
+
+    @property
+    def group_by_names(self) -> list[str]:
+        return [feature.name for feature in self.group_by]
+
+    def __hash__(self) -> int:
+        if self.window:
+            return self.window.__hash__()
+
+        name = ''
+        for feature in self.group_by:
+            name += feature.name
+        return name.__hash__()
 
 
 @dataclass

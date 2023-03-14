@@ -91,16 +91,14 @@ class StreamWorker:
 async def single_processing(
     stream_source: RedisStream, topic_name: str, feature_view: FeatureViewStore
 ) -> None:
-    from aligned import FileSource
-
     last_id = '$'
     logger.info(f'Started listning to {topic_name}')
-    request = feature_view.view.request_all.needed_requests[0]
-    aggregations = request.aggregate_over()
-    checkpoints = {
-        window: FileSource.parquet_at(f'{feature_view.view.name}_agg_{window.time_window.total_seconds()}')
-        for window in aggregations.keys()
-    }
+    # request = feature_view.view.request_all.needed_requests[0]
+    # aggregations = request.aggregate_over()
+    # checkpoints = {
+    #     window: FileSource.parquet_at(f'{feature_view.view.name}_agg_{window.time_window.total_seconds()}')
+    #     for window in aggregations.keys()
+    # }
     while True:
         stream_values = await stream_source.read_from_timestamp({topic_name: last_id})
 
@@ -111,9 +109,7 @@ async def single_processing(
         last_id = values[-1][0]
         records = [record for _, record in values]
 
-        job = RetrivalJob.from_dict(records, request)
-        if checkpoints:
-            job = StreamAggregationJob(job, checkpoints)
+        job = stream_job(records, feature_view)
 
         await feature_view.batch_write(job)  # type: ignore [arg-type]
         elapsed = timeit.default_timer() - start_time
@@ -135,10 +131,15 @@ def stream_job(values: list[dict], feature_view: FeatureViewStore) -> RetrivalJo
     if not aggregations:
         return job
 
-    checkpoints = {
-        window: FileSource.parquet_at(f'{feature_view.view.name}_agg_{window.time_window.total_seconds()}')
-        for window in aggregations.keys()
-    }
+    checkpoints = {}
+
+    for aggregation in aggregations.keys():
+        name = f'{feature_view.view.name}_agg'
+        if aggregation.window:
+            time_window = aggregation.window
+            name += f'_{time_window.time_window.total_seconds()}'
+        checkpoints[aggregation] = FileSource.parquet_at(name)
+
     return StreamAggregationJob(job, checkpoints)
 
 

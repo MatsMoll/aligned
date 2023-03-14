@@ -57,7 +57,14 @@ def gracefull_transformation(
 
 
 class PsqlTransformation:
-    def as_sql(self) -> str:
+    def as_psql(self) -> str:
+        raise NotImplementedError()
+
+
+class RedshiftTransformation:
+    def as_redshift(self) -> str:
+        if isinstance(self, PsqlTransformation):
+            return self.as_psql()
         raise NotImplementedError()
 
 
@@ -600,7 +607,7 @@ class LowerThenOrEqual(Transformation):
 
 
 @dataclass
-class Subtraction(Transformation):
+class Subtraction(Transformation, PsqlTransformation, RedshiftTransformation):
 
     front: str
     behind: str
@@ -631,6 +638,9 @@ class Subtraction(Transformation):
             input={'x': [1, 2, 0, None, 1], 'y': [1, 0, 2, 1, None]},
             output=[0, 2, -2, nan, nan],
         )
+
+    def as_psql(self) -> str:
+        return f'{self.front} - {self.behind}'
 
 
 @dataclass
@@ -668,7 +678,7 @@ class Addition(Transformation):
 
 
 @dataclass
-class TimeDifference(Transformation):
+class TimeDifference(Transformation, PsqlTransformation, RedshiftTransformation):
 
     front: str
     behind: str
@@ -716,6 +726,9 @@ class TimeDifference(Transformation):
             },
             output=[0, 2, -2, nan, nan],
         )
+
+    def as_psql(self) -> str:
+        return f"DATEDIFF('sec', {self.behind}, {self.front})"
 
 
 @dataclass
@@ -1434,7 +1447,7 @@ class AppendStrings(Transformation):
 
 
 @dataclass
-class ConcatStringAggregation(Transformation, PsqlTransformation):
+class ConcatStringAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
     group_keys: list[str]
@@ -1451,12 +1464,15 @@ class ConcatStringAggregation(Transformation, PsqlTransformation):
             pl.concat_str(pl.col(self.key), sep=self.separator).over(self.group_keys).alias(alias)
         )
 
-    def as_sql(self) -> str:
+    def as_psql(self) -> str:
         return f"array_to_string(array_agg({self.key}), '{self.separator}')"
+
+    def as_redshift(self) -> str:
+        return f"listagg(\"{self.key}\", '{self.separator}') within group (order by \"{self.key}\")"
 
 
 @dataclass
-class SumAggregation(Transformation, PsqlTransformation):
+class SumAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
     group_keys: list[str]
@@ -1470,12 +1486,12 @@ class SumAggregation(Transformation, PsqlTransformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.sum(self.key)
 
-    def as_sql(self) -> str:
+    def as_psql(self) -> str:
         return f'SUM({self.key})'
 
 
 @dataclass
-class MeanAggregation(Transformation, PsqlTransformation):
+class MeanAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
     group_keys: list[str]
@@ -1489,12 +1505,12 @@ class MeanAggregation(Transformation, PsqlTransformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).mean()
 
-    def as_sql(self) -> str:
+    def as_psql(self) -> str:
         return f'AVG({self.key})'
 
 
 @dataclass
-class MinAggregation(Transformation, PsqlTransformation):
+class MinAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
     group_keys: list[str]
@@ -1508,12 +1524,12 @@ class MinAggregation(Transformation, PsqlTransformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).min()
 
-    def as_sql(self) -> str:
+    def as_psql(self) -> str:
         return f'MIN({self.key})'
 
 
 @dataclass
-class MaxAggregation(Transformation, PsqlTransformation):
+class MaxAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
     group_keys: list[str]
@@ -1527,12 +1543,12 @@ class MaxAggregation(Transformation, PsqlTransformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).max()
 
-    def as_sql(self) -> str:
+    def as_psql(self) -> str:
         return f'MAX({self.key})'
 
 
 @dataclass
-class CountAggregation(Transformation, PsqlTransformation):
+class CountAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
     group_keys: list[str]
@@ -1546,12 +1562,12 @@ class CountAggregation(Transformation, PsqlTransformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).count()
 
-    def as_sql(self) -> str:
+    def as_psql(self) -> str:
         return f'COUNT({self.key})'
 
 
 @dataclass
-class CountDistinctAggregation(Transformation, PsqlTransformation):
+class CountDistinctAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
     group_keys: list[str]
@@ -1565,12 +1581,12 @@ class CountDistinctAggregation(Transformation, PsqlTransformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).unique_counts()
 
-    def as_sql(self) -> str:
+    def as_psql(self) -> str:
         return f'COUNT(DISTINCT {self.key})'
 
 
 @dataclass
-class StdAggregation(Transformation, PsqlTransformation):
+class StdAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
     group_keys: list[str]
@@ -1584,12 +1600,12 @@ class StdAggregation(Transformation, PsqlTransformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).std()
 
-    def as_sql(self) -> str:
+    def as_psql(self) -> str:
         return f'STDDEV({self.key})'
 
 
 @dataclass
-class VarianceAggregation(Transformation, PsqlTransformation):
+class VarianceAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
     group_keys: list[str]
@@ -1603,12 +1619,12 @@ class VarianceAggregation(Transformation, PsqlTransformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).var()
 
-    def as_sql(self) -> str:
+    def as_psql(self) -> str:
         return f'variance({self.key})'
 
 
 @dataclass
-class MedianAggregation(Transformation, PsqlTransformation):
+class MedianAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
     group_keys: list[str]
@@ -1622,12 +1638,12 @@ class MedianAggregation(Transformation, PsqlTransformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).median()
 
-    def as_sql(self) -> str:
+    def as_psql(self) -> str:
         return f'PERCENTILE_CONT(0.5) WITHIN GROUP(ORDER BY {self.key})'
 
 
 @dataclass
-class PercentileAggregation(Transformation, PsqlTransformation):
+class PercentileAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
     percentile: float
@@ -1642,5 +1658,5 @@ class PercentileAggregation(Transformation, PsqlTransformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).quantile(self.percentile)
 
-    def as_sql(self) -> str:
+    def as_psql(self) -> str:
         return f'PERCENTILE_CONT({self.percentile}) WITHIN GROUP(ORDER BY {self.key})'

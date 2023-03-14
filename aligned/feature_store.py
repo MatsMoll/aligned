@@ -19,7 +19,7 @@ from aligned.feature_view.combined_view import CombinedFeatureView, CompiledComb
 from aligned.feature_view.feature_view import FeatureView
 from aligned.online_source import BatchOnlineSource, OnlineSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
-from aligned.retrival_job import FilterJob, RetrivalJob, SupervisedJob
+from aligned.retrival_job import FilterJob, RetrivalJob, StreamAggregationJob, SupervisedJob
 from aligned.schemas.feature import FeatureLocation
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.model import EventTrigger
@@ -397,6 +397,22 @@ class ModelFeatureStore:
             request.features_to_include
         )
 
+    def process_features(self, input: RetrivalJob | dict[str, list]) -> RetrivalJob:
+        request = self.request
+
+        if isinstance(input, RetrivalJob):
+            job = input.filter(request.features_to_include)
+        elif isinstance(input, dict):
+            job = RetrivalJob.from_dict(input, request=request.needed_requests)
+        else:
+            raise ValueError(f'features must be a dict or a RetrivalJob, was {type(input)}')
+
+        return (
+            job.ensure_types(request.needed_requests)
+            .derive_features(request.needed_requests)
+            .filter(request.features_to_include)
+        )
+
 
 @dataclass
 class SupervisedModelFeatureStore:
@@ -510,7 +526,35 @@ class FeatureViewStore:
         return features
 
     async def write(self, values: dict[str, list[Any]]) -> None:
-        await self.batch_write(values)
+        from aligned import FileSource
+
+        request = self.view.request_all.needed_requests[0]
+        job = (
+            RetrivalJob.from_dict(values, request)
+            .validate_entites()
+            .fill_missing_columns()
+            .ensure_types([request])
+        )
+
+        aggregations = request.aggregate_over()
+        if not aggregations:
+            return job
+
+        checkpoints = {}
+
+        for aggregation in aggregations.keys():
+            name = f'{self.view.name}_agg'
+
+            if aggregation.window:
+                name += f'_{aggregation.window.time_window.total_seconds()}'
+
+            if aggregation.condition:
+                name += f'_{aggregation.condition.name}'
+
+            checkpoints[aggregation] = FileSource.parquet_at(name)
+
+        job = StreamAggregationJob(job, checkpoints)
+        await self.batch_write(job)
 
     async def process_input(self, values: dict[str, list[Any]]) -> dict[str, list[Any]]:
 

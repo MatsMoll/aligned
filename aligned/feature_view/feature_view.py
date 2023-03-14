@@ -11,7 +11,7 @@ from aligned.compiler.feature_factory import (
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
-from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver
+from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, AggregationTimeWindow
 from aligned.schemas.feature import FeatureLocation, FeatureReferance
 from aligned.schemas.feature_view import CompiledFeatureView
 
@@ -196,18 +196,21 @@ class FeatureView(ABC, FeatureSelectable):
             if not isinstance(agg_trans, AggregationTransformationFactory):
                 continue
 
-            if view.event_timestamp is None:
+            if view.event_timestamp is None and agg_trans.time_window:
                 raise ValueError(f'FeatureView {metadata.name} must contain an EventTimestamp')
 
-            timestamp_ref = FeatureReferance(
-                view.event_timestamp.name,
-                FeatureLocation.feature_view(view.name),
-                dtype=view.event_timestamp.dtype,
-            )
+            time_window: AggregationTimeWindow | None = None
+            if agg_trans.time_window:
 
-            window = agg_trans.time_window
+                timestamp_ref = FeatureReferance(
+                    view.event_timestamp.name,
+                    FeatureLocation.feature_view(view.name),
+                    dtype=view.event_timestamp.dtype,
+                )
+                time_window = AggregationTimeWindow(agg_trans.time_window, timestamp_ref)
+
             aggr.transformation = agg_trans.with_group_by(aggregation_group_by)
-            config = AggregateOver(aggregation_group_by, time_window=window, time_column=timestamp_ref)
+            config = AggregateOver(aggregation_group_by, window=time_window, condition=None)
             feature = aggr.compile()
             feat = AggregatedFeature(
                 derived_feature=feature,

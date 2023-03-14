@@ -774,8 +774,17 @@ class ArithmeticAggregation:
     feature: ArithmeticFeature
     time_window: timedelta | None = None
 
-    def over(self, time_window: timedelta) -> ArithmeticAggregation:
-        self.time_window = time_window
+    def over(
+        self,
+        weeks: float | None = None,
+        days: float | None = None,
+        hours: float | None = None,
+        minutes: float | None = None,
+        seconds: float | None = None,
+    ) -> ArithmeticAggregation:
+        self.time_window = timedelta(
+            weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
+        )
         return self
 
     def sum(self) -> Float:

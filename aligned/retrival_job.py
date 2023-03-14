@@ -524,21 +524,31 @@ class StreamAggregationJob(RetrivalJob, ModificationJob):
 
     async def data_windows(self, window: AggregateOver, data: pl.DataFrame, now: datetime) -> pl.DataFrame:
         checkpoint = self.checkpoints[window]
-        filter_expr = pl.col(window.time_column.name) > now - window.time_window
+        filter_expr: pl.Expr | None = None
+
+        if window.window:
+            time_window = window.window
+            filter_expr = pl.col(time_window.time_column) > now - time_window.time_window
+        if window.condition:
+            raise ValueError('Condition is not supported for stream aggregation, yet')
 
         try:
             window_data = (await checkpoint.to_polars()).collect()
 
-            if window.time_window:
-                window_data = pl.concat([window_data.filter(filter_expr), data.filter(filter_expr)])
+            if filter_expr:
+                new_data = pl.concat([window_data.filter(filter_expr), data.filter(filter_expr)])
             else:
-                window_data = pl.concat([window_data, data])
+                new_data = pl.concat([window_data, data])
 
-            await checkpoint.write_polars(window_data.lazy())
-            return window_data
+            await checkpoint.write_polars(new_data.lazy())
+            return new_data
         except FileNotFoundError:
 
-            window_data = data.filter(filter_expr)
+            if filter_expr:
+                window_data = data.filter(filter_expr)
+            else:
+                window_data = data
+
             await checkpoint.write_polars(window_data.lazy())
             return window_data
 
@@ -550,7 +560,7 @@ class StreamAggregationJob(RetrivalJob, ModificationJob):
 
         # This is used as a dummy frame, as the pl abstraction is not good enough
         lazy_df = pl.DataFrame({}).lazy()
-        now = datetime.now()
+        now = datetime.utcnow()
 
         for window in self.time_windows:
 
@@ -788,6 +798,11 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
             for feature in request.all_required_features:
                 if feature.dtype == FeatureType('').bool:
                     df = df.with_column(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
+                elif feature.dtype == FeatureType('').datetime:
+                    # Convert from ms to us
+                    df = df.with_column(
+                        (pl.col(feature.name).cast(pl.Int64) * 1000).cast(pl.Datetime(time_zone='UTC'))
+                    )
                 else:
                     df = df.with_column(pl.col(feature.name).cast(feature.dtype.polars_type, strict=False))
         return df

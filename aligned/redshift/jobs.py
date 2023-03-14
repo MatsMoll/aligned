@@ -8,11 +8,12 @@ import pandas as pd
 import polars as pl
 
 from aligned.psql.data_source import PostgreSQLConfig, PostgreSQLDataSource
+from aligned.psql.jobs import PostgreSqlJob
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver
 from aligned.schemas.feature import FeatureLocation, FeatureType
-from aligned.schemas.transformation import PsqlTransformation
+from aligned.schemas.transformation import RedshiftTransformation
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,7 @@ class TableFetch:
     id_column: str
     table: str | TableFetch
     columns: set[SqlColumn]
+    schema: str | None = field(default=None)
     joins: list[SqlJoin] = field(default_factory=list)
     conditions: list[str] = field(default_factory=list)
     group_by: list[str] = field(default_factory=list)
@@ -60,9 +62,6 @@ class TableFetch:
         order_by = ''
         group_by = ''
         select = 'SELECT'
-
-        if distinct:
-            select = f'SELECT DISTINCT ON ({distinct})'
 
         if self.conditions:
             wheres = 'WHERE ' + ' AND '.join(self.conditions)
@@ -78,41 +77,33 @@ class TableFetch:
         if isinstance(self.table, TableFetch):
             from_sql = f'FROM ({self.table.sql_query()}) as entities'
         else:
+            schema = f'{self.schema}.' if self.schema else ''
             from_sql = f"""FROM entities
-    LEFT JOIN "{ self.table }" ta ON { ' AND '.join(self.joins) }"""
+        LEFT JOIN {schema}"{ self.table }" ta ON { ' AND '.join(self.joins) }"""
 
-        return f"""
-    { select } { ', '.join(table_columns) }
-    { from_sql }
-    { wheres }
-    { order_by }
-    { group_by }"""
-
-
-@dataclass
-class PostgreSqlJob(RetrivalJob):
-
-    config: PostgreSQLConfig
-    query: str
-    retrival_requests: list[RetrivalRequest] = field(default_factory=list)
-
-    def request_result(self) -> RequestResult:
-        return RequestResult.from_request_list(self.retrival_requests)
-
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return self.retrival_requests
-
-    async def to_pandas(self) -> pd.DataFrame:
-        df = await self.to_polars()
-        return df.collect().to_pandas()
-
-    async def to_polars(self) -> pl.LazyFrame:
-        try:
-            return pl.read_sql(self.query, self.config.url).lazy()
-        except Exception as e:
-            logger.error(f'Error running query: {self.query}')
-            logger.error(f'Error: {e}')
-            raise e
+        if distinct:
+            aliases = [col.alias for col in self.columns]
+            return f"""
+            SELECT { ', '.join(aliases) }
+            FROM (
+        { select } { ', '.join(table_columns) },
+            ROW_NUMBER() OVER(
+                PARTITION BY entities.row_id
+                { order_by }
+            ) AS row_number
+            { from_sql }
+            { wheres }
+            { order_by }
+            { group_by }
+        ) AS entities
+        WHERE row_number = 1"""
+        else:
+            return f"""
+        { select } { ', '.join(table_columns) }
+        { from_sql }
+        { wheres }
+        { order_by }
+        { group_by }"""
 
 
 @dataclass
@@ -231,7 +222,7 @@ class SqlValue:
 
 
 @dataclass
-class FactPsqlJob(FactualRetrivalJob):
+class FactRedshiftJob(FactualRetrivalJob):
     """Fetches features for defined facts within a postgres DB
 
     It is supported to fetch from different tables, in one request
@@ -267,7 +258,7 @@ class FactPsqlJob(FactualRetrivalJob):
     async def psql_job(self) -> PostgreSqlJob:
         if isinstance(self.facts, PostgreSqlJob):
             return PostgreSqlJob(self.config, self.build_sql_entity_query(self.facts))
-        return PostgreSqlJob(self.config, await self.build_request())
+        raise ValueError(f'Redshift only support SQL entity queries. Got: {self.facts}')
 
     def dtype_to_sql_type(self, dtype: object) -> str:
         if isinstance(dtype, str):
@@ -293,18 +284,6 @@ class FactPsqlJob(FactualRetrivalJob):
             SqlColumn(db_field_name, feature)
             for feature, db_field_name in zip(field_selects, field_identifiers)
         }
-        derived_features = [
-            feature
-            for feature in request.derived_features
-            if isinstance(feature.transformation, PsqlTransformation)
-        ]
-        derived_alias = source.feature_identifier_for([feature.name for feature in derived_features])
-        derived_selects = {
-            SqlColumn(feature.transformation.as_psql(), name)
-            for feature, name in zip(derived_features, derived_alias)
-            if isinstance(feature.transformation, PsqlTransformation)
-        }
-        selects = selects.union(derived_selects)
 
         entities = list(request.entity_names)
         entity_db_name = source.feature_identifier_for(entities)
@@ -323,14 +302,37 @@ class FactPsqlJob(FactualRetrivalJob):
         if event_timestamp_clause:
             join_conditions.append(event_timestamp_clause)
 
-        return TableFetch(
+        rename_fetch = TableFetch(
             name=f'{request.name}_cte',
             id_column='row_id',
             table=source.table,
             columns=selects,
             joins=join_conditions,
             order_by=sort_query,
+            schema=self.config.schema,
         )
+
+        derived_features = [
+            feature
+            for feature in request.derived_features
+            if isinstance(feature.transformation, RedshiftTransformation)
+        ]
+        if derived_features:
+            derived_alias = source.feature_identifier_for([feature.name for feature in derived_features])
+            derived_selects = {
+                SqlColumn(feature.transformation.as_redshift(), name)
+                for feature, name in zip(derived_features, derived_alias)
+                if isinstance(feature.transformation, RedshiftTransformation)
+            }.union({SqlColumn('*', '*')})
+
+            return TableFetch(
+                name=rename_fetch.name,
+                id_column=rename_fetch.id_column,
+                table=rename_fetch,
+                columns=derived_selects,
+            )
+        else:
+            return rename_fetch
 
     def sql_aggregated_request(
         self, window: AggregateOver, features: set[AggregatedFeature], request: RetrivalRequest
@@ -339,9 +341,12 @@ class FactPsqlJob(FactualRetrivalJob):
         name = f'{request.name}_agg_cte'
 
         if not all(
-            [isinstance(feature.derived_feature.transformation, PsqlTransformation) for feature in features]
+            [
+                isinstance(feature.derived_feature.transformation, RedshiftTransformation)
+                for feature in features
+            ]
         ):
-            raise ValueError('All features must have a PsqlTransformation')
+            raise ValueError('All features must have a RedshiftTransformation')
 
         group_by_names = {feature.name for feature in window.group_by}
         if window.window:
@@ -354,7 +359,7 @@ class FactPsqlJob(FactualRetrivalJob):
 
         aggregates = {
             SqlColumn(
-                feature.derived_feature.transformation.as_sql(),
+                feature.derived_feature.transformation.as_redshift(),
                 feature.name,
             )
             for feature in features
@@ -364,8 +369,9 @@ class FactPsqlJob(FactualRetrivalJob):
         event_timestamp_clause: str | None = None
         if request.event_timestamp:
             id_column = 'row_id'
+            group_by_names = {id_column}
             # Use row_id as the main join key
-            event_timestamp_name = request.event_timestamp.name
+            event_timestamp_name = source.feature_identifier_for([request.event_timestamp.name])[0]
             if window.window:
                 time_window_config = window.window
                 window_in_seconds = int(time_window_config.time_window.total_seconds())
@@ -392,18 +398,46 @@ class FactPsqlJob(FactualRetrivalJob):
             for feature, db_field_name in zip(field_selects, field_identifiers)
         }
 
+        rename_table = TableFetch(
+            name='ta',
+            id_column='row_id',
+            table=source.table,
+            columns=selects,
+            joins=join_conditions,
+            schema=source.config.schema,
+        )
+
+        needed_derived_features = set()
+        derived_map = request.derived_feature_map()
+
+        for agg_feature in request.aggregated_features:
+            for depended in agg_feature.depending_on_names:
+                if depended in derived_map:
+                    needed_derived_features.add(derived_map[depended])
+
+        if needed_derived_features:
+            features = {
+                SqlColumn(feature.transformation.as_redshift(), feature.name)
+                for feature in needed_derived_features
+            }.union(
+                {SqlColumn('*', '*')}
+            )  # Need the * in order to select the "original values"
+            select_table = TableFetch(
+                name='derived',
+                id_column=rename_table.id_column,
+                table=rename_table,
+                columns=features,
+            )
+        else:
+            select_table = rename_table
+
         return TableFetch(
             name=name,
             id_column=id_column,
             # Need to do a subquery, in order to renmae the core features
-            table=TableFetch(
-                name='ta',
-                id_column='row_id',
-                table=source.table,
-                columns=selects,
-                joins=join_conditions,
-            ),
+            table=select_table,
             columns=aggregates.union(group_by_selects),
+            schema=source.config.schema,
             group_by=group_by_names,
         )
 
@@ -420,7 +454,7 @@ class FactPsqlJob(FactualRetrivalJob):
         fetches: list[TableFetch] = []
         supported_aggregation_features = set(request.feature_names).union(request.entity_names)
         for feature in request.derived_features:
-            if isinstance(feature.transformation, PsqlTransformation):
+            if isinstance(feature.transformation, RedshiftTransformation):
                 supported_aggregation_features.add(feature.name)
 
         for window, aggregates in aggregation_windows.items():
@@ -437,107 +471,8 @@ class FactPsqlJob(FactualRetrivalJob):
                 raise ValueError(
                     f'Only SQL aggregates are supported at the moment. Missing features {missing_features}'
                 )
-                # fetches.append(self.fetch_all_aggregate_values(window, aggregates, request))
 
         return fetches
-
-    async def build_request(self) -> str:
-        import numpy as np
-
-        final_select_names: set[str] = set()
-        entity_types: dict[str, FeatureType] = {}
-        has_event_timestamp = False
-
-        for request in self.requests:
-            final_select_names = final_select_names.union(
-                {f'{request.location.name}_cte.{feature}' for feature in request.all_required_feature_names}
-            )
-            final_select_names = final_select_names.union(
-                {f'entities.{entity}' for entity in request.entity_names}
-            )
-            for entity in request.entities:
-                entity_types[entity.name] = entity.dtype
-            if request.event_timestamp:
-                has_event_timestamp = True
-
-        if has_event_timestamp:
-            final_select_names.add('event_timestamp')
-            entity_types['event_timestamp'] = FeatureType('').datetime
-
-        # Need to replace nan as it will not be encoded
-        fact_df = await self.facts.to_pandas()
-        fact_df = fact_df.replace(np.nan, None)
-
-        number_of_values = fact_df.shape[0]
-        # + 1 is needed as 0 is evaluated for null
-        fact_df['row_id'] = list(range(1, number_of_values + 1))
-
-        entity_type_list = [
-            self.dtype_to_sql_type(entity_types.get(entity, FeatureType('').int32))
-            for entity in fact_df.columns
-        ]
-
-        query_values: list[list[SqlValue]] = []
-        all_entities = []
-        for values in fact_df.values:
-            row_placeholders = []
-            for column_index, value in enumerate(values):
-                row_placeholders.append(SqlValue(value, entity_type_list[column_index]))
-                if fact_df.columns[column_index] not in all_entities:
-                    all_entities.append(fact_df.columns[column_index])
-            query_values.append(row_placeholders)
-
-        feature_view_names: list[str] = [location.name for location in self.sources.keys()]
-        # Add the joins to the fact
-
-        tables: list[TableFetch] = []
-        aggregates: list[TableFetch] = []
-        for request in self.requests:
-            fetch = self.value_selection(request, has_event_timestamp)
-            tables.append(fetch)
-            aggregate_fetches = self.aggregated_values_from_request(request)
-            aggregates.extend(aggregate_fetches)
-            for aggregate in aggregate_fetches:
-                final_select_names = final_select_names.union(
-                    {column.alias for column in aggregate.columns if column.alias != aggregate.id_column}
-                )
-
-        joins = '\n    '.join(
-            [
-                f'INNER JOIN {feature_view}_cte ON {feature_view}_cte.row_id = entities.row_id'
-                for feature_view in feature_view_names
-            ]
-        )
-        if aggregates:
-            joins += '\n    '
-            joins += '\n    '.join(
-                [
-                    f'INNER JOIN {table.name} ON {table.name}.{table.id_column} = entities.{table.id_column}'
-                    for table in aggregates
-                ]
-            )
-
-        entity_values = self.build_entities_from_values(query_values)
-
-        return self.generate_query(
-            entity_columns=list(all_entities),
-            entity_query=entity_values,
-            tables=tables,
-            aggregates=aggregates,
-            final_select=list(final_select_names),
-            final_joins=joins,
-        )
-
-    def build_entities_from_values(self, values: list[list[SqlValue]]) -> str:
-        query = 'VALUES '
-        for row in values:
-            query += '\n    ('
-            for value in row:
-                query += value.to_sql + ', '
-            query = query[:-2]
-            query += '),'
-        query = query[:-1]
-        return query
 
     def build_sql_entity_query(self, sql_facts: PostgreSqlJob) -> str:
 
@@ -566,12 +501,17 @@ class FactPsqlJob(FactualRetrivalJob):
             tables.append(fetch)
             aggregate_fetches = self.aggregated_values_from_request(request)
             aggregates.extend(aggregate_fetches)
-            for aggregate in aggregate_fetches:
-                final_select_names = final_select_names.union(
-                    {column.alias for column in aggregate.columns if column.alias != 'entites.row_id'}
-                )
 
             all_entities.update(request.entity_names)
+
+            for aggregate in aggregate_fetches:
+                agg_features = {
+                    column.alias
+                    for column in aggregate.columns
+                    if column.alias != 'entites.row_id' and column.alias not in all_entities
+                }
+                final_select_names = final_select_names.union(agg_features)
+
             final_select_names = final_select_names.union(
                 {f'{fetch.name}.{feature}' for feature in request.all_required_feature_names}
             )
@@ -603,6 +543,7 @@ class FactPsqlJob(FactualRetrivalJob):
             aggregates=aggregates,
             final_select=list(final_select_names),
             final_joins=joins,
+            event_timestamp_col='event_timestamp' if has_event_timestamp else None,
         )
 
     def generate_query(
@@ -613,6 +554,7 @@ class FactPsqlJob(FactualRetrivalJob):
         aggregates: list[TableFetch],
         final_select: list[str],
         final_joins: str,
+        event_timestamp_col: str | None,
     ) -> str:
 
         query = f"""
@@ -637,9 +579,27 @@ WITH entities (
     ),"""
 
         query = query[:-1]  # Dropping the last comma
-        query += f"""
+        if event_timestamp_col:
+
+            query += f"""
+SELECT val.*
+FROM (
+    SELECT { ', '.join(final_select) }
+    FROM (
+        SELECT *, ROW_NUMBER() OVER(
+            PARTITION BY entities.row_id
+            ORDER BY entities."{event_timestamp_col}" DESC
+        ) AS row_number
+        FROM entities
+    ) as entities
+        { final_joins }
+    WHERE entities.row_number = 1
+) as val
+"""
+        else:
+            query += f"""
 SELECT { ', '.join(final_select) }
 FROM entities
-{ final_joins }
+    { final_joins }
 """
         return query

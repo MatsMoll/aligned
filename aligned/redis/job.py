@@ -43,6 +43,9 @@ class FactualRedisJob(FactualRetrivalJob):
 
             if entities.shape[0] == 0:
                 # Do not connect to redis if there are no entities to fetch
+                result_df = result_df.with_columns(
+                    [pl.lit(None).alias(column.name) for column in request.all_features]
+                )
                 continue
 
             features = list(request.all_feature_names)
@@ -68,6 +71,14 @@ class FactualRedisJob(FactualRetrivalJob):
                         .struct.field('field_0')
                         .cast(feature.dtype.polars_type)
                         .alias(feature.name)
+                    )
+                elif feature.dtype == FeatureType('').embedding or feature.dtype == FeatureType('').array:
+                    import json
+
+                    reqs = reqs.with_column(
+                        pl.col(feature.name)
+                        .apply(lambda row: json.loads(row))
+                        .cast(feature.dtype.polars_type)
                     )
                 else:
                     reqs = reqs.with_column(pl.col(feature.name).cast(feature.dtype.polars_type))
