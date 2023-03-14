@@ -464,6 +464,14 @@ class FeatureViewStore:
     only_write_model_features: bool = field(default=False)
 
     @property
+    def request(self) -> RetrivalRequest:
+        if self.only_write_model_features:
+            features_in_models = self.store.model_features_for(self.view.name)
+            return self.view.request_for(features_in_models).needed_requests[0]
+        else:
+            return self.view.request_all.needed_requests[0]
+
+    @property
     def source(self) -> FeatureSource:
         return self.store.feature_source
 
@@ -598,18 +606,21 @@ class FeatureViewStore:
             return
 
         # As it is a feature view, should it only contain one request
-        request = self.view.request_all.needed_requests[0]
-
-        if self.only_write_model_features:
-            request = self.view.request_for(features_in_models).needed_requests[0]
+        request = self.request
 
         core_job: RetrivalJob
 
         if isinstance(values, RetrivalJob):
             core_job = values
-        else:
+        elif isinstance(values, dict):
             core_job = RetrivalJob.from_dict(values, request)
+        else:
+            raise ValueError(f'values must be a dict or a RetrivalJob, was {type(values)}')
 
         job = core_job.derive_features([request]).listen_to_events(self.event_triggers)
+
+        if self.only_write_model_features:
+            logger.info(f'Only writing features used by models: {features_in_models}')
+            job = job.filter(features_in_models)
 
         await self.source.write(job, [request])

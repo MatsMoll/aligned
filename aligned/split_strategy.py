@@ -71,6 +71,10 @@ class SupervisedDataSet(Generic[DatasetType]):
     target_columns: set[str]
     event_timestamp_column: str | None
 
+    @property
+    def sorted_features(self) -> list[str]:
+        return sorted(self.features)
+
     def __init__(
         self,
         data: DatasetType,
@@ -94,8 +98,8 @@ class SupervisedDataSet(Generic[DatasetType]):
     @property
     def input(self) -> DatasetType:
         if isinstance(self.data, pl.LazyFrame):
-            return self.data.select(list(self.features))
-        return self.data[list(self.features)]
+            return self.data.select(self.sorted_features)
+        return self.data[self.sorted_features]
 
     @property
     def target(self) -> DatasetType:
@@ -138,8 +142,14 @@ class TrainTestValidateSet(Generic[DatasetType]):
         self.event_timestamp_column = event_timestamp_column
 
     @property
+    def sorted_features(self) -> list[str]:
+        return sorted(self.features)
+
+    @property
     def input(self) -> DatasetType:
-        return self.data[list(self.features)]
+        if isinstance(self.data, pl.LazyFrame):
+            return self.data.select(self.sorted_features)
+        return self.data[self.sorted_features]
 
     @property
     def target(self) -> DatasetType:

@@ -457,7 +457,7 @@ class ValidateEntitiesJob(RetrivalJob, ModificationJob):
 
         for request in self.retrival_requests:
             if request.entity_names - set(data.columns):
-                return pl.DataFrame({})
+                return pl.DataFrame({}).lazy()
 
         return data
 
@@ -531,14 +531,14 @@ class StreamAggregationJob(RetrivalJob, ModificationJob):
 
         if window.window:
             time_window = window.window
-            filter_expr = pl.col(time_window.time_column) > now - time_window.time_window
+            filter_expr = pl.col(time_window.time_column.name) > now - time_window.time_window
         if window.condition:
             raise ValueError('Condition is not supported for stream aggregation, yet')
 
         try:
             window_data = (await checkpoint.to_polars()).collect()
 
-            if filter_expr:
+            if filter_expr is not None:
                 new_data = pl.concat([window_data.filter(filter_expr), data.filter(filter_expr)])
             else:
                 new_data = pl.concat([window_data, data])
@@ -547,7 +547,7 @@ class StreamAggregationJob(RetrivalJob, ModificationJob):
             return new_data
         except FileNotFoundError:
 
-            if filter_expr:
+            if filter_expr is not None:
                 window_data = data.filter(filter_expr)
             else:
                 window_data = data
@@ -569,7 +569,7 @@ class StreamAggregationJob(RetrivalJob, ModificationJob):
 
             aggregations = self.aggregated_features[window]
 
-            required_features = set(window.group_by).union([window.time_column])
+            required_features = set(window.group_by).union([window.window.time_column])
             for agg in aggregations:
                 required_features.update(agg.derived_feature.depending_on)
 
@@ -793,6 +793,9 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                         )
                     else:
                         df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
+            if request.event_timestamp:
+                feature = request.event_timestamp
+                df[feature.name] = pd.to_datetime(df[feature.name], infer_datetime_format=True, utc=True)
         return df
 
     async def to_polars(self) -> pl.LazyFrame:
@@ -808,6 +811,11 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                     )
                 else:
                     df = df.with_column(pl.col(feature.name).cast(feature.dtype.polars_type, strict=False))
+            if request.event_timestamp:
+                feature = request.event_timestamp
+                df = df.with_column(
+                    (pl.col(feature.name).cast(pl.Int64) * 1000).cast(pl.Datetime(time_zone='UTC'))
+                )
         return df
 
     def remove_derived_features(self) -> RetrivalJob:
@@ -943,7 +951,10 @@ class FilterJob(RetrivalJob, ModificationJob):
 
     @property
     def retrival_requests(self) -> list[RetrivalRequest]:
-        return self.job.retrival_requests
+        return [
+            request.filter_features(request.all_feature_names - self.include_features)
+            for request in self.job.retrival_requests
+        ]
 
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.job.to_pandas()

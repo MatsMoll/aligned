@@ -48,7 +48,7 @@ class FactualRedisJob(FactualRetrivalJob):
                 )
                 continue
 
-            features = list(request.all_feature_names)
+            features = list({feature.name for feature in request.returned_features})
 
             async with redis.pipeline(transaction=False) as pipe:
                 for entity in entities[redis_combine_id]:
@@ -56,10 +56,10 @@ class FactualRedisJob(FactualRetrivalJob):
                 result = await pipe.execute()
 
             reqs: pl.DataFrame = pl.concat(
-                [entities, pl.DataFrame(result, columns=features)], how='horizontal'
+                [entities, pl.DataFrame(result, columns=features, orient='row')], how='horizontal'
             ).select(pl.exclude(redis_combine_id))
 
-            for feature in request.all_features:
+            for feature in request.returned_features:
                 if feature.dtype == FeatureType('').bool:
                     reqs = reqs.with_column(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
                 elif reqs[feature.name].dtype == pl.Utf8 and (
@@ -75,11 +75,7 @@ class FactualRedisJob(FactualRetrivalJob):
                 elif feature.dtype == FeatureType('').embedding or feature.dtype == FeatureType('').array:
                     import json
 
-                    reqs = reqs.with_column(
-                        pl.col(feature.name)
-                        .apply(lambda row: json.loads(row))
-                        .cast(feature.dtype.polars_type)
-                    )
+                    reqs = reqs.with_column(pl.col(feature.name).apply(lambda row: json.loads(row)))
                 else:
                     reqs = reqs.with_column(pl.col(feature.name).cast(feature.dtype.polars_type))
                 # if feature.dtype == FeatureType('').datetime:

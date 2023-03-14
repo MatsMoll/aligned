@@ -71,7 +71,7 @@ class StreamWorker:
         except AttributeError:
             raise ValueError('No reference found')
 
-    async def start(self) -> None:
+    async def start(self, should_prune_unused_features: bool) -> None:
         from aligned.data_source.stream_data_source import HttpStreamSource
 
         views = self.views_to_process or set()
@@ -85,7 +85,7 @@ class StreamWorker:
         if not views:
             raise ValueError('No feature views with streaming source to process')
 
-        await start(self.feature_store, views)
+        await start(self.feature_store, views, should_prune_unused_features)
 
 
 async def single_processing(
@@ -119,7 +119,7 @@ async def single_processing(
 def stream_job(values: list[dict], feature_view: FeatureViewStore) -> RetrivalJob:
     from aligned import FileSource
 
-    request = feature_view.view.request_all.needed_requests[0]
+    request = feature_view.request
     job = (
         RetrivalJob.from_dict(values, request)
         .validate_entites()
@@ -168,7 +168,9 @@ async def process(stream_source: RedisStream, topic_name: str, feature_views: li
         await multi_processing(stream_source, topic_name, feature_views)
 
 
-async def start(store: FeatureStore, feature_views_to_process: set[str]) -> None:
+async def start(
+    store: FeatureStore, feature_views_to_process: set[str], should_prune_unused_features: bool
+) -> None:
 
     if not feature_views_to_process:
         raise ValueError('No feature views set. remember to set the -v flag with the views to process')
@@ -215,5 +217,6 @@ async def start(store: FeatureStore, feature_views_to_process: set[str]) -> None
     redis_stream = RedisStream(redis_streams[0].config.redis())
     processes = []
     for topic_name, views in feature_views.items():
-        processes.append(process(redis_stream, topic_name, views))
+        process_views = [view.with_optimised_write(should_prune_unused_features) for view in views]
+        processes.append(process(redis_stream, topic_name, process_views))
     await asyncio.gather(*processes)

@@ -101,7 +101,11 @@ class RedisSource(FeatureSource, WritableFeatureSource):
 
             for request in requests:
                 # Run one query per row
-                data = data.with_column(
+                filter_entity_query: pl.Expr = pl.lit(True)
+                for entity_name in request.entity_names:
+                    filter_entity_query = filter_entity_query & (pl.col(entity_name).is_not_null())
+
+                request_data = data.filter(filter_entity_query).with_column(
                     (
                         pl.lit(request.location.identifier)
                         + pl.lit(':')
@@ -111,7 +115,7 @@ class RedisSource(FeatureSource, WritableFeatureSource):
 
                 features = ['id']
 
-                for feature in request.all_features:
+                for feature in request.returned_features:
 
                     expr = pl.col(feature.name).cast(pl.Utf8).alias(feature.name)
 
@@ -127,15 +131,16 @@ class RedisSource(FeatureSource, WritableFeatureSource):
 
                         expr = pl.col(feature.name).apply(lambda x: json.dumps(x.to_list()))
 
-                    data = data.with_column(expr)
+                    request_data = request_data.with_column(expr)
                     features.append(feature.name)
 
-                redis_frame = data.select(features).collect()
+                redis_frame = request_data.select(features).collect()
 
                 for record in redis_frame.to_dicts():
                     pipe.hset(record['id'], mapping={key: value for key, value in record.items() if value})
-                    for key in record.items():
-                        if record[key] is None:
+                    for key, value in record.items():
+                        if value is None:
+                            logger.info(f"Deleting {key} from {record['id']}")
                             pipe.hdel(record['id'], key)
                 await pipe.execute()
 

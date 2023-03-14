@@ -1,8 +1,9 @@
 import numpy as np
+import polars as pl
 import pytest
 from redis.asyncio.client import Pipeline  # type: ignore
 
-from aligned.redis.config import RedisConfig
+from aligned.redis.config import RedisConfig, RedisSource
 from aligned.redis.job import FactualRedisJob
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import RetrivalJob
@@ -123,3 +124,31 @@ async def test_factual_redis_job_int_entity(mocker) -> None:  # type: ignore[no-
     redis_mock.assert_called_once()
     x_result = [int(value) for value in values] + [0]
     assert np.all(result['x'].fillna(0).values == x_result)
+
+
+@pytest.mark.asyncio
+async def test_write_job(mocker, retrival_request: RetrivalRequest) -> None:  # type: ignore[no-untyped-def]
+
+    import fakeredis.aioredis
+
+    redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
+
+    _ = mocker.patch.object(RedisConfig, 'redis', return_value=redis)
+
+    insert_facts = RetrivalJob.from_dict(
+        data={'id_int': [1.0, 2.0, 4.0, 5.0], 'id_str': ['a', 'b', 'c', None], 'x': [1, 2, 3, 4]},
+        request=retrival_request,
+    )
+    facts = RetrivalJob.from_dict(
+        data={'id_int': [1.0, 2.0, 4.0, 5.0], 'id_str': ['a', 'b', 'c', None]},
+        request=retrival_request,
+    )
+    config = RedisConfig.localhost()
+    source = RedisSource(config)
+
+    await source.write(insert_facts, [retrival_request])
+
+    job = FactualRedisJob(RedisConfig.localhost(), requests=[retrival_request], facts=facts)
+    data = await job.to_polars()
+
+    assert data.collect().select('x').to_series().series_equal(pl.Series('x', [1, 2, 3, None]))

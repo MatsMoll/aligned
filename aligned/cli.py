@@ -233,7 +233,14 @@ def serve_command(
     default='.env',
     help='The path to env variables',
 )
-async def serve_worker_command(repo_path: str, worker_path: str, env_file: str) -> None:
+@click.option(
+    '--prune-unused-features',
+    default=False,
+    help='Will only process features that are used in a model if set to True',
+)
+async def serve_worker_command(
+    repo_path: str, worker_path: str, env_file: str, prune_unused_features: bool
+) -> None:
     """
     Starts a API serving the feature store
     """
@@ -278,7 +285,7 @@ async def serve_worker_command(repo_path: str, worker_path: str, env_file: str) 
     os.environ['ALADDIN_ENABLE_SERVER'] = 'True'
     worker = await StreamWorker.from_object(dir, reference_file_path, obj)
 
-    await worker.start()
+    await worker.start(prune_unused_features)
 
 
 @cli.command('materialize')

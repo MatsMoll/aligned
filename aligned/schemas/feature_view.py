@@ -138,6 +138,11 @@ class CompiledFeatureView(Codable):
             derived_features.update(intermediate)
             aggregated_features.update(aggregated)
 
+        all_features = features.union(derived_features).union(
+            {feature.derived_feature for feature in aggregated_features}
+        )
+        exclude_names = {feature.name for feature in all_features} - feature_names
+
         return FeatureRequest(
             FeatureLocation.feature_view(self.name),
             feature_names,
@@ -150,6 +155,7 @@ class CompiledFeatureView(Codable):
                     derived_features=derived_features,
                     aggregated_features=aggregated_features,
                     event_timestamp=self.event_timestamp,
+                    features_to_exclude=exclude_names,
                 )
             ],
         )

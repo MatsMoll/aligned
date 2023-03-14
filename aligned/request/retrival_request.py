@@ -23,6 +23,24 @@ class RetrivalRequest(Codable):
     aggregated_features: set[AggregatedFeature] = field(default_factory=set)
     event_timestamp: EventTimestamp | None = field(default=None)
 
+    features_to_exclude: set[str] = field(default_factory=set)
+
+    def filter_features(self, feature_names: set[str]) -> 'RetrivalRequest':
+        return RetrivalRequest(
+            name=self.name,
+            location=self.location,
+            entities=self.entities,
+            features=self.features,
+            derived_features=self.derived_features,
+            aggregated_features=self.aggregated_features,
+            event_timestamp=self.event_timestamp,
+            features_to_exclude=self.features_to_exclude.union(self.all_feature_names - feature_names),
+        )
+
+    @property
+    def returned_features(self) -> set[Feature]:
+        return {feature for feature in self.all_features if feature.name not in self.features_to_exclude}
+
     @property
     def feature_names(self) -> list[str]:
         return [feature.name for feature in self.features]
@@ -110,6 +128,7 @@ class RetrivalRequest(Codable):
     @staticmethod
     def combine(requests: list['RetrivalRequest']) -> list['RetrivalRequest']:
         grouped_requests: dict[FeatureLocation, RetrivalRequest] = {}
+        returned_features: dict[FeatureLocation, set[Feature]] = {}
         entities = set()
         for request in requests:
             entities.update(request.entities)
@@ -124,11 +143,18 @@ class RetrivalRequest(Codable):
                     aggregated_features=request.aggregated_features,
                     event_timestamp=request.event_timestamp,
                 )
+                returned_features[fv_name] = request.returned_features
             else:
                 grouped_requests[fv_name].derived_features.update(request.derived_features)
                 grouped_requests[fv_name].features.update(request.features)
                 grouped_requests[fv_name].aggregated_features.update(request.aggregated_features)
                 grouped_requests[fv_name].entities.update(request.entities)
+                returned_features[fv_name].update(request.returned_features)
+
+        for request in grouped_requests.values():
+            request.features_to_exclude = request.features_to_exclude.union(
+                request.all_feature_names - {feature.name for feature in returned_features[request.location]}
+            )
 
         return list(grouped_requests.values())
 
