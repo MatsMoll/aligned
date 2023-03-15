@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import Any
@@ -8,8 +9,11 @@ import numpy as np
 import pandas as pd
 import polars as pl
 from mashumaro.types import SerializableType
+from pydantic import BaseModel, ValidationError
 
 from aligned.schemas.codable import Codable
+
+logger = logging.getLogger(__name__)
 
 
 class SupportedTextModels:
@@ -21,7 +25,7 @@ class SupportedTextModels:
     def __init__(self) -> None:
         self.types = {}
 
-        for tran_type in [GensimModel]:
+        for tran_type in [GensimModel, OpenAiEmbeddingModel]:
             self.add(tran_type)
 
     def add(self, transformation: type[TextVectoriserModel]) -> None:
@@ -64,6 +68,12 @@ class TextVectoriserModel(Codable, SerializableType):
     @staticmethod
     def gensim(model_name: str, config: GensimConfig | None = None) -> GensimModel:
         return GensimModel(model_name=model_name, config=config or GensimConfig())
+
+    @staticmethod
+    def openai(
+        model_name: str = 'text-embedding-ada-002', api_token_env_key: str = 'OPENAI_API_KEY'
+    ) -> OpenAiEmbeddingModel:
+        return OpenAiEmbeddingModel(model=model_name, api_token_env_key=api_token_env_key)
 
 
 @dataclass
@@ -155,3 +165,74 @@ class GensimModel(TextVectoriserModel):
         import gensim.downloader as gensim_downloader
 
         self.loaded_model = gensim_downloader.load(self.model_name)
+
+
+class OpenAiEmbedding(BaseModel):
+    index: int
+    embedding: list[float]
+
+
+class OpenAiResponse(BaseModel):
+    data: list[OpenAiEmbedding]
+
+
+@dataclass
+class OpenAiEmbeddingModel(TextVectoriserModel):
+
+    api_token_env_key: str = field(default='OPENAI_API_KEY')
+    model: str = field(default='text-embedding-ada-002')
+    name: str = 'openai'
+
+    async def embeddings(self, input: list[str]) -> OpenAiResponse:
+        # import openai
+        import os
+
+        # openai.api_key = os.environ[self.api_token_env_key]
+        # return openai.Embedding.create(
+        #     model="text-embedding-ada-002",
+        #     input=input
+        # )
+        from httpx import AsyncClient
+
+        api_token = os.environ[self.api_token_env_key]
+
+        assert isinstance(input, list)
+        for item in input:
+            assert item is not None
+            assert isinstance(item, str)
+            assert len(item) > 0
+            assert len(item) / 3 < 7000
+
+        try:
+            async with AsyncClient() as client:
+                json = {'model': self.model, 'input': input}
+                response = await client.post(
+                    url='https://api.openai.com/v1/embeddings',
+                    json=json,
+                    headers={'Authorization': f'Bearer {api_token}', 'Content-Type': 'application/json'},
+                )
+                response.raise_for_status()
+        except Exception as e:
+            logger.error(f'Error calling OpenAi Embeddings API: {e}')
+            logger.error(f'Input: {input}')
+            raise e
+
+        try:
+            return OpenAiResponse(**response.json())
+        except ValidationError as e:
+            logger.error(f'Response: {response.json()}')
+            logger.error(f'Error parsing OpenAi Embeddings API response: {e}')
+            raise e
+
+    async def load_model(self):
+        pass
+
+    async def vectorise_pandas(self, texts: pd.Series) -> pd.Series:
+        data = await self.embeddings(texts.tolist())
+        return pd.Series([embedding.embedding for embedding in data.data])
+
+    async def vectorise_polars(self, texts: pl.LazyFrame, text_key: str, output_key: str) -> pl.LazyFrame:
+        data = await self.embeddings(texts.select(text_key).collect().to_series().to_list())
+        return texts.with_column(
+            pl.Series(values=[embedding.embedding for embedding in data.data], name=output_key)
+        )

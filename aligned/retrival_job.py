@@ -122,6 +122,12 @@ class SupervisedJob:
     def with_subfeatures(self) -> SupervisedJob:
         return SupervisedJob(self.job.with_subfeatures(), self.target_columns)
 
+    def cached_at(self, location: DataFileReference | str) -> SupervisedJob:
+        return SupervisedJob(
+            self.job.cached_at(location),
+            self.target_columns,
+        )
+
 
 @dataclass
 class SupervisedTrainJob:
@@ -703,7 +709,15 @@ class FileCachedJob(RetrivalJob, ModificationJob):
         return df
 
     async def to_polars(self) -> pl.LazyFrame:
-        return await super().to_polars()
+        try:
+            logger.info('Trying to read cache file')
+            df = await self.location.to_polars()
+        except UnableToFindFileException:
+            logger.info('Unable to load file, so fetching from source')
+            df = await self.job.to_polars()
+            logger.info('Writing result to cache')
+            await self.location.write_polars(df)
+        return df
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         return self

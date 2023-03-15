@@ -94,10 +94,14 @@ class PostgreSqlJob(RetrivalJob):
 
     config: PostgreSQLConfig
     query: str
-    retrival_requests: list[RetrivalRequest] = field(default_factory=list)
+    requests: list[RetrivalRequest] = field(default_factory=list)
 
     def request_result(self) -> RequestResult:
         return RequestResult.from_request_list(self.retrival_requests)
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.requests
 
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.to_polars()

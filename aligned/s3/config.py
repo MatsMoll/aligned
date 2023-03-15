@@ -3,6 +3,7 @@ from datetime import datetime
 from io import BytesIO
 
 import pandas as pd
+import polars as pl
 from httpx import HTTPStatusError
 
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
@@ -49,7 +50,7 @@ class AwsS3Config(Codable):
         bucket = os.environ[self.bucket_env]
         return f'https://{region}.amazoneaws.com/{bucket}/'
 
-    def file_at(self, path: str, mapping_keys: dict[str, str] | None = None) -> 'AwsS3DataSource':
+    def json_at(self, path: str, mapping_keys: dict[str, str] | None = None) -> 'AwsS3DataSource':
         return AwsS3DataSource(config=self, path=path)
 
     def csv_at(
@@ -179,8 +180,24 @@ class AwsS3ParquetDataSource(BatchDataSource, DataFileReference, ColumnFeatureMa
         except HTTPStatusError:
             raise UnableToFindFileException()
 
+    async def to_polars(self) -> pl.LazyFrame:
+        try:
+            data = await self.storage.read(self.path)
+            buffer = BytesIO(data)
+            return pl.read_parquet(buffer).lazy()
+        except FileNotFoundError:
+            raise UnableToFindFileException()
+        except HTTPStatusError:
+            raise UnableToFindFileException()
+
     async def write_pandas(self, df: pd.DataFrame) -> None:
         buffer = BytesIO()
         df.to_parquet(buffer)
+        buffer.seek(0)
+        await self.storage.write(self.path, buffer.read())
+
+    async def write_polars(self, df: pl.LazyFrame) -> None:
+        buffer = BytesIO()
+        df.collect().write_parquet(buffer)
         buffer.seek(0)
         await self.storage.write(self.path, buffer.read())
