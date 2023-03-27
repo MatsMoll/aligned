@@ -534,6 +534,7 @@ class PandasTransformationFactory(TransformationFactory):
         return self._using_features
 
     def compile(self) -> Transformation:
+        import inspect
         import types
 
         import dill
@@ -543,12 +544,12 @@ class PandasTransformationFactory(TransformationFactory):
         if isinstance(self.method, types.LambdaType) and self.method.__name__ == '<lambda>':
             return PandasLambdaTransformation(
                 method=dill.dumps(self.method),
-                code=dill.source.getsource(self.method),
+                code=inspect.getsource(self.method).strip(),
                 dtype=self.dtype.dtype,
             )
         else:
             return PandasFunctionTransformation(
-                code=dill.source.getsource(self.method),
+                code=inspect.getsource(self.method),
                 function_name=dill.source.getname(self.method),
                 dtype=self.dtype.dtype,
             )

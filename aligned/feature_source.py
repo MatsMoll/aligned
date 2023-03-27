@@ -87,15 +87,15 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
         if request.location.identifier not in self.sources:
             raise ValueError(
                 (
-                    f"Unable to find feature view named '{request.name}'.",
+                    f"Unable to find feature view named '{request.location.identifier}'.",
                     'Make sure it is added to the featuer store',
                 )
             )
         return (
             self.sources[request.location.identifier]
             .all_data(request.needed_requests[0], limit)
-            .derive_features(request.needed_requests)
             .ensure_types(request.needed_requests)
+            .derive_features(request.needed_requests)
         )
 
     def all_between(self, start_date: datetime, end_date: datetime, request: FeatureRequest) -> RetrivalJob:
@@ -111,8 +111,8 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
         return (
             self.sources[request.location.identifier]
             .all_between_dates(request.needed_requests[0], start_date, end_date)
-            .derive_features(requests=request.needed_requests)
             .ensure_types(request.needed_requests)
+            .derive_features(requests=request.needed_requests)
         )
 
 

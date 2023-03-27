@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -248,20 +249,31 @@ class PandasFunctionTransformation(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         if self.function_name not in locals():
             exec(self.code)
-        return locals()[self.function_name](df)
+
+        loaded = locals()[self.function_name]
+        if asyncio.iscoroutinefunction(loaded):
+            return await loaded(df)
+        else:
+            return loaded(df)
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         pandas_df = df.collect().to_pandas()
         if self.function_name not in locals():
             exec(self.code)
-        pandas_df[alias] = locals()[self.function_name](pandas_df)
+
+        loaded = locals()[self.function_name]
+        if asyncio.iscoroutinefunction(loaded):
+            pandas_df[alias] = await loaded(pandas_df)
+        else:
+            pandas_df[alias] = loaded(pandas_df)
+
         return pl.from_pandas(pandas_df).lazy()
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
             transformation=PandasFunctionTransformation(
-                code='def test(df):\n    return df["a"] + df["b"]',
+                code='async def test(df):\n    return df["a"] + df["b"]',
                 function_name='test',
                 dtype=FeatureType('').int32,
             ),
@@ -293,7 +305,6 @@ class PandasLambdaTransformation(Transformation):
             return loaded(df)
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        import asyncio
 
         import dill
 
@@ -328,7 +339,12 @@ class PolarsFunctionTransformation(Transformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         if self.function_name not in locals():
             exec(self.code)
-        return locals()[self.function_name](df, alias)
+
+        loaded = locals()[self.function_name]
+        if asyncio.iscoroutinefunction(loaded):
+            return await loaded(df, alias)
+        else:
+            return loaded(df, alias)
 
 
 @dataclass
