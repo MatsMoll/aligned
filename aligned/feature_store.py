@@ -24,7 +24,7 @@ from aligned.schemas.feature import FeatureLocation
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.model import EventTrigger
 from aligned.schemas.model import Model as ModelSchema
-from aligned.schemas.repo_definition import EnricherReference, RepoDefinition
+from aligned.schemas.repo_definition import EnricherReference, RepoDefinition, RepoMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +88,12 @@ class FeatureStore:
     def experimental() -> 'FeatureStore':
         from aligned.online_source import BatchOnlineSource
 
-        return FeatureStore.from_definition(RepoDefinition(online_source=BatchOnlineSource()))
+        return FeatureStore.from_definition(
+            RepoDefinition(
+                metadata=RepoMetadata(created_at=datetime.utcnow(), name='experimental'),
+                online_source=BatchOnlineSource(),
+            )
+        )
 
     @staticmethod
     def register_enrichers(enrichers: list[EnricherReference]) -> None:
@@ -159,6 +164,7 @@ class FeatureStore:
 
     def repo_definition(self) -> RepoDefinition:
         return RepoDefinition(
+            metadata=RepoMetadata(datetime.utcnow(), 'feature_store_location.py'),
             feature_views=set(self.feature_views.values()),
             combined_feature_views=set(self.combined_feature_views.values()),
             models=set(self.models.values()),
