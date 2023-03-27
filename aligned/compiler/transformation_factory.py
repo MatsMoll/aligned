@@ -534,16 +534,31 @@ class PandasTransformationFactory(TransformationFactory):
         return self._using_features
 
     def compile(self) -> Transformation:
-        from aligned.schemas.transformation import PandasTransformation
+        import types
 
-        return PandasTransformation(method=self.method, dtype=self.dtype.dtype)
+        import dill
+
+        from aligned.schemas.transformation import PandasFunctionTransformation, PandasLambdaTransformation
+
+        if isinstance(self.method, types.LambdaType) and self.method.__name__ == '<lambda>':
+            return PandasLambdaTransformation(
+                method=dill.dumps(self.method),
+                code=dill.source.getsource(self.method),
+                dtype=self.dtype.dtype,
+            )
+        else:
+            return PandasFunctionTransformation(
+                code=dill.source.getsource(self.method),
+                function_name=dill.source.getname(self.method),
+                dtype=self.dtype.dtype,
+            )
 
 
 @dataclass
 class PolarsTransformationFactory(TransformationFactory):
 
     dtype: FeatureFactory
-    method: pl.Expr
+    method: pl.Expr | Callable[[pl.LazyFrame, pl.Expr], pl.LazyFrame]
     _using_features: list[FeatureFactory]
 
     @property
@@ -551,11 +566,28 @@ class PolarsTransformationFactory(TransformationFactory):
         return self._using_features
 
     def compile(self) -> Transformation:
+        import types
+
         import dill
 
-        from aligned.schemas.transformation import PolarsTransformation
+        from aligned.schemas.transformation import PolarsFunctionTransformation, PolarsLambdaTransformation
 
-        return PolarsTransformation(method=dill.dumps(self.method), dtype=self.dtype.dtype)
+        code = dill.source.getsource(self.method)
+
+        if isinstance(self.method, pl.Expr):
+            code = str(self.method)
+            self.method = lambda df, alias: df.with_column(self.method.alias(alias))
+
+        if isinstance(self.method, types.LambdaType) and self.method.__name__ == '<lambda>':
+            return PolarsLambdaTransformation(
+                method=dill.dumps(self.method), code=code, dtype=self.dtype.dtype
+            )
+        else:
+            return PolarsFunctionTransformation(
+                code=code,
+                function_name=dill.source.getname(self.method),
+                dtype=self.dtype.dtype,
+            )
 
 
 class AggregatableTransformation:

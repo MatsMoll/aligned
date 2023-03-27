@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -141,7 +142,16 @@ class EnricherReference(Codable):
 
 
 @dataclass
+class RepoMetadata(Codable):
+    created_at: datetime
+    name: str
+    github_url: str | None = field(default=None)
+
+
+@dataclass
 class RepoDefinition(Codable):
+
+    metadata: RepoMetadata
 
     online_source: OnlineSource
 

@@ -14,7 +14,7 @@ import polars as pl
 
 from aligned.exceptions import UnableToFindFileException
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
-from aligned.schemas.feature import FeatureType
+from aligned.schemas.feature import Feature, FeatureType
 from aligned.split_strategy import (
     SplitDataSet,
     SplitStrategy,
@@ -128,6 +128,21 @@ class SupervisedJob:
             self.target_columns,
         )
 
+    def validate(self, validator: Validator) -> SupervisedJob:
+        return SupervisedJob(
+            self.job.validate(validator),
+            self.target_columns,
+        )
+
+    def log_each_job(self) -> SupervisedJob:
+        return SupervisedJob(
+            self.job.log_each_job(),
+            self.target_columns,
+        )
+
+    def describe(self) -> str:
+        return f'{self.job.describe()} with target columns {self.target_columns}'
+
 
 @dataclass
 class SupervisedTrainJob:
@@ -136,21 +151,34 @@ class SupervisedTrainJob:
     train_size: float
 
     async def to_pandas(self) -> TrainTestSet[pd.DataFrame]:
-        data = await self.job.to_pandas()
+        core_data = await self.job.to_polars()
+        data = core_data.data.collect()
+        data = data.to_pandas()
 
         test_ratio_start = self.train_size
         return TrainTestSet(
-            data=data.data,
-            entity_columns=data.entity_columns,
-            features=data.features,
-            target=data.target,
-            train_index=split(data.data, 0, test_ratio_start, data.event_timestamp_column),
-            test_index=split(data.data, test_ratio_start, 1, data.event_timestamp_column),
-            event_timestamp_column=data.event_timestamp_column,
+            data=data,
+            entity_columns=core_data.entity_columns,
+            features=core_data.features,
+            target_columns=core_data.target_columns,
+            train_index=split(data, 0, test_ratio_start, core_data.event_timestamp_column),
+            test_index=split(data, test_ratio_start, 1, core_data.event_timestamp_column),
+            event_timestamp_column=core_data.event_timestamp_column,
         )
 
     async def to_polars(self) -> TrainTestSet[pl.DataFrame]:
-        raise NotImplementedError()
+        # Use the pandas method, as the split is not created for polars yet
+        # A but unsure if I should use the same index concept for polars
+        pandas_data = await self.to_pandas()
+        return TrainTestSet(
+            data=pl.from_pandas(pandas_data.data),
+            entity_columns=pandas_data.entity_columns,
+            features=pandas_data.features,
+            target_columns=pandas_data.target_columns,
+            train_index=pandas_data.train_index,
+            test_index=pandas_data.test_index,
+            event_timestamp_column=pandas_data.event_timestamp_column,
+        )
 
     def validation_set(self, validation_size: float) -> SupervisedValidationJob:
         return SupervisedValidationJob(self, validation_size)
@@ -172,7 +200,7 @@ class SupervisedValidationJob:
             data=data.data,
             entity_columns=set(data.entity_columns),
             features=data.features,
-            target=data.target,
+            target=data.target_columns,
             train_index=split(data.data, 0, test_start, data.event_timestamp_column),
             test_index=split(data.data, test_start, validate_start, data.event_timestamp_column),
             validate_index=split(data.data, validate_start, 1, data.event_timestamp_column),
@@ -183,7 +211,7 @@ class SupervisedValidationJob:
         data = await self.to_pandas()
 
         return TrainTestValidateSet(
-            data=data.data,
+            data=pl.from_pandas(data.data),
             entity_columns=data.entity_columns,
             features=data.features,
             target=data.target,
@@ -215,7 +243,14 @@ class RetrivalJob(ABC):
     async def to_polars(self) -> pl.LazyFrame:
         raise NotImplementedError()
 
+    def describe(self) -> str:
+        if isinstance(self, ModificationJob):
+            return f'{self.job.describe()} -> {self.__class__.__name__}'
+        raise NotImplementedError(f'Describe not implemented for {self.__class__.__name__}')
+
     def remove_derived_features(self) -> RetrivalJob:
+        if isinstance(self, ModificationJob):
+            return self.copy_with(self.job.remove_derived_features())
         return self
 
     def log_each_job(self) -> RetrivalJob:
@@ -245,7 +280,7 @@ class RetrivalJob(ABC):
     def train_set(self, train_size: float, target_column: str) -> SupervisedTrainJob:
         return SupervisedJob(self, {target_column}).train_set(train_size=train_size)
 
-    def validate(self, validator: Validator) -> ValidationJob:
+    def validate(self, validator: Validator) -> RetrivalJob:
         return ValidationJob(self, validator)
 
     def derive_features(self, requests: list[RetrivalRequest]) -> RetrivalJob:
@@ -352,13 +387,19 @@ class ValidationJob(RetrivalJob, ModificationJob):
     def retrival_requests(self) -> list[RetrivalRequest]:
         return self.job.retrival_requests
 
+    @property
+    def features_to_validate(self) -> set[Feature]:
+        return RequestResult.from_request_list(self.retrival_requests).features
+
     async def to_pandas(self) -> pd.DataFrame:
         return await self.validator.validate_pandas(
-            list(self.request_result.features), await self.job.to_pandas()
+            list(self.features_to_validate), await self.job.to_pandas()
         )
 
     async def to_polars(self) -> pl.LazyFrame:
-        raise NotImplementedError()
+        return await self.validator.validate_polars(
+            list(self.features_to_validate), await self.job.to_polars()
+        )
 
     def with_subfeatures(self) -> RetrivalJob:
         return ValidationJob(self.job.with_subfeatures(), self.validator)
@@ -441,7 +482,7 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
         return await self.compute_derived_features_polars(await self.job.to_polars())
 
     def remove_derived_features(self) -> RetrivalJob:
-        return self.job
+        return self.job.remove_derived_features()
 
 
 @dataclass
@@ -819,16 +860,28 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                 if feature.dtype == FeatureType('').bool:
                     df = df.with_column(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
                 elif feature.dtype == FeatureType('').datetime:
+                    current_dtype = df.select([feature.name]).dtypes[0]
+                    if isinstance(current_dtype, pl.Datetime):
+                        continue
                     # Convert from ms to us
                     df = df.with_column(
-                        (pl.col(feature.name).cast(pl.Int64) * 1000).cast(pl.Datetime(time_zone='UTC'))
+                        (pl.col(feature.name).cast(pl.Int64) * 1000)
+                        .cast(pl.Datetime(time_zone='UTC'))
+                        .alias(feature.name)
                     )
                 else:
                     df = df.with_column(pl.col(feature.name).cast(feature.dtype.polars_type, strict=False))
             if request.event_timestamp:
                 feature = request.event_timestamp
+                if feature.name not in df.columns:
+                    continue
+                current_dtype = df.select([feature.name]).dtypes[0]
+                if isinstance(current_dtype, pl.Datetime):
+                    continue
                 df = df.with_column(
-                    (pl.col(feature.name).cast(pl.Int64) * 1000).cast(pl.Datetime(time_zone='UTC'))
+                    (pl.col(feature.name).cast(pl.Int64) * 1000)
+                    .cast(pl.Datetime(time_zone='UTC'))
+                    .alias(feature.name)
                 )
         return df
 
@@ -952,6 +1005,12 @@ class CombineFactualJob(RetrivalJob):
     def remove_derived_features(self) -> RetrivalJob:
         return CombineFactualJob([job.remove_derived_features() for job in self.jobs], self.combined_requests)
 
+    def describe(self) -> str:
+        description = f'Combining {len(self.jobs)} jobs:\n'
+        for index, job in enumerate(self.jobs):
+            description += f'{index + 1}: {job.describe()}\n'
+        return description
+
 
 @dataclass
 class FilterJob(RetrivalJob, ModificationJob):
@@ -985,6 +1044,9 @@ class FilterJob(RetrivalJob, ModificationJob):
             return df.select(total_list)
         else:
             return df
+
+    def validate(self, validator: Validator) -> RetrivalJob:
+        return FilterJob(self.include_features, self.job.validate(validator))
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
 

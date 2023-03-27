@@ -50,6 +50,8 @@ class Model(Codable):
     features: set[FeatureReferance]
     predictions_view: PredictionsView
     description: str | None = field(default=None)
+    contacts: list[str] | None = field(default=None)
+    tags: dict[str, str] | None = field(default=None)
 
     def __hash__(self) -> int:
         return self.name.__hash__()

@@ -38,16 +38,9 @@ def make_tzaware(t: datetime) -> datetime:
 
 
 def load_envs(path: Path) -> None:
-    if path.is_file():
-        import os
+    from dotenv import load_dotenv
 
-        with path.open() as file:
-            for line in file:
-                if len(line) < 3:
-                    continue
-                key, value = line.strip().split('=')
-                os.environ[key] = value
-    else:
+    if not load_dotenv(path):
         click.echo(f'No env file found at {path}')
 
 

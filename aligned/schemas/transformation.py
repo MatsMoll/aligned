@@ -169,8 +169,9 @@ class SupportedTransformations:
             Equals,
             NotEquals,
             NotNull,
-            PandasTransformation,
-            PolarsTransformation,
+            PandasLambdaTransformation,
+            PandasFunctionTransformation,
+            PolarsLambdaTransformation,
             Ratio,
             Contains,
             GreaterThen,
@@ -231,34 +232,112 @@ class SupportedTransformations:
 
 
 @dataclass
-class PandasTransformation(Transformation):
+class PandasFunctionTransformation(Transformation):
+    """
+    This will encode a custom method, that is not a lambda function
+    Threfore, we will stort the actuall code, and dynamically load it on runtime.
 
-    method: bytes
+    This is unsafe, but will remove the ModuleImportError for custom methods
+    """
+
+    code: str
+    function_name: str
     dtype: FeatureType
-    name: str = 'pandas_tran'
+    name: str = 'pandas_code_tran'
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        if self.function_name not in locals():
+            exec(self.code)
+        return locals()[self.function_name](df)
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        pandas_df = df.collect().to_pandas()
+        if self.function_name not in locals():
+            exec(self.code)
+        pandas_df[alias] = locals()[self.function_name](pandas_df)
+        return pl.from_pandas(pandas_df).lazy()
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            transformation=PandasFunctionTransformation(
+                code='def test(df):\n    return df["a"] + df["b"]',
+                function_name='test',
+                dtype=FeatureType('').int32,
+            ),
+            input={
+                'a': [1, 2, 3, 4, 5],
+                'b': [1, 2, 3, 4, 5],
+            },
+            output=[2, 4, 6, 8, 10],
+        )
+
+
+@dataclass
+class PandasLambdaTransformation(Transformation):
+
+    method: bytes
+    code: str
+    dtype: FeatureType
+    name: str = 'pandas_lambda_tran'
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        import asyncio
+
         import dill
 
         loaded = dill.loads(self.method)
-        return await loaded(df)
+        if asyncio.iscoroutinefunction(loaded):
+            return await loaded(df)
+        else:
+            return loaded(df)
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        import asyncio
+
         import dill
 
         pandas_df = df.collect().to_pandas()
         loaded = dill.loads(self.method)
-        pandas_df[alias] = await loaded(pandas_df)
+        if asyncio.iscoroutinefunction(loaded):
+            pandas_df[alias] = await loaded(pandas_df)
+        else:
+            pandas_df[alias] = loaded(pandas_df)
 
         return pl.from_pandas(pandas_df).lazy()
 
 
 @dataclass
-class PolarsTransformation(Transformation):
+class PolarsFunctionTransformation(Transformation):
+    """
+    This will encode a custom method, that is not a lambda function
+    Threfore, we will stort the actuall code, and dynamically load it on runtime.
+
+    This is unsafe, but will remove the ModuleImportError for custom methods
+    """
+
+    code: str
+    function_name: str
+    dtype: FeatureType
+    name: str = 'pandas_code_tran'
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        polars_df = await self.transform_polars(pl.from_pandas(df).lazy(), self.function_name)
+        return polars_df.collect().to_pandas()[self.function_name]
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        if self.function_name not in locals():
+            exec(self.code)
+        return locals()[self.function_name](df, alias)
+
+
+@dataclass
+class PolarsLambdaTransformation(Transformation):
 
     method: bytes
+    code: str
     dtype: FeatureType
-    name: str = 'polars_tran'
+    name: str = 'polars_lambda_tran'
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         import dill
@@ -271,8 +350,8 @@ class PolarsTransformation(Transformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         import dill
 
-        expr: pl.Expr = dill.loads(self.method)
-        return df.with_column(expr.alias(alias))
+        tran: Callable[[pl.LazyFrame, str], pl.LazyFrame] = dill.loads(self.method)
+        return tran(df, alias)
 
 
 @dataclass
@@ -899,6 +978,8 @@ class DateComponent(Transformation):
                 expr = col.weekday()
             case 'year':
                 expr = col.year()
+            case 'dayofweek':
+                expr = col.weekday()
             case _:
                 raise NotImplementedError(
                     f'Date component {self.component} is not implemented. Maybe setup a PR and contribute?'

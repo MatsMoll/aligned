@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from importlib import import_module
 from inspect import getmro, isclass
 from pathlib import Path
@@ -6,7 +7,7 @@ from typing import Any
 
 from aligned.enricher import Enricher
 from aligned.online_source import BatchOnlineSource, OnlineSource
-from aligned.schemas.repo_definition import EnricherReference, RepoDefinition, RepoReference
+from aligned.schemas.repo_definition import EnricherReference, RepoDefinition, RepoMetadata, RepoReference
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +77,10 @@ class RepoReader:
 
     @staticmethod
     async def definition_from_path(repo_path: Path) -> RepoDefinition:
+
+        metadata = RepoMetadata(created_at=datetime.now(), name=repo_path.name, github_url=None)
         repo = RepoDefinition(
+            metadata=metadata,
             feature_views=set(),
             combined_feature_views=set(),
             models=set(),

@@ -1,10 +1,9 @@
 import logging
 from abc import ABC, abstractproperty
 from dataclasses import dataclass
-from typing import Callable
 
 from aligned.compiler.feature_factory import FeatureFactory
-from aligned.feature_view.feature_view import FeatureSelectable, FeatureView, FVType
+from aligned.feature_view.feature_view import FeatureView
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import FeatureLocation
@@ -21,7 +20,7 @@ class CombinedFeatureViewMetadata:
     owner: str | None = None
 
 
-class CombinedFeatureView(ABC, FeatureSelectable):
+class CombinedFeatureView(ABC):
     @abstractproperty
     def metadata(self) -> CombinedFeatureViewMetadata:
         pass
@@ -59,7 +58,6 @@ class CombinedFeatureView(ABC, FeatureSelectable):
                 feature_view_deps[FeatureLocation.feature_view(feature.metadata.name)] = feature.compile()
             if isinstance(feature, FeatureFactory):
                 feature._location = FeatureLocation.combined_view(var_name)
-                feature._name = var_name  # Needed in some cases for later inferance and features
                 if not feature.transformation:
                     logger.info('Feature had no transformation, which do not make sense in a CombinedView')
                     continue
@@ -74,15 +72,3 @@ class CombinedFeatureView(ABC, FeatureSelectable):
             features=transformations,
             feature_referances=requests,
         )
-
-    @classmethod
-    def select(
-        cls: type[FVType], features: Callable[[type[FVType]], list[FeatureFactory]]
-    ) -> RetrivalRequest:
-        view: CompiledCombinedFeatureView = cls.compile()  # type: ignore[attr-defined]
-        names = features(cls)
-        return view.requests_for({feat.name for feat in names})
-
-    @classmethod
-    def select_all(cls: type[FVType]) -> RetrivalRequest:
-        return cls.compile().request_all  # type: ignore[attr-defined]

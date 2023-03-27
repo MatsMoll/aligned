@@ -30,7 +30,8 @@ class PostgreSQLConfig(Codable):
     def from_url(url: str) -> PostgreSQLConfig:
         import os
 
-        os.environ['PSQL_DATABASE'] = url
+        if 'PSQL_DATABASE' not in os.environ:
+            os.environ['PSQL_DATABASE'] = url
         return PostgreSQLConfig(env_var='PSQL_DATABASE')
 
     @staticmethod

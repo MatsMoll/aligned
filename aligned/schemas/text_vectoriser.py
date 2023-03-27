@@ -25,7 +25,7 @@ class SupportedTextModels:
     def __init__(self) -> None:
         self.types = {}
 
-        for tran_type in [GensimModel, OpenAiEmbeddingModel]:
+        for tran_type in [GensimModel, OpenAiEmbeddingModel, HuggingFaceTransformer]:
             self.add(tran_type)
 
     def add(self, transformation: type[TextVectoriserModel]) -> None:
@@ -74,6 +74,10 @@ class TextVectoriserModel(Codable, SerializableType):
         model_name: str = 'text-embedding-ada-002', api_token_env_key: str = 'OPENAI_API_KEY'
     ) -> OpenAiEmbeddingModel:
         return OpenAiEmbeddingModel(model=model_name, api_token_env_key=api_token_env_key)
+
+    @staticmethod
+    def huggingface(model_name: str) -> HuggingFaceTransformer:
+        return HuggingFaceTransformer(model=model_name)
 
 
 @dataclass
@@ -236,3 +240,31 @@ class OpenAiEmbeddingModel(TextVectoriserModel):
         return texts.with_column(
             pl.Series(values=[embedding.embedding for embedding in data.data], name=output_key)
         )
+
+
+@dataclass
+class HuggingFaceTransformer(TextVectoriserModel):
+
+    model: str
+    name: str = 'huggingface'
+    loaded_model: Any = field(default=None)
+
+    async def load_model(self):
+        from sentence_transformers import SentenceTransformer
+
+        self.loaded_model = SentenceTransformer(self.model)
+
+    async def vectorise_polars(self, texts: pl.LazyFrame, text_key: str, output_key: str) -> pl.LazyFrame:
+        if self.loaded_model is None:
+            await self.load_model()
+        return texts.with_column(
+            pl.Series(
+                self.loaded_model.encode(texts.select(pl.col(text_key)).collect().to_series().to_list())
+            ).alias(output_key)
+        )
+        pass
+
+    async def vectorise_pandas(self, texts: pd.Series) -> pd.Series:
+        if self.loaded_model is None:
+            await self.load_model()
+        return pd.Series(self.loaded_model.encode(texts.tolist()))

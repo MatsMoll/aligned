@@ -13,9 +13,6 @@ async def test_all_features(
 
     features = await store.feature_view(feature_view.metadata.name).all().to_pandas()
 
-    for feature in type(breast_scan_feature_viewout_with_datetime).select_all().features_to_include:
-        assert feature in features.columns
-
     assert 'is_malignant' in features.columns
     assert not features['is_malignant'].isna().any()
     assert 'diagnosis' in features.columns

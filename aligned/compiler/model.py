@@ -58,6 +58,8 @@ class ModelMetedata:
     features: list[FeatureReferencable]
     # Will log the feature inputs to a model. Therefore, enabling log and wait etc.
     # feature_logger: WritableBatchSource | None = field(default=None)
+    contacts: list[str] | None = field(default=None)
+    tags: dict[str, str] | None = field(default=None)
     description: str | None = field(default=None)
     predictions_source: BatchDataSource | None = field(default=None)
     predictions_stream: StreamDataSource | None = field(default=None)
@@ -69,10 +71,14 @@ class Model(ABC):
         name: str,
         description: str,
         features: list[FeatureReferencable],
+        contacts: list[str] | None = None,
+        tags: dict[str, str] | None = None,
         predictions_source: BatchDataSource | None = None,
         predictions_stream: StreamDataSource | None = None,
     ) -> ModelMetedata:
-        return ModelMetedata(name, features, description, predictions_source, predictions_stream)
+        return ModelMetedata(
+            name, features, contacts, tags, description, predictions_source, predictions_stream
+        )
 
     @abstractproperty
     def metadata(self) -> ModelMetedata:
@@ -92,7 +98,6 @@ class Model(ABC):
             feature = getattr(cls, var_name)
 
             if isinstance(feature, FeatureFactory):
-                feature._name = var_name
                 feature._location = FeatureLocation.model(metadata.name)
 
             if isinstance(feature, FeatureView):
@@ -102,10 +107,10 @@ class Model(ABC):
                 compiled = feature.compile()
                 inference_view.entities.update(compiled.predictions_view.entities)
             elif isinstance(feature, Target):
-                feature._name = var_name
+                assert feature._name
                 feature._location = FeatureLocation.model(metadata.name)
                 target_feature = feature.feature.copy_type()
-                target_feature._name = var_name
+                target_feature._name = feature._name
                 target_feature._location = FeatureLocation.model(metadata.name)
                 trigger: EventTrigger | None = None
 
@@ -135,7 +140,7 @@ class Model(ABC):
 
             elif isinstance(feature, TargetProbability):
                 feature_name = feature.target._name
-                feature._name = var_name
+                assert feature._name
                 inference_view.features.add(
                     Feature(
                         var_name,
@@ -173,4 +178,11 @@ class Model(ABC):
         if not probability_features:
             inference_view.features.update({target.feature for target in inference_view.target})
 
-        return ModelSchema(name=metadata.name, features=features, predictions_view=inference_view)
+        return ModelSchema(
+            name=metadata.name,
+            features=features,
+            predictions_view=inference_view,
+            contacts=metadata.contacts,
+            tags=metadata.tags,
+            description=metadata.description,
+        )

@@ -115,6 +115,9 @@ class PostgreSqlJob(RetrivalJob):
             logger.error(f'Error: {e}')
             raise e
 
+    def describe(self) -> str:
+        return f'PostgreSQL Job: \n{self.query}\n'
+
 
 @dataclass
 class FullExtractPsqlJob(FullExtractJob):
@@ -257,6 +260,16 @@ class FactPsqlJob(FactualRetrivalJob):
     def config(self) -> PostgreSQLConfig:
         return list(self.sources.values())[0].config
 
+    def describe(self) -> str:
+        if isinstance(self.facts, PostgreSqlJob):
+            psql_job = self.build_sql_entity_query(self.facts)
+            return f'Loading features for {self.facts.describe()}\n\nQuery: {psql_job}'
+        else:
+            raise ValueError(
+                'Only PostgreSqlJob is supported as facts when describing,'
+                f'but fetching features for facts: {self.facts.describe()}'
+            )
+
     async def to_pandas(self) -> pd.DataFrame:
         job = await self.psql_job()
         return await job.to_pandas()
@@ -294,18 +307,6 @@ class FactPsqlJob(FactualRetrivalJob):
             SqlColumn(db_field_name, feature)
             for feature, db_field_name in zip(field_selects, field_identifiers)
         }
-        derived_features = [
-            feature
-            for feature in request.derived_features
-            if isinstance(feature.transformation, PsqlTransformation)
-        ]
-        derived_alias = source.feature_identifier_for([feature.name for feature in derived_features])
-        derived_selects = {
-            SqlColumn(feature.transformation.as_psql(), name)
-            for feature, name in zip(derived_features, derived_alias)
-            if isinstance(feature.transformation, PsqlTransformation)
-        }
-        selects = selects.union(derived_selects)
 
         entities = list(request.entity_names)
         entity_db_name = source.feature_identifier_for(entities)
@@ -324,7 +325,7 @@ class FactPsqlJob(FactualRetrivalJob):
         if event_timestamp_clause:
             join_conditions.append(event_timestamp_clause)
 
-        return TableFetch(
+        rename_fetch = TableFetch(
             name=f'{request.name}_cte',
             id_column='row_id',
             table=source.table,
@@ -332,6 +333,29 @@ class FactPsqlJob(FactualRetrivalJob):
             joins=join_conditions,
             order_by=sort_query,
         )
+
+        derived_features = [
+            feature
+            for feature in request.derived_features
+            if isinstance(feature.transformation, PsqlTransformation)
+            and all([field in field_selects for field in feature.depending_on_names])
+        ]
+        if derived_features:
+            derived_alias = source.feature_identifier_for([feature.name for feature in derived_features])
+            derived_selects = {
+                SqlColumn(feature.transformation.as_psql(), name)
+                for feature, name in zip(derived_features, derived_alias)
+                if isinstance(feature.transformation, PsqlTransformation)
+            }.union({SqlColumn('*', '*')})
+
+            return TableFetch(
+                name=rename_fetch.name,
+                id_column=rename_fetch.id_column,
+                table=rename_fetch,
+                columns=derived_selects,
+            )
+        else:
+            return rename_fetch
 
     def sql_aggregated_request(
         self, window: AggregateOver, features: set[AggregatedFeature], request: RetrivalRequest
@@ -355,7 +379,7 @@ class FactPsqlJob(FactualRetrivalJob):
 
         aggregates = {
             SqlColumn(
-                feature.derived_feature.transformation.as_sql(),
+                feature.derived_feature.transformation.as_psql(),
                 feature.name,
             )
             for feature in features
@@ -365,8 +389,9 @@ class FactPsqlJob(FactualRetrivalJob):
         event_timestamp_clause: str | None = None
         if request.event_timestamp:
             id_column = 'row_id'
+            group_by_names = {id_column}
             # Use row_id as the main join key
-            event_timestamp_name = request.event_timestamp.name
+            event_timestamp_name = source.feature_identifier_for([request.event_timestamp.name])[0]
             if window.window:
                 time_window_config = window.window
                 window_in_seconds = int(time_window_config.time_window.total_seconds())
@@ -393,17 +418,43 @@ class FactPsqlJob(FactualRetrivalJob):
             for feature, db_field_name in zip(field_selects, field_identifiers)
         }
 
+        rename_table = TableFetch(
+            name='ta',
+            id_column='row_id',
+            table=source.table,
+            columns=selects,
+            joins=join_conditions,
+        )
+
+        needed_derived_features = set()
+        derived_map = request.derived_feature_map()
+
+        for agg_feature in request.aggregated_features:
+            for depended in agg_feature.depending_on_names:
+                if depended in derived_map:
+                    needed_derived_features.add(derived_map[depended])
+
+        if needed_derived_features:
+            features = {
+                SqlColumn(feature.transformation.as_psql(), feature.name)
+                for feature in needed_derived_features
+            }.union(
+                {SqlColumn('*', '*')}
+            )  # Need the * in order to select the "original values"
+            select_table = TableFetch(
+                name='derived',
+                id_column=rename_table.id_column,
+                table=rename_table,
+                columns=features,
+            )
+        else:
+            select_table = rename_table
+
         return TableFetch(
             name=name,
             id_column=id_column,
             # Need to do a subquery, in order to renmae the core features
-            table=TableFetch(
-                name='ta',
-                id_column='row_id',
-                table=source.table,
-                columns=selects,
-                joins=join_conditions,
-            ),
+            table=select_table,
             columns=aggregates.union(group_by_selects),
             group_by=list(group_by_names),
         )

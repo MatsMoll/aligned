@@ -95,6 +95,26 @@ class UpperBoundInclusive(Constraint):
 
 
 @dataclass
+class MinLength(Constraint):
+    value: int
+
+    name = 'min_length'
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+@dataclass
+class MaxLength(Constraint):
+    value: int
+
+    name = 'max_length'
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+@dataclass
 class And(Constraint):
 
     left: Constraint

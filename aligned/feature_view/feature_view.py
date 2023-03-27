@@ -1,16 +1,10 @@
 from abc import ABC, abstractproperty
 from dataclasses import dataclass, field
-from typing import Callable, TypeVar
+from typing import TypeVar
 
-from aligned.compiler.feature_factory import (
-    AggregationTransformationFactory,
-    Entity,
-    EventTimestamp,
-    FeatureFactory,
-)
+from aligned.compiler.feature_factory import AggregationTransformationFactory, Entity, EventTimestamp
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
-from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, AggregationTimeWindow
 from aligned.schemas.feature import FeatureLocation, FeatureReferance
 from aligned.schemas.feature_view import CompiledFeatureView
@@ -19,24 +13,13 @@ from aligned.schemas.feature_view import CompiledFeatureView
 FVType = TypeVar('FVType')
 
 
-class FeatureSelectable:
-    @classmethod
-    def select(
-        cls: type[FVType], features: Callable[[type[FVType]], list[FeatureFactory]]
-    ) -> RetrivalRequest:
-        pass
-
-    @classmethod
-    def select_all(cls: type[FVType]) -> RetrivalRequest:
-        pass
-
-
 @dataclass
 class FeatureViewMetadata:
     name: str
     description: str
     batch_source: BatchDataSource
     stream_source: StreamDataSource | None = field(default=None)
+    contacts: list[str] | None = field(default=None)
     tags: dict[str, str] = field(default_factory=dict)
 
     @staticmethod
@@ -50,7 +33,7 @@ class FeatureViewMetadata:
         )
 
 
-class FeatureView(ABC, FeatureSelectable):
+class FeatureView(ABC):
     """
     A collection of features, and a way to combine them.
 
@@ -62,28 +45,24 @@ class FeatureView(ABC, FeatureSelectable):
         pass
 
     @staticmethod
-    def metedata_with(
+    def metadata_with(
         name: str,
         description: str,
         batch_source: BatchDataSource,
         stream_source: StreamDataSource | None = None,
+        contacts: list[str] | None = None,
         tags: dict[str, str] | None = None,
     ) -> FeatureViewMetadata:
         from aligned import HttpStreamSource
 
         return FeatureViewMetadata(
-            name, description, batch_source, stream_source or HttpStreamSource(name), tags or {}
+            name,
+            description,
+            batch_source,
+            stream_source or HttpStreamSource(name),
+            contacts=contacts,
+            tags=tags or {},
         )
-
-    @classmethod
-    def select(cls: type[FVType], features: Callable[[type[FVType]], list[FeatureFactory]]) -> FeatureRequest:
-        view: CompiledFeatureView = cls.compile()  # type: ignore
-        names = features(cls)
-        return view.request_for({feature.name for feature in names if feature.name})
-
-    @classmethod
-    def select_all(cls: type[FVType]) -> FeatureRequest:
-        return cls.compile().request_all  # type: ignore
 
     @classmethod
     def compile(cls) -> CompiledFeatureView:
@@ -146,6 +125,7 @@ class FeatureView(ABC, FeatureSelectable):
                             continue
 
                     if depth == 0:
+                        # The raw value and the transformed have the same name
                         feature_dep._name = var_name
                         feat_dep = feature_dep.feature()
                         view.features.add(feat_dep)

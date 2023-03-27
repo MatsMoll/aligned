@@ -64,15 +64,11 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
             request for request in request.needed_requests if request.location.identifier not in self.sources
         ]
         jobs = [
-            self.source_types[source_group]
-            .multi_source_features_for(
+            self.source_types[source_group].multi_source_features_for(
                 facts=facts,
                 requests=[
                     (source, req) for source, req in core_requests if source.job_group_key() == source_group
                 ],
-            )
-            .derive_features(
-                requests=[req for source, req in core_requests if source.job_group_key() == source_group]
             )
             for source_group in source_groupes
         ]

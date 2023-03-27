@@ -83,6 +83,9 @@ class FeatureType(Codable):
             return self.name == other.name
         return False
 
+    def __hash__(self) -> int:
+        return self.name.__hash__()
+
     @property
     def string(self) -> 'FeatureType':
         return FeatureType(name='string')

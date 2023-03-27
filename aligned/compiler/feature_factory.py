@@ -14,6 +14,8 @@ from aligned.schemas.constraints import (
     InDomain,
     LowerBound,
     LowerBoundInclusive,
+    MaxLength,
+    MinLength,
     UpperBound,
     UpperBoundInclusive,
 )
@@ -78,6 +80,9 @@ class TargetProbability:
     def __hash__(self) -> int:
         return self._name.__hash__()
 
+    def __set_name__(self, owner, name):
+        self._name = name
+
 
 class FeatureReferencable:
     def feature_referance(self) -> FeatureReferance:
@@ -91,6 +96,9 @@ class Target(FeatureReferencable):
     ground_truth_event: StreamDataSource | None = field(default=None)
     _name: str | None = field(default=None)
     _location: FeatureLocation | None = field(default=None)
+
+    def __set_name__(self, owner, name):
+        self._name = name
 
     def feature_referance(self) -> FeatureReferance:
         if not self._name:
@@ -148,6 +156,9 @@ class FeatureFactory(FeatureReferencable):
 
     transformation: TransformationFactory | None = None
     constraints: set[ConstraintFactory] | None = None
+
+    def __set_name__(self, owner, name):
+        self._name = name
 
     @property
     def dtype(self) -> FeatureType:
@@ -244,26 +255,33 @@ class FeatureFactory(FeatureReferencable):
             instance.transformation = FillMissingFactory(self, ConstantFillNaStrategy(value))
         return instance  # type: ignore [return-value]
 
-    def transform_pandas(
-        self,
-        transformation: Callable[[pd.DataFrame], pd.Series],
-        using_features: list[FeatureFactory] | None = None,
-        as_dtype: T | None = None,
+    def transformed_using_features_pandas(
+        self: T, using_features: list[FeatureFactory], transformation: Callable[[pd.DataFrame, pd.Series]]
     ) -> T:
-        import asyncio
+        from aligned.compiler.transformation_factory import PandasTransformationFactory
 
-        from aligned.compiler.transformation_factory import DillTransformationFactory
+        dtype: FeatureFactory = self.copy_type()  # type: ignore [assignment]
 
-        dtype: FeatureFactory = as_dtype or self.copy_type()  # type: ignore [assignment]
+        dtype.transformation = PandasTransformationFactory(dtype, transformation, using_features or [self])
+        return dtype  # type: ignore [return-value]
 
-        if asyncio.iscoroutinefunction(transformation):
-            dtype.transformation = DillTransformationFactory(dtype, transformation, using_features or [self])
-        else:
+    def transform_pandas(self, transformation: Callable[[pd.DataFrame], pd.Series], as_dtype: T) -> T:
+        from aligned.compiler.transformation_factory import PandasTransformationFactory
 
-            async def sub_tran(df: pd.DataFrame) -> pd.Series:
-                return transformation(df)
+        dtype: FeatureFactory = as_dtype  # type: ignore [assignment]
 
-            dtype.transformation = DillTransformationFactory(dtype, sub_tran, using_features or [self])
+        dtype.transformation = PandasTransformationFactory(dtype, transformation, [self])
+        return dtype  # type: ignore [return-value]
+
+    def transformed_using_features_polars(
+        self: T,
+        using_features: list[FeatureFactory],
+        transformation: Callable[[pl.LazyFrame, str], pl.LazyFrame],
+    ) -> T:
+        from aligned.compiler.transformation_factory import PolarsTransformationFactory
+
+        dtype: FeatureFactory = self.copy_type()  # type: ignore [assignment]
+        dtype.transformation = PolarsTransformationFactory(dtype, transformation, using_features or [self])
         return dtype  # type: ignore [return-value]
 
     def transform_polars(
@@ -595,7 +613,17 @@ class UUID(FeatureFactory, CouldBeEntityFeature):
         return FeatureType('').uuid
 
 
-class String(CategoricalEncodableFeature, NumberConvertableFeature, CouldBeEntityFeature):
+class LengthValidatable(FeatureFactory):
+    def min_length(self: T, length: int) -> T:
+        self._add_constraint(MinLength(length))
+        return self
+
+    def max_length(self: T, length: int) -> T:
+        self._add_constraint(MaxLength(length))
+        return self
+
+
+class String(CategoricalEncodableFeature, NumberConvertableFeature, CouldBeEntityFeature, LengthValidatable):
     def copy_type(self) -> String:
         return String()
 
@@ -727,7 +755,9 @@ class Coordinate:
     y: ArithmeticFeature
 
     def eucledian_distance(self, to: Coordinate) -> Float:
-        return ((self.x - to.x) ** 2 + (self.y - to.y) ** 2) ** 0.5
+        sub = self.x - to.x
+        sub.hidden = True
+        return (sub**2 + (self.y - to.y) ** 2) ** 0.5
 
 
 @dataclass
@@ -818,14 +848,14 @@ class ArithmeticAggregation:
     def count(self) -> Int64:
         from aligned.compiler.aggregation_factory import CountAggregationFactory
 
-        feat = Float()
+        feat = Int64()
         feat.transformation = CountAggregationFactory(self.feature, group_by=[], time_window=self.time_window)
         return feat
 
     def count_distinct(self) -> Int64:
         from aligned.compiler.aggregation_factory import CountDistinctAggregationFactory
 
-        feat = Float()
+        feat = Int64()
         feat.transformation = CountDistinctAggregationFactory(
             self.feature, group_by=[], time_window=self.time_window
         )

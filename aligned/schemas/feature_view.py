@@ -26,7 +26,7 @@ class CompiledFeatureView(Codable):
 
     event_triggers: set[EventTrigger] | None = field(default=None)
 
-    # valid_from: datetime
+    contacts: list[str] | None = field(default=None)
 
     def to_dict(self, **kwargs: dict) -> dict:
         assert isinstance(self.name, str)
@@ -48,6 +48,10 @@ class CompiledFeatureView(Codable):
         if self.event_triggers is not None:
             for event_trigger in self.event_triggers:
                 assert isinstance(event_trigger, EventTrigger)
+        if self.contacts is not None:
+            assert isinstance(self.contacts, list)
+            for contact in self.contacts:
+                assert isinstance(contact, str)
         return super().to_dict(**kwargs)
 
     @property

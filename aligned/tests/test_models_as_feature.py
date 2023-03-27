@@ -4,7 +4,7 @@ from aligned.schemas.feature import FeatureLocation
 
 class View(FeatureView):
 
-    metadata = FeatureView.metedata_with('view', 'test', FileSource.csv_at(''))
+    metadata = FeatureView.metadata_with('view', 'test', FileSource.csv_at(''))
 
     view_id = Int32().as_entity()
 
@@ -13,7 +13,7 @@ class View(FeatureView):
 
 class OtherView(FeatureView):
 
-    metadata = FeatureView.metedata_with('other', 'test', FileSource.csv_at(''))
+    metadata = FeatureView.metadata_with('other', 'test', FileSource.csv_at(''))
 
     other_id = Int32().as_entity()
 

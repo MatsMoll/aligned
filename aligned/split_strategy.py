@@ -14,7 +14,7 @@ class TrainTestSet(Generic[DatasetType]):
 
     entity_columns: set[str]
     features: set[str]
-    target: set[str]
+    target_columns: set[str]
 
     train_index: Index
     test_index: Index
@@ -25,42 +25,52 @@ class TrainTestSet(Generic[DatasetType]):
         data: DatasetType,
         entity_columns: set[str],
         features: set[str],
-        target: set[str],
+        target_columns: set[str],
         train_index: Index,
         test_index: Index,
         event_timestamp_column: str | None,
     ):
+        if isinstance(data, pl.LazyFrame):
+            raise ValueError('The dataframe need to be a DataFrame, not a LazyFrame when using Polars.')
         self.data = data
         self.entity_columns = entity_columns
         self.features = features
-        self.target = target
+        self.target_columns = target_columns
         self.train_index = train_index
         self.test_index = test_index
         self.event_timestamp_column = event_timestamp_column
 
     @property
+    def sorted_features(self) -> list[str]:
+        return sorted(self.features)
+
+    @property
     def train(self) -> DatasetType:
+        if isinstance(self.data, pl.DataFrame):
+            return self.data[self.train_index.to_list(), :]
         return self.data.iloc[self.train_index]
 
     @property
     def train_input(self) -> DatasetType:
-        return self.train[list(self.features)]
+        return self.train[self.sorted_features]
 
     @property
     def train_target(self) -> DatasetType:
-        return self.train[list(self.target)]
+        return self.train[list(self.target_columns)]
 
     @property
     def test(self) -> DatasetType:
+        if isinstance(self.data, pl.DataFrame):
+            return self.data[self.test_index.to_list(), :]
         return self.data.iloc[self.test_index]
 
     @property
     def test_input(self) -> DatasetType:
-        return self.test[list(self.features)]
+        return self.test[self.sorted_features]
 
     @property
     def test_target(self) -> DatasetType:
-        return self.test[list(self.target)]
+        return self.test[list(self.target_columns)]
 
 
 class SupervisedDataSet(Generic[DatasetType]):
@@ -91,19 +101,19 @@ class SupervisedDataSet(Generic[DatasetType]):
 
     @property
     def entities(self) -> DatasetType:
-        if isinstance(self.data, pl.LazyFrame):
+        if isinstance(self.data, (pl.LazyFrame, pl.DataFrame)):
             return self.data.select(list(self.entity_columns))
         return self.data[list(self.entity_columns)]
 
     @property
     def input(self) -> DatasetType:
-        if isinstance(self.data, pl.LazyFrame):
+        if isinstance(self.data, (pl.LazyFrame, pl.DataFrame)):
             return self.data.select(self.sorted_features)
         return self.data[self.sorted_features]
 
     @property
     def target(self) -> DatasetType:
-        if isinstance(self.data, pl.LazyFrame):
+        if isinstance(self.data, (pl.LazyFrame, pl.DataFrame)):
             return self.data.select(list(self.target_columns))
         return self.data[list(self.target_columns)]
 
@@ -153,15 +163,22 @@ class TrainTestValidateSet(Generic[DatasetType]):
 
     @property
     def target(self) -> DatasetType:
-        return self.data[list(self.target_columns)]
+        if isinstance(self.data, pl.LazyFrame):
+            return self.data.select(sorted(self.target_columns))
+        return self.data[sorted(self.target_columns)]
 
     @property
     def train(self) -> SupervisedDataSet[DatasetType]:
+        if isinstance(self.data, pl.DataFrame):
+            data = self.data[self.train_index.to_list(), :]
+        else:
+            data = self.data.iloc[self.train_index]
+
         return SupervisedDataSet(
-            self.data.iloc[self.train_index],
+            data,
             self.entity_columns,
             self.features,
-            self.target,
+            self.target_columns,
             self.event_timestamp_column,
         )
 
@@ -175,11 +192,17 @@ class TrainTestValidateSet(Generic[DatasetType]):
 
     @property
     def test(self) -> SupervisedDataSet[DatasetType]:
+
+        if isinstance(self.data, pl.DataFrame):
+            data = self.data[self.test_index.to_list(), :]
+        else:
+            data = self.data.iloc[self.test_index]
+
         return SupervisedDataSet(
-            self.data.iloc[self.test_index],
+            data,
             set(self.entity_columns),
             set(self.features),
-            self.target,
+            self.target_columns,
             self.event_timestamp_column,
         )
 
@@ -193,11 +216,15 @@ class TrainTestValidateSet(Generic[DatasetType]):
 
     @property
     def validate(self) -> SupervisedDataSet[DatasetType]:
+        if isinstance(self.data, pl.DataFrame):
+            data = self.data[self.validate_index.to_list(), :]
+        else:
+            data = self.data.iloc[self.validate_index]
         return SupervisedDataSet(
-            self.data.iloc[self.validate_index],
+            data,
             self.entity_columns,
             set(self.features),
-            self.target,
+            self.target_columns,
             self.event_timestamp_column,
         )
 

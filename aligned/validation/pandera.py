@@ -6,7 +6,7 @@ import polars as pl
 from pandera import Check, Column, DataFrameSchema  # type: ignore[attr-defined]
 
 from aligned.schemas.constraints import Constraint, Required
-from aligned.schemas.feature import Feature
+from aligned.schemas.feature import Feature, FeatureType
 from aligned.validation.interface import Validator
 
 logger = logging.getLogger(__name__)
@@ -20,21 +20,35 @@ class PanderaValidator(Validator):
         'upper_bound': lambda constraint: Check.less_than(constraint.value),
         'upper_bound_inc': lambda constraint: Check.less_than_or_equal_to(constraint.value),
         'in_domain': lambda domain: Check.isin(domain.values),
+        'min_length': lambda constraint: Check.str_length(min_length=constraint.value),
+        'max_length': lambda constraint: Check.str_length(max_length=constraint.value),
+    }
+
+    datatype_check = {
+        FeatureType('').bool,
+        FeatureType('').string,
+        FeatureType('').uuid,
+        FeatureType('').date,
     }
 
     def _column_for(self, feature: Feature) -> Column:
+
         if feature.constraints is None:
-            return Column(feature.dtype.pandas_type, nullable=True)
+            return Column(
+                feature.dtype.pandas_type if feature.dtype in self.datatype_check else None, nullable=True
+            )
 
         is_nullable = Required() not in feature.constraints
 
+        checks = [
+            self.check_map[constraint.name](constraint)
+            for constraint in feature.constraints
+            if constraint.name in self.check_map
+        ]
+
         return Column(
-            feature.dtype.pandas_type,
-            checks=[
-                self.check_map[constraint.name](constraint)
-                for constraint in feature.constraints
-                if constraint.name in self.check_map
-            ],
+            dtype=feature.dtype.pandas_type if feature.dtype in self.datatype_check else None,
+            checks=checks,
             nullable=is_nullable,
             required=not is_nullable,
         )
@@ -62,5 +76,6 @@ class PanderaValidator(Validator):
                 features, df.loc[df.index.delete(error.failure_cases['index'])].reset_index()
             )
 
-    async def validate_polars(self, features: list[Feature], df: pl.DataFrame) -> pl.DataFrame:
-        return pl.from_pandas(await self.validate_pandas(features, df.to_pandas()))
+    async def validate_polars(self, features: list[Feature], df: pl.LazyFrame) -> pl.LazyFrame:
+        input_df = df.collect().to_pandas()
+        return pl.from_pandas(await self.validate_pandas(features, input_df)).lazy()
