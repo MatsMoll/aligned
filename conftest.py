@@ -13,7 +13,9 @@ from aligned import (
     Float,
     Int32,
     Model,
+    RedisConfig,
     String,
+    TextVectoriserModel,
 )
 from aligned.feature_store import FeatureStore
 from aligned.feature_view.combined_view import CombinedFeatureView, CombinedFeatureViewMetadata
@@ -573,6 +575,8 @@ async def combined_feature_store(
 
 @pytest.fixture
 def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureView:
+    redis = RedisConfig.localhost()
+
     class TitanicPassenger(FeatureView):
 
         metadata = FeatureViewMetadata(
@@ -589,9 +593,13 @@ def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureView:
         )
         updated_at = EventTimestamp()
 
-        name = String()
         sex = String().accepted_values(['male', 'female'])
         survived = Bool().description('If the passenger survived')
+
+        name = String()
+        name_embedding = name.embedding(TextVectoriserModel.gensim('glove-wiki-gigaword-50')).indexed(
+            index_name='name_embedding_index', vector_size=50, storage=redis.index(), metadata=[age, sex]
+        )
 
         sibsp = (
             Int32()

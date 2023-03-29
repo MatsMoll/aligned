@@ -15,6 +15,7 @@ import polars as pl
 from aligned.exceptions import UnableToFindFileException
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.schemas.feature import Feature, FeatureType
+from aligned.schemas.vector_storage import VectorIndex
 from aligned.split_strategy import (
     SplitDataSet,
     SplitStrategy,
@@ -295,6 +296,9 @@ class RetrivalJob(ABC):
     def listen_to_events(self, events: set[EventTrigger]) -> RetrivalJob:
         return ListenForTriggers(self, events)
 
+    def update_vector_index(self, indexes: list[VectorIndex]) -> RetrivalJob:
+        return UpdateVectorIndexJob(self, indexes)
+
     def validate_entites(self) -> RetrivalJob:
         return ValidateEntitiesJob(self)
 
@@ -318,6 +322,43 @@ class ModificationJob:
     def copy_with(self: JobType, job: RetrivalJob) -> JobType:
         self.job = job  # type: ignore
         return self
+
+
+@dataclass
+class UpdateVectorIndexJob(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+    indexes: list[VectorIndex]
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.job.request_result
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.job.retrival_requests
+
+    async def to_pandas(self) -> pd.DataFrame:
+        raise NotImplementedError()
+
+    async def to_polars(self) -> pl.LazyFrame:
+        data = await self.job.to_polars()
+
+        update_jobs = []
+        for index in self.indexes:
+
+            select = index.entities + index.metadata + [index.vector]
+            select_names = {feat.name for feat in select}
+
+            filter_expr = pl.lit(True)
+            for entity in index.entities:
+                filter_expr = filter_expr & pl.col(entity.name).is_not_null()
+
+            filtered_data = data.select(select_names).filter(filter_expr)
+            update_jobs.append(index.storage.upsert_polars(filtered_data, index))
+
+        await asyncio.gather(*update_jobs)
+        return data
 
 
 @dataclass

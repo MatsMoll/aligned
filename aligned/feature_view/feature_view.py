@@ -2,7 +2,12 @@ from abc import ABC, abstractproperty
 from dataclasses import dataclass, field
 from typing import TypeVar
 
-from aligned.compiler.feature_factory import AggregationTransformationFactory, Entity, EventTimestamp
+from aligned.compiler.feature_factory import (
+    AggregationTransformationFactory,
+    Embedding,
+    Entity,
+    EventTimestamp,
+)
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, AggregationTimeWindow
@@ -85,6 +90,7 @@ class FeatureView(ABC):
             aggregated_features=set(),
             event_timestamp=None,
             stream_data_source=metadata.stream_source,
+            indexes=[],
         )
         aggregations: list[FeatureFactory] = []
 
@@ -97,6 +103,14 @@ class FeatureView(ABC):
             feature._name = var_name
             feature._location = FeatureLocation.feature_view(metadata.name)
             compiled_feature = feature.feature()
+
+            if isinstance(feature, Embedding):
+                view.indexes.extend(
+                    [
+                        index.compile(feature._location, compiled_feature, view.entities)
+                        for index in feature.indexes
+                    ]
+                )
 
             if feature.transformation:
                 # Adding features that is not stored in the view

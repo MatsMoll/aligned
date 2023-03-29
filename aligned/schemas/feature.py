@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Literal
 
@@ -86,48 +88,52 @@ class FeatureType(Codable):
     def __hash__(self) -> int:
         return self.name.__hash__()
 
+    def __pre_serialize__(self) -> FeatureType:
+        assert isinstance(self.name, str)
+        return self
+
     @property
-    def string(self) -> 'FeatureType':
+    def string(self) -> FeatureType:
         return FeatureType(name='string')
 
     @property
-    def int32(self) -> 'FeatureType':
+    def int32(self) -> FeatureType:
         return FeatureType(name='int32')
 
     @property
-    def bool(self) -> 'FeatureType':
+    def bool(self) -> FeatureType:
         return FeatureType(name='bool')
 
     @property
-    def int64(self) -> 'FeatureType':
+    def int64(self) -> FeatureType:
         return FeatureType(name='int64')
 
     @property
-    def float(self) -> 'FeatureType':
+    def float(self) -> FeatureType:
         return FeatureType(name='float')
 
     @property
-    def double(self) -> 'FeatureType':
+    def double(self) -> FeatureType:
         return FeatureType(name='double')
 
     @property
-    def date(self) -> 'FeatureType':
+    def date(self) -> FeatureType:
         return FeatureType(name='date')
 
     @property
-    def uuid(self) -> 'FeatureType':
+    def uuid(self) -> FeatureType:
         return FeatureType(name='uuid')
 
     @property
-    def datetime(self) -> 'FeatureType':
+    def datetime(self) -> FeatureType:
         return FeatureType(name='datetime')
 
     @property
-    def array(self) -> 'FeatureType':
+    def array(self) -> FeatureType:
         return FeatureType(name='array')
 
     @property
-    def embedding(self) -> 'FeatureType':
+    def embedding(self) -> FeatureType:
         return FeatureType(name='embedding')
 
 
@@ -140,15 +146,16 @@ class Feature(Codable):
 
     constraints: set[Constraint] | None = None
 
-    def to_dict(self, **kwargs: dict) -> dict:
+    def __pre_serialize__(self) -> Feature:
         assert isinstance(self.name, str)
         assert isinstance(self.dtype, FeatureType)
         assert isinstance(self.description, str) or self.description is None
         assert isinstance(self.tags, dict) or self.tags is None
-        for constraint in self.constraints:
-            assert isinstance(constraint, Constraint)
+        if self.constraints:
+            for constraint in self.constraints:
+                assert isinstance(constraint, Constraint)
 
-        return super().to_dict(**kwargs)
+        return self
 
     def __hash__(self) -> int:
         return hash(self.name)
@@ -194,15 +201,15 @@ class FeatureLocation(Codable):
         return (self.name + self.location).__hash__()
 
     @staticmethod
-    def feature_view(name: str) -> 'FeatureLocation':
+    def feature_view(name: str) -> FeatureLocation:
         return FeatureLocation(name, 'feature_view')
 
     @staticmethod
-    def combined_view(name: str) -> 'FeatureLocation':
+    def combined_view(name: str) -> FeatureLocation:
         return FeatureLocation(name, 'combined_view')
 
     @staticmethod
-    def model(name: str) -> 'FeatureLocation':
+    def model(name: str) -> FeatureLocation:
         return FeatureLocation(name, 'model')
 
 

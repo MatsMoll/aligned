@@ -11,7 +11,7 @@ from aligned.psql.data_source import PostgreSQLConfig, PostgreSQLDataSource
 from aligned.psql.jobs import PostgreSqlJob
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
-from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver
+from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, DerivedFeature
 from aligned.schemas.feature import FeatureLocation, FeatureType
 from aligned.schemas.transformation import RedshiftTransformation
 
@@ -312,10 +312,12 @@ class FactRedshiftJob(FactualRetrivalJob):
             schema=self.config.schema,
         )
 
+        derived_map = request.derived_feature_map()
         derived_features = [
             feature
             for feature in request.derived_features
             if isinstance(feature.transformation, RedshiftTransformation)
+            and all([name not in derived_map for name in feature.depending_on_names])
         ]
         if derived_features:
             derived_alias = source.feature_identifier_for([feature.name for feature in derived_features])
@@ -355,8 +357,6 @@ class FactRedshiftJob(FactualRetrivalJob):
             name = f'{request.name}_agg_{time_window}_cte'
             group_by_names = {'entities.row_id'}
 
-        group_by_selects = {SqlColumn(feature, feature) for feature in group_by_names}
-
         aggregates = {
             SqlColumn(
                 feature.derived_feature.transformation.as_redshift(),
@@ -369,7 +369,7 @@ class FactRedshiftJob(FactualRetrivalJob):
         event_timestamp_clause: str | None = None
         if request.event_timestamp:
             id_column = 'row_id'
-            group_by_names = {id_column}
+            group_by_names = {'entities.row_id'}
             # Use row_id as the main join key
             event_timestamp_name = source.feature_identifier_for([request.event_timestamp.name])[0]
             if window.window:
@@ -381,6 +381,8 @@ class FactRedshiftJob(FactualRetrivalJob):
                 )
             else:
                 event_timestamp_clause = f'ta.{event_timestamp_name} <= entities.event_timestamp'
+
+        group_by_selects = {SqlColumn(feature, feature) for feature in group_by_names}
 
         entities = list(request.entity_names)
         entity_db_name = source.feature_identifier_for(entities)
@@ -407,17 +409,42 @@ class FactRedshiftJob(FactualRetrivalJob):
             schema=source.config.schema,
         )
 
-        needed_derived_features = set()
+        needed_derived_features: set[DerivedFeature] = set()
         derived_map = request.derived_feature_map()
+
+        def resolve_sql_transformation(feature: str) -> str:
+            """Create the sql query for hidden features.
+
+            This will loop through the hidden features,
+            and "concat" the sql query for each hidden feature.
+
+            e.g:
+            1 + x as my_feature
+            => (z + y) + x as my_feature
+            """
+            hidden_feature = derived_map[feature]
+            assert isinstance(hidden_feature.transformation, RedshiftTransformation)
+            sql_query = hidden_feature.transformation.as_redshift()
+            for depended in hidden_feature.depending_on_names:
+                if depended not in derived_map:
+                    continue
+                sub_feature = derived_map[depended]
+                if depended.isnumeric():
+                    assert isinstance(sub_feature.transformation, RedshiftTransformation)
+                    hidden_sql = sub_feature.transformation.as_redshift()
+                    hidden_sql = resolve_sql_transformation(sub_feature.name)
+                    sql_query = sql_query.replace(depended, f'({hidden_sql})')
+
+            return sql_query
 
         for agg_feature in request.aggregated_features:
             for depended in agg_feature.depending_on_names:
-                if depended in derived_map:
+                if depended in derived_map:  # if it is a derived feature
                     needed_derived_features.add(derived_map[depended])
 
         if needed_derived_features:
             features = {
-                SqlColumn(feature.transformation.as_redshift(), feature.name)
+                SqlColumn(resolve_sql_transformation(feature.name), feature.name)
                 for feature in needed_derived_features
             }.union(
                 {SqlColumn('*', '*')}

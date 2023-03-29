@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass, field
 
@@ -21,6 +23,7 @@ from aligned.retrival_job import RetrivalJob
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import Feature, FeatureType
 from aligned.schemas.feature_view import CompiledFeatureView
+from aligned.schemas.vector_storage import VectorIndex, VectorStorage
 
 logger = logging.getLogger(__name__)
 
@@ -40,14 +43,14 @@ class RedisConfig(Codable):
         return os.environ[self.env_var]
 
     @staticmethod
-    def from_url(url: str) -> 'RedisConfig':
+    def from_url(url: str) -> RedisConfig:
         import os
 
         os.environ['REDIS_URL'] = url
         return RedisConfig(env_var='REDIS_URL')
 
     @staticmethod
-    def localhost() -> 'RedisConfig':
+    def localhost() -> RedisConfig:
         import os
 
         if 'REDIS_URL' not in os.environ:
@@ -61,11 +64,89 @@ class RedisConfig(Codable):
 
         return StrictRedis(connection_pool=redis_manager[self.env_var])
 
-    def online_source(self) -> 'RedisOnlineSource':
+    def online_source(self) -> RedisOnlineSource:
         return RedisOnlineSource(config=self)
 
-    def stream(self, topic: str) -> 'RedisStreamSource':
+    def stream(self, topic: str) -> RedisStreamSource:
         return RedisStreamSource(topic_name=topic, config=self)
+
+    def index(
+        self,
+        initial_cap: int | None = None,
+        distance_metric: str | None = None,
+        algorithm: str | None = None,
+        embedding_type: str | None = None,
+    ) -> RedisVectorIndex:
+        return RedisVectorIndex(
+            config=self,
+            initial_cap=initial_cap or 10000,
+            distance_metric=distance_metric or 'COSINE',
+            index_alogrithm=algorithm or 'FLAT',
+            embedding_type=embedding_type or 'FLOAT32',
+        )
+
+
+@dataclass
+class RedisVectorIndex(VectorStorage):
+
+    config: RedisConfig
+
+    initial_cap: int
+    distance_metric: str
+    index_alogrithm: str
+    embedding_type: str
+
+    name: str = 'redis'
+
+    async def create_index(self, index: VectorIndex) -> None:
+        from redis.commands.search.indexDefinition import IndexDefinition, IndexType
+
+        redis = self.config.redis()
+        try:
+            info = await redis.ft(index.name).info()
+            logger.info(f'Index {index.name} already exists: {info}')
+        except Exception:
+            logger.info(f'Creating index {index.name} with prefix {index.location.identifier}...')
+            index_definition = IndexDefinition(prefix=[index.location.identifier], index_type=IndexType.HASH)
+            fields = [
+                self.index_schema(feature, index) for feature in set(index.metadata).union({index.vector})
+            ]
+            await redis.ft(index.name).create_index(
+                fields=fields,
+                definition=index_definition,
+            )
+
+    def index_schema(self, feature: Feature, index: VectorIndex) -> str:
+        from redis.commands.search.field import NumericField, TagField, TextField, VectorField
+
+        if feature.dtype.is_numeric:
+            return NumericField(name=feature.name)
+
+        match feature.dtype.name:
+            case 'string':
+                return TextField(name=feature.name)
+            case 'uuid':
+                return TagField(name=feature.name)
+            case 'embedding':
+                if feature.name != index.vector.name:
+                    raise ValueError(
+                        f'The metadata can not contain a feature embedding. like: {feature.name}'
+                    )
+
+                return VectorField(
+                    name=feature.name,
+                    algorithm=self.index_alogrithm,
+                    attributes={
+                        'TYPE': self.embedding_type,
+                        'DIM': index.vector_dim,
+                        'DISTANCE_METRIC': self.distance_metric,
+                        'INITIAL_CAP': self.initial_cap,
+                    },
+                )
+        raise ValueError(f'Unsupported feature type {feature.dtype.name}')
+
+    async def upsert_polars(self, df: pl.LazyFrame, index: VectorIndex) -> None:
+        logger.info(f'Upserting {len(df.columns)} into index {index.name}...')
 
 
 @dataclass
@@ -74,7 +155,7 @@ class RedisOnlineSource(OnlineSource):
     config: RedisConfig
     source_type = 'redis'
 
-    def feature_source(self, feature_views: set[CompiledFeatureView]) -> 'RedisSource':
+    def feature_source(self, feature_views: set[CompiledFeatureView]) -> RedisSource:
         return RedisSource(self.config)
 
 
@@ -155,7 +236,7 @@ class RedisStreamSource(StreamDataSource, SinkableDataSource):
 
     name: str = 'redis'
 
-    def map_values(self, mappings: dict[str, str]) -> 'RedisStreamSource':
+    def map_values(self, mappings: dict[str, str]) -> RedisStreamSource:
         return RedisStreamSource(
             topic_name=self.topic_name, config=self.config, mappings=self.mappings | mappings
         )

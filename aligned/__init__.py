@@ -26,6 +26,7 @@ from aligned.psql.data_source import PostgreSQLConfig
 from aligned.redis.config import RedisConfig
 from aligned.redshift.data_source import RedshiftSQLConfig
 from aligned.s3.config import AwsS3Config
+from aligned.schemas.text_vectoriser import TextVectoriserModel
 
 __all__ = [
     'FeatureStore',
@@ -54,4 +55,5 @@ __all__ = [
     'EventTimestamp',
     'Timestamp',
     'Model',
+    'TextVectoriserModel',
 ]

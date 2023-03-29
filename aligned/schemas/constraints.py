@@ -13,6 +13,7 @@ class Constraint(Codable, SerializableType):
         return hash(self.name)
 
     def _serialize(self) -> dict:
+        assert self.name in SupportedConstraints.shared().types, f'Constraint {self.name} is not supported'
         return self.to_dict()
 
     @classmethod
@@ -40,6 +41,8 @@ class SupportedConstraints:
             UpperBoundInclusive,
             Required,
             InDomain,
+            MaxLength,
+            MinLength,
         ]:
             self.add(tran_type)
 

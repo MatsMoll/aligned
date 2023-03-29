@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 
 from aligned.data_source.batch_data_source import BatchDataSource
@@ -7,6 +9,7 @@ from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import AggregatedFeature, DerivedFeature
 from aligned.schemas.event_trigger import EventTrigger
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
+from aligned.schemas.vector_storage import VectorIndex
 
 
 @dataclass
@@ -27,8 +30,9 @@ class CompiledFeatureView(Codable):
     event_triggers: set[EventTrigger] | None = field(default=None)
 
     contacts: list[str] | None = field(default=None)
+    indexes: list[VectorIndex] | None = field(default=None)
 
-    def to_dict(self, **kwargs: dict) -> dict:
+    def __pre_serialize__(self) -> CompiledFeatureView:
         assert isinstance(self.name, str)
         assert isinstance(self.description, str)
         assert isinstance(self.tags, dict)
@@ -52,7 +56,11 @@ class CompiledFeatureView(Codable):
             assert isinstance(self.contacts, list)
             for contact in self.contacts:
                 assert isinstance(contact, str)
-        return super().to_dict(**kwargs)
+        if self.indexes is not None:
+            assert isinstance(self.indexes, list)
+            for index in self.indexes:
+                assert isinstance(index, VectorIndex)
+        return self
 
     @property
     def full_schema(self) -> set[Feature]:

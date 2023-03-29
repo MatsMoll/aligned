@@ -183,6 +183,7 @@ class SupportedTransformations:
             DateComponent,
             Subtraction,
             Addition,
+            AdditionValue,
             TimeDifference,
             Logarithm,
             LogarithmOnePluss,
@@ -218,6 +219,7 @@ class SupportedTransformations:
             StdAggregation,
             VarianceAggregation,
             PercentileAggregation,
+            Clip,
         ]:
             self.add(tran_type)
 
@@ -735,6 +737,32 @@ class Subtraction(Transformation, PsqlTransformation, RedshiftTransformation):
 
     def as_psql(self) -> str:
         return f'{self.front} - {self.behind}'
+
+
+@dataclass
+class AdditionValue(Transformation):
+
+    feature: str
+    value: LiteralValue
+
+    name: str = 'add_value'
+    dtype: FeatureType = FeatureType('').float
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return df[self.feature] + self.value.python_value
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        return pl.col(self.feature) + pl.lit(self.value.python_value)
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        from numpy import nan
+
+        return TransformationTestDefinition(
+            AdditionValue(feature='x', value=LiteralValue(2)),
+            input={'x': [1, 2, 0, None, 1], 'y': [1, 0, 2, 1, None]},
+            output=[3, 4, 2, nan, 3],
+        )
 
 
 @dataclass
@@ -1731,3 +1759,34 @@ class PercentileAggregation(Transformation, PsqlTransformation, RedshiftTransfor
 
     def as_psql(self) -> str:
         return f'PERCENTILE_CONT({self.percentile}) WITHIN GROUP(ORDER BY {self.key})'
+
+
+@dataclass
+class Clip(Transformation, PsqlTransformation, RedshiftTransformation):
+
+    key: str
+    lower: LiteralValue
+    upper: LiteralValue
+
+    name = 'clip'
+    dtype = FeatureType('').float
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return df[self.key].clip(lower=self.lower.python_value, upper=self.upper.python_value)
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        return pl.col(self.key).clip(min_val=self.lower.python_value, max_val=self.upper.python_value)
+
+    def as_psql(self) -> str:
+        return (
+            f'CASE WHEN {self.key} < {self.lower} THEN {self.lower} WHEN '
+            f'{self.key} > {self.upper} THEN {self.upper} ELSE {self.key} END'
+        )
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            transformation=Clip(key='a', lower=LiteralValue.from_value(0), upper=LiteralValue.from_value(1)),
+            input={'a': [-1, 0.1, 0.9, 2]},
+            output=[0, 0.1, 0.9, 1],
+        )

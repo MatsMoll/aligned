@@ -150,6 +150,7 @@ class GensimModel(TextVectoriserModel):
         tokenised_text = texts.with_columns([pl.col(text_key).apply(token).alias(f'{text_key}_tokens')])
 
         def vector(tokens: list[str]) -> list[float]:
+            logger.info('Computing vector', tokens)
             vector = np.zeros(self.loaded_model.vector_size)
             n = 0
             for token in tokens:
@@ -169,6 +170,7 @@ class GensimModel(TextVectoriserModel):
         import gensim.downloader as gensim_downloader
 
         self.loaded_model = gensim_downloader.load(self.model_name)
+        logger.info(f'Loaded model {self.model_name}')
 
 
 class OpenAiEmbedding(BaseModel):

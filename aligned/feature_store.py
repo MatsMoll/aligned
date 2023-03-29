@@ -595,6 +595,7 @@ class FeatureViewStore:
             .ensure_types(request)
             .derive_features(request)
             .listen_to_events(self.event_triggers)
+            .update_vector_index(self.view.indexes)
             .to_polars()
         ).collect()
 
@@ -623,7 +624,11 @@ class FeatureViewStore:
         else:
             raise ValueError(f'values must be a dict or a RetrivalJob, was {type(values)}')
 
-        job = core_job.derive_features([request]).listen_to_events(self.event_triggers)
+        job = (
+            core_job.derive_features([request])
+            .listen_to_events(self.event_triggers)
+            .update_vector_index(self.view.indexes)
+        )
 
         if self.only_write_model_features:
             logger.info(f'Only writing features used by models: {features_in_models}')

@@ -8,6 +8,7 @@ import pandas as pd
 import polars as pl
 
 from aligned.compiler.constraint_factory import ConstraintFactory, LiteralFactory
+from aligned.compiler.vector_index_factory import VectorIndexFactory
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.schemas.constraints import (
     Constraint,
@@ -23,6 +24,7 @@ from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import EventTimestamp as EventTimestampFeature
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
 from aligned.schemas.transformation import TextVectoriserModel, Transformation
+from aligned.schemas.vector_storage import VectorStorage
 
 if TYPE_CHECKING:
     from aligned.compiler.transformation_factory import FillNaStrategy
@@ -194,7 +196,7 @@ class FeatureFactory(FeatureReferencable):
     def compile(self) -> DerivedFeature:
 
         if not self.transformation:
-            raise ValueError('Trying to create a derived feature with no transformation')
+            raise ValueError(f'Trying to create a derived feature with no transformation, {self.name}')
 
         return DerivedFeature(
             name=self.name,
@@ -459,6 +461,13 @@ class ArithmeticFeature(ComparableFeature):
         feature.transformation = LogTransformFactory(self)
         return feature
 
+    def clip(self: T, lower_bound: float, upper_bound: float) -> T:
+        from aligned.compiler.transformation_factory import ClipFactory
+
+        feature = Float()
+        feature.transformation = ClipFactory(self, lower_bound, upper_bound)
+        return feature
+
 
 class DecimalOperations(FeatureFactory):
     def __round__(self) -> Int64:
@@ -658,6 +667,9 @@ class String(CategoricalEncodableFeature, NumberConvertableFeature, CouldBeEntit
         feature.transformation = WordVectoriserFactory(self, model)
         return feature
 
+    def embedding(self, model: TextVectoriserModel) -> Embedding:
+        return self.sentence_vector(model)
+
     def append(self, feature: FeatureFactory | str) -> String:
         from aligned.compiler.transformation_factory import AppendStrings
 
@@ -707,6 +719,7 @@ class EventTimestamp(DateFeature, ArithmeticFeature):
 class Embedding(FeatureFactory):
 
     sub_type: FeatureFactory
+    indexes: list[VectorIndexFactory] | None = None
 
     def copy_type(self) -> Embedding:
         return Embedding()
@@ -714,6 +727,26 @@ class Embedding(FeatureFactory):
     @property
     def dtype(self) -> FeatureType:
         return FeatureType('').embedding
+
+    def indexed(
+        self,
+        index_name: str,
+        vector_size: int,
+        storage: VectorStorage,
+        metadata: list[FeatureFactory] | None = None,
+    ) -> Embedding:
+        if self.indexes is None:
+            self.indexes = []
+
+        self.indexes.append(
+            VectorIndexFactory(
+                name=index_name,
+                vector_dim=vector_size,
+                metadata=metadata or [],
+                storage=storage,
+            )
+        )
+        return self
 
 
 class ImageUrl(FeatureFactory):

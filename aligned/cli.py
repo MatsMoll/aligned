@@ -44,6 +44,39 @@ def load_envs(path: Path) -> None:
         click.echo(f'No env file found at {path}')
 
 
+def setup_logger():
+    from logging.config import dictConfig
+
+    handler = 'console'
+    log_format = '%(levelname)s:\t\b%(asctime)s %(name)s:%(lineno)d [%(correlation_id)s] %(message)s'
+    dictConfig(
+        {
+            'version': 1,
+            'disable_existing_loggers': False,
+            'filters': {
+                'correlation_id': {
+                    '()': 'asgi_correlation_id.CorrelationIdFilter',
+                    'uuid_length': 16,
+                },
+            },
+            'formatters': {
+                'console': {'class': 'logging.Formatter', 'datefmt': '%H:%M:%S', 'format': log_format}
+            },
+            'handlers': {
+                'console': {
+                    'class': 'logging.StreamHandler',
+                    'filters': ['correlation_id'],
+                    'formatter': 'console',
+                }
+            },
+            'loggers': {
+                # project
+                '': {'handlers': [handler], 'level': 'INFO', 'propagate': True},
+            },
+        }
+    )
+
+
 @click.group()
 def cli() -> None:
     pass
@@ -71,6 +104,8 @@ async def apply_command(repo_path: str, reference_file: str, env_file: str) -> N
     Create or update a feature store deployment
     """
     from aligned import FileSource
+
+    setup_logger()
 
     dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
     path, obj = reference_file.split(':')
@@ -159,40 +194,12 @@ def serve_command(
     """
     Starts a API serving the feature store
     """
-    from logging.config import dictConfig
-
     import uvicorn
+
+    setup_logger()
 
     host = host or os.getenv('HOST', '127.0.0.1')
 
-    handler = 'console'
-    log_format = '%(levelname)s:\t\b%(asctime)s %(name)s:%(lineno)d [%(correlation_id)s] %(message)s'
-    dictConfig(
-        {
-            'version': 1,
-            'disable_existing_loggers': False,
-            'filters': {
-                'correlation_id': {
-                    '()': 'asgi_correlation_id.CorrelationIdFilter',
-                    'uuid_length': 16,
-                },
-            },
-            'formatters': {
-                'console': {'class': 'logging.Formatter', 'datefmt': '%H:%M:%S', 'format': log_format}
-            },
-            'handlers': {
-                'console': {
-                    'class': 'logging.StreamHandler',
-                    'filters': ['correlation_id'],
-                    'formatter': 'console',
-                }
-            },
-            'loggers': {
-                # project
-                '': {'handlers': [handler], 'level': 'INFO', 'propagate': True},
-            },
-        }
-    )
     os.environ['ALADDIN_ENABLE_SERVER'] = 'True'
     # Needed in order to find the feature_store_location file
     dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
@@ -237,36 +244,8 @@ async def serve_worker_command(
     """
     Starts a API serving the feature store
     """
-    from logging.config import dictConfig
+    setup_logger()
 
-    handler = 'console'
-    log_format = '%(levelname)s:\t\b%(asctime)s %(name)s:%(lineno)d [%(correlation_id)s] %(message)s'
-    dictConfig(
-        {
-            'version': 1,
-            'disable_existing_loggers': False,
-            'filters': {
-                'correlation_id': {
-                    '()': 'asgi_correlation_id.CorrelationIdFilter',
-                    'uuid_length': 16,
-                },
-            },
-            'formatters': {
-                'console': {'class': 'logging.Formatter', 'datefmt': '%H:%M:%S', 'format': log_format}
-            },
-            'handlers': {
-                'console': {
-                    'class': 'logging.StreamHandler',
-                    'filters': ['correlation_id'],
-                    'formatter': 'console',
-                }
-            },
-            'loggers': {
-                # project
-                '': {'handlers': [handler], 'level': 'INFO', 'propagate': True},
-            },
-        }
-    )
     # Needed in order to find the feature_store_location file
     path, obj = worker_path.split(':')
     dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
@@ -454,6 +433,61 @@ async def profile(repo_path: str, reference_file: str, env_file: str, output: st
                 )
 
     Path(output).write_bytes(results.to_json().encode('utf-8'))
+
+
+@cli.command('create_indexes')
+@coro
+@click.option(
+    '--repo-path',
+    default='.',
+    help='The path to the repo',
+)
+@click.option(
+    '--reference-file',
+    default='feature_store_location.py:source',
+    help='The path to a feature store reference file. Defining where to read and write the feature store',
+)
+@click.option(
+    '--env-file',
+    default='.env',
+    help='The path to env variables',
+)
+async def create_indexes(repo_path: str, reference_file: str, env_file: str) -> None:
+    from aligned import FeatureStore, FileSource
+
+    setup_logger()
+
+    # Make sure modules can be read, and that the env is set
+    path, obj = reference_file.split(':')
+    dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
+    reference_file_path = Path(path)
+
+    sys.path.append(str(dir))
+    env_file_path = dir / env_file
+    load_envs(env_file_path)
+
+    repo_ref = RepoReference('const', {'const': FileSource.json_at('./feature-store.json')})
+    with suppress(ValueError):
+        repo_ref = RepoReference.reference_object(dir, reference_file_path, obj)
+
+    if file := repo_ref.selected_file:
+        click.echo(f'Updating file at: {file}')
+
+        repo_def = await RepoReader.definition_from_path(dir)
+    else:
+        click.echo(f'No repo file found at {dir}. Returning without creating indexes')
+        return
+
+    feature_store = FeatureStore.from_definition(repo_def)
+
+    for feature_view_name in sorted(feature_store.feature_views.keys()):
+        view = feature_store.feature_views[feature_view_name]
+        if view.indexes is None:
+            continue
+
+        for index in view.indexes:
+            click.echo(f'Creating indexes for: {feature_view_name}, named {index.name}')
+            await index.storage.create_index(index)
 
 
 if __name__ == '__main__':
