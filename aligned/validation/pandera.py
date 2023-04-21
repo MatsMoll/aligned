@@ -20,8 +20,11 @@ class PanderaValidator(Validator):
         'upper_bound': lambda constraint: Check.less_than(constraint.value),
         'upper_bound_inc': lambda constraint: Check.less_than_or_equal_to(constraint.value),
         'in_domain': lambda domain: Check.isin(domain.values),
-        'min_length': lambda constraint: Check.str_length(min_length=constraint.value),
-        'max_length': lambda constraint: Check.str_length(max_length=constraint.value),
+        'min_length': lambda constraint: Check.str_length(min_value=constraint.value),
+        'max_length': lambda constraint: Check.str_length(max_value=constraint.value),
+        'regex': lambda constraint: Check.str_matches(constraint.value),
+        'ends_with': lambda constraint: Check.str_endswith(constraint.value),
+        'starts_with': lambda constraint: Check.str_startswith(constraint.value),
     }
 
     datatype_check = {
@@ -32,6 +35,7 @@ class PanderaValidator(Validator):
     }
 
     def _column_for(self, feature: Feature) -> Column:
+        Check.str_matches
 
         if feature.constraints is None:
             return Column(

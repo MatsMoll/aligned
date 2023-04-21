@@ -759,7 +759,7 @@ class AdditionValue(Transformation):
         from numpy import nan
 
         return TransformationTestDefinition(
-            AdditionValue(feature='x', value=LiteralValue(2)),
+            AdditionValue(feature='x', value=LiteralValue.from_value(2)),
             input={'x': [1, 2, 0, None, 1], 'y': [1, 0, 2, 1, None]},
             output=[3, 4, 2, nan, 3],
         )
@@ -1523,7 +1523,7 @@ class AppendConstString(Transformation):
         return df[self.key] + self.string
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return pl.concat_str([pl.col(self.key), pl.lit(self.string)], sep='').alias(alias)
+        return pl.concat_str([pl.col(self.key).fill_null(''), pl.lit(self.string)], sep='').alias(alias)
 
 
 @dataclass
@@ -1541,7 +1541,9 @@ class AppendStrings(Transformation):
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_column(
-            pl.concat_str([pl.col(self.first_key), pl.col(self.second_key)], sep=self.sep).alias(alias)
+            pl.concat_str(
+                [pl.col(self.first_key).fill_null(''), pl.col(self.second_key).fill_null('')], sep=self.sep
+            ).alias(alias)
         )
 
 

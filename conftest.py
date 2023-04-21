@@ -440,7 +440,7 @@ def titanic_model(titanic_feature_view: FeatureView) -> Model:
             features=[features.age, features.sibsp, features.has_siblings, features.is_male, features.is_mr],
         )
 
-        will_survive = features.survived.as_target()
+        will_survive = features.survived.as_classification_target()
 
     return Titanic()
 
@@ -598,7 +598,7 @@ def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureView:
 
         name = String()
         name_embedding = name.embedding(TextVectoriserModel.gensim('glove-wiki-gigaword-50')).indexed(
-            index_name='name_embedding_index', vector_size=50, storage=redis.index(), metadata=[age, sex]
+            embedding_size=50, storage=redis.index(name='name_embedding_index'), metadata=[age, sex]
         )
 
         sibsp = (
@@ -630,7 +630,7 @@ def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> Model:
             features=[features.age, features.sibsp, features.has_siblings, features.is_male],
         )
 
-        will_survive = features.survived.as_target()
+        will_survive = features.survived.as_classification_target()
 
     return Titanic()
 

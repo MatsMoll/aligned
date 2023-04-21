@@ -3,7 +3,8 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Literal
+from pathlib import Path
+from typing import TYPE_CHECKING, Literal
 from uuid import uuid4
 
 import pandas as pd
@@ -14,14 +15,17 @@ from aligned.data_file import DataFileReference
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.enricher import CsvFileEnricher, Enricher, LoadedStatEnricher, StatisticEricher, TimespanSelector
 from aligned.exceptions import UnableToFindFileException
-from aligned.feature_store import FeatureStore
 from aligned.local.job import FileDateJob, FileFactualJob, FileFullJob
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
 from aligned.s3.storage import FileStorage, HttpStorage
 from aligned.schemas.codable import Codable
-from aligned.schemas.repo_definition import RepoDefinition
+from aligned.schemas.folder import Folder
 from aligned.storage import Storage
+
+if TYPE_CHECKING:
+    from aligned.feature_store import FeatureStore
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +44,9 @@ class StorageFileReference:
         raise NotImplementedError()
 
     async def feature_store(self) -> FeatureStore:
+        from aligned import FeatureStore
+        from aligned.schemas.repo_definition import RepoDefinition
+
         file = await self.read()
         return FeatureStore.from_definition(RepoDefinition.from_json(file))
 
@@ -277,6 +284,20 @@ class FileSource:
         path: str, mapping_keys: dict[str, str] | None = None, config: ParquetConfig | None = None
     ) -> ParquetFileSource:
         return ParquetFileSource(path=path, mapping_keys=mapping_keys or {}, config=config or ParquetConfig())
+
+    @staticmethod
+    def folder(path: str) -> Folder:
+        return LocalFolder(base_path=Path(path))
+
+
+@dataclass
+class LocalFolder(Folder):
+
+    base_path: Path
+    name = 'local_folder'
+
+    def file_at(self, path: Path) -> StorageFileReference:
+        return StorageFileSource(path=str(self.base_path / path))
 
 
 class LiteralReference(DataFileReference):

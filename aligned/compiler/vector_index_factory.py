@@ -13,14 +13,12 @@ if TYPE_CHECKING:
 @dataclass
 class VectorIndexFactory:
 
-    name: str
     vector_dim: int
     metadata: list[FeatureFactory]
     storage: VectorStorage
 
     def compile(self, location: FeatureLocation, vector: Feature, entities: set[Feature]) -> VectorIndex:
         return VectorIndex(
-            name=self.name,
             location=location,
             vector=vector,
             vector_dim=self.vector_dim,

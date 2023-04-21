@@ -425,10 +425,6 @@ class FillNaStrategy:
     def compile(self) -> Any:
         pass
 
-    @staticmethod
-    def mean(limit: int | None = None) -> 'FillNaStrategy':
-        return MeanFillNaStrategy(limit)
-
 
 @dataclass
 class ConstantFillNaStrategy(FillNaStrategy):
@@ -436,16 +432,6 @@ class ConstantFillNaStrategy(FillNaStrategy):
 
     def compile(self) -> Any:
         return self.value
-
-
-@dataclass
-class MeanFillNaStrategy(FillNaStrategy):
-
-    limit: int | None = field(default=None)
-
-    def compile(self) -> Any:
-        logging.info('The Mean Fill strategy will be deprecated.')
-        return 0
 
 
 @dataclass
@@ -682,6 +668,7 @@ class AppendStrings(TransformationFactory):
 
     first_feature: FeatureFactory
     second_feature: FeatureFactory | LiteralValue
+    separator: str = field(default='')
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -696,7 +683,7 @@ class AppendStrings(TransformationFactory):
         if isinstance(self.second_feature, LiteralValue):
             return AppendConstString(self.first_feature.name, self.second_feature.value)
         else:
-            return AppendStrings(self.first_feature.name, self.second_feature.name)
+            return AppendStrings(self.first_feature.name, self.second_feature.name, self.separator)
 
 
 @dataclass

@@ -138,6 +138,9 @@ class FullExtractPsqlJob(FullExtractJob):
     def config(self) -> PostgreSQLConfig:
         return self.source.config
 
+    def describe(self) -> str:
+        return self.psql_job().describe()
+
     async def to_pandas(self) -> pd.DataFrame:
         return await self.psql_job().to_pandas()
 
@@ -164,7 +167,7 @@ class FullExtractPsqlJob(FullExtractJob):
         if self.limit:
             limit_query = f'LIMIT {int(self.limit)}'
 
-        f'SELECT {column_select} FROM {schema}"{self.source.table}" {limit_query}',
+        return f'SELECT {column_select} FROM {schema}"{self.source.table}" {limit_query}'
 
 
 @dataclass

@@ -19,7 +19,7 @@ class VectorStorageFactory:
         self.supported_storages = {}
 
         for storage in VectorStorage.__subclasses__():
-            self.supported_storages[storage.name] = storage
+            self.supported_storages[storage.type_name] = storage
 
     @classmethod
     def shared(cls) -> VectorStorageFactory:
@@ -30,20 +30,20 @@ class VectorStorageFactory:
 
 class VectorStorage(Codable, SerializableType):
 
-    name: str
+    type_name: str
 
     def _serialize(self) -> dict:
         assert (
-            self.name in VectorStorageFactory.shared().supported_storages
-        ), f'VectorStorage {self.name} is not supported'
+            self.type_name in VectorStorageFactory.shared().supported_storages
+        ), f'VectorStorage {self.type_name} is not supported'
         return self.to_dict()
 
     @classmethod
     def _deserialize(cls, value: dict) -> VectorStorage:
-        name = value['name']
+        name = value['type_name']
         if name not in VectorStorageFactory.shared().supported_storages:
             raise ValueError(f'VectorStorage {name} is not supported')
-        del value['name']
+        del value['type_name']
         return VectorStorageFactory.shared().supported_storages[name].from_dict(value)
 
     async def create_index(self, index: VectorIndex) -> None:
@@ -56,7 +56,6 @@ class VectorStorage(Codable, SerializableType):
 @dataclass
 class VectorIndex(Codable):
 
-    name: str
     location: FeatureLocation
     vector: Feature
     vector_dim: int
@@ -65,8 +64,7 @@ class VectorIndex(Codable):
     entities: list[Feature]
 
     def __pre_serialize__(self) -> VectorIndex:
-        assert isinstance(self.name, str)
-        assert isinstance(self.vector_dim, int)
+        assert isinstance(self.vector_dim, int), f'got {self.vector_dim}, expected int'
         assert isinstance(self.storage, VectorStorage)
         assert isinstance(self.location, FeatureLocation)
         assert isinstance(self.vector, Feature)

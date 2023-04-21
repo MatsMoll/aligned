@@ -72,6 +72,7 @@ class RedisConfig(Codable):
 
     def index(
         self,
+        name: str,
         initial_cap: int | None = None,
         distance_metric: str | None = None,
         algorithm: str | None = None,
@@ -79,6 +80,7 @@ class RedisConfig(Codable):
     ) -> RedisVectorIndex:
         return RedisVectorIndex(
             config=self,
+            name=name,
             initial_cap=initial_cap or 10000,
             distance_metric=distance_metric or 'COSINE',
             index_alogrithm=algorithm or 'FLAT',
@@ -91,33 +93,34 @@ class RedisVectorIndex(VectorStorage):
 
     config: RedisConfig
 
+    name: str
     initial_cap: int
     distance_metric: str
     index_alogrithm: str
     embedding_type: str
 
-    name: str = 'redis'
+    type_name: str = 'redis'
 
     async def create_index(self, index: VectorIndex) -> None:
-        from redis.commands.search.indexDefinition import IndexDefinition, IndexType
+        from redis.commands.search.indexDefinition import IndexDefinition, IndexType  # type: ignore
 
         redis = self.config.redis()
         try:
-            info = await redis.ft(index.name).info()
-            logger.info(f'Index {index.name} already exists: {info}')
+            info = await redis.ft(self.name).info()
+            logger.info(f'Index {self.name} already exists: {info}')
         except Exception:
-            logger.info(f'Creating index {index.name} with prefix {index.location.identifier}...')
+            logger.info(f'Creating index {self.name} with prefix {index.location.identifier}...')
             index_definition = IndexDefinition(prefix=[index.location.identifier], index_type=IndexType.HASH)
             fields = [
                 self.index_schema(feature, index) for feature in set(index.metadata).union({index.vector})
             ]
-            await redis.ft(index.name).create_index(
+            await redis.ft(self.name).create_index(
                 fields=fields,
                 definition=index_definition,
             )
 
     def index_schema(self, feature: Feature, index: VectorIndex) -> str:
-        from redis.commands.search.field import NumericField, TagField, TextField, VectorField
+        from redis.commands.search.field import NumericField, TagField, TextField, VectorField  # type: ignore
 
         if feature.dtype.is_numeric:
             return NumericField(name=feature.name)
@@ -146,7 +149,7 @@ class RedisVectorIndex(VectorStorage):
         raise ValueError(f'Unsupported feature type {feature.dtype.name}')
 
     async def upsert_polars(self, df: pl.LazyFrame, index: VectorIndex) -> None:
-        logger.info(f'Upserting {len(df.columns)} into index {index.name}...')
+        logger.info(f'Upserting {len(df.columns)} into index {self.name}...')
 
 
 @dataclass
@@ -208,9 +211,7 @@ class RedisSource(FeatureSource, WritableFeatureSource):
                     elif feature.dtype == FeatureType('').datetime:
                         expr = pl.col(feature.name).dt.timestamp('ms').cast(pl.Utf8).alias(feature.name)
                     elif feature.dtype == FeatureType('').embedding or feature.dtype == FeatureType('').array:
-                        import json
-
-                        expr = pl.col(feature.name).apply(lambda x: json.dumps(x.to_list()))
+                        expr = pl.col(feature.name).apply(lambda x: x.to_numpy().tobytes())
 
                     request_data = request_data.with_column(expr)
                     features.append(feature.name)
@@ -253,9 +254,8 @@ class RedisStreamSource(StreamDataSource, SinkableDataSource):
             elif feature.dtype == FeatureType('').datetime:
                 expr = pl.col(feature.name).dt.timestamp('ms')
             elif feature.dtype == FeatureType('').embedding or feature.dtype == FeatureType('').array:
-                import json
 
-                expr = pl.col(feature.name).apply(lambda x: json.dumps(x.to_list()))
+                expr = pl.col(feature.name).apply(lambda x: x.to_numpy().tobytes())
 
             data = data.with_column(expr.cast(pl.Utf8).alias(feature.name))
 

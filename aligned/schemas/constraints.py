@@ -108,6 +108,36 @@ class MinLength(Constraint):
 
 
 @dataclass
+class Regex(Constraint):
+    value: str
+
+    name = 'regex'
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+@dataclass
+class EndsWith(Constraint):
+    value: str
+
+    name = 'ends_with'
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+@dataclass
+class StartsWith(Constraint):
+    value: str
+
+    name = 'starts_with'
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+@dataclass
 class MaxLength(Constraint):
     value: int
 

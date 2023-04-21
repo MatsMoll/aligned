@@ -42,6 +42,10 @@ class SupportedTextModels:
 class TextVectoriserModel(Codable, SerializableType):
     name: str
 
+    @property
+    def embedding_size(self) -> int | None:
+        return None
+
     def _serialize(self) -> dict:
         return self.to_dict()
 
@@ -188,6 +192,10 @@ class OpenAiEmbeddingModel(TextVectoriserModel):
     api_token_env_key: str = field(default='OPENAI_API_KEY')
     model: str = field(default='text-embedding-ada-002')
     name: str = 'openai'
+
+    @property
+    def embedding_size(self) -> int | None:
+        return 768
 
     async def embeddings(self, input: list[str]) -> OpenAiResponse:
         # import openai

@@ -7,10 +7,11 @@ from typing import Callable
 import polars as pl
 
 from aligned.compiler.feature_factory import (
+    ClassificationTarget,
     EventTimestamp,
     FeatureFactory,
     FeatureReferencable,
-    Target,
+    RegressionTarget,
     TargetProbability,
 )
 from aligned.data_source.batch_data_source import BatchDataSource
@@ -19,11 +20,12 @@ from aligned.entity_data_source import EntityDataSource
 from aligned.feature_view.feature_view import FeatureView
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
+from aligned.schemas.folder import Folder
 from aligned.schemas.literal_value import LiteralValue
-from aligned.schemas.model import EventTrigger
 from aligned.schemas.model import Model as ModelSchema
 from aligned.schemas.model import PredictionsView
-from aligned.schemas.model import Target as TargetSchema
+from aligned.schemas.target import ClassificationTarget as ClassificationTargetSchema
+from aligned.schemas.target import RegressionTarget as RegressionTargetSchema
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +65,7 @@ class ModelMetedata:
     description: str | None = field(default=None)
     predictions_source: BatchDataSource | None = field(default=None)
     predictions_stream: StreamDataSource | None = field(default=None)
+    dataset_folder: Folder | None = field(default=None)
 
 
 class Model(ABC):
@@ -75,9 +78,17 @@ class Model(ABC):
         tags: dict[str, str] | None = None,
         predictions_source: BatchDataSource | None = None,
         predictions_stream: StreamDataSource | None = None,
+        dataset_folder: Folder | None = None,
     ) -> ModelMetedata:
         return ModelMetedata(
-            name, features, contacts, tags, description, predictions_source, predictions_stream
+            name,
+            features,
+            contacts,
+            tags,
+            description,
+            predictions_source,
+            predictions_stream,
+            dataset_folder,
         )
 
     @abstractproperty
@@ -90,9 +101,18 @@ class Model(ABC):
         metadata = cls().metadata
 
         inference_view: PredictionsView = PredictionsView(
-            set(), set(), set(), set(), source=metadata.predictions_source
+            entities=set(),
+            features=set(),
+            derived_features=set(),
+            source=metadata.predictions_source,
+            stream_source=metadata.predictions_stream,
+            classification_targets=set(),
+            regression_targets=set(),
         )
         probability_features: dict[str, set[TargetProbability]] = {}
+
+        classification_targets: dict[str, ClassificationTargetSchema] = {}
+        regression_targets: dict[str, RegressionTargetSchema] = {}
 
         for var_name in var_names:
             feature = getattr(cls, var_name)
@@ -106,41 +126,31 @@ class Model(ABC):
             elif isinstance(feature, Model):
                 compiled = feature.compile()
                 inference_view.entities.update(compiled.predictions_view.entities)
-            elif isinstance(feature, Target):
+            elif isinstance(feature, ClassificationTarget):
                 assert feature._name
                 feature._location = FeatureLocation.model(metadata.name)
-                target_feature = feature.feature.copy_type()
-                target_feature._name = feature._name
-                target_feature._location = FeatureLocation.model(metadata.name)
-                trigger: EventTrigger | None = None
+                target_feature = feature.compile()
 
-                on_ground_truth_event = feature.ground_truth_event
+                classification_targets[var_name] = target_feature
+                inference_view.classification_targets.add(target_feature)
+            elif isinstance(feature, RegressionTarget):
+                assert feature._name
+                feature._location = FeatureLocation.model(metadata.name)
+                target_feature = feature.compile()
 
-                if feature.event_trigger:
-                    event = feature.event_trigger
-                    if not event.condition._name:
-                        event.condition._name = '0'
-
-                    trigger = EventTrigger(
-                        event.condition.compile(), event=event.event, payload={feature.feature.feature()}
-                    )
-                    if not on_ground_truth_event:
-                        on_ground_truth_event = event.event
-
-                inference_view.target.add(
-                    TargetSchema(
-                        estimating=feature.feature.feature_referance(),
-                        feature=target_feature.feature(),
-                        on_ground_truth_event=on_ground_truth_event,
-                        event_trigger=trigger,
-                    )
-                )
+                regression_targets[var_name] = target_feature
+                inference_view.regression_targets.add(target_feature)
             elif isinstance(feature, EventTimestamp):
                 inference_view.event_timestamp = feature.event_timestamp()
 
             elif isinstance(feature, TargetProbability):
                 feature_name = feature.target._name
                 assert feature._name
+                assert feature.target._name not in classification_targets
+
+                target = classification_targets[feature.target._name]
+                target.class_probabilities.add(feature.compile())
+
                 inference_view.features.add(
                     Feature(
                         var_name,
@@ -176,7 +186,9 @@ class Model(ABC):
             )
             inference_view.derived_features.add(arg_max_feature)
         if not probability_features:
-            inference_view.features.update({target.feature for target in inference_view.target})
+            inference_view.features.update(
+                {target.feature for target in inference_view.classification_targets}
+            )
 
         return ModelSchema(
             name=metadata.name,
@@ -185,4 +197,5 @@ class Model(ABC):
             contacts=metadata.contacts,
             tags=metadata.tags,
             description=metadata.description,
+            dataset_folder=metadata.dataset_folder,
         )

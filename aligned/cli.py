@@ -254,8 +254,7 @@ async def serve_worker_command(
     env_file_path = dir / env_file
     load_envs(env_file_path)
 
-    os.environ['ALADDIN_ENABLE_SERVER'] = 'True'
-    worker = await StreamWorker.from_object(dir, reference_file_path, obj)
+    worker = StreamWorker.from_object(dir, reference_file_path, obj)
 
     await worker.start(prune_unused_features)
 

@@ -47,7 +47,9 @@ class FileStorage(Storage):
         return Path(path).read_bytes()
 
     async def write(self, path: str, content: bytes) -> None:
-        Path(path).write_bytes(content)
+        lib_path = Path(path)
+        lib_path.parent.mkdir(parents=True, exist_ok=True)
+        lib_path.write_bytes(content)
 
 
 @dataclass
