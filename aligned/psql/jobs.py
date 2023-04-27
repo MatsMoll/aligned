@@ -31,7 +31,7 @@ class SqlColumn:
     def sql_select(self) -> str:
         if self.selection == self.alias:
             return f'{self.selection}'
-        return f'{self.selection} AS "{self.alias}"'
+        return f'"{self.selection}" AS "{self.alias}"'
 
     def __hash__(self) -> int:
         return hash(self.sql_select)

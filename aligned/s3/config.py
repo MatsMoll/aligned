@@ -140,6 +140,15 @@ class AwsS3CsvDataSource(BatchDataSource, DataFileReference, ColumnFeatureMappab
         buffer.seek(0)
         await self.storage.write(self.path, buffer.read())
 
+    async def write_polars(self, df: pl.LazyFrame) -> None:
+        buffer = BytesIO()
+        df.collect().write_csv(
+            buffer,
+            sep=self.csv_config.seperator,
+        )
+        buffer.seek(0)
+        await self.storage.write(self.path, buffer.read())
+
     def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
         return FileFullJob(self, request=request, limit=limit)
 
@@ -192,12 +201,12 @@ class AwsS3ParquetDataSource(BatchDataSource, DataFileReference, ColumnFeatureMa
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
         buffer = BytesIO()
-        df.to_parquet(buffer)
+        df.to_parquet(buffer, compression=self.parquet_config.compression, engine=self.parquet_config.engine)
         buffer.seek(0)
         await self.storage.write(self.path, buffer.read())
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
         buffer = BytesIO()
-        df.collect().write_parquet(buffer)
+        df.collect().write_parquet(buffer, compression=self.parquet_config.compression)
         buffer.seek(0)
         await self.storage.write(self.path, buffer.read())

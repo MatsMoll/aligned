@@ -277,4 +277,4 @@ class HuggingFaceTransformer(TextVectoriserModel):
     async def vectorise_pandas(self, texts: pd.Series) -> pd.Series:
         if self.loaded_model is None:
             await self.load_model()
-        return pd.Series(self.loaded_model.encode(texts.tolist()))
+        return pd.Series(self.loaded_model.encode(texts.tolist()).tolist())

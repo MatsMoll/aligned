@@ -489,16 +489,19 @@ class FeatureViewStore:
         if not isinstance(self.source, RangeFeatureSource):
             raise ValueError(f'The source ({self.source}) needs to conform to RangeFeatureSource')
 
+        request = self.view.request_all
         if self.feature_filter:
             request = self.view.request_for(self.feature_filter)
-            return FilterJob(include_features=self.feature_filter, job=self.source.all_for(request, limit))
 
-        request = self.view.request_all
-        return (
+        job = (
             self.source.all_for(request, limit)
             .ensure_types(request.needed_requests)
             .derive_features(request.needed_requests)
         )
+        if self.feature_filter:
+            return FilterJob(include_features=self.feature_filter, job=job)
+        else:
+            return job
 
     def between_dates(self, start_date: datetime, end_date: datetime) -> RetrivalJob:
         if not isinstance(self.source, RangeFeatureSource):
@@ -531,7 +534,11 @@ class FeatureViewStore:
         else:
             raise ValueError(f'entities must be a dict or a RetrivalJob, was {type(entities)}')
 
-        return self.source.features_for(entity_job, request)
+        job = self.source.features_for(entity_job, request)
+        if self.feature_filter:
+            return job.filter(self.feature_filter)
+        else:
+            return job
 
     def select(self, features: set[str]) -> 'FeatureViewStore':
         return FeatureViewStore(self.store, self.view, self.event_triggers, features)

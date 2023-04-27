@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from abc import ABC, abstractproperty
 from dataclasses import dataclass, field
-from typing import TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 from aligned.compiler.feature_factory import (
     AggregationTransformationFactory,
@@ -13,6 +15,9 @@ from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, AggregationTimeWindow
 from aligned.schemas.feature import FeatureLocation, FeatureReferance
 from aligned.schemas.feature_view import CompiledFeatureView
+
+if TYPE_CHECKING:
+    from aligned.feature_store import FeatureViewStore
 
 # Enables code compleation in the select method
 FVType = TypeVar('FVType')
@@ -28,7 +33,7 @@ class FeatureViewMetadata:
     tags: dict[str, str] = field(default_factory=dict)
 
     @staticmethod
-    def from_compiled(view: CompiledFeatureView) -> 'FeatureViewMetadata':
+    def from_compiled(view: CompiledFeatureView) -> FeatureViewMetadata:
         return FeatureViewMetadata(
             name=view.name,
             description=view.description,
@@ -104,7 +109,7 @@ class FeatureView(ABC):
             feature._location = FeatureLocation.feature_view(metadata.name)
             compiled_feature = feature.feature()
 
-            if isinstance(feature, Embedding):
+            if isinstance(feature, Embedding) and feature.indexes:
                 view.indexes.extend(
                     [
                         index.compile(feature._location, compiled_feature, view.entities)
@@ -213,3 +218,12 @@ class FeatureView(ABC):
             view.aggregated_features.add(feat)
 
         return view
+
+    @classmethod
+    def query(cls) -> FeatureViewStore:
+        from aligned import FeatureStore
+
+        self = cls()
+        store = FeatureStore.experimental()
+        store.add_feature_view(self)
+        return store.feature_view(self.metadata.name)

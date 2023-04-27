@@ -766,7 +766,7 @@ class AdditionValue(Transformation):
 
 
 @dataclass
-class Addition(Transformation):
+class Addition(Transformation, PsqlTransformation, RedshiftTransformation):
 
     front: str
     behind: str
@@ -787,6 +787,9 @@ class Addition(Transformation):
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.front) + pl.col(self.behind)
+
+    def as_psql(self) -> str:
+        return f'{self.front} + {self.behind}'
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:

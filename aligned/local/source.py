@@ -210,7 +210,7 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
         return pl.scan_parquet(self.path)
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
-        df.sink_parquet(self.path)
+        df.sink_parquet(self.path, compression=self.config.compression)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
         return FileFullJob(self, request, limit)
