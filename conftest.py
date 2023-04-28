@@ -631,6 +631,7 @@ def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> Model:
         )
 
         will_survive = features.survived.as_classification_target()
+        probability = will_survive.probability_of(True)
 
     return Titanic()
 
