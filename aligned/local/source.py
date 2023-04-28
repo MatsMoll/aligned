@@ -246,10 +246,7 @@ class StorageFileSource(StorageFileReference):
 
     @property
     def storage(self) -> Storage:
-        if self.path.startswith('http'):
-            return HttpStorage()
-        else:
-            return FileStorage()
+        return HttpStorage() if self.path.startswith('http') else FileStorage()
 
     def __hash__(self) -> int:
         return hash(self.path)

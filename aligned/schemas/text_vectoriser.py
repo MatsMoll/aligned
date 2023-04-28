@@ -215,7 +215,7 @@ class OpenAiEmbeddingModel(TextVectoriserModel):
             assert item is not None
             assert isinstance(item, str)
             assert len(item) > 0
-            assert len(item) / 3 < 7000
+            assert len(item) < 21000
 
         try:
             async with AsyncClient() as client:
@@ -272,7 +272,6 @@ class HuggingFaceTransformer(TextVectoriserModel):
                 self.loaded_model.encode(texts.select(pl.col(text_key)).collect().to_series().to_list())
             ).alias(output_key)
         )
-        pass
 
     async def vectorise_pandas(self, texts: pd.Series) -> pd.Series:
         if self.loaded_model is None:

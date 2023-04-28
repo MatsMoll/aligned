@@ -55,24 +55,10 @@ class TableFetch:
     order_by: str | None = field(default=None)
 
     def sql_query(self, distinct: str | None = None) -> str:
-        # Select the core features
-        wheres = ''
-        order_by = ''
-        group_by = ''
-        select = 'SELECT'
-
-        if distinct:
-            select = f'SELECT DISTINCT ON ({distinct})'
-
-        if self.conditions:
-            wheres = 'WHERE ' + ' AND '.join(self.conditions)
-
-        if self.order_by:
-            order_by = 'ORDER BY ' + self.order_by
-
-        if self.group_by:
-            group_by = 'GROUP BY ' + ', '.join(self.group_by)
-
+        select = f'SELECT DISTINCT ON ({distinct})' if distinct else 'SELECT'
+        wheres = 'WHERE ' + ' AND '.join(self.conditions) if self.conditions else ''
+        order_by = 'ORDER BY ' + self.order_by if self.order_by else ''
+        group_by = 'GROUP BY ' + ', '.join(self.group_by) if self.group_by else ''
         table_columns = [col.sql_select for col in self.columns]
 
         if isinstance(self.table, TableFetch):
@@ -163,10 +149,7 @@ class FullExtractPsqlJob(FullExtractJob):
         column_select = ', '.join(columns)
         schema = f'{self.config.schema}.' if self.config.schema else ''
 
-        limit_query = ''
-        if self.limit:
-            limit_query = f'LIMIT {int(self.limit)}'
-
+        limit_query = f'LIMIT {int(self.limit)}' if self.limit else ''
         return f'SELECT {column_select} FROM {schema}"{self.source.table}" {limit_query}'
 
 
@@ -264,14 +247,13 @@ class FactPsqlJob(FactualRetrivalJob):
         return list(self.sources.values())[0].config
 
     def describe(self) -> str:
-        if isinstance(self.facts, PostgreSqlJob):
-            psql_job = self.build_sql_entity_query(self.facts)
-            return f'Loading features for {self.facts.describe()}\n\nQuery: {psql_job}'
-        else:
+        if not isinstance(self.facts, PostgreSqlJob):
             raise ValueError(
                 'Only PostgreSqlJob is supported as facts when describing,'
                 f'but fetching features for facts: {self.facts.describe()}'
             )
+        psql_job = self.build_sql_entity_query(self.facts)
+        return f'Loading features for {self.facts.describe()}\n\nQuery: {psql_job}'
 
     async def to_pandas(self) -> pd.DataFrame:
         job = await self.psql_job()
@@ -293,7 +275,7 @@ class FactPsqlJob(FactualRetrivalJob):
             return 'text'
         if dtype == FeatureType('').uuid:
             return 'uuid'
-        if dtype == FeatureType('').int32 or dtype == FeatureType('').int64:
+        if dtype in [FeatureType('').int32, FeatureType('').int64]:
             return 'integer'
         if dtype == FeatureType('').datetime:
             return 'TIMESTAMP WITH TIME ZONE'
@@ -337,13 +319,12 @@ class FactPsqlJob(FactualRetrivalJob):
             order_by=sort_query,
         )
 
-        derived_features = [
+        if derived_features := [
             feature
             for feature in request.derived_features
             if isinstance(feature.transformation, PsqlTransformation)
-            and all([field in field_selects for field in feature.depending_on_names])
-        ]
-        if derived_features:
+            and all(field in field_selects for field in feature.depending_on_names)
+        ]:
             derived_alias = source.feature_identifier_for([feature.name for feature in derived_features])
             derived_selects = {
                 SqlColumn(feature.transformation.as_psql(), name)
@@ -367,7 +348,8 @@ class FactPsqlJob(FactualRetrivalJob):
         name = f'{request.name}_agg_cte'
 
         if not all(
-            [isinstance(feature.derived_feature.transformation, PsqlTransformation) for feature in features]
+            isinstance(feature.derived_feature.transformation, PsqlTransformation)
+            for feature in features
         ):
             raise ValueError('All features must have a PsqlTransformation')
 
@@ -485,15 +467,15 @@ class FactPsqlJob(FactualRetrivalJob):
                 for depended_feature in agg.derived_feature.depending_on:
                     needed_features.add(depended_feature.name)
 
-            missing_features = needed_features - supported_aggregation_features
-            if not missing_features:
-                fetches.append(self.sql_aggregated_request(window, aggregates, request))
-            else:
+            if (
+                missing_features := needed_features
+                - supported_aggregation_features
+            ):
                 raise ValueError(
                     f'Only SQL aggregates are supported at the moment. Missing features {missing_features}'
                 )
-                # fetches.append(self.fetch_all_aggregate_values(window, aggregates, request))
-
+            else:
+                fetches.append(self.sql_aggregated_request(window, aggregates, request))
         return fetches
 
     async def build_request(self) -> str:
@@ -591,8 +573,7 @@ class FactPsqlJob(FactualRetrivalJob):
                 query += value.to_sql + ', '
             query = query[:-2]
             query += '),'
-        query = query[:-1]
-        return query
+        return query[:-1]
 
     def build_sql_entity_query(self, sql_facts: PostgreSqlJob) -> str:
 

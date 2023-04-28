@@ -291,9 +291,8 @@ class PowerFactory(TransformationFactory):
 
         if isinstance(self.second, FeatureFactory):
             return PowerFeature(self.first.name, self.second.name)
-        else:
-            value = LiteralValue.from_value(self.second)
-            return Power(self.first.name, value)
+        value = LiteralValue.from_value(self.second)
+        return Power(self.first.name, value)
 
 
 @dataclass
@@ -601,10 +600,7 @@ class MeanTransfomrationFactory(TransformationFactory, AggregatableTransformatio
 
     @property
     def using_features(self) -> list[FeatureFactory]:
-        if self.group_by:
-            return [self.feature] + self.group_by
-        else:
-            return [self.feature]
+        return [self.feature] + self.group_by if self.group_by else [self.feature]
 
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import Mean

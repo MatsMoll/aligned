@@ -146,7 +146,7 @@ class StreamWorker:
 
         redis_streams: list[RedisStreamSource] = streams
         for stream in redis_streams:
-            if not stream.config == redis_streams[0].config:
+            if stream.config != redis_streams[0].config:
                 raise ValueError(f'Not all stream configs for {feature_views_to_process}, is equal.')
 
         redis_stream = RedisStream(redis_streams[0].config.redis())
@@ -156,11 +156,12 @@ class StreamWorker:
             processes.append(process(redis_stream, topic_name, process_views))
 
         for active_learning_config in self.active_learning_configs:
-            for model_name in set(active_learning_config.model_names):
-                processes.append(
-                    process_predictions(redis_stream, store.model(model_name), active_learning_config)
+            processes.extend(
+                process_predictions(
+                    redis_stream, store.model(model_name), active_learning_config
                 )
-
+                for model_name in set(active_learning_config.model_names)
+            )
         await asyncio.gather(*processes)
 
 

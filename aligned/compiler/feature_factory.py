@@ -285,9 +285,15 @@ class FeatureFactory(FeatureReferencable):
 
     @property
     def depending_on_names(self) -> list[str]:
-        if not self.transformation:
-            return []
-        return [feat._name for feat in self.transformation.using_features if feat._name]
+        return (
+            [
+                feat._name
+                for feat in self.transformation.using_features
+                if feat._name
+            ]
+            if self.transformation
+            else []
+        )
 
     def feature_referance(self) -> FeatureReferance:
         return FeatureReferance(self.name, self._location, self.dtype)

@@ -91,9 +91,7 @@ class AggregateOver(Codable):
         if self.window:
             return self.window.__hash__()
 
-        name = ''
-        for feature in self.group_by:
-            name += feature.name
+        name = ''.join(feature.name for feature in self.group_by)
         return name.__hash__()
 
 

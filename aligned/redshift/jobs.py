@@ -57,21 +57,11 @@ class TableFetch:
     order_by: str | None = field(default=None)
 
     def sql_query(self, distinct: str | None = None) -> str:
-        # Select the core features
-        wheres = ''
-        order_by = ''
-        group_by = ''
         select = 'SELECT'
 
-        if self.conditions:
-            wheres = 'WHERE ' + ' AND '.join(self.conditions)
-
-        if self.order_by:
-            order_by = 'ORDER BY ' + self.order_by
-
-        if self.group_by:
-            group_by = 'GROUP BY ' + ', '.join(self.group_by)
-
+        wheres = 'WHERE ' + ' AND '.join(self.conditions) if self.conditions else ''
+        order_by = 'ORDER BY ' + self.order_by if self.order_by else ''
+        group_by = 'GROUP BY ' + ', '.join(self.group_by) if self.group_by else ''
         table_columns = [col.sql_select for col in self.columns]
 
         if isinstance(self.table, TableFetch):
@@ -81,9 +71,15 @@ class TableFetch:
             from_sql = f"""FROM entities
         LEFT JOIN {schema}"{ self.table }" ta ON { ' AND '.join(self.joins) }"""
 
-        if distinct:
-            aliases = [col.alias for col in self.columns]
+        if not distinct:
             return f"""
+        { select } { ', '.join(table_columns) }
+        { from_sql }
+        { wheres }
+        { order_by }
+        { group_by }"""
+        aliases = [col.alias for col in self.columns]
+        return f"""
             SELECT { ', '.join(aliases) }
             FROM (
         { select } { ', '.join(table_columns) },
@@ -97,13 +93,6 @@ class TableFetch:
             { group_by }
         ) AS entities
         WHERE row_number = 1"""
-        else:
-            return f"""
-        { select } { ', '.join(table_columns) }
-        { from_sql }
-        { wheres }
-        { order_by }
-        { group_by }"""
 
 
 @dataclass
@@ -147,10 +136,7 @@ class FullExtractPsqlJob(FullExtractJob):
         column_select = ', '.join(columns)
         schema = f'{self.config.schema}.' if self.config.schema else ''
 
-        limit_query = ''
-        if self.limit:
-            limit_query = f'LIMIT {int(self.limit)}'
-
+        limit_query = f'LIMIT {int(self.limit)}' if self.limit else ''
         f'SELECT {column_select} FROM {schema}"{self.source.table}" {limit_query}',
 
 
@@ -267,7 +253,7 @@ class FactRedshiftJob(FactualRetrivalJob):
             return 'text'
         if dtype == FeatureType('').uuid:
             return 'uuid'
-        if dtype == FeatureType('').int32 or dtype == FeatureType('').int64:
+        if dtype in [FeatureType('').int32, FeatureType('').int64]:
             return 'integer'
         if dtype == FeatureType('').datetime:
             return 'TIMESTAMP WITH TIME ZONE'
@@ -313,13 +299,12 @@ class FactRedshiftJob(FactualRetrivalJob):
         )
 
         derived_map = request.derived_feature_map()
-        derived_features = [
+        if derived_features := [
             feature
             for feature in request.derived_features
             if isinstance(feature.transformation, RedshiftTransformation)
-            and all([name not in derived_map for name in feature.depending_on_names])
-        ]
-        if derived_features:
+            and all(name not in derived_map for name in feature.depending_on_names)
+        ]:
             derived_alias = source.feature_identifier_for([feature.name for feature in derived_features])
             derived_selects = {
                 SqlColumn(feature.transformation.as_redshift(), name)
@@ -343,10 +328,10 @@ class FactRedshiftJob(FactualRetrivalJob):
         name = f'{request.name}_agg_cte'
 
         if not all(
-            [
-                isinstance(feature.derived_feature.transformation, RedshiftTransformation)
-                for feature in features
-            ]
+            isinstance(
+                feature.derived_feature.transformation, RedshiftTransformation
+            )
+            for feature in features
         ):
             raise ValueError('All features must have a RedshiftTransformation')
 
@@ -491,14 +476,16 @@ class FactRedshiftJob(FactualRetrivalJob):
                 for depended_feature in agg.derived_feature.depending_on:
                     needed_features.add(depended_feature.name)
 
-            missing_features = needed_features - supported_aggregation_features
-            if not missing_features:
-                fetches.append(self.sql_aggregated_request(window, aggregates, request))
-            else:
+            if (
+                missing_features := needed_features
+                - supported_aggregation_features
+            ):
                 raise ValueError(
                     f'Only SQL aggregates are supported at the moment. Missing features {missing_features}'
                 )
 
+            else:
+                fetches.append(self.sql_aggregated_request(window, aggregates, request))
         return fetches
 
     def build_sql_entity_query(self, sql_facts: PostgreSqlJob) -> str:

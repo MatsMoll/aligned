@@ -471,11 +471,10 @@ class FeatureViewStore:
 
     @property
     def request(self) -> RetrivalRequest:
-        if self.only_write_model_features:
-            features_in_models = self.store.model_features_for(self.view.name)
-            return self.view.request_for(features_in_models).needed_requests[0]
-        else:
+        if not self.only_write_model_features:
             return self.view.request_all.needed_requests[0]
+        features_in_models = self.store.model_features_for(self.view.name)
+        return self.view.request_for(features_in_models).needed_requests[0]
 
     @property
     def source(self) -> FeatureSource:
@@ -535,10 +534,7 @@ class FeatureViewStore:
             raise ValueError(f'entities must be a dict or a RetrivalJob, was {type(entities)}')
 
         job = self.source.features_for(entity_job, request)
-        if self.feature_filter:
-            return job.filter(self.feature_filter)
-        else:
-            return job
+        return job.filter(self.feature_filter) if self.feature_filter else job
 
     def select(self, features: set[str]) -> 'FeatureViewStore':
         return FeatureViewStore(self.store, self.view, self.event_triggers, features)
@@ -566,8 +562,7 @@ class FeatureViewStore:
             .ensure_types([request])
         )
 
-        aggregations = request.aggregate_over()
-        if aggregations:
+        if aggregations := request.aggregate_over():
             checkpoints: dict[AggregateOver, DataFileReference] = {}
 
             for aggregation in aggregations.keys():
