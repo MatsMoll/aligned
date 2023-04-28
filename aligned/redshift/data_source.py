@@ -9,7 +9,8 @@ from aligned.compiler.model import EntityDataSource, SqlEntityDataSource
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.enricher import Enricher
 from aligned.psql.data_source import PostgreSQLConfig, PostgreSQLDataSource
-from aligned.retrival_job import DateRangeJob, RetrivalJob, RetrivalRequest
+from aligned.request.retrival_request import RetrivalRequest
+from aligned.retrival_job import DateRangeJob, FullExtractJob, RetrivalJob
 from aligned.schemas.codable import Codable
 
 
@@ -75,6 +76,11 @@ class RedshiftSQLDataSource(BatchDataSource, ColumnFeatureMappable):
 
     def __hash__(self) -> int:
         return hash(self.table)
+
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
+        from aligned.psql.jobs import FullExtractPsqlJob
+
+        return FullExtractPsqlJob(self, request, limit)
 
     def all_between_dates(
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime

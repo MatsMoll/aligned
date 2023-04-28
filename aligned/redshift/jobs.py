@@ -10,7 +10,7 @@ import polars as pl
 from aligned.psql.data_source import PostgreSQLConfig, PostgreSQLDataSource
 from aligned.psql.jobs import PostgreSqlJob
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
-from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
+from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, RetrivalJob
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, DerivedFeature
 from aligned.schemas.feature import FeatureLocation, FeatureType
 from aligned.schemas.transformation import RedshiftTransformation
@@ -104,54 +104,6 @@ class TableFetch:
         { wheres }
         { order_by }
         { group_by }"""
-
-
-@dataclass
-class FullExtractPsqlJob(FullExtractJob):
-
-    source: PostgreSQLDataSource
-    request: RetrivalRequest
-    limit: int | None = None
-
-    @property
-    def request_result(self) -> RequestResult:
-        return RequestResult.from_request(self.request)
-
-    @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return [self.request]
-
-    @property
-    def config(self) -> PostgreSQLConfig:
-        return self.source.config
-
-    async def to_pandas(self) -> pd.DataFrame:
-        return await self.psql_job().to_pandas()
-
-    async def to_polars(self) -> pl.LazyFrame:
-        return await self.psql_job().to_polars()
-
-    def psql_job(self) -> PostgreSqlJob:
-        return PostgreSqlJob(self.config, self.build_request())
-
-    def build_request(self) -> str:
-
-        all_features = [
-            feature.name for feature in list(self.request.all_required_features.union(self.request.entities))
-        ]
-        sql_columns = self.source.feature_identifier_for(all_features)
-        columns = [
-            f'"{sql_col}" AS {alias}' if sql_col != alias else sql_col
-            for sql_col, alias in zip(sql_columns, all_features)
-        ]
-        column_select = ', '.join(columns)
-        schema = f'{self.config.schema}.' if self.config.schema else ''
-
-        limit_query = ''
-        if self.limit:
-            limit_query = f'LIMIT {int(self.limit)}'
-
-        f'SELECT {column_select} FROM {schema}"{self.source.table}" {limit_query}',
 
 
 @dataclass
