@@ -146,7 +146,9 @@ class Model(ABC):
             elif isinstance(feature, TargetProbability):
                 feature_name = feature.target._name
                 assert feature._name
-                assert feature.target._name not in classification_targets
+                assert (
+                    feature.target._name in classification_targets
+                ), 'Target must be a classification target.'
 
                 target = classification_targets[feature.target._name]
                 target.class_probabilities.add(feature.compile())
