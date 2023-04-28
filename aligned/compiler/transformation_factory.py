@@ -256,16 +256,22 @@ class DifferanceBetweenFactory(TransformationFactory):
 class AdditionBetweenFactory(TransformationFactory):
 
     first_feature: FeatureFactory
-    second_feature: FeatureFactory
+    second_feature: FeatureFactory | Any
 
     @property
     def using_features(self) -> list[FeatureFactory]:
-        return [self.first_feature, self.second_feature]
+        if isinstance(self.second_feature, FeatureFactory):
+            return [self.first_feature, self.second_feature]
+        else:
+            return [self.first_feature]
 
     def compile(self) -> Transformation:
-        from aligned.schemas.transformation import Addition
+        from aligned.schemas.transformation import Addition, AdditionValue
 
-        return Addition(self.first_feature.name, self.second_feature.name)
+        if isinstance(self.second_feature, FeatureFactory):
+            return Addition(self.first_feature.name, self.second_feature.name)
+        else:
+            return AdditionValue(self.first_feature.name, LiteralValue.from_value(self.second_feature))
 
 
 @dataclass
@@ -419,10 +425,6 @@ class FillNaStrategy:
     def compile(self) -> Any:
         pass
 
-    @staticmethod
-    def mean(limit: int | None = None) -> 'FillNaStrategy':
-        return MeanFillNaStrategy(limit)
-
 
 @dataclass
 class ConstantFillNaStrategy(FillNaStrategy):
@@ -430,16 +432,6 @@ class ConstantFillNaStrategy(FillNaStrategy):
 
     def compile(self) -> Any:
         return self.value
-
-
-@dataclass
-class MeanFillNaStrategy(FillNaStrategy):
-
-    limit: int | None = field(default=None)
-
-    def compile(self) -> Any:
-        logging.info('The Mean Fill strategy will be deprecated.')
-        return 0
 
 
 @dataclass
@@ -567,21 +559,22 @@ class PolarsTransformationFactory(TransformationFactory):
         return self._using_features
 
     def compile(self) -> Transformation:
+        import inspect
         import types
 
         import dill
 
         from aligned.schemas.transformation import PolarsFunctionTransformation, PolarsLambdaTransformation
 
-        code = dill.source.getsource(self.method)
-
         if isinstance(self.method, pl.Expr):
             code = str(self.method)
             self.method = lambda df, alias: df.with_column(self.method.alias(alias))
+        else:
+            code = inspect.getsource(self.method)
 
         if isinstance(self.method, types.LambdaType) and self.method.__name__ == '<lambda>':
             return PolarsLambdaTransformation(
-                method=dill.dumps(self.method), code=code, dtype=self.dtype.dtype
+                method=dill.dumps(self.method), code=code.strip(), dtype=self.dtype.dtype
             )
         else:
             return PolarsFunctionTransformation(
@@ -675,6 +668,7 @@ class AppendStrings(TransformationFactory):
 
     first_feature: FeatureFactory
     second_feature: FeatureFactory | LiteralValue
+    separator: str = field(default='')
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -689,4 +683,25 @@ class AppendStrings(TransformationFactory):
         if isinstance(self.second_feature, LiteralValue):
             return AppendConstString(self.first_feature.name, self.second_feature.value)
         else:
-            return AppendStrings(self.first_feature.name, self.second_feature.name)
+            return AppendStrings(self.first_feature.name, self.second_feature.name, self.separator)
+
+
+@dataclass
+class ClipFactory(TransformationFactory):
+
+    feature: FeatureFactory
+    lower_bound: int | float
+    upper_bound: int | float
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.feature]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import Clip
+
+        return Clip(
+            self.feature.name,
+            LiteralValue.from_value(self.lower_bound),
+            LiteralValue.from_value(self.upper_bound),
+        )

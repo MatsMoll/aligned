@@ -8,21 +8,31 @@ import pandas as pd
 import polars as pl
 
 from aligned.compiler.constraint_factory import ConstraintFactory, LiteralFactory
+from aligned.compiler.vector_index_factory import VectorIndexFactory
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.schemas.constraints import (
     Constraint,
+    EndsWith,
     InDomain,
     LowerBound,
     LowerBoundInclusive,
     MaxLength,
     MinLength,
+    Regex,
+    StartsWith,
     UpperBound,
     UpperBoundInclusive,
 )
 from aligned.schemas.derivied_feature import DerivedFeature
+from aligned.schemas.event_trigger import EventTrigger as EventTriggerSchema
 from aligned.schemas.feature import EventTimestamp as EventTimestampFeature
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
+from aligned.schemas.literal_value import LiteralValue
+from aligned.schemas.target import ClassificationTarget as ClassificationTargetSchemas
+from aligned.schemas.target import ClassTargetProbability
+from aligned.schemas.target import RegressionTarget as RegressionTargetSchemas
 from aligned.schemas.transformation import TextVectoriserModel, Transformation
+from aligned.schemas.vector_storage import VectorStorage
 
 if TYPE_CHECKING:
     from aligned.compiler.transformation_factory import FillNaStrategy
@@ -74,7 +84,7 @@ class EventTrigger:
 @dataclass
 class TargetProbability:
     of_value: Any
-    target: Target
+    target: ClassificationTarget
     _name: str | None = None
 
     def __hash__(self) -> int:
@@ -83,6 +93,12 @@ class TargetProbability:
     def __set_name__(self, owner, name):
         self._name = name
 
+    def compile(self) -> ClassTargetProbability:
+        return ClassTargetProbability(
+            outcome=LiteralValue.from_value(self.of_value),
+            feature=Feature(self._name, dtype=FeatureType('').float),
+        )
+
 
 class FeatureReferencable:
     def feature_referance(self) -> FeatureReferance:
@@ -90,7 +106,7 @@ class FeatureReferencable:
 
 
 @dataclass
-class Target(FeatureReferencable):
+class RegressionTarget(FeatureReferencable):
     feature: FeatureFactory
     event_trigger: EventTrigger | None = field(default=None)
     ground_truth_event: StreamDataSource | None = field(default=None)
@@ -107,19 +123,94 @@ class Target(FeatureReferencable):
             raise ValueError('Missing location, can not create reference')
         return FeatureReferance(self._name, self._location, self.feature.dtype)
 
-    def listen_to_ground_truth_event(self, stream: StreamDataSource) -> Target:
-        return Target(
+    def listen_to_ground_truth_event(self, stream: StreamDataSource) -> RegressionTarget:
+        return RegressionTarget(
             feature=self.feature,
             event_trigger=self.event_trigger,
             ground_truth_event=stream,
         )
 
-    def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> Target:
+    def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> RegressionTarget:
         assert when.dtype == FeatureType('').bool, 'A trigger needs a boolean condition'
 
-        return Target(self.feature, EventTrigger(when, sink_to))
+        return RegressionTarget(
+            self.feature, EventTrigger(when, sink_to), ground_truth_event=self.ground_truth_event
+        )
+
+    def compile(self) -> RegressionTargetSchemas:
+        on_ground_truth_event = self.ground_truth_event
+        trigger = self.event_trigger
+
+        if self.event_trigger:
+            event = self.event_trigger
+            if not event.condition._name:
+                event.condition._name = '0'
+
+            trigger = EventTriggerSchema(
+                event.condition.compile(), event=event.event, payload={self.feature.feature()}
+            )
+            if not on_ground_truth_event:
+                on_ground_truth_event = event.event
+
+        return RegressionTargetSchemas(
+            self.feature.feature_referance(),
+            feature=Feature(self._name, self.feature.dtype),
+            on_ground_truth_event=on_ground_truth_event,
+            event_trigger=trigger,
+        )
+
+
+@dataclass
+class ClassificationTarget(FeatureReferencable):
+    feature: FeatureFactory
+    event_trigger: EventTrigger | None = field(default=None)
+    ground_truth_event: StreamDataSource | None = field(default=None)
+    _name: str | None = field(default=None)
+    _location: FeatureLocation | None = field(default=None)
+
+    def __set_name__(self, owner, name):
+        self._name = name
+
+    def feature_referance(self) -> FeatureReferance:
+        if not self._name:
+            raise ValueError('Missing name, can not create reference')
+        if not self._location:
+            raise ValueError('Missing location, can not create reference')
+        return FeatureReferance(self._name, self._location, self.feature.dtype)
+
+    def listen_to_ground_truth_event(self, stream: StreamDataSource) -> ClassificationTarget:
+        return ClassificationTarget(
+            feature=self.feature,
+            event_trigger=self.event_trigger,
+            ground_truth_event=stream,
+        )
+
+    def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> ClassificationTarget:
+        assert when.dtype == FeatureType('').bool, 'A trigger needs a boolean condition'
+
+        return ClassificationTarget(self.feature, EventTrigger(when, sink_to))
+
+    def confidence(self):
+        pass
 
     def probability_of(self, value: Any) -> TargetProbability:
+        """Define a value that will be the probability of a certain target class.
+
+        This is mainly intended to be used for classification problems with low cardinality.
+
+        For example, if the target is a binary classification, then the probability of the target.
+        being 1 can be defined by:
+
+        >>> target.probability_of(1)
+
+        For cases where the target have a high cardinality can `probabilities` be used instead.
+
+        Args:
+            value (Any): The class that will be the probability of the target.
+
+        Returns:
+            TargetProbability: A feature that contains the probability of the target class.
+        """
 
         if not isinstance(value, self.feature.dtype.python_type):
             raise ValueError(
@@ -130,6 +221,28 @@ class Target(FeatureReferencable):
             )
 
         return TargetProbability(value, self)
+
+    def compile(self) -> ClassificationTargetSchemas:
+        on_ground_truth_event = self.ground_truth_event
+        trigger = self.event_trigger
+
+        if self.event_trigger:
+            event = self.event_trigger
+            if not event.condition._name:
+                event.condition._name = '0'
+
+            trigger = EventTriggerSchema(
+                event.condition.compile(), event=event.event, payload={self.feature.feature()}
+            )
+            if not on_ground_truth_event:
+                on_ground_truth_event = event.event
+
+        return ClassificationTargetSchemas(
+            self.feature.feature_referance(),
+            feature=Feature(self._name, self.feature.dtype),
+            on_ground_truth_event=on_ground_truth_event,
+            event_trigger=trigger,
+        )
 
 
 class FeatureFactory(FeatureReferencable):
@@ -188,13 +301,16 @@ class FeatureFactory(FeatureReferencable):
             constraints=self.constraints,
         )
 
-    def as_target(self) -> Target:
-        return Target(self)
+    def as_classification_target(self) -> ClassificationTarget:
+        return ClassificationTarget(self)
+
+    def as_regression_target(self) -> RegressionTarget:
+        return RegressionTarget(self)
 
     def compile(self) -> DerivedFeature:
 
         if not self.transformation:
-            raise ValueError('Trying to create a derived feature with no transformation')
+            raise ValueError(f'Trying to create a derived feature with no transformation, {self.name}')
 
         return DerivedFeature(
             name=self.name,
@@ -204,7 +320,7 @@ class FeatureFactory(FeatureReferencable):
             depth=self.depth(),
             description=self._description,
             tags=None,
-            constraints=None,
+            constraints=self.constraints,
         )
 
     def depth(self) -> int:
@@ -459,6 +575,13 @@ class ArithmeticFeature(ComparableFeature):
         feature.transformation = LogTransformFactory(self)
         return feature
 
+    def clip(self: T, lower_bound: float, upper_bound: float) -> T:
+        from aligned.compiler.transformation_factory import ClipFactory
+
+        feature = Float()
+        feature.transformation = ClipFactory(self, lower_bound, upper_bound)
+        return feature
+
 
 class DecimalOperations(FeatureFactory):
     def __round__(self) -> Int64:
@@ -623,7 +746,27 @@ class LengthValidatable(FeatureFactory):
         return self
 
 
-class String(CategoricalEncodableFeature, NumberConvertableFeature, CouldBeEntityFeature, LengthValidatable):
+class StringValidatable(FeatureFactory):
+    def validate_regex(self: T, regex: str) -> T:
+        self._add_constraint(Regex(regex))
+        return self
+
+    def validate_endswith(self: T, suffix: str) -> T:
+        self._add_constraint(EndsWith(suffix))
+        return self
+
+    def validate_startswith(self: T, prefix: str) -> T:
+        self._add_constraint(StartsWith(prefix))
+        return self
+
+
+class String(
+    CategoricalEncodableFeature,
+    NumberConvertableFeature,
+    CouldBeEntityFeature,
+    LengthValidatable,
+    StringValidatable,
+):
     def copy_type(self) -> String:
         return String()
 
@@ -656,13 +799,17 @@ class String(CategoricalEncodableFeature, NumberConvertableFeature, CouldBeEntit
 
         feature = Embedding()
         feature.transformation = WordVectoriserFactory(self, model)
+        feature.embedding_size = model.embedding_size
         return feature
 
-    def append(self, feature: FeatureFactory | str) -> String:
+    def embedding(self, model: TextVectoriserModel) -> Embedding:
+        return self.sentence_vector(model)
+
+    def append(self, other: FeatureFactory | str) -> String:
         from aligned.compiler.transformation_factory import AppendStrings
 
         feature = String()
-        feature.transformation = AppendStrings(self, feature)
+        feature.transformation = AppendStrings(self, other)
         return feature
 
 
@@ -707,6 +854,8 @@ class EventTimestamp(DateFeature, ArithmeticFeature):
 class Embedding(FeatureFactory):
 
     sub_type: FeatureFactory
+    embedding_size: int | None = None
+    indexes: list[VectorIndexFactory] | None = None
 
     def copy_type(self) -> Embedding:
         return Embedding()
@@ -715,8 +864,29 @@ class Embedding(FeatureFactory):
     def dtype(self) -> FeatureType:
         return FeatureType('').embedding
 
+    def indexed(
+        self,
+        storage: VectorStorage,
+        metadata: list[FeatureFactory] | None = None,
+        embedding_size: int | None = None,
+    ) -> Embedding:
+        if self.indexes is None:
+            self.indexes = []
 
-class ImageUrl(FeatureFactory):
+        if not self.embedding_size:
+            assert embedding_size, 'An embedding size is needed in order to create a vector index'
+
+        self.indexes.append(
+            VectorIndexFactory(
+                vector_dim=self.embedding_size or embedding_size,
+                metadata=metadata or [],
+                storage=storage,
+            )
+        )
+        return self
+
+
+class ImageUrl(StringValidatable):
     @property
     def dtype(self) -> FeatureType:
         return FeatureType('').string

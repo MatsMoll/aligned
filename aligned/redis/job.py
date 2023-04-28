@@ -73,9 +73,9 @@ class FactualRedisJob(FactualRetrivalJob):
                         .alias(feature.name)
                     )
                 elif feature.dtype == FeatureType('').embedding or feature.dtype == FeatureType('').array:
-                    import json
+                    import numpy as np
 
-                    reqs = reqs.with_column(pl.col(feature.name).apply(lambda row: json.loads(row)))
+                    reqs = reqs.with_column(pl.col(feature.name).apply(lambda row: np.frombuffer(row)))
                 else:
                     reqs = reqs.with_column(pl.col(feature.name).cast(feature.dtype.polars_type))
                 # if feature.dtype == FeatureType('').datetime:

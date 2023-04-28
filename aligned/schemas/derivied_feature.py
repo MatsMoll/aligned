@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from datetime import timedelta
 
@@ -32,7 +34,7 @@ class DerivedFeature(Feature):
         self.tags = tags
         self.constraints = constraints
 
-    def to_dict(self, **kwargs: dict) -> dict:
+    def __pre_serialize__(self) -> DerivedFeature:
         from aligned.schemas.transformation import SupportedTransformations
 
         for feature in self.depending_on:
@@ -41,7 +43,7 @@ class DerivedFeature(Feature):
         assert isinstance(self.transformation, Transformation)
         assert self.transformation.name in SupportedTransformations.shared().types
 
-        return super().to_dict(**kwargs)
+        return self
 
     @property
     def depending_on_names(self) -> list[str]:

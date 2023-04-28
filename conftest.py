@@ -13,7 +13,9 @@ from aligned import (
     Float,
     Int32,
     Model,
+    RedisConfig,
     String,
+    TextVectoriserModel,
 )
 from aligned.feature_store import FeatureStore
 from aligned.feature_view.combined_view import CombinedFeatureView, CombinedFeatureViewMetadata
@@ -438,7 +440,7 @@ def titanic_model(titanic_feature_view: FeatureView) -> Model:
             features=[features.age, features.sibsp, features.has_siblings, features.is_male, features.is_mr],
         )
 
-        will_survive = features.survived.as_target()
+        will_survive = features.survived.as_classification_target()
 
     return Titanic()
 
@@ -573,6 +575,8 @@ async def combined_feature_store(
 
 @pytest.fixture
 def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureView:
+    redis = RedisConfig.localhost()
+
     class TitanicPassenger(FeatureView):
 
         metadata = FeatureViewMetadata(
@@ -589,9 +593,13 @@ def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureView:
         )
         updated_at = EventTimestamp()
 
-        name = String()
         sex = String().accepted_values(['male', 'female'])
         survived = Bool().description('If the passenger survived')
+
+        name = String()
+        name_embedding = name.embedding(TextVectoriserModel.gensim('glove-wiki-gigaword-50')).indexed(
+            embedding_size=50, storage=redis.index(name='name_embedding_index'), metadata=[age, sex]
+        )
 
         sibsp = (
             Int32()
@@ -622,7 +630,7 @@ def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> Model:
             features=[features.age, features.sibsp, features.has_siblings, features.is_male],
         )
 
-        will_survive = features.survived.as_target()
+        will_survive = features.survived.as_classification_target()
 
     return Titanic()
 

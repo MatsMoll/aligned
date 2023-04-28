@@ -42,6 +42,10 @@ class SupportedTextModels:
 class TextVectoriserModel(Codable, SerializableType):
     name: str
 
+    @property
+    def embedding_size(self) -> int | None:
+        return None
+
     def _serialize(self) -> dict:
         return self.to_dict()
 
@@ -150,6 +154,7 @@ class GensimModel(TextVectoriserModel):
         tokenised_text = texts.with_columns([pl.col(text_key).apply(token).alias(f'{text_key}_tokens')])
 
         def vector(tokens: list[str]) -> list[float]:
+            logger.info('Computing vector', tokens)
             vector = np.zeros(self.loaded_model.vector_size)
             n = 0
             for token in tokens:
@@ -169,6 +174,7 @@ class GensimModel(TextVectoriserModel):
         import gensim.downloader as gensim_downloader
 
         self.loaded_model = gensim_downloader.load(self.model_name)
+        logger.info(f'Loaded model {self.model_name}')
 
 
 class OpenAiEmbedding(BaseModel):
@@ -186,6 +192,10 @@ class OpenAiEmbeddingModel(TextVectoriserModel):
     api_token_env_key: str = field(default='OPENAI_API_KEY')
     model: str = field(default='text-embedding-ada-002')
     name: str = 'openai'
+
+    @property
+    def embedding_size(self) -> int | None:
+        return 768
 
     async def embeddings(self, input: list[str]) -> OpenAiResponse:
         # import openai
@@ -267,4 +277,4 @@ class HuggingFaceTransformer(TextVectoriserModel):
     async def vectorise_pandas(self, texts: pd.Series) -> pd.Series:
         if self.loaded_model is None:
             await self.load_model()
-        return pd.Series(self.loaded_model.encode(texts.tolist()))
+        return pd.Series(self.loaded_model.encode(texts.tolist()).tolist())

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -22,11 +22,12 @@ if TYPE_CHECKING:
 class AwsS3Storage(Storage):
 
     config: AwsS3Config
+    timeout: int = field(default=60)
 
     async def read(self, path: str) -> bytes:
         from httpx import AsyncClient
 
-        async with AsyncClient() as client:
+        async with AsyncClient(timeout=self.timeout) as client:
             s3_client = S3Client(client, self.config.s3_config)
             url = s3_client.signed_download_url(path)
             response = await client.get(url)
@@ -36,7 +37,7 @@ class AwsS3Storage(Storage):
     async def write(self, path: str, content: bytes) -> None:
         from httpx import AsyncClient
 
-        async with AsyncClient() as client:
+        async with AsyncClient(timeout=self.timeout) as client:
             s3_client = S3Client(client, self.config.s3_config)
             await s3_client.upload(path, content)
 
@@ -47,7 +48,9 @@ class FileStorage(Storage):
         return Path(path).read_bytes()
 
     async def write(self, path: str, content: bytes) -> None:
-        Path(path).write_bytes(content)
+        lib_path = Path(path)
+        lib_path.parent.mkdir(parents=True, exist_ok=True)
+        lib_path.write_bytes(content)
 
 
 @dataclass

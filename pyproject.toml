@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aligned"
-version = "0.0.7"
+version = "0.0.8"
 description = "A scalable feature store that makes it easy to align offline and online ML systems"
 authors = ["Mats E. Mollestad <mats@mollestad.no>"]
 license = "Apache-2.0"
@@ -60,7 +60,8 @@ connectorx = { version = "^0.3.1", optional = true }
 pillow = { version = "^9.4.0", optional = true }
 prometheus-fastapi-instrumentator = { version="^5.9.1", optional = true }
 gensim = { version = "4.3.0", optional = true }
-openai = "^0.27.2"
+openai = { version = "^0.27.2", optional = true }
+sentence-transformers = { version = "^2.2.2", optional = true }
 
 [tool.poetry.extras]
 aws = ["aioaws", "connectorx"]
@@ -69,7 +70,7 @@ redis = ["redis"]
 server = ["asgi-correlation-id", "fastapi", "uvicorn", "prometheus-fastapi-instrumentator"]
 pandera = ["pandera"]
 image = ["pillow"]
-text = ["gensim"]
+text = ["gensim", "openai", "sentence-transformers"]
 
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.2.6"

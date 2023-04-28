@@ -260,7 +260,7 @@ class FeatureStore:
     def event_triggers_for(self, feature_view: str) -> set[EventTrigger]:
         triggers = self.feature_views[feature_view].event_triggers or set()
         for model in self.models.values():
-            for target in model.predictions_view.target:
+            for target in model.predictions_view.classification_targets:
                 if target.event_trigger and target.estimating.location.location == feature_view:
                     triggers.add(target.event_trigger)
         return triggers
@@ -440,9 +440,9 @@ class SupervisedModelFeatureStore:
         features = {f'{feature.location.identifier}:{feature.name}' for feature in feature_refs}
         target_features = {
             f'{feature.estimating.location.identifier}:{feature.estimating.name}'
-            for feature in self.model.predictions_view.target
+            for feature in self.model.predictions_view.classification_targets
         }
-        targets = {feature.estimating.name for feature in self.model.predictions_view.target}
+        targets = {feature.estimating.name for feature in self.model.predictions_view.classification_targets}
         request = self.store.requests_for(RawStringFeatureRequest(features))
         target_request = self.store.requests_for(
             RawStringFeatureRequest(target_features)
@@ -481,29 +481,27 @@ class FeatureViewStore:
     def source(self) -> FeatureSource:
         return self.store.feature_source
 
-    def with_optimised_write(self, only_write_model_features: bool = True) -> 'FeatureViewStore':
-        return FeatureViewStore(
-            self.store,
-            self.view,
-            self.event_triggers,
-            self.feature_filter,
-            only_write_model_features=only_write_model_features,
-        )
+    def with_optimised_write(self) -> 'FeatureViewStore':
+        features_in_models = self.store.model_features_for(self.view.name)
+        return self.select(features_in_models)
 
     def all(self, limit: int | None = None) -> RetrivalJob:
         if not isinstance(self.source, RangeFeatureSource):
             raise ValueError(f'The source ({self.source}) needs to conform to RangeFeatureSource')
 
+        request = self.view.request_all
         if self.feature_filter:
             request = self.view.request_for(self.feature_filter)
-            return FilterJob(include_features=self.feature_filter, job=self.source.all_for(request, limit))
 
-        request = self.view.request_all
-        return (
+        job = (
             self.source.all_for(request, limit)
             .ensure_types(request.needed_requests)
             .derive_features(request.needed_requests)
         )
+        if self.feature_filter:
+            return FilterJob(include_features=self.feature_filter, job=job)
+        else:
+            return job
 
     def between_dates(self, start_date: datetime, end_date: datetime) -> RetrivalJob:
         if not isinstance(self.source, RangeFeatureSource):
@@ -536,7 +534,11 @@ class FeatureViewStore:
         else:
             raise ValueError(f'entities must be a dict or a RetrivalJob, was {type(entities)}')
 
-        return self.source.features_for(entity_job, request)
+        job = self.source.features_for(entity_job, request)
+        if self.feature_filter:
+            return job.filter(self.feature_filter)
+        else:
+            return job
 
     def select(self, features: set[str]) -> 'FeatureViewStore':
         return FeatureViewStore(self.store, self.view, self.event_triggers, features)
@@ -583,29 +585,15 @@ class FeatureViewStore:
 
         await self.batch_write(job)
 
-    async def process_input(self, values: dict[str, list[Any]]) -> dict[str, list[Any]]:
+    def process_input(self, values: dict[str, list[Any]]) -> RetrivalJob:
 
         request = self.view.request_all.needed_requests[0]
 
         job = RetrivalJob.from_dict(values, request)
 
-        output = (
-            await job.validate_entites()
-            .fill_missing_columns()
-            .ensure_types(request)
-            .derive_features(request)
-            .listen_to_events(self.event_triggers)
-            .to_polars()
-        ).collect()
-
-        return output.to_dict()
+        return job.fill_missing_columns().ensure_types([request]).derive_features([request])
 
     async def batch_write(self, values: dict[str, list[Any]] | RetrivalJob) -> None:
-
-        features_in_models = self.store.model_features_for(self.view.name)
-        if self.only_write_model_features and not features_in_models:
-            logger.info('No model is using this feature view')
-            return
 
         if not isinstance(self.source, WritableFeatureSource):
             logger.info('Feature Source is not writable')
@@ -623,10 +611,14 @@ class FeatureViewStore:
         else:
             raise ValueError(f'values must be a dict or a RetrivalJob, was {type(values)}')
 
-        job = core_job.derive_features([request]).listen_to_events(self.event_triggers)
+        job = (
+            core_job.derive_features([request])
+            .listen_to_events(self.event_triggers)
+            .update_vector_index(self.view.indexes)
+        )
 
-        if self.only_write_model_features:
-            logger.info(f'Only writing features used by models: {features_in_models}')
-            job = job.filter(features_in_models)
+        if self.feature_filter:
+            logger.info(f'Only writing features used by models: {self.feature_filter}')
+            job = job.filter(self.feature_filter)
 
         await self.source.write(job, [request])

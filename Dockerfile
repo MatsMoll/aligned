@@ -4,4 +4,4 @@ WORKDIR /opt/app
 
 COPY /. opt/app/aligned
 
-RUN pip install 'opt/app/aligned[redis,aws,psql,server,text]'
+RUN pip install -U 'opt/app/aligned[redis,aws,psql,server,text]'

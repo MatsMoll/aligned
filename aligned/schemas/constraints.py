@@ -13,6 +13,7 @@ class Constraint(Codable, SerializableType):
         return hash(self.name)
 
     def _serialize(self) -> dict:
+        assert self.name in SupportedConstraints.shared().types, f'Constraint {self.name} is not supported'
         return self.to_dict()
 
     @classmethod
@@ -40,6 +41,8 @@ class SupportedConstraints:
             UpperBoundInclusive,
             Required,
             InDomain,
+            MaxLength,
+            MinLength,
         ]:
             self.add(tran_type)
 
@@ -99,6 +102,36 @@ class MinLength(Constraint):
     value: int
 
     name = 'min_length'
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+@dataclass
+class Regex(Constraint):
+    value: str
+
+    name = 'regex'
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+@dataclass
+class EndsWith(Constraint):
+    value: str
+
+    name = 'ends_with'
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+@dataclass
+class StartsWith(Constraint):
+    value: str
+
+    name = 'starts_with'
 
     def __hash__(self) -> int:
         return hash(self.name)
