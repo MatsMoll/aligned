@@ -10,7 +10,7 @@ import polars as pl
 from aligned.psql.data_source import PostgreSQLConfig, PostgreSQLDataSource
 from aligned.psql.jobs import PostgreSqlJob
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
-from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, RetrivalJob
+from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, DerivedFeature
 from aligned.schemas.feature import FeatureLocation, FeatureType
 from aligned.schemas.transformation import RedshiftTransformation
@@ -104,6 +104,54 @@ class TableFetch:
         { wheres }
         { order_by }
         { group_by }"""
+
+
+@dataclass
+class FullExtractPsqlJob(FullExtractJob):
+
+    source: PostgreSQLDataSource
+    request: RetrivalRequest
+    limit: int | None = None
+
+    @property
+    def request_result(self) -> RequestResult:
+        return RequestResult.from_request(self.request)
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return [self.request]
+
+    @property
+    def config(self) -> PostgreSQLConfig:
+        return self.source.config
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return await self.psql_job().to_pandas()
+
+    async def to_polars(self) -> pl.LazyFrame:
+        return await self.psql_job().to_polars()
+
+    def psql_job(self) -> PostgreSqlJob:
+        return PostgreSqlJob(self.config, self.build_request())
+
+    def build_request(self) -> str:
+
+        all_features = [
+            feature.name for feature in list(self.request.all_required_features.union(self.request.entities))
+        ]
+        sql_columns = self.source.feature_identifier_for(all_features)
+        columns = [
+            f'"{sql_col}" AS {alias}' if sql_col != alias else sql_col
+            for sql_col, alias in zip(sql_columns, all_features)
+        ]
+        column_select = ', '.join(columns)
+        schema = f'{self.config.schema}.' if self.config.schema else ''
+
+        limit_query = ''
+        if self.limit:
+            limit_query = f'LIMIT {int(self.limit)}'
+
+        f'SELECT {column_select} FROM {schema}"{self.source.table}" {limit_query}',
 
 
 @dataclass
@@ -210,6 +258,11 @@ class FactRedshiftJob(FactualRetrivalJob):
     async def psql_job(self) -> PostgreSqlJob:
         if isinstance(self.facts, PostgreSqlJob):
             return PostgreSqlJob(self.config, self.build_sql_entity_query(self.facts))
+        raise ValueError(f'Redshift only support SQL entity queries. Got: {self.facts}')
+
+    def describe(self) -> str:
+        if isinstance(self.facts, PostgreSqlJob):
+            return PostgreSqlJob(self.config, self.build_sql_entity_query(self.facts)).describe()
         raise ValueError(f'Redshift only support SQL entity queries. Got: {self.facts}')
 
     def dtype_to_sql_type(self, dtype: object) -> str:
@@ -476,24 +529,26 @@ class FactRedshiftJob(FactualRetrivalJob):
         tables: list[TableFetch] = []
         aggregates: list[TableFetch] = []
         for request in self.requests:
-            fetch = self.value_selection(request, has_event_timestamp)
-            tables.append(fetch)
-            aggregate_fetches = self.aggregated_values_from_request(request)
-            aggregates.extend(aggregate_fetches)
 
             all_entities.update(request.entity_names)
 
-            for aggregate in aggregate_fetches:
-                agg_features = {
-                    column.alias
-                    for column in aggregate.columns
-                    if column.alias != 'entites.row_id' and column.alias not in all_entities
-                }
-                final_select_names = final_select_names.union(agg_features)
+            if request.aggregated_features:
+                aggregate_fetches = self.aggregated_values_from_request(request)
+                aggregates.extend(aggregate_fetches)
 
-            final_select_names = final_select_names.union(
-                {f'{fetch.name}.{feature}' for feature in request.all_required_feature_names}
-            )
+                for aggregate in aggregate_fetches:
+                    agg_features = {
+                        f'{aggregate.name}.{column.alias}'
+                        for column in aggregate.columns
+                        if column.alias != 'entites.row_id' and column.alias not in all_entities
+                    }
+                    final_select_names = final_select_names.union(agg_features)
+            else:
+                fetch = self.value_selection(request, has_event_timestamp)
+                tables.append(fetch)
+                final_select_names = final_select_names.union(
+                    {f'{fetch.name}.{feature}' for feature in request.all_required_feature_names}
+                )
 
         all_entities_list = list(all_entities)
         all_entities_str = ', '.join(all_entities_list)
@@ -504,13 +559,13 @@ class FactRedshiftJob(FactualRetrivalJob):
             f'{list(request.entity_names)[0]}) AS row_id FROM ({sql_facts.query}) AS entities'
         )
         joins = '\n    '.join(
-            [f'INNER JOIN {table.name} ON {table.name}.row_id = entities.row_id' for table in tables]
+            [f'LEFT JOIN {table.name} ON {table.name}.row_id = entities.row_id' for table in tables]
         )
         if aggregates:
             joins += '\n    '
             joins += '\n    '.join(
                 [
-                    f'INNER JOIN {table.name} ON {table.name}.{table.id_column} = entities.{table.id_column}'
+                    f'LEFT JOIN {table.name} ON {table.name}.{table.id_column} = entities.{table.id_column}'
                     for table in aggregates
                 ]
             )

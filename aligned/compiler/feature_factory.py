@@ -190,9 +190,6 @@ class ClassificationTarget(FeatureReferencable):
 
         return ClassificationTarget(self.feature, EventTrigger(when, sink_to))
 
-    def confidence(self):
-        pass
-
     def probability_of(self, value: Any) -> TargetProbability:
         """Define a value that will be the probability of a certain target class.
 
@@ -591,6 +588,9 @@ class DecimalOperations(FeatureFactory):
         feature.transformation = RoundFactory(self)
         return feature
 
+    def round(self) -> Int64:
+        return self.__round__()
+
     def __ceil__(self) -> Int64:
         from aligned.compiler.transformation_factory import CeilFactory
 
@@ -598,12 +598,18 @@ class DecimalOperations(FeatureFactory):
         feature.transformation = CeilFactory(self)
         return feature
 
+    def cail(self) -> Int64:
+        return self.__ceil__()
+
     def __floor__(self) -> Int64:
         from aligned.compiler.transformation_factory import FloorFactory
 
         feature = Int64()
         feature.transformation = FloorFactory(self)
         return feature
+
+    def floor(self) -> Int64:
+        return self.__floor__()
 
 
 class TruncatableFeature(FeatureFactory):

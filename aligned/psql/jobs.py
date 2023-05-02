@@ -29,9 +29,14 @@ class SqlColumn:
 
     @property
     def sql_select(self) -> str:
+        selection = self.selection
+        # if not special operation e.g function. Then wrap in quotes
+        if not ('(' in selection or '-' in selection or '.' in selection):
+            selection = f'"{self.selection}"'
+
         if self.selection == self.alias:
-            return f'{self.selection}'
-        return f'"{self.selection}" AS "{self.alias}"'
+            return f'{selection}'
+        return f'{selection} AS "{self.alias}"'
 
     def __hash__(self) -> int:
         return hash(self.sql_select)
@@ -559,7 +564,7 @@ class FactPsqlJob(FactualRetrivalJob):
 
         joins = '\n    '.join(
             [
-                f'INNER JOIN {feature_view}_cte ON {feature_view}_cte.row_id = entities.row_id'
+                f'LEFT JOIN {feature_view}_cte ON {feature_view}_cte.row_id = entities.row_id'
                 for feature_view in feature_view_names
             ]
         )
@@ -567,7 +572,7 @@ class FactPsqlJob(FactualRetrivalJob):
             joins += '\n    '
             joins += '\n    '.join(
                 [
-                    f'INNER JOIN {table.name} ON {table.name}.{table.id_column} = entities.{table.id_column}'
+                    f'LEFT JOIN {table.name} ON {table.name}.{table.id_column} = entities.{table.id_column}'
                     for table in aggregates
                 ]
             )
@@ -617,19 +622,21 @@ class FactPsqlJob(FactualRetrivalJob):
         tables: list[TableFetch] = []
         aggregates: list[TableFetch] = []
         for request in self.requests:
-            fetch = self.value_selection(request, has_event_timestamp)
-            tables.append(fetch)
-            aggregate_fetches = self.aggregated_values_from_request(request)
-            aggregates.extend(aggregate_fetches)
-            for aggregate in aggregate_fetches:
-                final_select_names = final_select_names.union(
-                    {column.alias for column in aggregate.columns if column.alias != 'entites.row_id'}
-                )
-
             all_entities.update(request.entity_names)
-            final_select_names = final_select_names.union(
-                {f'{fetch.name}.{feature}' for feature in request.all_required_feature_names}
-            )
+
+            if request.aggregated_features:
+                aggregate_fetches = self.aggregated_values_from_request(request)
+                aggregates.extend(aggregate_fetches)
+                for aggregate in aggregate_fetches:
+                    final_select_names = final_select_names.union(
+                        {column.alias for column in aggregate.columns if column.alias != 'entites.row_id'}
+                    )
+            else:
+                fetch = self.value_selection(request, has_event_timestamp)
+                tables.append(fetch)
+                final_select_names = final_select_names.union(
+                    {f'{fetch.name}.{feature}' for feature in request.all_required_feature_names}
+                )
 
         all_entities_list = list(all_entities)
         all_entities_str = ', '.join(all_entities_list)
@@ -640,13 +647,13 @@ class FactPsqlJob(FactualRetrivalJob):
             f'{list(request.entity_names)[0]}) AS row_id FROM ({sql_facts.query}) AS entities'
         )
         joins = '\n    '.join(
-            [f'INNER JOIN {table.name} ON {table.name}.row_id = entities.row_id' for table in tables]
+            [f'LEFT JOIN {table.name} ON {table.name}.row_id = entities.row_id' for table in tables]
         )
         if aggregates:
             joins += '\n    '
             joins += '\n    '.join(
                 [
-                    f'INNER JOIN {table.name} ON {table.name}.{table.id_column} = entities.{table.id_column}'
+                    f'LEFT JOIN {table.name} ON {table.name}.{table.id_column} = entities.{table.id_column}'
                     for table in aggregates
                 ]
             )

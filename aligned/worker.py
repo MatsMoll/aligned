@@ -152,7 +152,9 @@ class StreamWorker:
         redis_stream = RedisStream(redis_streams[0].config.redis())
         processes = []
         for topic_name, views in feature_views.items():
-            process_views = [view.with_optimised_write(should_prune_unused_features) for view in views]
+            process_views = views
+            if should_prune_unused_features:
+                process_views = [view.with_optimised_write() for view in process_views]
             processes.append(process(redis_stream, topic_name, process_views))
 
         for active_learning_config in self.active_learning_configs:
