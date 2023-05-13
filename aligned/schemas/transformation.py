@@ -372,7 +372,10 @@ class PolarsLambdaTransformation(Transformation):
         import dill
 
         tran: Callable[[pl.LazyFrame, str], pl.LazyFrame] = dill.loads(self.method)
-        return tran(df, alias)
+        if isinstance(tran, pl.Expr):
+            return tran
+        else:
+            return tran(df, alias)
 
 
 @dataclass

@@ -570,7 +570,9 @@ class PolarsTransformationFactory(TransformationFactory):
 
         if isinstance(self.method, pl.Expr):
             code = str(self.method)
-            self.method = lambda df, alias: df.with_column(self.method.alias(alias))
+            return PolarsLambdaTransformation(
+                method=dill.dumps(self.method), code=code.strip(), dtype=self.dtype.dtype
+            )
         else:
             code = inspect.getsource(self.method)
 
