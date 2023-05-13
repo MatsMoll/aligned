@@ -1,24 +1,36 @@
 # Aligned
 
-Aligned help defining a single source of truth for logic while keeping the technology stack flexible. Such innovation has been possible by removing the need to depend on a processing engine, leading to less- and more transparent- code. Furthermore, the declarative API has made it possible to comment, add data validation, and define feature transformation at the same location. Therefore, it leads to a precise definition of the intended result.
+Aligned makes it easier to reduce visibility debt, and data depencency debts, as described in [Sculley et al. [2015]](https://papers.nips.cc/paper/2015/file/86df7dcfd896fcaf2674f757a2463eba-Paper.pdf).
 
-Main advantages:
-- Test new features faster
-- Adapt faster to new technical and business requirements.
-- Stop technology lock-in, like processing engines and infrastructure.
-- Stop vendor lock-in. Deploy to any provider that fits you
+Want to look at examples of how to use `aligned`? View the [`MatsMoll/aligned-example` repo](https://github.com/MatsMoll/aligned-example).
 
-As a result, loading model featurs can be done with the following code.
+This is done by providing an new innovative way of describing feature transformations, and data flow in ML systems. While also collecting dependency metadata that would otherwise be too inconvenient and error prone to manually type out.
+
+Therefore, you get the following:
+- [Feature Store](https://matsmoll.github.io/posts/understanding-the-chaotic-landscape-of-mlops#feature-store)
+- [Feature Server](#feature-server)
+- [Stream Processing](#stream-worker)
+- Model Performance Monitoring - Documentation coming soon
+- Data Catalog - Documentation coming soon
+- Data Lineage - Documentation coming soon
+- [Data Quality Assurance](#data-quality)
+- [Easy Data Loading](#access-data)
+- [Load Form Multiple Sources](#fast-development)
+
+
+All from the simple API of defining
+- [Data Sources](#data-sources)
+- [Feature Views](#feature-views)
+- [Models](#describe-models)
+
+As a result, loading model features is as easy as:
 
 ```python
+entities = {"passenger_id": [1, 2, 3, 4]}
 await store.model("titanic").features_for(entities).as_pandas()
 ```
 
-Read the post about [how the most elegant MLOps tool was created](https://matsmoll.github.io/2022/12/31/How-I-created-the-most-elegant-MLOps-tool.html)
-
-Also check out the the [example repo](https://github.com/otovo/aligned-example) to see how it can be used
-
-Aligned is still in actice development, so changes are likely.
+Aligned is still in active development, so changes are likely.
 
 ## Feature Views
 
@@ -30,14 +42,14 @@ This makes the features light weight, data source indipendent, and flexible.
 ```python
 class TitanicPassenger(FeatureView):
 
-    metadata = FeatureViewMetadata(
+    metadata = FeatureView.metadata_with(
         name="passenger",
         description="Some features from the titanic dataset",
         batch_source=FileSource.csv_at("titanic.csv"),
         stream_source=HttpStreamSource(topic_name="titanic")
     )
 
-    passenger_id = Entity(dtype=Int32())
+    passenger_id = Int32().as_entity()
 
     # Input values
     age = (
@@ -56,11 +68,6 @@ class TitanicPassenger(FeatureView):
 
     # Creates two one hot encoded values
     is_male, is_female = sex.one_hot_encode(['male', 'female'])
-
-    # Standard scale the age.
-    # This will fit the scaler using a data slice from the batch source
-    # limited to maximum 100 rows. We can also uese a time constraint if wanted
-    scaled_age = age.standard_scaled(limit=100)
 ```
 
 ## Data sources
@@ -70,10 +77,11 @@ Only define where the data is, and we handle the dirty work.
 
 ```python
 my_db = PostgreSQLConfig(env_var="DATABASE_URL")
+redis = RedisConfig(env_var="REDIS_URL")
 
 class TitanicPassenger(FeatureView):
 
-    metadata = FeatureViewMetadata(
+    metadata = FeatureView.metadata_with(
         name="passenger",
         description="Some features from the titanic dataset",
         batch_source=my_db.table(
@@ -82,10 +90,10 @@ class TitanicPassenger(FeatureView):
                 "Passenger_Id": "passenger_id"
             }
         ),
-        stream_source=HttpStreamSource(topic_name="titanic")
+        stream_source=redis.stream(topic="titanic")
     )
 
-    passenger_id = Entity(dtype=Int32())
+    passenger_id = Int32().as_entity()
 ```
 
 ### Fast development
@@ -120,26 +128,32 @@ class AwsFeatures(FeatureView):
     ...
 ```
 
-## Model Service
+## Describe Models
 
 Usually will you need to combine multiple features for each model.
-This is where a `ModelService` comes in.
+This is where a `Model` comes in.
 Here can you define which features should be exposed.
 
 ```python
-# Uses the variable name, as the model service name.
-# Can also define a custom name, if wanted.
-titanic_model = ModelService(
-    features=[
-        TitanicPassenger.select_all(),
+class Titanic(Model):
 
-        # Select features with code completion
-        LocationFeatures.select(lambda view: [
-            view.distance_to_shore,
-            view.distance_to_closest_boat
-        ]),
-    ]
-)
+    passenger = TitanicPassenger()
+    location = LocationFeatures()
+
+    metadata = Model.metadata_with(
+        name="titanic",
+        features=[
+            passenger.constant_filled_age,
+            passenger.ordinal_sex,
+            passenger.sibsp,
+
+            location.distance_to_shore,
+            location.distance_to_closest_boat
+        ]
+    )
+
+    # Referencing the passenger's survived feature as the target
+    did_survive = passenger.survived.as_classification_target()
 ```
 
 
@@ -176,7 +190,10 @@ class SomeFeatures(FeatureView):
     latitude = Float()
     longitude = Float()
 
-    distance_to_users = Float().transformed(distance_to_users, using_features=[latitude, longitude])
+    distance_to_users = Float().transformed_using_features_pandas(
+        [latitude, longitude],
+        distance_to_users
+    )
 ```
 
 
@@ -186,10 +203,10 @@ You can easily create a feature store that contains all your feature definitions
 This can then be used to genreate data sets, setup an instce to serve features, DAG's etc.
 
 ```python
-store = FeatureStore.from_dir(".")
+store = await FileSource.json_at("./feature-store.json").feature_store()
 
 # Select all features from a single feature view
-df = await store.all_for("passenger", limit=100).to_df()
+df = await store.all_for("passenger", limit=100).to_pandas()
 ```
 
 ### Centraliced Feature Store Definition
@@ -198,13 +215,13 @@ One option is therefore to reference the storage you use, and load the `FeatureS
 
 ```python
 aws_bucket = AwsS3Config(...)
-store = await aws_bucket.file_at("production.json").feature_store()
+store = await aws_bucket.json_at("production.json").feature_store()
 
 # This switches from the production online store to the offline store
 # Aka. the batch sources defined on the feature views
 experimental_store = store.offline_store()
 ```
-This json file can be generated by running `alinged apply`.
+This json file can be generated by running `aligned apply`.
 
 ### Select multiple feature views
 
@@ -217,7 +234,7 @@ df = await store.features_for({
     "passenger:sibsp"
 
     "other_features:distance_to_closest_boat",
-]).to_df()
+]).to_polars()
 ```
 
 ### Model Service
@@ -228,7 +245,7 @@ Selecting features for a model is super simple.
 ```python
 df = await store.model("titanic_model").features_for({
     "passenger_id": [1, 50, 110]
-}).to_df()
+}).to_pandas()
 ```
 
 ### Feature View
@@ -236,8 +253,8 @@ df = await store.model("titanic_model").features_for({
 If you want to only select features for a specific feature view, then this is also possible.
 
 ```python
-prev_30_days = await store.feature_view("match").previous(days=30).to_df()
-sample_of_20 = await store.feature_view("match").all(limit=20).to_df()
+prev_30_days = await store.feature_view("match").previous(days=30).to_pandas()
+sample_of_20 = await store.feature_view("match").all(limit=20).to_pandas()
 ```
 
 ## Data quality
@@ -267,30 +284,43 @@ df = await store.model("titanic_model").features_for({
     "passenger_id": [1, 50, 110]
 }).validate(
     PanderaValidator()  # Validates all features
-).to_df()
+).to_pandas()
 ```
 
 ## Feature Server
 
-This expectes that you either run the command in your feature store repo, or have a file with a `RepoReference` instance.
-You can also setup an online source like Redis, for faster storage.
+You can define how to serve your features with the `FeatureServer`. Here can you define where you want to load, and potentially write your features to.
+
+By default will it `aligned` look for a file called `server.py`, and a `FeatureServer` object called `server`. However, this can be defined manually as well.
 
 ```python
-redis = RedisConfig.localhost()
+from aligned import RedisConfig, FileSource
+from aligned.schemas.repo_definition import FeatureServer
 
-aws_bucket = AwsS3Config(...)
+store = FileSource.json_at("feature-store.json")
 
-repo_files = RepoReference(
-    env_var_name="ENVIRONMENT",
-    repo_paths={
-        "production": aws_bucket.file_at("feature-store/production.json"),
-        "shadow": aws_bucket.file_at("feature-store/shadow.json"),
-        "staging": aws_bucket.file_at("feature-store/staging.json")
-        # else generate the feature store from the current dir
-    }
+server = FeatureServer.from_reference(
+    store,
+    RedisConfig.localhost()
 )
-
-# Use redis as the online source, if not running localy
 ```
 
 Then run `aligned serve`, and a FastAPI server will start. Here can you push new features, which then transforms and stores the features, or just fetch them.
+
+## Stream Worker
+
+You can also setup stream processing with a similar structure. However, here will a `StreamWorker` be used.
+
+by default will `aligned` look for a `worker.py` file with an object called `worker`. An example would be the following.
+
+```python
+from aligned import RedisConfig, FileSource
+from aligned.schemas.repo_definition import FeatureServer
+
+store = FileSource.json_at("feature-store.json")
+
+server = FeatureServer.from_reference(
+    store,
+    RedisConfig.localhost()
+)
+```
