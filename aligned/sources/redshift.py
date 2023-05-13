@@ -8,10 +8,10 @@ from aligned import RedisConfig
 from aligned.compiler.model import EntityDataSource, SqlEntityDataSource
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.enricher import Enricher
-from aligned.psql.data_source import PostgreSQLConfig, PostgreSQLDataSource
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import DateRangeJob, FullExtractJob, RetrivalJob
 from aligned.schemas.codable import Codable
+from aligned.sources.psql import PostgreSQLConfig, PostgreSQLDataSource
 
 
 @dataclass

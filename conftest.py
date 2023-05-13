@@ -19,10 +19,10 @@ from aligned import (
 )
 from aligned.feature_store import FeatureStore
 from aligned.feature_view.combined_view import CombinedFeatureView, CombinedFeatureViewMetadata
-from aligned.local.source import CsvFileSource, FileFullJob, LiteralReference, ParquetFileSource
 from aligned.retrival_job import DerivedFeatureJob, RetrivalJob, RetrivalRequest
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
+from aligned.sources.local import CsvFileSource, FileFullJob, LiteralReference, ParquetFileSource
 
 
 @pytest.fixture

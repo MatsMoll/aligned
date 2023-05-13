@@ -7,13 +7,13 @@ from datetime import datetime
 import pandas as pd
 import polars as pl
 
-from aligned.psql.data_source import PostgreSQLConfig, PostgreSQLDataSource
 from aligned.psql.jobs import PostgreSqlJob
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, DerivedFeature
 from aligned.schemas.feature import FeatureLocation, FeatureType
 from aligned.schemas.transformation import RedshiftTransformation
+from aligned.sources.psql import PostgreSQLConfig, PostgreSQLDataSource
 
 logger = logging.getLogger(__name__)
 

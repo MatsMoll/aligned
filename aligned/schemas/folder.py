@@ -8,7 +8,7 @@ from mashumaro.types import SerializableType
 from aligned.schemas.codable import Codable
 
 if TYPE_CHECKING:
-    from aligned.local.source import StorageFileReference
+    from aligned.sources.local import StorageFileReference
 
 
 class FolderFactory:

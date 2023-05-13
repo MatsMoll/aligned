@@ -3,8 +3,8 @@ import pytest
 
 from aligned import FeatureStore, FileSource
 from aligned.local.job import FileFullJob
-from aligned.local.source import LiteralReference
 from aligned.retrival_job import RetrivalRequest
+from aligned.sources.local import LiteralReference
 
 
 @pytest.mark.asyncio

@@ -4,10 +4,10 @@ from datetime import datetime
 import pandas as pd
 import polars as pl
 
-from aligned.local.source import DataFileReference
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RequestResult, RetrivalJob
 from aligned.schemas.feature import Feature
+from aligned.sources.local import DataFileReference
 
 
 class LiteralRetrivalJob(RetrivalJob):

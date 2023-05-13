@@ -3,11 +3,11 @@ import polars as pl
 import pytest
 from redis.asyncio.client import Pipeline  # type: ignore
 
-from aligned.redis.config import RedisConfig, RedisSource
 from aligned.redis.job import FactualRedisJob
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import RetrivalJob
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureType
+from aligned.sources.redis import RedisConfig, RedisSource
 
 
 @pytest.fixture

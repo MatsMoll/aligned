@@ -21,10 +21,10 @@ class BatchDataSourceFactory:
     _shared: BatchDataSourceFactory | None = None
 
     def __init__(self) -> None:
-        from aligned.local.source import CsvFileSource, ParquetFileSource
-        from aligned.psql.data_source import PostgreSQLDataSource
-        from aligned.redshift.data_source import RedshiftSQLDataSource
-        from aligned.s3.config import AwsS3CsvDataSource, AwsS3ParquetDataSource
+        from aligned.sources.local import CsvFileSource, ParquetFileSource
+        from aligned.sources.psql import PostgreSQLDataSource
+        from aligned.sources.redshift import RedshiftSQLDataSource
+        from aligned.sources.s3 import AwsS3CsvDataSource, AwsS3ParquetDataSource
 
         self.supported_data_sources = {
             PostgreSQLDataSource.type_name: PostgreSQLDataSource,

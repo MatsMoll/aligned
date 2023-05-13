@@ -13,10 +13,10 @@ from aligned.active_learning.write_policy import ActiveLearningWritePolicy
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.feature_source import WritableFeatureSource
 from aligned.feature_store import FeatureViewStore, ModelFeatureStore
-from aligned.local.source import StorageFileReference
-from aligned.redis.config import RedisStreamSource
 from aligned.redis.stream import RedisStream
 from aligned.retrival_job import RetrivalJob, StreamAggregationJob
+from aligned.sources.local import StorageFileReference
+from aligned.sources.redis import RedisStreamSource
 
 logger = logging.getLogger(__name__)
 

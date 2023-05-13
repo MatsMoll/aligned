@@ -15,7 +15,7 @@ except ModuleNotFoundError:
 from aligned.storage import Storage
 
 if TYPE_CHECKING:
-    from aligned.s3.config import AwsS3Config
+    from aligned.sources.s3 import AwsS3Config
 
 
 @dataclass

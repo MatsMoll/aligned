@@ -19,7 +19,7 @@ class StreamDataSourceFactory:
     _shared: StreamDataSourceFactory | None = None
 
     def __init__(self) -> None:
-        from aligned.redis.config import RedisStreamSource
+        from aligned.sources.redis import RedisStreamSource
 
         self.supported_data_sources = {
             HttpStreamSource.name: HttpStreamSource,

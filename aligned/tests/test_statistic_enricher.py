@@ -5,7 +5,7 @@ import pytest
 from freezegun import freeze_time
 
 from aligned.enricher import TimespanSelector
-from aligned.local.source import CsvFileSource
+from aligned.sources.local import CsvFileSource
 
 
 @pytest.mark.asyncio

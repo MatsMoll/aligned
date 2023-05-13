@@ -9,8 +9,8 @@ from pathlib import Path
 import pandas as pd
 from mashumaro.types import SerializableType
 
-from aligned.redis.config import RedisConfig
 from aligned.schemas.codable import Codable
+from aligned.sources.redis import RedisConfig
 
 logger = logging.getLogger(__name__)
 

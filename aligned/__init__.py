@@ -18,12 +18,12 @@ from aligned.feature_view import (
     FeatureView,
     FeatureViewMetadata,
 )
-from aligned.local.source import FileSource
-from aligned.psql.data_source import PostgreSQLConfig
-from aligned.redis.config import RedisConfig
-from aligned.redshift.data_source import RedshiftSQLConfig
-from aligned.s3.config import AwsS3Config
 from aligned.schemas.text_vectoriser import TextVectoriserModel
+from aligned.sources.local import FileSource
+from aligned.sources.psql import PostgreSQLConfig
+from aligned.sources.redis import RedisConfig
+from aligned.sources.redshift import RedshiftSQLConfig
+from aligned.sources.s3 import AwsS3Config
 
 __all__ = [
     'FeatureStore',

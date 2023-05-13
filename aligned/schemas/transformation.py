@@ -1542,7 +1542,7 @@ class LoadImageUrl(Transformation):
         import numpy as np
         from PIL import Image
 
-        from aligned.local.source import StorageFileSource
+        from aligned.sources.local import StorageFileSource
 
         urls = df.select(self.image_url_key).collect()[self.image_url_key]
 

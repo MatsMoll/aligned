@@ -4,8 +4,8 @@ import pandas as pd
 import pytest
 
 from aligned.local.job import FileFullJob
-from aligned.local.source import LiteralReference
 from aligned.retrival_job import DerivedFeatureJob, RetrivalRequest
+from aligned.sources.local import LiteralReference
 
 
 @pytest.mark.asyncio

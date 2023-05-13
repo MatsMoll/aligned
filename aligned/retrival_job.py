@@ -28,9 +28,9 @@ from aligned.validation.interface import Validator
 if TYPE_CHECKING:
     from typing import AsyncIterator
 
-    from aligned.local.source import DataFileReference
     from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver
     from aligned.schemas.model import EventTrigger
+    from aligned.sources.local import DataFileReference
 
 
 logger = logging.getLogger(__name__)
@@ -269,7 +269,7 @@ class RetrivalJob(ABC):
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         if isinstance(location, str):
-            from aligned.local.source import ParquetFileSource
+            from aligned.sources.local import ParquetFileSource
 
             return FileCachedJob(ParquetFileSource(location), self)
         else:
@@ -455,7 +455,7 @@ class ValidationJob(RetrivalJob, ModificationJob):
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         if isinstance(location, str):
-            from aligned.local.source import ParquetFileSource
+            from aligned.sources.local import ParquetFileSource
 
             return FileCachedJob(ParquetFileSource(location), self)
         else:
@@ -747,7 +747,7 @@ class RawFileCachedJob(RetrivalJob, ModificationJob):
 
     async def to_pandas(self) -> pd.DataFrame:
         from aligned.local.job import FileFullJob
-        from aligned.local.source import LiteralReference
+        from aligned.sources.local import LiteralReference
 
         try:
             logger.info('Trying to read cache file')

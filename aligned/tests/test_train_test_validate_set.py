@@ -1,8 +1,8 @@
 import pytest
 
 from aligned.feature_store import FeatureStore
-from aligned.local.source import CsvFileSource
 from aligned.retrival_job import split
+from aligned.sources.local import CsvFileSource
 
 
 @pytest.mark.asyncio

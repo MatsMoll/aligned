@@ -9,10 +9,10 @@ from httpx import HTTPStatusError
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.exceptions import UnableToFindFileException
 from aligned.local.job import FileDateJob, FileFullJob
-from aligned.local.source import CsvConfig, DataFileReference, ParquetConfig, StorageFileReference
 from aligned.retrival_job import DateRangeJob, FullExtractJob, RetrivalRequest
 from aligned.s3.storage import AwsS3Storage
 from aligned.schemas.codable import Codable
+from aligned.sources.local import CsvConfig, DataFileReference, ParquetConfig, StorageFileReference
 from aligned.storage import Storage
 
 try:

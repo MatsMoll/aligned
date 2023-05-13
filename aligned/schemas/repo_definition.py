@@ -16,7 +16,7 @@ from aligned.schemas.model import Model
 if TYPE_CHECKING:
     from fastapi import FastAPI
 
-    from aligned.local.source import StorageFileReference
+    from aligned.sources.local import StorageFileReference
 
 
 logger = logging.getLogger(__name__)
@@ -74,7 +74,7 @@ class RepoReference:
     @staticmethod
     def reference_object(repo: Path, file: Path, object: str) -> RepoReference:
         from aligned.compiler.repo_reader import import_module, path_to_py_module
-        from aligned.local.source import StorageFileReference
+        from aligned.sources.local import StorageFileReference
 
         module_path = path_to_py_module(file, repo)
 
