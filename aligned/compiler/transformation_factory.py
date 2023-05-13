@@ -53,15 +53,17 @@ class NotNullFactory(TransformationFactory):
 class RatioFactory(TransformationFactory):
 
     numerator: FeatureFactory
-    denumerator: FeatureFactory
+    denumerator: FeatureFactory | LiteralValue
 
     @property
     def using_features(self) -> list[FeatureFactory]:
         return [self.numerator, self.denumerator]
 
     def compile(self) -> Transformation:
-        from aligned.schemas.transformation import Ratio
+        from aligned.schemas.transformation import DivideDenumeratorValue, Ratio
 
+        if isinstance(self.denumerator, LiteralValue):
+            return DivideDenumeratorValue(self.numerator.name, self.denumerator)
         return Ratio(self.numerator.name, self.denumerator.name)
 
 
@@ -705,3 +707,25 @@ class ClipFactory(TransformationFactory):
             LiteralValue.from_value(self.lower_bound),
             LiteralValue.from_value(self.upper_bound),
         )
+
+
+@dataclass
+class MultiplyFactory(TransformationFactory):
+
+    first: FeatureFactory
+    behind: FeatureFactory | LiteralValue
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        if isinstance(self.behind, LiteralValue):
+            return [self.first]
+        else:
+            return [self.first, self.behind]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import Multiply, MultiplyValue
+
+        if isinstance(self.behind, LiteralValue):
+            return MultiplyValue(self.first.name, self.behind)
+        else:
+            return Multiply(self.first.name, self.behind.name)

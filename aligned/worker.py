@@ -6,6 +6,8 @@ import timeit
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from prometheus_client import Counter, Histogram
+
 from aligned.active_learning.selection import ActiveLearningMetric, ActiveLearningSelection
 from aligned.active_learning.write_policy import ActiveLearningWritePolicy
 from aligned.data_source.stream_data_source import StreamDataSource
@@ -17,6 +19,13 @@ from aligned.redis.stream import RedisStream
 from aligned.retrival_job import RetrivalJob, StreamAggregationJob
 
 logger = logging.getLogger(__name__)
+
+processed_rows_count = Counter(
+    name='aligned_processed_rows', documentation='Number of processed rows', labelnames=['feature_view']
+)
+process_time = Histogram(
+    'aligned_process_time', documentation='Time used to process the records', labelnames=['feature_view']
+)
 
 # Very experimental, so can contain a lot of bugs
 
@@ -37,6 +46,7 @@ class StreamWorker:
     views_to_process: set[str]
     should_prune_unused_features: bool = field(default=False)
     active_learning_configs: list[ActiveLearningConfig] = field(default_factory=list)
+    metric_logging_port: int | None = field(default=None)
 
     @staticmethod
     def from_reference(
@@ -62,17 +72,21 @@ class StreamWorker:
     @staticmethod
     def from_object(repo: Path, file: Path, obj: str) -> StreamWorker:
         from aligned.compiler.repo_reader import import_module, path_to_py_module
+        from aligned.exceptions import StreamWorkerNotFound
 
         module_path = path_to_py_module(file, repo)
-        module = import_module(module_path)
 
         try:
+            module = import_module(module_path)
+
             worker = getattr(module, obj)
             if isinstance(worker, StreamWorker):
                 return worker
             raise ValueError('No reference found')
         except AttributeError:
             raise ValueError('No reference found')
+        except ModuleNotFoundError:
+            raise StreamWorkerNotFound(module_path)
 
     def generate_active_learning_dataset(
         self,
@@ -91,7 +105,13 @@ class StreamWorker:
         )
         return self
 
+    def metrics_port(self, port: int) -> StreamWorker:
+        self.metric_logging_port = port
+        return self
+
     async def start(self, should_prune_unused_features: bool) -> None:
+        from prometheus_client import start_http_server
+
         from aligned.data_source.stream_data_source import HttpStreamSource
 
         store = await self.feature_store_reference.feature_store()
@@ -163,6 +183,9 @@ class StreamWorker:
                     process_predictions(redis_stream, store.model(model_name), active_learning_config)
                 )
 
+        if self.metric_logging_port:
+            start_http_server(self.metric_logging_port)
+
         await asyncio.gather(*processes)
 
 
@@ -228,6 +251,10 @@ async def single_processing(
 
         await feature_view.batch_write(job)  # type: ignore [arg-type]
         elapsed = timeit.default_timer() - start_time
+
+        process_time.labels(feature_view.view.name).observe(elapsed)
+        processed_rows_count.labels(feature_view.view.name).inc(len(values))
+
         logger.info(f'Wrote {len(values)} records in {elapsed} seconds')
 
 
@@ -258,6 +285,14 @@ def stream_job(values: list[dict], feature_view: FeatureViewStore) -> RetrivalJo
     return StreamAggregationJob(job, checkpoints)
 
 
+async def monitor_process(values: list[dict], view: FeatureViewStore):
+    start_time = timeit.default_timer()
+    await view.batch_write(stream_job(values, view))
+    elapsed = timeit.default_timer() - start_time
+    process_time.labels(view.view.name).observe(elapsed)
+    processed_rows_count.labels(view.view.name).inc(len(values))
+
+
 async def multi_processing(
     stream_source: RedisStream, topic_name: str, feature_views: list[FeatureViewStore]
 ) -> None:
@@ -273,7 +308,7 @@ async def multi_processing(
         last_id = values[-1][0]
         mapped_values = [record for _, record in values]
 
-        await asyncio.gather(*[view.batch_write(stream_job(mapped_values, view)) for view in feature_views])
+        await asyncio.gather(*[monitor_process(mapped_values, view) for view in feature_views])
 
 
 async def process(stream_source: RedisStream, topic_name: str, feature_views: list[FeatureViewStore]) -> None:

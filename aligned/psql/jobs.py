@@ -31,7 +31,7 @@ class SqlColumn:
     def sql_select(self) -> str:
         selection = self.selection
         # if not special operation e.g function. Then wrap in quotes
-        if not ('(' in selection or '-' in selection or '.' in selection):
+        if not ('(' in selection or '-' in selection or '.' in selection or selection == '*'):
             selection = f'"{self.selection}"'
 
         if self.selection == self.alias:

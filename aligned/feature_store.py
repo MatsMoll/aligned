@@ -438,11 +438,24 @@ class SupervisedModelFeatureStore:
     def features_for(self, entities: dict[str, list] | RetrivalJob) -> SupervisedJob:
         feature_refs = self.model.features
         features = {f'{feature.location.identifier}:{feature.name}' for feature in feature_refs}
-        target_features = {
-            f'{feature.estimating.location.identifier}:{feature.estimating.name}'
-            for feature in self.model.predictions_view.classification_targets
-        }
-        targets = {feature.estimating.name for feature in self.model.predictions_view.classification_targets}
+        pred_view = self.model.predictions_view
+        target_features = set()
+        targets = set()
+        if pred_view.classification_targets:
+            target_features = {
+                f'{feature.estimating.location.identifier}:{feature.estimating.name}'
+                for feature in pred_view.classification_targets
+            }
+            targets = {feature.estimating.name for feature in pred_view.classification_targets}
+        elif pred_view.regression_targets:
+            target_features = {
+                f'{feature.estimating.location.identifier}:{feature.estimating.name}'
+                for feature in pred_view.regression_targets
+            }
+            targets = {feature.estimating.name for feature in pred_view.regression_targets}
+        else:
+            raise ValueError('Found no targets in the model')
+
         request = self.store.requests_for(RawStringFeatureRequest(features))
         target_request = self.store.requests_for(
             RawStringFeatureRequest(target_features)
@@ -621,4 +634,4 @@ class FeatureViewStore:
             logger.info(f'Only writing features used by models: {self.feature_filter}')
             job = job.filter(self.feature_filter)
 
-        await self.source.write(job, [request])
+        await self.source.write(job, job.retrival_requests)

@@ -608,6 +608,9 @@ def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureView:
             .description('Number of siblings on titanic')
         )
 
+        double_sibsp = sibsp * 2
+        square_sibsp = sibsp * sibsp
+
         cabin = String()
 
         # Transformed features

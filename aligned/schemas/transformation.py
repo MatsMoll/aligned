@@ -174,6 +174,7 @@ class SupportedTransformations:
             PandasFunctionTransformation,
             PolarsLambdaTransformation,
             Ratio,
+            DivideDenumeratorValue,
             Contains,
             GreaterThen,
             GreaterThenValue,
@@ -182,6 +183,8 @@ class SupportedTransformations:
             LowerThenOrEqual,
             DateComponent,
             Subtraction,
+            Multiply,
+            MultiplyValue,
             Addition,
             AdditionValue,
             TimeDifference,
@@ -766,6 +769,56 @@ class AdditionValue(Transformation):
 
 
 @dataclass
+class Multiply(Transformation, PsqlTransformation, RedshiftTransformation):
+
+    front: str
+    behind: str
+
+    name: str = 'mul'
+    dtype: FeatureType = FeatureType('').float
+
+    def __init__(self, front: str, behind: str) -> None:
+        self.front = front
+        self.behind = behind
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return gracefull_transformation(
+            df,
+            is_valid_mask=~(df[self.front].isna() | df[self.behind].isna()),
+            transformation=lambda dfv: dfv[self.front] * dfv[self.behind],
+        )
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        return pl.col(self.front) * pl.col(self.behind)
+
+    def as_psql(self) -> str:
+        return f'{self.front} * {self.behind}'
+
+
+@dataclass
+class MultiplyValue(Transformation, PsqlTransformation, RedshiftTransformation):
+
+    key: str
+    value: LiteralValue
+
+    name: str = 'mul_val'
+    dtype: FeatureType = FeatureType('').float
+
+    def __init__(self, key: str, value: LiteralValue) -> None:
+        self.key = key
+        self.value = value
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        return pl.col(self.key) * pl.lit(self.value.python_value)
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return df[self.key] * self.value.python_value
+
+    def as_psql(self) -> str:
+        return f"{self.key} * '{self.value.python_value}'"
+
+
+@dataclass
 class Addition(Transformation, PsqlTransformation, RedshiftTransformation):
 
     front: str
@@ -1195,6 +1248,41 @@ class Ratio(Transformation):
             Ratio('x', 'y'),
             input={'x': [1, 2, 0, 1, None, 9], 'y': [1, 0, 1, 4, 2, None]},
             output=[1, nan, 0, 0.25, nan, nan],
+        )
+
+
+@dataclass
+class DivideDenumeratorValue(Transformation):
+
+    numerator: str
+    denumerator: LiteralValue
+
+    name: str = 'div_denum_val'
+    dtype: FeatureType = FeatureType('').float
+
+    def __init__(self, numerator: str, denumerator: LiteralValue) -> None:
+        self.numerator = numerator
+        self.denumerator = denumerator
+        assert denumerator.python_value != 0
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return gracefull_transformation(
+            df,
+            is_valid_mask=~(df[self.numerator].isna()),
+            transformation=lambda dfv: dfv[self.numerator].astype(float) / self.denumerator.python_value,
+        )
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        return pl.col(self.numerator) / pl.lit(self.denumerator.python_value)
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        from numpy import nan
+
+        return TransformationTestDefinition(
+            DivideDenumeratorValue('x', LiteralValue.from_value(2)),
+            input={'x': [1, 2, 0, 1, None, 9]},
+            output=[0.5, 1, 0, 0.5, nan, 4.5],
         )
 
 

@@ -1,6 +1,3 @@
-"""
-.. include:: ../README.md
-"""
 from aligned.compiler.feature_factory import (
     UUID,
     Bool,

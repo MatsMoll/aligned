@@ -311,6 +311,12 @@ class RetrivalJob(ABC):
             request = [request]
         return LiteralDictJob(data, request)
 
+    @staticmethod
+    def from_polars_df(df: pl.DataFrame, request: list[RetrivalRequest]) -> RetrivalJob:
+        from aligned.local.job import LiteralRetrivalJob
+
+        return LiteralRetrivalJob(df.lazy(), RequestResult.from_request_list(request))
+
 
 JobType = TypeVar('JobType')
 
@@ -430,7 +436,9 @@ class ValidationJob(RetrivalJob, ModificationJob):
 
     @property
     def features_to_validate(self) -> set[Feature]:
-        return RequestResult.from_request_list(self.retrival_requests).features
+        return RequestResult.from_request_list(
+            [request for request in self.retrival_requests if not request.aggregated_features]
+        ).features
 
     async def to_pandas(self) -> pd.DataFrame:
         return await self.validator.validate_pandas(
@@ -868,6 +876,8 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.job.to_pandas()
         for request in self.requests:
+            if request.aggregated_features:
+                continue
             for feature in request.all_required_features:
 
                 mask = ~df[feature.name].isnull()
@@ -897,6 +907,9 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
     async def to_polars(self) -> pl.LazyFrame:
         df = await self.job.to_polars()
         for request in self.requests:
+            if request.aggregated_features:
+                continue
+
             for feature in request.all_required_features:
                 if feature.dtype == FeatureType('').bool:
                     df = df.with_column(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
@@ -1065,10 +1078,7 @@ class FilterJob(RetrivalJob, ModificationJob):
 
     @property
     def retrival_requests(self) -> list[RetrivalRequest]:
-        return [
-            request.filter_features(request.all_feature_names - self.include_features)
-            for request in self.job.retrival_requests
-        ]
+        return [request.filter_features(self.include_features) for request in self.job.retrival_requests]
 
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.job.to_pandas()

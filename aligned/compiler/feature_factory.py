@@ -537,11 +537,14 @@ class ArithmeticFeature(ComparableFeature):
         feature.transformation = AdditionBetweenFactory(self, other)
         return feature
 
-    def __truediv__(self, other: FeatureFactory) -> Float:
+    def __truediv__(self, other: FeatureFactory | Any) -> Float:
         from aligned.compiler.transformation_factory import RatioFactory
 
         feature = Float()
-        feature.transformation = RatioFactory(self, other)
+        if isinstance(other, FeatureFactory):
+            feature.transformation = RatioFactory(self, other)
+        else:
+            feature.transformation = RatioFactory(self, LiteralValue.from_value(other))
         return feature
 
     def __floordiv__(self, other: FeatureFactory) -> Float:
@@ -556,6 +559,26 @@ class ArithmeticFeature(ComparableFeature):
 
         feature = Float()
         feature.transformation = AbsoluteFactory(self)
+        return feature
+
+    def __mul__(self, other: FeatureFactory | Any) -> Float:
+        from aligned.compiler.transformation_factory import MultiplyFactory
+
+        feature = Float()
+        if isinstance(other, FeatureFactory):
+            feature.transformation = MultiplyFactory(self, other)
+        else:
+            feature.transformation = MultiplyFactory(self, LiteralValue.from_value(other))
+        return feature
+
+    def __rmul__(self, other: FeatureFactory | Any) -> Float:
+        from aligned.compiler.transformation_factory import MultiplyFactory
+
+        feature = Float()
+        if isinstance(other, FeatureFactory):
+            feature.transformation = MultiplyFactory(self, other)
+        else:
+            feature.transformation = MultiplyFactory(self, LiteralValue.from_value(other))
         return feature
 
     def __pow__(self, other: FeatureFactory | Any) -> Float:

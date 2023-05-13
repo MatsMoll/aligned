@@ -167,7 +167,7 @@ class CompiledFeatureView(Codable):
                     derived_features=derived_features,
                     aggregated_features=aggregated_features,
                     event_timestamp=self.event_timestamp,
-                    features_to_exclude=exclude_names,
+                    features_to_include=exclude_names,
                 )
             ],
         )

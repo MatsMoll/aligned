@@ -23,7 +23,27 @@ class RetrivalRequest(Codable):
     aggregated_features: set[AggregatedFeature] = field(default_factory=set)
     event_timestamp: EventTimestamp | None = field(default=None)
 
-    features_to_exclude: set[str] = field(default_factory=set)
+    features_to_include: set[str] = field(default_factory=set)
+
+    def __init__(
+        self,
+        name: str,
+        location: FeatureLocation,
+        entities: set[Feature],
+        features: set[Feature],
+        derived_features: set[DerivedFeature],
+        aggregated_features: set[AggregatedFeature] | None = None,
+        event_timestamp: EventTimestamp | None = None,
+        features_to_include: set[str] | None = None,
+    ):
+        self.name = name
+        self.location = location
+        self.entities = entities
+        self.features = features
+        self.derived_features = derived_features
+        self.aggregated_features = aggregated_features or set()
+        self.event_timestamp = event_timestamp
+        self.features_to_include = features_to_include or self.all_feature_names
 
     def filter_features(self, feature_names: set[str]) -> 'RetrivalRequest':
         return RetrivalRequest(
@@ -34,12 +54,12 @@ class RetrivalRequest(Codable):
             derived_features=self.derived_features,
             aggregated_features=self.aggregated_features,
             event_timestamp=self.event_timestamp,
-            features_to_exclude=self.features_to_exclude.union(self.all_feature_names - feature_names),
+            features_to_include=feature_names,
         )
 
     @property
     def returned_features(self) -> set[Feature]:
-        return {feature for feature in self.all_features if feature.name not in self.features_to_exclude}
+        return {feature for feature in self.all_features if feature.name in self.features_to_include}
 
     @property
     def feature_names(self) -> list[str]:
@@ -152,7 +172,7 @@ class RetrivalRequest(Codable):
                 returned_features[fv_name].update(request.returned_features)
 
         for request in grouped_requests.values():
-            request.features_to_exclude = request.features_to_exclude.union(
+            request.features_to_include = request.features_to_include.union(
                 request.all_feature_names - {feature.name for feature in returned_features[request.location]}
             )
 
@@ -227,7 +247,17 @@ class RequestResult(Codable):
         elif request_len > 1:
             return RequestResult(
                 entities=set().union(*[request.entities for request in requests]),
-                features=set().union(*[request.all_features - request.entities for request in requests]),
+                features=set().union(
+                    *[
+                        {
+                            feature
+                            for feature in request.all_features
+                            if feature.name in request.features_to_include
+                        }
+                        - request.entities
+                        for request in requests
+                    ]
+                ),
                 event_timestamp='event_timestamp'
                 if any(request.event_timestamp for request in requests)
                 else None,
