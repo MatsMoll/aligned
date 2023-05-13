@@ -11,9 +11,9 @@ from prometheus_client import Counter, Histogram
 from aligned.active_learning.selection import ActiveLearningMetric, ActiveLearningSelection
 from aligned.active_learning.write_policy import ActiveLearningWritePolicy
 from aligned.data_source.stream_data_source import StreamDataSource
+from aligned.feature_source import WritableFeatureSource
 from aligned.feature_store import FeatureViewStore, ModelFeatureStore
 from aligned.local.source import StorageFileReference
-from aligned.online_source import OnlineSource
 from aligned.redis.config import RedisStreamSource
 from aligned.redis.stream import RedisStream
 from aligned.retrival_job import RetrivalJob, StreamAggregationJob
@@ -42,7 +42,7 @@ class ActiveLearningConfig:
 class StreamWorker:
 
     feature_store_reference: StorageFileReference
-    online_source: OnlineSource
+    sink_source: WritableFeatureSource
     views_to_process: set[str]
     should_prune_unused_features: bool = field(default=False)
     active_learning_configs: list[ActiveLearningConfig] = field(default_factory=list)
@@ -50,7 +50,9 @@ class StreamWorker:
 
     @staticmethod
     def from_reference(
-        source: StorageFileReference, online_source: OnlineSource, views_to_process: set[str] | None = None
+        source: StorageFileReference,
+        sink_source: WritableFeatureSource,
+        views_to_process: set[str] | None = None,
     ) -> StreamWorker:
         """
         Creates a stream worker.
@@ -59,7 +61,7 @@ class StreamWorker:
 
         Args:
             source (StorageFileReference): The storage of the feature store file
-            online_source (OnlineSource): Where to store the processed features
+            sink_source (WritableFeatureSource): Where to store the processed features
             views_to_process (set[str] | None, optional): The views to process.
                 Defaults to None aka, all streaming views.
 
@@ -67,7 +69,7 @@ class StreamWorker:
             StreamWorker | None: A worker that can start processing
         """
 
-        return StreamWorker(source, online_source, views_to_process)
+        return StreamWorker(source, sink_source, views_to_process)
 
     @staticmethod
     def from_object(repo: Path, file: Path, obj: str) -> StreamWorker:
@@ -115,7 +117,7 @@ class StreamWorker:
         from aligned.data_source.stream_data_source import HttpStreamSource
 
         store = await self.feature_store_reference.feature_store()
-        store = store.with_source(self.online_source)
+        store = store.with_source(self.sink_source)
 
         views = self.views_to_process or set()
         if not self.views_to_process:

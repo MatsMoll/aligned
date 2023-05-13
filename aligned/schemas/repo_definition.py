@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from aligned.enricher import Enricher
-from aligned.online_source import OnlineSource
+from aligned.feature_source import FeatureSource
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature_view import CompiledCombinedFeatureView, CompiledFeatureView
 from aligned.schemas.model import Model
@@ -50,11 +50,11 @@ class RepoReference:
             return self.repo_paths.get(self.env_var_name)
         return self.repo_paths.get(self.selected)
 
-    def feature_server(self, online_source: OnlineSource) -> FastAPI | OnlineSource:
+    def feature_server(self, source: FeatureSource) -> FastAPI | FeatureSource:
         import os
 
         if os.environ.get('ALADDIN_ENABLE_SERVER', 'False').lower() == 'false':
-            return online_source
+            return source
 
         from aligned.server import FastAPIServer
 
@@ -93,7 +93,7 @@ class RepoReference:
 class FeatureServer:
     @staticmethod
     def from_reference(
-        reference: StorageFileReference, online_source: OnlineSource | None = None
+        reference: StorageFileReference, online_source: FeatureSource | None = None
     ) -> FastAPI | None:
         """Creates a feature server
         This can process and serve features for both models and feature views
@@ -102,7 +102,7 @@ class FeatureServer:
         redis = RedisConfig.localhost()
         server = FeatureSever.from_reference(
             FileSource.from_json("./feature-store.json"),
-            online_source=redis.online_source()
+            online_source=redis
         )
         ```
 
@@ -152,8 +152,6 @@ class RepoMetadata(Codable):
 class RepoDefinition(Codable):
 
     metadata: RepoMetadata
-
-    online_source: OnlineSource
 
     feature_views: set[CompiledFeatureView] = field(default_factory=set)
     combined_feature_views: set[CompiledCombinedFeatureView] = field(default_factory=set)

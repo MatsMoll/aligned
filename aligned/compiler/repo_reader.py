@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any
 
 from aligned.enricher import Enricher
-from aligned.online_source import BatchOnlineSource, OnlineSource
 from aligned.schemas.repo_definition import EnricherReference, RepoDefinition, RepoMetadata, RepoReference
 
 logger = logging.getLogger(__name__)
@@ -84,7 +83,6 @@ class RepoReader:
             feature_views=set(),
             combined_feature_views=set(),
             models=set(),
-            online_source=BatchOnlineSource(),
             enrichers=[],
         )
 
@@ -115,8 +113,6 @@ class RepoReader:
                     repo.enrichers.append(
                         EnricherReference(module=module_path, attribute_name=attribute, enricher=obj)
                     )
-                elif isinstance(obj, OnlineSource):
-                    repo.online_source = obj
                 else:
                     classes = super_classes_in(obj)
                     if 'Model' in classes:

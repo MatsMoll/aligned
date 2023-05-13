@@ -291,8 +291,6 @@ repo_files = RepoReference(
 )
 
 # Use redis as the online source, if not running localy
-if repo_files.selected != "local":
-    online_source = redis.online_source()
 ```
 
 Then run `aligned serve`, and a FastAPI server will start. Here can you push new features, which then transforms and stores the features, or just fetch them.

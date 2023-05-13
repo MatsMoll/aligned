@@ -13,6 +13,11 @@ from aligned.request.retrival_request import FeatureRequest, RequestResult, Retr
 from aligned.retrival_job import RetrivalJob
 
 
+class FeatureSourceFactory:
+    def feature_source(self) -> FeatureSource:
+        raise NotImplementedError()
+
+
 class FeatureSource:
     def features_for(self, facts: RetrivalJob, request: FeatureRequest) -> RetrivalJob:
         raise NotImplementedError()

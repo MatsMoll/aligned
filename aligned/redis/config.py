@@ -16,13 +16,11 @@ except ModuleNotFoundError:
     ConnectionPool = Redis
 
 from aligned.data_source.stream_data_source import SinkableDataSource, StreamDataSource
-from aligned.feature_source import FeatureSource, WritableFeatureSource
-from aligned.online_source import OnlineSource
+from aligned.feature_source import FeatureSource, FeatureSourceFactory, WritableFeatureSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import RetrivalJob
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import Feature, FeatureType
-from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.vector_storage import VectorIndex, VectorStorage
 
 logger = logging.getLogger(__name__)
@@ -32,7 +30,7 @@ redis_manager: dict[str, ConnectionPool] = {}
 
 
 @dataclass
-class RedisConfig(Codable):
+class RedisConfig(Codable, FeatureSourceFactory):
 
     env_var: str
 
@@ -58,14 +56,14 @@ class RedisConfig(Codable):
 
         return RedisConfig(env_var='REDIS_URL')
 
+    def feature_source(self) -> FeatureSource:
+        return RedisSource(self)
+
     def redis(self) -> Redis:
         if self.env_var not in redis_manager:
             redis_manager[self.env_var] = ConnectionPool.from_url(self.url, decode_responses=True)
 
         return StrictRedis(connection_pool=redis_manager[self.env_var])
-
-    def online_source(self) -> RedisOnlineSource:
-        return RedisOnlineSource(config=self)
 
     def stream(self, topic: str) -> RedisStreamSource:
         return RedisStreamSource(topic_name=topic, config=self)
@@ -150,16 +148,6 @@ class RedisVectorIndex(VectorStorage):
 
     async def upsert_polars(self, df: pl.LazyFrame, index: VectorIndex) -> None:
         logger.info(f'Upserting {len(df.columns)} into index {self.name}...')
-
-
-@dataclass
-class RedisOnlineSource(OnlineSource):
-
-    config: RedisConfig
-    source_type = 'redis'
-
-    def feature_source(self, feature_views: set[CompiledFeatureView]) -> RedisSource:
-        return RedisSource(self.config)
 
 
 @dataclass

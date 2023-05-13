@@ -163,10 +163,10 @@ class AwsS3ParquetDataSource(BatchDataSource, DataFileReference, ColumnFeatureMa
 
     config: AwsS3Config
     path: str
-    mapping_keys: dict[str, str]  # = field(default_factory=dict)
+    mapping_keys: dict[str, str]
 
-    parquet_config: ParquetConfig  # = field(default_factory=ParquetConfig)
-    type_name: str = 'aws_s3_parquet'  # = field(default='aws_s3_parquet')
+    parquet_config: ParquetConfig
+    type_name: str = 'aws_s3_parquet'
 
     def job_group_key(self) -> str:
         return f'{self.type_name}/{self.path}'

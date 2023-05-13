@@ -12,12 +12,12 @@ from aligned.exceptions import CombinedFeatureViewQuerying
 from aligned.feature_source import (
     BatchFeatureSource,
     FeatureSource,
+    FeatureSourceFactory,
     RangeFeatureSource,
     WritableFeatureSource,
 )
 from aligned.feature_view.combined_view import CombinedFeatureView, CompiledCombinedFeatureView
 from aligned.feature_view.feature_view import FeatureView
-from aligned.online_source import BatchOnlineSource, OnlineSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import FilterJob, RetrivalJob, StreamAggregationJob, SupervisedJob
 from aligned.schemas.feature import FeatureLocation
@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class RawStringFeatureRequest:
+
     features: set[str]
 
     @property
@@ -86,12 +87,9 @@ class FeatureStore:
 
     @staticmethod
     def experimental() -> 'FeatureStore':
-        from aligned.online_source import BatchOnlineSource
-
         return FeatureStore.from_definition(
             RepoDefinition(
                 metadata=RepoMetadata(created_at=datetime.utcnow(), name='experimental'),
-                online_source=BatchOnlineSource(),
             )
         )
 
@@ -149,7 +147,6 @@ class FeatureStore:
         Returns:
             FeatureStore: A ready to use feature store
         """
-        source = feature_source or repo.online_source.feature_source(repo.feature_views)
         feature_views = {fv.name: fv for fv in repo.feature_views}
         combined_feature_views = {fv.name: fv for fv in repo.combined_feature_views}
 
@@ -159,7 +156,9 @@ class FeatureStore:
             feature_views=feature_views,
             combined_feature_views=combined_feature_views,
             models={model.name: model for model in repo.models},
-            feature_source=source,
+            feature_source=BatchFeatureSource(
+                {FeatureLocation.feature_view(fv.name): fv for fv in repo.feature_views}
+            ),
         )
 
     def repo_definition(self) -> RepoDefinition:
@@ -168,7 +167,6 @@ class FeatureStore:
             feature_views=set(self.feature_views.values()),
             combined_feature_views=set(self.combined_feature_views.values()),
             models=set(self.models.values()),
-            online_source=BatchOnlineSource(),
             enrichers=[],
         )
 
@@ -320,6 +318,24 @@ class FeatureStore:
         return FeatureStore._requests_for(feature_request, self.feature_views, self.combined_feature_views)
 
     def feature_view(self, view: str) -> 'FeatureViewStore':
+        """
+        Selects a feature view based on a name.
+
+        From here can you query the feature view for features.
+
+        ```python
+        data = await store.feature_view('my_view').all(limit=10).to_pandas()
+        ```
+
+        Args:
+            view (str): The name of the feature view
+
+        Raises:
+            CombinedFeatureViewQuerying: If the name is a combined feature view
+
+        Returns:
+            FeatureViewStore: The selected feature view ready for querying
+        """
         if view in self.combined_feature_views:
             raise CombinedFeatureViewQuerying(
                 'You are trying to get a combined feature view. ',
@@ -329,6 +345,23 @@ class FeatureStore:
         return FeatureViewStore(self, feature_view, self.event_triggers_for(view))
 
     def add_feature_view(self, feature_view: FeatureView) -> None:
+        """
+        Compiles and adds the feature view to the store
+
+        ```python
+        class MyFeatureView(FeatureView):
+            metadata = ...
+
+            id = Int32().as_entity()
+
+            my_feature = String()
+
+        store.add_feature_view(MyFeatureView())
+        ```
+
+        Args:
+            feature_view (FeatureView): The feature view to add
+        """
         compiled_view = type(feature_view).compile()
         self.feature_views[compiled_view.name] = compiled_view
         if isinstance(self.feature_source, BatchFeatureSource):
@@ -341,34 +374,52 @@ class FeatureStore:
         self.combined_feature_views[compiled_view.name] = compiled_view
 
     def add_model(self, model: Model) -> None:
+        """
+        Compiles and adds the model to the store
+
+        Args:
+            model (Model): The model to add
+        """
         compiled_model = type(model).compile()
         self.models[compiled_model.name] = compiled_model
 
-    def with_source(self, source: OnlineSource | None = None) -> 'FeatureStore':
+    def with_source(self, source: FeatureSource | FeatureSourceFactory | None = None) -> 'FeatureStore':
         """
         Creates a new instance of a feature store, but changes where to fetch the features from
 
         ```
         store = # Load the store
-        redis_store = store.with_source(redis.online_source())
+        redis_store = store.with_source(redis)
         batch_source = redis_store.with_source()
         ```
 
         Args:
-            source (OnlineSource): The source to fetch from, None will lead to using the batch source
+            source (FeatureSource): The source to fetch from, None will lead to using the batch source
 
         Returns:
             FeatureStore: A new feature store instance
         """
-        online_source = source or BatchOnlineSource()
+        if isinstance(source, FeatureSourceFactory):
+            feature_source = source.feature_source()
+        else:
+            feature_source = source or BatchFeatureSource(
+                {FeatureLocation.feature_view(view.name) for view in set(self.feature_views.values())}
+            )
+
         return FeatureStore(
             feature_views=self.feature_views,
             combined_feature_views=self.combined_feature_views,
             models=self.models,
-            feature_source=online_source.feature_source(set(self.feature_views.values())),
+            feature_source=feature_source,
         )
 
     def offline_store(self) -> 'FeatureStore':
+        """
+        Will set the source to the defined batch sources.
+
+        Returns:
+            FeatureStore: A new feature store that loads features from the batch sources
+        """
         return self.with_source()
 
     def model_features_for(self, view_name: str) -> set[str]:
