@@ -140,6 +140,7 @@ class Model(ABC):
 
                 regression_targets[var_name] = target_feature
                 inference_view.regression_targets.add(target_feature)
+                inference_view.features.add(target_feature.feature)
             elif isinstance(feature, EventTimestamp):
                 inference_view.event_timestamp = feature.event_timestamp()
 
@@ -187,6 +188,7 @@ class Model(ABC):
                 depth=1,
             )
             inference_view.derived_features.add(arg_max_feature)
+
         if not probability_features:
             inference_view.features.update(
                 {target.feature for target in inference_view.classification_targets}

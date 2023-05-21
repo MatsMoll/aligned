@@ -157,7 +157,10 @@ class FeatureStore:
             combined_feature_views=combined_feature_views,
             models={model.name: model for model in repo.models},
             feature_source=BatchFeatureSource(
-                {FeatureLocation.feature_view(fv.name).identifier: fv for fv in repo.feature_views}
+                {
+                    FeatureLocation.feature_view(fv.name).identifier: fv.batch_data_source
+                    for fv in repo.feature_views
+                }
             ),
         )
 
@@ -404,7 +407,7 @@ class FeatureStore:
         else:
             feature_source = source or BatchFeatureSource(
                 {
-                    FeatureLocation.feature_view(view.name).identifier: view
+                    FeatureLocation.feature_view(view.name).identifier: view.batch_data_source
                     for view in set(self.feature_views.values())
                 }
             )

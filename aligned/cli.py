@@ -45,36 +45,41 @@ def load_envs(path: Path) -> None:
 
 
 def setup_logger():
+    from importlib.util import find_spec
     from logging.config import dictConfig
 
     handler = 'console'
-    log_format = '%(levelname)s:\t\b%(asctime)s %(name)s:%(lineno)d [%(correlation_id)s] %(message)s'
-    dictConfig(
-        {
-            'version': 1,
-            'disable_existing_loggers': False,
-            'filters': {
-                'correlation_id': {
-                    '()': 'asgi_correlation_id.CorrelationIdFilter',
-                    'uuid_length': 16,
-                },
-            },
-            'formatters': {
-                'console': {'class': 'logging.Formatter', 'datefmt': '%H:%M:%S', 'format': log_format}
-            },
-            'handlers': {
-                'console': {
-                    'class': 'logging.StreamHandler',
-                    'filters': ['correlation_id'],
-                    'formatter': 'console',
-                }
-            },
-            'loggers': {
-                # project
-                '': {'handlers': [handler], 'level': 'INFO', 'propagate': True},
-            },
+    log_format = '%(levelname)s:\t\b%(asctime)s %(name)s:%(lineno)d %(message)s'
+    configs = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'filters': {},
+        'formatters': {
+            'console': {'class': 'logging.Formatter', 'datefmt': '%H:%M:%S', 'format': log_format}
+        },
+        'handlers': {
+            'console': {
+                'class': 'logging.StreamHandler',
+                'filters': [],
+                'formatter': 'console',
+            }
+        },
+        'loggers': {
+            # project
+            '': {'handlers': [handler], 'level': 'INFO', 'propagate': True},
+        },
+    }
+
+    if find_spec('asgi_correlation_id'):
+        log_format = '%(levelname)s:\t\b%(asctime)s %(name)s:%(lineno)d [%(correlation_id)s] %(message)s'
+        configs['filters']['correlation_id'] = {
+            '()': 'asgi_correlation_id.CorrelationIdFilter',
+            'uuid_length': 16,
         }
-    )
+        configs['handlers']['console']['filters'].append('correlation_id')
+        configs['formatters']['console']['format'] = log_format
+
+    dictConfig(configs)
 
 
 @click.group()
@@ -434,7 +439,7 @@ async def profile(repo_path: str, reference_file: str, env_file: str, output: st
     Path(output).write_bytes(results.to_json().encode('utf-8'))
 
 
-@cli.command('create_indexes')
+@cli.command('create-indexes')
 @coro
 @click.option(
     '--repo-path',
@@ -485,7 +490,7 @@ async def create_indexes(repo_path: str, reference_file: str, env_file: str) -> 
             continue
 
         for index in view.indexes:
-            click.echo(f'Creating indexes for: {feature_view_name}, named {index.name}')
+            click.echo(f'Creating indexes for: {feature_view_name}')
             await index.storage.create_index(index)
 
 

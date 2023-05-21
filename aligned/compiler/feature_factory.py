@@ -838,7 +838,10 @@ class String(
         from aligned.compiler.transformation_factory import AppendStrings
 
         feature = String()
-        feature.transformation = AppendStrings(self, other)
+        if isinstance(other, FeatureFactory):
+            feature.transformation = AppendStrings(self, other)
+        else:
+            feature.transformation = AppendStrings(self, LiteralValue.from_value(other))
         return feature
 
 

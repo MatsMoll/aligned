@@ -1,8 +1,9 @@
 # Aligned
 
-Aligned makes it easier to reduce visibility debt, and data depencency debts, as described in [Sculley et al. [2015]](https://papers.nips.cc/paper/2015/file/86df7dcfd896fcaf2674f757a2463eba-Paper.pdf).
+Aligned helps improving ML system visibility, while also reducing technical, and data debt, as described in [Sculley et al. [2015]](https://papers.nips.cc/paper/2015/file/86df7dcfd896fcaf2674f757a2463eba-Paper.pdf).
 
-Want to look at examples of how to use `aligned`? View the [`MatsMoll/aligned-example` repo](https://github.com/MatsMoll/aligned-example).
+Want to look at examples of how to use `aligned`?
+View the [`MatsMoll/aligned-example` repo](https://github.com/MatsMoll/aligned-example).
 
 This is done by providing an new innovative way of describing feature transformations, and data flow in ML systems. While also collecting dependency metadata that would otherwise be too inconvenient and error prone to manually type out.
 
@@ -27,7 +28,7 @@ As a result, loading model features is as easy as:
 
 ```python
 entities = {"passenger_id": [1, 2, 3, 4]}
-await store.model("titanic").features_for(entities).as_pandas()
+await store.model("titanic").features_for(entities).to_pandas()
 ```
 
 Aligned is still in active development, so changes are likely.

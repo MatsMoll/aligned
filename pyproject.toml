@@ -5,8 +5,8 @@ description = "A scalable feature store that makes it easy to align offline and 
 authors = ["Mats E. Mollestad <mats@mollestad.no>"]
 license = "Apache-2.0"
 readme = "README.md"
-homepage = "https://github.com/otovo/aladdin"
-repository = "https://github.com/otovo/aladdin"
+homepage = "https://github.com/otovo/aligned"
+repository = "https://github.com/otovo/aligned"
 keywords = [
     'python',
     'typed',
@@ -53,7 +53,7 @@ pyarrow = "^8.0.0"
 Jinja2 = "^3.1.2"
 nest-asyncio = "^1.5.5"
 asgi-correlation-id = { version = "^3.0.0", optional = true }
-pandera = {version = "^0.13.3", optional = true}
+pandera = { version = "^0.13.3", optional = true}
 httpx = "^0.23.0"
 polars = { version = "^0.15.6", extras = ["all"] }
 connectorx = { version = "^0.3.1", optional = true }

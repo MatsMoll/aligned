@@ -1,6 +1,12 @@
 from dataclasses import dataclass
 
-from redis.asyncio import Redis  # type: ignore
+try:
+    from redis.asyncio import Redis  # type: ignore
+except ModuleNotFoundError:
+
+    class Redis:
+        async def xread(self, streams: dict[str, str], count: int, block: int):
+            pass
 
 
 @dataclass

@@ -49,17 +49,21 @@ def super_classes_in(obj: Any) -> set[str]:
     return super_class_names
 
 
-def python_files(repo_path: Path, ignore_path: Path | None = None) -> list[Path]:
+def find_files(repo_path: Path, ignore_path: Path | None = None, file_extension: str = 'py') -> list[Path]:
     files = {
         path.resolve()
-        for path in repo_path.resolve().glob('**/*.py')
-        if path.is_file() and '__init__.py' != path.name
+        for path in repo_path.resolve().glob(f'**/*.{file_extension}')
+        if path.is_file()
+        and '__init__.py' != path.name
+        and not any(part.startswith('.') for part in path.parts)
     }
     if ignore_path:
         ignore_files = {
             path.resolve()
-            for path in ignore_path.glob('**/*.py')
-            if path.is_file() and '__init__.py' != path.name
+            for path in ignore_path.glob(f'**/*.{file_extension}')
+            if path.is_file()
+            and '__init__.py' != path.name
+            and not any(part.startswith('.') for part in path.parts)
         }
         files -= ignore_files
     return sorted(files)
@@ -88,7 +92,7 @@ class RepoReader:
 
         feature_view_names: dict[str, str] = {}
 
-        for py_file in python_files(repo_path):
+        for py_file in find_files(repo_path):
             imports = imports_for(py_file)
 
             module_path = path_to_py_module(py_file, repo_path)
