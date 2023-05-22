@@ -764,6 +764,9 @@ class UUID(FeatureFactory, CouldBeEntityFeature):
     def dtype(self) -> FeatureType:
         return FeatureType('').uuid
 
+    def aggregate(self) -> CategoricalAggregation:
+        return CategoricalAggregation(self)
+
 
 class LengthValidatable(FeatureFactory):
     def min_length(self: T, length: int) -> T:
@@ -980,6 +983,13 @@ class StringAggregation:
             self.feature, group_by=[], separator=separator, time_window=self.time_window
         )
         return feature
+
+    def count(self) -> Int32:
+        from aligned.compiler.aggregation_factory import CountAggregationFactory
+
+        feat = Int32()
+        feat.transformation = CountAggregationFactory(self.feature, group_by=[], time_window=self.time_window)
+        return feat
 
 
 @dataclass
