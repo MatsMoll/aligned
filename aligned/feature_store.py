@@ -494,7 +494,7 @@ class ModelFeatureStore:
         )
 
     def process_features(self, input: RetrivalJob | dict[str, list]) -> RetrivalJob:
-        request = self.request
+        request = self.request()
 
         if isinstance(input, RetrivalJob):
             job = input.filter(request.features_to_include)

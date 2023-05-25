@@ -61,9 +61,9 @@ polars = { version = "^0.15.6", extras = ["all"] }
 connectorx = { version = "^0.3.1", optional = true }
 pillow = { version = "^9.4.0", optional = true }
 prometheus-fastapi-instrumentator = { version="^5.9.1", optional = true }
-gensim = { version = "4.3.0", optional = true }
-openai = { version = "^0.27.2", optional = true }
-sentence-transformers = { version = "^2.2.2", optional = true }
+# gensim = { version = "4.3.0", optional = true }
+# openai = { version = "^0.27.2", optional = true }
+# sentence-transformers = { version = "^2.2.2", optional = true }
 
 [tool.poetry.extras]
 aws = ["aioaws", "connectorx"]
@@ -72,7 +72,7 @@ redis = ["redis"]
 server = ["asgi-correlation-id", "fastapi", "uvicorn", "prometheus-fastapi-instrumentator"]
 pandera = ["pandera"]
 image = ["pillow"]
-text = ["gensim", "openai", "sentence-transformers"]
+# text = ["gensim", "openai", "sentence-transformers"]
 
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.2.6"

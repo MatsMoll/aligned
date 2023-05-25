@@ -56,5 +56,5 @@ def test_model_request() -> None:
 
     assert len(store.feature_views) == 2
 
-    model_request = store.model('test_model').request
+    model_request = store.model('test_model').request()
     assert model_request.features_to_include == {'feature_a', 'feature_b', 'view_id', 'other_id'}

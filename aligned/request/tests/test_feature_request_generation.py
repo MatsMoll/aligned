@@ -46,8 +46,10 @@ async def test_fetch_features_request(titanic_feature_view: FeatureView) -> None
 
     retrival_request = request.needed_requests[0]
     missing_features = expected_features - retrival_request.all_feature_names
+    # All the features to retrive and computed
     assert retrival_request.all_feature_names == expected_features, f'Missing features {missing_features}'
     assert retrival_request.entity_names == {'passenger_id'}
 
+    # All the features that is returned
     assert len(request.request_result.entities) == 1
-    assert len(request.request_result.features) == len(expected_features)
+    assert len(request.request_result.features) == len(wanted_features)
