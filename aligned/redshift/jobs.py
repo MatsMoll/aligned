@@ -235,6 +235,8 @@ class FactRedshiftJob(FactualRetrivalJob):
     requests: list[RetrivalRequest]
     facts: RetrivalJob
 
+    entity_table_name: str = field(default='entities')
+
     @property
     def request_result(self) -> RequestResult:
         return RequestResult.from_request_list(self.requests)
@@ -282,8 +284,10 @@ class FactRedshiftJob(FactualRetrivalJob):
 
         source = self.sources[request.location]
 
-        entity_selects = {f'entities.{entity}' for entity in request.entity_names}
-        field_selects = request.all_required_feature_names.union(entity_selects).union({'entities.row_id'})
+        entity_selects = {f'{self.entity_table_name}.{entity}' for entity in request.entity_names}
+        field_selects = request.all_required_feature_names.union(entity_selects).union(
+            {f'{self.entity_table_name}.row_id'}
+        )
         field_identifiers = source.feature_identifier_for(field_selects)
         selects = {
             SqlColumn(db_field_name, feature)
@@ -292,16 +296,18 @@ class FactRedshiftJob(FactualRetrivalJob):
 
         entities = list(request.entity_names)
         entity_db_name = source.feature_identifier_for(entities)
-        sort_query = 'entities.row_id'
+        sort_query = f'{self.entity_table_name}.row_id'
 
         event_timestamp_clause: str | None = None
         if request.event_timestamp and entities_has_event_timestamp:
             event_timestamp_column = source.feature_identifier_for([request.event_timestamp.name])[0]
-            event_timestamp_clause = f'entities.event_timestamp >= ta.{event_timestamp_column}'
+            event_timestamp_clause = (
+                f'{self.entity_table_name}.event_timestamp >= ta.{event_timestamp_column}'
+            )
             sort_query += f', {event_timestamp_column} DESC'
 
         join_conditions = [
-            f'ta."{entity_db_name}" = entities.{entity}'
+            f'ta."{entity_db_name}" = {self.entity_table_name}.{entity}'
             for entity, entity_db_name in zip(entities, entity_db_name)
         ]
         if event_timestamp_clause:
@@ -360,7 +366,7 @@ class FactRedshiftJob(FactualRetrivalJob):
             time_window_config = window.window
             time_window = int(time_window_config.time_window.total_seconds())
             name = f'{request.name}_agg_{time_window}_cte'
-            group_by_names = {'entities.row_id'}
+            group_by_names = {f'{self.entity_table_name}s.row_id'}
 
         aggregates = {
             SqlColumn(
@@ -374,31 +380,33 @@ class FactRedshiftJob(FactualRetrivalJob):
         event_timestamp_clause: str | None = None
         if request.event_timestamp:
             id_column = 'row_id'
-            group_by_names = {'entities.row_id'}
+            group_by_names = {f'{self.entity_table_name}.row_id'}
             # Use row_id as the main join key
             event_timestamp_name = source.feature_identifier_for([request.event_timestamp.name])[0]
             if window.window:
                 time_window_config = window.window
                 window_in_seconds = int(time_window_config.time_window.total_seconds())
                 event_timestamp_clause = (
-                    f'ta.{event_timestamp_name} BETWEEN entities.event_timestamp'
-                    f" - interval '{window_in_seconds} seconds' AND entities.event_timestamp"
+                    f'ta.{event_timestamp_name} BETWEEN {self.entity_table_name}.event_timestamp'
+                    f" - interval '{window_in_seconds} seconds' AND {self.entity_table_name}.event_timestamp"
                 )
             else:
-                event_timestamp_clause = f'ta.{event_timestamp_name} <= entities.event_timestamp'
+                event_timestamp_clause = (
+                    f'ta.{event_timestamp_name} <= {self.entity_table_name}.event_timestamp'
+                )
 
         group_by_selects = {SqlColumn(feature, feature) for feature in group_by_names}
 
         entities = list(request.entity_names)
         entity_db_name = source.feature_identifier_for(entities)
         join_conditions = [
-            f'ta."{entity_db_name}" = entities.{entity}'
+            f'ta."{entity_db_name}" = {self.entity_table_name}.{entity}'
             for entity, entity_db_name in zip(entities, entity_db_name)
         ]
         if event_timestamp_clause:
             join_conditions.append(event_timestamp_clause)
 
-        field_selects = request.all_required_feature_names.union({'entities.*'})
+        field_selects = request.all_required_feature_names.union({f'{self.entity_table_name}.*'})
         field_identifiers = source.feature_identifier_for(field_selects)
         selects = {
             SqlColumn(db_field_name, feature)
@@ -518,7 +526,7 @@ class FactRedshiftJob(FactualRetrivalJob):
 
         for request in self.requests:
             final_select_names = final_select_names.union(
-                {f'entities.{entity}' for entity in request.entity_names}
+                {f'{self.entity_table_name}.{entity}' for entity in request.entity_names}
             )
 
         if has_event_timestamp:
@@ -540,7 +548,8 @@ class FactRedshiftJob(FactualRetrivalJob):
                     agg_features = {
                         f'{aggregate.name}.{column.alias}'
                         for column in aggregate.columns
-                        if column.alias != 'entites.row_id' and column.alias not in all_entities
+                        if column.alias != f'{self.entity_table_name}.row_id'
+                        and column.alias not in all_entities
                     }
                     final_select_names = final_select_names.union(agg_features)
             else:
@@ -556,16 +565,20 @@ class FactRedshiftJob(FactualRetrivalJob):
 
         entity_query = (
             f'SELECT {all_entities_str}, ROW_NUMBER() OVER (ORDER BY '
-            f'{list(request.entity_names)[0]}) AS row_id FROM ({sql_facts.query}) AS entities'
+            f'{list(request.entity_names)[0]}) AS row_id FROM ({sql_facts.query}) AS {self.entity_table_name}'
         )
         joins = '\n    '.join(
-            [f'LEFT JOIN {table.name} ON {table.name}.row_id = entities.row_id' for table in tables]
+            [
+                f'LEFT JOIN {table.name} ON {table.name}.row_id = {self.entity_table_name}.row_id'
+                for table in tables
+            ]
         )
         if aggregates:
             joins += '\n    '
             joins += '\n    '.join(
                 [
-                    f'LEFT JOIN {table.name} ON {table.name}.{table.id_column} = entities.{table.id_column}'
+                    f'LEFT JOIN {table.name} ON '
+                    f'{table.name}.{table.id_column} = {self.entity_table_name}.{table.id_column}'
                     for table in aggregates
                 ]
             )
@@ -592,7 +605,7 @@ class FactRedshiftJob(FactualRetrivalJob):
     ) -> str:
 
         query = f"""
-WITH entities (
+WITH {self.entity_table_name} (
     { ', '.join(entity_columns) }
 ) AS (
     { entity_query }
@@ -602,7 +615,7 @@ WITH entities (
         for table in tables:
             query += f"""
 {table.name} AS (
-    { table.sql_query(distinct='entities.row_id') }
+    { table.sql_query(distinct=f'{self.entity_table_name}.row_id') }
     ),"""
 
         # Select the aggregate features
@@ -621,19 +634,19 @@ FROM (
     SELECT { ', '.join(final_select) }
     FROM (
         SELECT *, ROW_NUMBER() OVER(
-            PARTITION BY entities.row_id
-            ORDER BY entities."{event_timestamp_col}" DESC
+            PARTITION BY {self.entity_table_name}.row_id
+            ORDER BY {self.entity_table_name}."{event_timestamp_col}" DESC
         ) AS row_number
-        FROM entities
-    ) as entities
+        FROM {self.entity_table_name}
+    ) as {self.entity_table_name}
         { final_joins }
-    WHERE entities.row_number = 1
+    WHERE {self.entity_table_name}.row_number = 1
 ) as val
 """
         else:
             query += f"""
 SELECT { ', '.join(final_select) }
-FROM entities
+FROM {self.entity_table_name}
     { final_joins }
 """
         return query

@@ -629,7 +629,7 @@ class FactPsqlJob(FactualRetrivalJob):
                 aggregates.extend(aggregate_fetches)
                 for aggregate in aggregate_fetches:
                     final_select_names = final_select_names.union(
-                        {column.alias for column in aggregate.columns if column.alias != 'entites.row_id'}
+                        {column.alias for column in aggregate.columns if column.alias != 'entities.row_id'}
                     )
             else:
                 fetch = self.value_selection(request, has_event_timestamp)

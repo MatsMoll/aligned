@@ -227,10 +227,7 @@ class FeatureStore:
         else:
             entity_request = entities
 
-        return FilterJob(
-            feature_names,
-            self.feature_source.features_for(entity_request, requests),
-        )
+        return self.feature_source.features_for(entity_request, requests)
 
     def features_for(self, entities: dict[str, list] | RetrivalJob, features: list[str]) -> RetrivalJob:
 
@@ -249,9 +246,20 @@ class FeatureStore:
                 for request in requests.needed_requests:
                     if view.name == request.location.name:
                         feature_names.update(request.all_feature_names)
-        for request in requests.needed_requests:
+
+        for request_index in range(len(requests.needed_requests)):
+            request = requests.needed_requests[request_index]
             feature_names.update(request.entity_names)
 
+            if isinstance(entities, dict):
+                # Do not load the features if they already exist as an entity
+                request.features = {feature for feature in request.features if feature.name not in entities}
+            if len(request.features) == 0:
+                request.derived_features = set()
+
+        requests.needed_requests = [
+            request for request in requests.needed_requests if len(request.all_feature_names) > 0
+        ]
         return self.features_for_request(requests, entities, feature_names)
 
     def model(self, name: str) -> 'ModelFeatureStore':
@@ -443,18 +451,34 @@ class ModelFeatureStore:
     model: ModelSchema
     store: FeatureStore
 
-    @property
-    def raw_string_features(self) -> set[str]:
-        return {f'{feature.location.identifier}:{feature.name}' for feature in self.model.features}
+    def raw_string_features(self, except_features: set[str]) -> set[str]:
+        return {
+            f'{feature.location.identifier}:{feature.name}'
+            for feature in self.model.features
+            if feature.name not in except_features
+        }
 
-    @property
-    def request(self) -> FeatureRequest:
-        return self.store.requests_for(RawStringFeatureRequest(self.raw_string_features))
+    def request(self, except_features: set[str] | None = None) -> FeatureRequest:
+        return self.store.requests_for(
+            RawStringFeatureRequest(self.raw_string_features(except_features or set()))
+        )
 
     def features_for(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
-        request = self.request
-        features = self.raw_string_features
-        return self.store.features_for(entities, list(features)).filter(request.features_to_include)
+        request = self.request()
+        if isinstance(entities, dict):
+            features = self.raw_string_features(set(entities.keys()))
+        else:
+            features = self.raw_string_features(set())
+
+        job = self.store.features_for(entities, list(features)).with_request(request.needed_requests)
+
+        if isinstance(entities, dict):
+            subset_request = self.request(set(entities.keys()))
+
+            if subset_request.request_result.feature_columns != request.request_result.feature_columns:
+                job = job.derive_features(request.needed_requests)
+
+        return job.filter(request.features_to_include)
 
     def with_target(self) -> 'SupervisedModelFeatureStore':
         return SupervisedModelFeatureStore(self.model, self.store)
@@ -525,7 +549,7 @@ class SupervisedModelFeatureStore:
         )
         job = self.store.features_for_request(total_request, entities, total_request.features_to_include)
         return SupervisedJob(
-            job,
+            job.filter(total_request.features_to_include),
             target_columns=targets,
         )
 
@@ -664,6 +688,14 @@ class FeatureViewStore:
         return job.fill_missing_columns().ensure_types([request]).derive_features([request])
 
     async def batch_write(self, values: dict[str, list[Any]] | RetrivalJob) -> None:
+        """Takes a set of features, computes the derived features, and store them in the source
+
+        Args:
+            values (dict[str, list[Any]] | RetrivalJob): The features to write
+
+        Raises:
+            ValueError: In case the inputed features are invalid
+        """
 
         if not isinstance(self.source, WritableFeatureSource):
             logger.info('Feature Source is not writable')

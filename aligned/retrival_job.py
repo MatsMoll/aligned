@@ -293,6 +293,9 @@ class RetrivalJob(ABC):
     def filter(self, include_features: set[str]) -> RetrivalJob:
         return FilterJob(include_features, self)
 
+    def with_request(self, requests: list[RetrivalRequest]) -> RetrivalJob:
+        return WithRequests(self, requests)
+
     def listen_to_events(self, events: set[EventTrigger]) -> RetrivalJob:
         return ListenForTriggers(self, events)
 
@@ -490,6 +493,7 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
                     if feature.name in df.columns:
                         logger.info(f'Skipped adding feature {feature.name} to computation plan')
                         continue
+
                     logger.info(f'Adding feature to computation plan in polars: {feature.name}')
 
                     method = await feature.transformation.transform_polars(df, feature.name)
@@ -857,6 +861,27 @@ class DateRangeJob(RetrivalJob):
 
 class FactualRetrivalJob(RetrivalJob):
     facts: RetrivalJob
+
+
+@dataclass
+class WithRequests(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+    requests: list[RetrivalRequest]
+
+    @property
+    def request_result(self) -> RequestResult:
+        return RequestResult.from_request_list(self.requests)
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.requests
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return await self.job.to_pandas()
+
+    async def to_polars(self) -> pl.LazyFrame:
+        return await self.job.to_polars()
 
 
 @dataclass

@@ -211,7 +211,7 @@ class RequestResult(Codable):
 
     @property
     def feature_columns(self) -> list[str]:
-        return [feature.name for feature in self.features]
+        return sorted(feature.name for feature in self.features)
 
     @property
     def entity_columns(self) -> list[str]:
@@ -323,7 +323,7 @@ class FeatureRequest(Codable):
 
     @property
     def request_result(self) -> RequestResult:
-        return RequestResult.from_request_list(self.needed_requests)
+        return RequestResult.from_request_list(self.needed_requests).filter_features(self.features_to_include)
 
     def without_event_timestamp(self, name_sufix: str | None = None) -> 'FeatureRequest':
         return FeatureRequest(

@@ -224,8 +224,6 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
     def multi_source_features_for(
         cls, facts: RetrivalJob, requests: list[tuple[ParquetFileSource, RetrivalRequest]]
     ) -> FactualRetrivalJob:
-        if len(requests) != 1:
-            raise ValueError(f'Only able to load one {requests} at a time')
 
         source = requests[0][0]
         if not isinstance(source, cls):

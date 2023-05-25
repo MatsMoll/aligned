@@ -23,6 +23,10 @@ class FactualRedisJob(FactualRetrivalJob):
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_polars()).collect().to_pandas()
 
+    def describe(self) -> str:
+        features_to_load = [list(request.all_feature_names) for request in self.requests]
+        return f'Loading features from Redis using HMGET {features_to_load}'
+
     async def to_polars(self) -> pl.LazyFrame:
         redis = self.config.redis()
 

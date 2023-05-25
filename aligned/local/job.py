@@ -204,8 +204,13 @@ class FileFactualJob(FactualRetrivalJob):
 
             feature_df = df.select(request_features)
 
-            renames = {org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)}
-            feature_df = feature_df.rename(renames)
+            renames = {
+                org_name: wanted_name
+                for org_name, wanted_name in zip(request_features, all_names)
+                if org_name != wanted_name
+            }
+            if renames:
+                feature_df = feature_df.rename(renames)
 
             for entity in request.entities:
                 feature_df = feature_df.with_column(pl.col(entity.name).cast(entity.dtype.polars_type))
@@ -224,13 +229,13 @@ class FileFactualJob(FactualRetrivalJob):
             new_result = new_result.select(pl.exclude(list(entity_names)))
 
             if request.event_timestamp:
-                new_result = new_result.with_columns(
-                    pl.col(request.event_timestamp.name)
-                    .str.strptime(pl.Datetime, '%+')
-                    .alias(request.event_timestamp.name)
-                )
                 field = request.event_timestamp.name
                 ttl = request.event_timestamp.ttl
+
+                if new_result.select(field).dtypes[0] == pl.Utf8():
+                    new_result = new_result.with_columns(
+                        pl.col(field).str.strptime(pl.Datetime, '%+').alias(field)
+                    )
                 if ttl:
                     ttl_request = (pl.col(field) <= pl.col(event_timestamp_col)) & (
                         pl.col(field) >= pl.col(event_timestamp_col) - ttl
@@ -240,6 +245,7 @@ class FileFactualJob(FactualRetrivalJob):
                     new_result = new_result.filter(
                         pl.col(field).is_null() | (pl.col(field) <= pl.col(event_timestamp_col))
                     )
+                new_result = new_result.select(pl.exclude(field))
 
             unique = new_result.unique(subset=row_id_name, keep='first')
             result = result.join(unique, on=row_id_name, how='left')
