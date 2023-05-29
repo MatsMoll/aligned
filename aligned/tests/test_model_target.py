@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 import numpy as np
 import polars as pl
@@ -33,13 +33,13 @@ async def test_titanic_model_with_targets_and_scd(titanic_feature_store_scd: Fea
         {
             'passenger_id': [1, 2, 3, 4, 5, 6, 7],
             'event_timestamp': [
-                datetime(2023, 2, 6),
-                datetime(2023, 2, 6),
-                datetime(2023, 1, 2),
-                datetime(2023, 2, 6),
-                datetime(2023, 2, 6),
-                datetime(2023, 2, 6),
-                datetime(2023, 2, 6),
+                datetime(2023, 2, 6, tzinfo=timezone.utc),
+                datetime(2023, 2, 6, tzinfo=timezone.utc),
+                datetime(2023, 1, 2, tzinfo=timezone.utc),
+                datetime(2023, 2, 6, tzinfo=timezone.utc),
+                datetime(2023, 2, 6, tzinfo=timezone.utc),
+                datetime(2023, 2, 6, tzinfo=timezone.utc),
+                datetime(2023, 2, 6, tzinfo=timezone.utc),
             ],
         }
     )

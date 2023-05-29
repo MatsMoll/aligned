@@ -60,16 +60,16 @@ class FactualRedisJob(FactualRetrivalJob):
                 result = await pipe.execute()
 
             reqs: pl.DataFrame = pl.concat(
-                [entities, pl.DataFrame(result, columns=features, orient='row')], how='horizontal'
+                [entities, pl.DataFrame(result, schema=features, orient='row')], how='horizontal'
             ).select(pl.exclude(redis_combine_id))
 
             for feature in request.returned_features:
                 if feature.dtype == FeatureType('').bool:
-                    reqs = reqs.with_column(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
+                    reqs = reqs.with_columns(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
                 elif reqs[feature.name].dtype == pl.Utf8 and (
                     feature.dtype == FeatureType('').int32 or feature.dtype == FeatureType('').int64
                 ):
-                    reqs = reqs.with_column(
+                    reqs = reqs.with_columns(
                         pl.col(feature.name)
                         .str.splitn('.', 2)
                         .struct.field('field_0')
@@ -79,9 +79,9 @@ class FactualRedisJob(FactualRetrivalJob):
                 elif feature.dtype == FeatureType('').embedding or feature.dtype == FeatureType('').array:
                     import numpy as np
 
-                    reqs = reqs.with_column(pl.col(feature.name).apply(lambda row: np.frombuffer(row)))
+                    reqs = reqs.with_columns(pl.col(feature.name).apply(lambda row: np.frombuffer(row)))
                 else:
-                    reqs = reqs.with_column(pl.col(feature.name).cast(feature.dtype.polars_type))
+                    reqs = reqs.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type))
                 # if feature.dtype == FeatureType('').datetime:
                 #     dates = pd.to_datetime(result_series[result_value_mask], unit='s', utc=True)
                 #     result_df.loc[set_mask, feature.name] = dates

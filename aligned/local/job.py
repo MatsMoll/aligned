@@ -213,8 +213,8 @@ class FileFactualJob(FactualRetrivalJob):
                 feature_df = feature_df.rename(renames)
 
             for entity in request.entities:
-                feature_df = feature_df.with_column(pl.col(entity.name).cast(entity.dtype.polars_type))
-                result = result.with_column(pl.col(entity.name).cast(entity.dtype.polars_type))
+                feature_df = feature_df.with_columns(pl.col(entity.name).cast(entity.dtype.polars_type))
+                result = result.with_columns(pl.col(entity.name).cast(entity.dtype.polars_type))
 
             column_selects = list(entity_names.union({'row_id'}))
             if request.event_timestamp:

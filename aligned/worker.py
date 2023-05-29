@@ -13,10 +13,9 @@ from aligned.active_learning.write_policy import ActiveLearningWritePolicy
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.feature_source import WritableFeatureSource
 from aligned.feature_store import FeatureViewStore, ModelFeatureStore
-from aligned.redis.stream import RedisStream
 from aligned.retrival_job import RetrivalJob, StreamAggregationJob
 from aligned.sources.local import StorageFileReference
-from aligned.sources.redis import RedisStreamSource
+from aligned.streams.interface import ReadableStream
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +131,6 @@ class StreamWorker:
 
         feature_views_to_process = views
 
-        streams: list[StreamDataSource] = []
         feature_views: dict[str, list[FeatureViewStore]] = {}
 
         for view in store.feature_views.values():
@@ -143,46 +141,32 @@ class StreamWorker:
                 continue
             source = view.stream_data_source
 
-            if not streams:
-                streams.append(source)
-                feature_views[source.topic_name] = [store.feature_view(view.name)]
-            elif isinstance(source, type(streams[0])):
-                streams.append(source)
-                if source.topic_name in feature_views:
-                    feature_views[source.topic_name] = feature_views[source.topic_name] + [
-                        store.feature_view(view.name)
-                    ]
-                else:
-                    feature_views[source.topic_name] = [store.feature_view(view.name)]
+            if source.topic_name in feature_views:
+                feature_views[source.topic_name] = feature_views[source.topic_name] + [
+                    store.feature_view(view.name)
+                ]
             else:
-                raise ValueError(
-                    'The grouped stream sources is not of the same type.'
-                    f'{view.name} was as {type(source)} expected {streams[0]}'
-                )
+                feature_views[source.topic_name] = [store.feature_view(view.name)]
 
-        if not isinstance(streams[0], RedisStreamSource):
-            raise ValueError(
-                'Only supporting Redis Streams for worker nodes as of now. '
-                f'Please contribute to the repo in order to support {type(streams[0])} on a worker node'
-            )
-
-        redis_streams: list[RedisStreamSource] = streams
-        for stream in redis_streams:
-            if not stream.config == redis_streams[0].config:
-                raise ValueError(f'Not all stream configs for {feature_views_to_process}, is equal.')
-
-        redis_stream = RedisStream(redis_streams[0].config.redis())
         processes = []
         for topic_name, views in feature_views.items():
             process_views = views
             if should_prune_unused_features:
                 process_views = [view.with_optimised_write() for view in process_views]
-            processes.append(process(redis_stream, topic_name, process_views))
+            stream: StreamDataSource = views[0].view.stream_data_source
+            stream_consumer = stream.consumer()
+            processes.append(process(stream_consumer, topic_name, process_views))
 
         for active_learning_config in self.active_learning_configs:
             for model_name in set(active_learning_config.model_names):
+                model = store.models[model_name]
+                source = model.predictions_view.stream_source
+
+                if not source:
+                    logger.info(f'Skipping to setup active learning set for {model_name}')
+
                 processes.append(
-                    process_predictions(redis_stream, store.model(model_name), active_learning_config)
+                    process_predictions(source.consumer(), store.model(model_name), active_learning_config)
                 )
 
         if self.metric_logging_port:
@@ -192,7 +176,9 @@ class StreamWorker:
 
 
 async def process_predictions(
-    stream_source: RedisStream, model: ModelFeatureStore, active_learning_config: ActiveLearningConfig | None
+    stream_source: ReadableStream,
+    model: ModelFeatureStore,
+    active_learning_config: ActiveLearningConfig | None,
 ) -> None:
     from aligned.active_learning.job import ActiveLearningJob
 
@@ -201,18 +187,14 @@ async def process_predictions(
         return
 
     topic_name = model.model.predictions_view.stream_source.topic_name
-    last_id = '$'
     logger.info(f'Started listning to {topic_name}')
 
     while True:
-        stream_values = await stream_source.read_from_timestamp({topic_name: last_id})
+        records = await stream_source.read()
 
-        if not stream_values:
+        if not records:
             continue
         start_time = timeit.default_timer()
-        _, values = stream_values[0]
-        last_id = values[-1][0]
-        records = [value for _, value in values]
 
         request = model.model.request_all_predictions.needed_requests[0]
         job = RetrivalJob.from_dict(records, request).ensure_types([request])
@@ -229,35 +211,27 @@ async def process_predictions(
 
 
 async def single_processing(
-    stream_source: RedisStream, topic_name: str, feature_view: FeatureViewStore
+    stream_source: ReadableStream, topic_name: str, feature_view: FeatureViewStore
 ) -> None:
-    last_id = '$'
     logger.info(f'Started listning to {topic_name}')
-    # request = feature_view.view.request_all.needed_requests[0]
-    # aggregations = request.aggregate_over()
-    # checkpoints = {
-    #     window: FileSource.parquet_at(f'{feature_view.view.name}_agg_{window.time_window.total_seconds()}')
-    #     for window in aggregations.keys()
-    # }
     while True:
-        stream_values = await stream_source.read_from_timestamp({topic_name: last_id})
+        logger.info(f'Reading {topic_name}')
+        records = await stream_source.read()
+        logger.info(f'Read {topic_name} values: {len(records)}')
 
-        if not stream_values:
+        if not records:
             continue
-        start_time = timeit.default_timer()
-        _, values = stream_values[0]
-        last_id = values[-1][0]
-        records = [record for _, record in values]
 
+        start_time = timeit.default_timer()
         job = stream_job(records, feature_view)
 
         await feature_view.batch_write(job)  # type: ignore [arg-type]
         elapsed = timeit.default_timer() - start_time
 
         process_time.labels(feature_view.view.name).observe(elapsed)
-        processed_rows_count.labels(feature_view.view.name).inc(len(values))
+        processed_rows_count.labels(feature_view.view.name).inc(len(records))
 
-        logger.info(f'Wrote {len(values)} records in {elapsed} seconds')
+        logger.info(f'Wrote {len(records)} records in {elapsed} seconds')
 
 
 def stream_job(values: list[dict], feature_view: FeatureViewStore) -> RetrivalJob:
@@ -296,24 +270,21 @@ async def monitor_process(values: list[dict], view: FeatureViewStore):
 
 
 async def multi_processing(
-    stream_source: RedisStream, topic_name: str, feature_views: list[FeatureViewStore]
+    stream_source: ReadableStream, topic_name: str, feature_views: list[FeatureViewStore]
 ) -> None:
-    last_id = '$'
     logger.info(f'Started listning to {topic_name}')
     while True:
-        stream_values = await stream_source.read_from_timestamp({topic_name: last_id})
+        stream_values = await stream_source.read()
 
         if not stream_values:
             continue
 
-        _, values = stream_values[0]
-        last_id = values[-1][0]
-        mapped_values = [record for _, record in values]
-
-        await asyncio.gather(*[monitor_process(mapped_values, view) for view in feature_views])
+        await asyncio.gather(*[monitor_process(stream_values, view) for view in feature_views])
 
 
-async def process(stream_source: RedisStream, topic_name: str, feature_views: list[FeatureViewStore]) -> None:
+async def process(
+    stream_source: ReadableStream, topic_name: str, feature_views: list[FeatureViewStore]
+) -> None:
     if len(feature_views) == 1:
         await single_processing(stream_source, topic_name, feature_views[0])
     else:

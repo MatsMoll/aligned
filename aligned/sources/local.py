@@ -98,9 +98,9 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
             buffer = await HttpStorage().read(self.path)
             io_buffer = BytesIO(buffer)
             io_buffer.seek(0)
-            return pl.read_csv(io_buffer, sep=self.csv_config.seperator).lazy()
+            return pl.read_csv(io_buffer, sep=self.csv_config.seperator, try_parse_dates=True).lazy()
 
-        return pl.scan_csv(self.path, sep=self.csv_config.seperator)
+        return pl.scan_csv(self.path, separator=self.csv_config.seperator, try_parse_dates=True)
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
         df.to_csv(

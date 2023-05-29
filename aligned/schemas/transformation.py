@@ -119,10 +119,6 @@ class Transformation(Codable, SerializableType):
                 )
             else:
                 assert_series_equal(expected.alias(alias), output, check_names=False, check_dtype=False)
-        except pl.NotFoundError:
-            AssertionError(
-                f'Not able to find resulting transformation {cls.__name__}, remember to add .alias(alias)'
-            )
         except AttributeError:
             raise AssertionError(
                 f'Error for transformation {cls.__name__}. Could be missing a return in the transformation'
@@ -365,7 +361,7 @@ class PolarsLambdaTransformation(Transformation):
 
         loaded: pl.Expr = dill.loads(self.method)
         pl_df = pl.from_pandas(df)
-        pl_df = pl_df.with_column((loaded).alias('polars_tran_column'))
+        pl_df = pl_df.with_columns((loaded).alias('polars_tran_column'))
         return pl_df['polars_tran_column'].to_pandas()
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
@@ -390,7 +386,7 @@ class NotNull(Transformation):
         return df[self.key].notnull()
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column(pl.col(self.key).is_not_null().alias(alias))
+        return df.with_columns(pl.col(self.key).is_not_null().alias(alias))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -418,7 +414,7 @@ class Equals(Transformation):
         return df[self.key] == self.value.python_value
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column((pl.col(self.key) == self.value.python_value).alias(alias))
+        return df.with_columns((pl.col(self.key) == self.value.python_value).alias(alias))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -450,7 +446,7 @@ class And(Transformation):
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column(
+        return df.with_columns(
             (
                 pl.when(pl.col(self.first_key).is_not_null() & pl.col(self.second_key).is_not_null())
                 .then(pl.col(self.first_key) & pl.col(self.second_key))
@@ -481,7 +477,7 @@ class Or(Transformation):
         self.second_key = second_key
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column((pl.col(self.first_key) | pl.col(self.second_key)).alias(alias))
+        return df.with_columns((pl.col(self.first_key) | pl.col(self.second_key)).alias(alias))
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         df[self.first_key].__invert__
@@ -519,7 +515,7 @@ class Inverse(Transformation):
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column((~pl.col(self.key)).alias(alias))
+        return df.with_columns((~pl.col(self.key)).alias(alias))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -547,7 +543,7 @@ class NotEquals(Transformation):
         return df[self.key] != self.value.python_value
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column((pl.col(self.key) != self.value.python_value).alias(alias))
+        return df.with_columns((pl.col(self.key) != self.value.python_value).alias(alias))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -571,7 +567,7 @@ class GreaterThenValue(Transformation):
         return df[self.key] > self.value
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column((pl.col(self.key) > self.value).alias(alias))
+        return df.with_columns((pl.col(self.key) > self.value).alias(alias))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -597,7 +593,7 @@ class GreaterThen(Transformation):
         return df[self.left_key] > df[self.right_key]
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column((pl.col(self.left_key) > pl.col(self.right_key)).alias(alias))
+        return df.with_columns((pl.col(self.left_key) > pl.col(self.right_key)).alias(alias))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -631,7 +627,7 @@ class GreaterThenOrEqual(Transformation):
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column((pl.col(self.key) >= self.value).alias(alias))
+        return df.with_columns((pl.col(self.key) >= self.value).alias(alias))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -665,7 +661,7 @@ class LowerThen(Transformation):
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column((pl.col(self.key) < self.value).alias(alias))
+        return df.with_columns((pl.col(self.key) < self.value).alias(alias))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -881,7 +877,7 @@ class TimeDifference(Transformation, PsqlTransformation, RedshiftTransformation)
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column((pl.col(self.front) - pl.col(self.behind)).dt.seconds().alias(alias))
+        return df.with_columns((pl.col(self.front) - pl.col(self.behind)).dt.seconds().alias(alias))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -931,7 +927,7 @@ class Logarithm(Transformation):
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column(
+        return df.with_columns(
             (pl.when(pl.col(self.key) > 0).then(pl.col(self.key).log()).otherwise(pl.lit(None))).alias(alias)
         )
 
@@ -963,7 +959,7 @@ class LogarithmOnePluss(Transformation):
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column(
+        return df.with_columns(
             (pl.when(pl.col(self.key) > -1).then((pl.col(self.key) + 1).log()).otherwise(pl.lit(None))).alias(
                 alias
             )
@@ -1482,7 +1478,7 @@ class MapArgMax(Transformation):
                 )
             else:
                 expr = pl.when(pl.col(key) > 0.5).then(value.python_value).otherwise(pl.lit(None))
-            return df.with_column(expr.alias(alias))
+            return df.with_columns(expr.alias(alias))
         else:
             features = list(self.column_mappings.keys())
             arg_max_alias = f'{alias}_arg_max'
@@ -1492,8 +1488,8 @@ class MapArgMax(Transformation):
                     alias: [self.column_mappings[feature].python_value for feature in features],
                     arg_max_alias: list(range(0, len(features))),
                 }
-            ).with_column(pl.col(arg_max_alias).cast(pl.UInt32))
-            sub = df.with_column(pl.concat_list(pl.col(features)).alias(array_row_alias)).with_column(
+            ).with_columns(pl.col(arg_max_alias).cast(pl.UInt32))
+            sub = df.with_columns(pl.concat_list(pl.col(features)).alias(array_row_alias)).with_columns(
                 pl.col(array_row_alias).arr.arg_max().alias(arg_max_alias)
             )
             return sub.join(mapper.lazy(), on=arg_max_alias, how='left').select(
@@ -1634,7 +1630,7 @@ class AppendStrings(Transformation):
         return df[self.first_key] + self.sep + df[self.second_key]
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_column(
+        return df.with_columns(
             pl.concat_str(
                 [pl.col(self.first_key).fill_null(''), pl.col(self.second_key).fill_null('')], sep=self.sep
             ).alias(alias)
@@ -1871,7 +1867,7 @@ class Clip(Transformation, PsqlTransformation, RedshiftTransformation):
         return df[self.key].clip(lower=self.lower.python_value, upper=self.upper.python_value)
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key).clip(min_val=self.lower.python_value, max_val=self.upper.python_value)
+        return pl.col(self.key).clip(lower_bound=self.lower.python_value, upper_bound=self.upper.python_value)
 
     def as_psql(self) -> str:
         return (

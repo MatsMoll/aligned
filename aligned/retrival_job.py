@@ -937,19 +937,20 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
 
             for feature in request.all_required_features:
                 if feature.dtype == FeatureType('').bool:
-                    df = df.with_column(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
+                    df = df.with_columns(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
                 elif feature.dtype == FeatureType('').datetime:
                     current_dtype = df.select([feature.name]).dtypes[0]
                     if isinstance(current_dtype, pl.Datetime):
                         continue
                     # Convert from ms to us
-                    df = df.with_column(
+                    df = df.with_columns(
                         (pl.col(feature.name).cast(pl.Int64) * 1000)
                         .cast(pl.Datetime(time_zone='UTC'))
                         .alias(feature.name)
                     )
                 else:
-                    df = df.with_column(pl.col(feature.name).cast(feature.dtype.polars_type, strict=False))
+                    df = df.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type, strict=False))
+
             if request.event_timestamp:
                 feature = request.event_timestamp
                 if feature.name not in df.columns:
@@ -957,7 +958,7 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                 current_dtype = df.select([feature.name]).dtypes[0]
                 if isinstance(current_dtype, pl.Datetime):
                     continue
-                df = df.with_column(
+                df = df.with_columns(
                     (pl.col(feature.name).cast(pl.Int64) * 1000)
                     .cast(pl.Datetime(time_zone='UTC'))
                     .alias(feature.name)

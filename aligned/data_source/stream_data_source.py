@@ -10,6 +10,7 @@ from aligned.schemas.codable import Codable
 
 if TYPE_CHECKING:
     from aligned.retrival_job import RetrivalJob
+    from aligned.streams.interface import ReadableStream
 
 
 class StreamDataSourceFactory:
@@ -19,11 +20,13 @@ class StreamDataSourceFactory:
     _shared: StreamDataSourceFactory | None = None
 
     def __init__(self) -> None:
+        from aligned.sources.kafka import KafkaTopicConfig
         from aligned.sources.redis import RedisStreamSource
 
         self.supported_data_sources = {
             HttpStreamSource.name: HttpStreamSource,
             RedisStreamSource.name: RedisStreamSource,
+            KafkaTopicConfig.name: KafkaTopicConfig,
         }
 
     @classmethod
@@ -58,6 +61,21 @@ class StreamDataSource(ABC, Codable, SerializableType):
         del value['name']
         data_class = StreamDataSourceFactory.shared().supported_data_sources[name]
         return data_class.from_dict(value)
+
+    def consumer(self) -> ReadableStream:
+        """Returns a consumer that actually can load data
+
+        E.g:
+        ```python
+        redis_config = RedisConfig(env_var="REDIS_URL")
+
+        consumer = redis_config.consumer()
+        ```
+
+        Returns:
+            ReadableStream: A stream you can read records from
+        """
+        raise NotImplementedError()
 
 
 @dataclass

@@ -19,6 +19,7 @@ from aligned.feature_view import (
     FeatureViewMetadata,
 )
 from aligned.schemas.text_vectoriser import TextVectoriserModel
+from aligned.sources.kafka import KafkaConfig
 from aligned.sources.local import FileSource
 from aligned.sources.psql import PostgreSQLConfig
 from aligned.sources.redis import RedisConfig
@@ -40,6 +41,8 @@ __all__ = [
     'HttpStreamSource',
     # Online Source
     'RedisConfig',
+    # Streaming Sources
+    'KafkaConfig',
     # Types
     'Entity',
     'String',

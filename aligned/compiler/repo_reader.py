@@ -79,7 +79,11 @@ class RepoReader:
     """
 
     @staticmethod
-    async def definition_from_path(repo_path: Path) -> RepoDefinition:
+    async def definition_from_path(repo_path: Path, excludes: list[str] | None = None) -> RepoDefinition:
+
+        excluded_files: list[Path] = []
+        for exclude in excludes:
+            excluded_files.extend(repo_path.resolve().glob(exclude))
 
         metadata = RepoMetadata(created_at=datetime.now(), name=repo_path.name, github_url=None)
         repo = RepoDefinition(
@@ -93,16 +97,14 @@ class RepoReader:
         feature_view_names: dict[str, str] = {}
 
         for py_file in find_files(repo_path):
+            if py_file in excluded_files:
+                continue
+
             imports = imports_for(py_file)
 
             module_path = path_to_py_module(py_file, repo_path)
-            if (
-                module_path.startswith('aladdin')
-                or module_path.startswith('.')
-                or module_path.startswith('heroku')
-                or module_path.endswith('__')
-            ):
-                # Skip aladdin modules
+            if module_path.startswith('aladdin') or module_path.startswith('.') or module_path.endswith('__'):
+                # Skip no feature defintion modules
                 continue
 
             module = import_module(module_path)

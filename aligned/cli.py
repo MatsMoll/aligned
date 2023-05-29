@@ -104,7 +104,8 @@ def cli() -> None:
     default='.env',
     help='The path to env variables',
 )
-async def apply_command(repo_path: str, reference_file: str, env_file: str) -> None:
+@click.option('--ignore-file', default='.alignedignore', help='The files Aligned should ignore')
+async def apply_command(repo_path: str, reference_file: str, env_file: str, ignore_file: str) -> None:
     """
     Create or update a feature store deployment
     """
@@ -113,10 +114,17 @@ async def apply_command(repo_path: str, reference_file: str, env_file: str) -> N
     setup_logger()
 
     dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
+    ignore_path = dir / ignore_file
+
     path, obj = reference_file.split(':')
     reference_file_path = Path(path).absolute()
     load_envs(dir / env_file)
     sys.path.append(str(dir))
+
+    excludes = []
+
+    if ignore_path.is_file():
+        excludes = ignore_path.read_text().split('\n')
 
     repo_ref = RepoReference('const', {'const': FileSource.json_at('./feature-store.json')})
     with suppress(ValueError):
@@ -125,7 +133,7 @@ async def apply_command(repo_path: str, reference_file: str, env_file: str) -> N
     if file := repo_ref.selected_file:
         click.echo(f'Updating file at: {file}')
 
-        repo_def = await RepoReader.definition_from_path(dir)
+        repo_def = await RepoReader.definition_from_path(dir, excludes)
 
         await file.write(repo_def.to_json(omit_none=True).encode('utf-8'))
     else:

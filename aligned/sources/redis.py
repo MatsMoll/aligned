@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 
 import polars as pl
 
+from aligned.streams.interface import ReadableStream
+
 try:
     from redis.asyncio import ConnectionPool, Redis, StrictRedis  # type: ignore
 except ModuleNotFoundError:
@@ -177,7 +179,7 @@ class RedisSource(FeatureSource, WritableFeatureSource):
                 for entity_name in request.entity_names:
                     filter_entity_query = filter_entity_query & (pl.col(entity_name).is_not_null())
 
-                request_data = data.filter(filter_entity_query).with_column(
+                request_data = data.filter(filter_entity_query).with_columns(
                     (
                         pl.lit(request.location.identifier)
                         + pl.lit(':')
@@ -201,7 +203,7 @@ class RedisSource(FeatureSource, WritableFeatureSource):
                     elif feature.dtype == FeatureType('').embedding or feature.dtype == FeatureType('').array:
                         expr = pl.col(feature.name).apply(lambda x: x.to_numpy().tobytes())
 
-                    request_data = request_data.with_column(expr)
+                    request_data = request_data.with_columns(expr)
                     features.append(feature.name)
 
                 redis_frame = request_data.select(features).collect()
@@ -225,6 +227,11 @@ class RedisStreamSource(StreamDataSource, SinkableDataSource):
 
     name: str = 'redis'
 
+    def consumer(self) -> ReadableStream:
+        from aligned.streams.redis import RedisStream
+
+        return RedisStream(self.config.redis(), self.topic_name)
+
     def map_values(self, mappings: dict[str, str]) -> RedisStreamSource:
         return RedisStreamSource(
             topic_name=self.topic_name, config=self.config, mappings=self.mappings | mappings
@@ -245,7 +252,7 @@ class RedisStreamSource(StreamDataSource, SinkableDataSource):
 
                 expr = pl.col(feature.name).apply(lambda x: x.to_numpy().tobytes())
 
-            data = data.with_column(expr.cast(pl.Utf8).alias(feature.name))
+            data = data.with_columns(expr.cast(pl.Utf8).alias(feature.name))
 
         return data
 
