@@ -584,7 +584,7 @@ def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureView:
             name='titanic',
             description='Some features from the titanic dataset',
             batch_source=titanic_source_scd,
-            stream_source=redis.stream(name='titanic_stream').with_coder(JsonRecordCoder('json')),
+            stream_source=redis.stream(topic='titanic_stream').with_coder(JsonRecordCoder('json')),
         )
 
         passenger_id = Entity(dtype=Int32())
