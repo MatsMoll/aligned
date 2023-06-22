@@ -175,9 +175,11 @@ class FastAPIServer:
         app = FastAPI(middleware=[Middleware(CorrelationIdMiddleware)])
         app.docs_url = '/docs'
 
+        prom_instrument = Instrumentator().instrument(app)
+
         @app.on_event('startup')
         async def startup():
-            Instrumentator().instrument(app).expose(app)
+            prom_instrument.expose(app)
 
         @app.get('health', status_code=HTTP_200_OK)
         def health() -> None:
