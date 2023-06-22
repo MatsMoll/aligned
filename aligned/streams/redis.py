@@ -21,6 +21,7 @@ class RedisStream(ReadableStream, SinakableStream):
     client: Redis
     stream_name: str
     read_timestamp: str = field(default='0-0')
+    mappings: dict[str, str] = field(default_factory=dict)
     record_coder: RecordCoder = field(default_factory=lambda: PassthroughRecordCoder())
 
     async def read(self, max_records: int = None, max_wait: float = None) -> list[dict]:

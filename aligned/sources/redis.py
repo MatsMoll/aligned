@@ -165,7 +165,9 @@ class RedisSource(FeatureSource, WritableFeatureSource):
     def features_for(self, facts: RetrivalJob, request: FeatureRequest) -> RetrivalJob:
         from aligned.redis.job import FactualRedisJob
 
-        return FactualRedisJob(self.config, request.needed_requests, facts)
+        needed_requests = [req for req in request.needed_requests if req.location.location != 'combined_view']
+        combined = [req for req in request.needed_requests if req.location.location == 'combined_view']
+        return FactualRedisJob(self.config, needed_requests, facts).combined_features(combined)
 
     async def write(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
 

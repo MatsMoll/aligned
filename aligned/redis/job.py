@@ -20,6 +20,10 @@ class FactualRedisJob(FactualRetrivalJob):
     def request_result(self) -> RequestResult:
         return RequestResult.from_request_list(self.requests)
 
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.requests
+
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_polars()).collect().to_pandas()
 

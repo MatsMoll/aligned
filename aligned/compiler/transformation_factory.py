@@ -692,6 +692,22 @@ class AppendStrings(TransformationFactory):
 
 
 @dataclass
+class JsonPathFactory(TransformationFactory):
+
+    json_feature: FeatureFactory
+    path: str
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.json_feature]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import JsonPath
+
+        return JsonPath(self.json_feature.name, self.path)
+
+
+@dataclass
 class PresignedAwsUrlFactory(TransformationFactory):
 
     aws_config: AwsS3Config

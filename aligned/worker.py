@@ -306,7 +306,7 @@ async def process(
         else:
             await multi_processing(stream_source, topic_name, feature_views)
     except Exception as e:
-        logger.error(f'Error processing {topic_name}: {e}')
+        logger.error(f'Error processing {topic_name}: {type(e)} - {e}')
         if error_count > 5:
             raise e
         await asyncio.sleep(5)

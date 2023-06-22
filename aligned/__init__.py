@@ -6,6 +6,7 @@ from aligned.compiler.feature_factory import (
     Float,
     Int32,
     Int64,
+    Json,
     String,
     Timestamp,
 )
@@ -54,6 +55,7 @@ __all__ = [
     'Float',
     'EventTimestamp',
     'Timestamp',
+    'Json',
     'Model',
     'TextVectoriserModel',
 ]

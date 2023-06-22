@@ -287,6 +287,9 @@ class RetrivalJob(ABC):
     def derive_features(self, requests: list[RetrivalRequest]) -> RetrivalJob:
         return DerivedFeatureJob(job=self, requests=requests)
 
+    def combined_features(self, requests: list[RetrivalRequest] | None = None) -> RetrivalJob:
+        return CombineFactualJob([self], requests or self.retrival_requests)
+
     def ensure_types(self, requests: list[RetrivalRequest]) -> RetrivalJob:
         return EnsureTypesJob(job=self, requests=requests)
 
@@ -1033,6 +1036,7 @@ class CombineFactualJob(RetrivalJob):
 
     async def combine_polars_data(self, df: pl.LazyFrame) -> pl.LazyFrame:
         for request in self.combined_requests:
+            logger.info(f'{request.name}, {len(request.derived_features)}')
             for feature in request.derived_features:
                 if feature.name in df.columns:
                     logger.info(f'Skipping feature {feature.name}, already computed')

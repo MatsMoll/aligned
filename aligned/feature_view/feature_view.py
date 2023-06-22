@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractproperty
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from aligned.compiler.feature_factory import (
     AggregationTransformationFactory,
@@ -227,3 +227,8 @@ class FeatureView(ABC):
         store = FeatureStore.experimental()
         store.add_feature_view(self)
         return store.feature_view(self.metadata.name)
+
+    @classmethod
+    async def process(cls, data: list[dict] | dict[str, Any]) -> list[dict]:
+        df = await cls.query().process_input(data).to_polars()
+        return df.collect().to_dicts()

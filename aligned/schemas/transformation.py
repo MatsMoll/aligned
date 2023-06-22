@@ -223,6 +223,7 @@ class SupportedTransformations:
             StdAggregation,
             VarianceAggregation,
             PercentileAggregation,
+            JsonPath,
             Clip,
         ]:
             self.add(tran_type)
@@ -1201,7 +1202,9 @@ class ReplaceStrings(Transformation):
         return temp_df
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        raise NotImplementedError()
+        pandas_column = df.select(self.key).collect().to_pandas()
+        transformed = await self.transform_pandas(pandas_column)
+        return df.with_columns(pl.Series(transformed).alias(alias))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -1934,3 +1937,19 @@ class PresignedAwsUrl(Transformation):
             .apply(lambda x: s3.signed_download_url(x, max_age=self.max_age_seconds))
             .alias(alias)
         )
+
+
+@dataclass
+class JsonPath(Transformation):
+
+    key: str
+    path: str
+
+    name = 'json_path'
+    dtype = FeatureType('').string
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return pl.Series(df[self.key]).str.json_path_match(self.path).to_pandas()
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        return pl.col(self.key).str.json_path_match(self.path).alias(alias)

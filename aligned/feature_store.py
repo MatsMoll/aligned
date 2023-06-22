@@ -254,12 +254,9 @@ class FeatureStore:
             if isinstance(entities, dict):
                 # Do not load the features if they already exist as an entity
                 request.features = {feature for feature in request.features if feature.name not in entities}
-            if len(request.features) == 0:
+            if len(request.features) == 0 and request.location.location != 'combined_view':
                 request.derived_features = set()
 
-        requests.needed_requests = [
-            request for request in requests.needed_requests if len(request.all_feature_names) > 0
-        ]
         return self.features_for_request(requests, entities, feature_names)
 
     def model(self, name: str) -> 'ModelFeatureStore':

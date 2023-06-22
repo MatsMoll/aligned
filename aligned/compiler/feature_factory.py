@@ -872,6 +872,22 @@ class String(
         return image_url
 
 
+class Json(FeatureFactory):
+    def copy_type(self: Json) -> Json:
+        return super().copy_type()
+
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType('').string
+
+    def json_path_value_at(self, path: str, as_type: T) -> T:
+        from aligned.compiler.transformation_factory import JsonPathFactory
+
+        feature = as_type.copy_type()
+        feature.transformation = JsonPathFactory(self, path)
+        return feature
+
+
 class Entity(FeatureFactory):
 
     _dtype: FeatureFactory

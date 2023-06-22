@@ -228,13 +228,11 @@ class FastAPIServer:
 
         @app.post('/features')
         async def features(payload: APIFeatureRequest) -> dict:
-            df = await feature_store.features_for(
-                payload.entities,
-                features=payload.features,
-            ).to_pandas()
-            orient = 'values'
-            body = ','.join([f'"{column}":{df[column].to_json(orient=orient)}' for column in df.columns])
-            return Response(content=f'{{{body}}}', media_type='application/json')
+            import json
+
+            df = await feature_store.features_for(payload.entities, features=payload.features).to_polars()
+            json_data = json.dumps(df.collect().to_dict(as_series=False))
+            return Response(content=json_data, media_type='application/json')
 
         return app
 
