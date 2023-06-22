@@ -516,7 +516,7 @@ class Inverse(Transformation):
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isnull()),
-            transformation=lambda dfv: ~dfv[self.key],
+            transformation=lambda dfv: ~dfv[self.key].astype('bool'),
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:

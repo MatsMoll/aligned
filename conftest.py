@@ -22,6 +22,7 @@ from aligned.feature_view.combined_view import CombinedFeatureView, CombinedFeat
 from aligned.retrival_job import DerivedFeatureJob, RetrivalJob, RetrivalRequest
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
+from aligned.schemas.record_coders import JsonRecordCoder
 from aligned.sources.local import CsvFileSource, FileFullJob, LiteralReference, ParquetFileSource
 
 
@@ -583,6 +584,7 @@ def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureView:
             name='titanic',
             description='Some features from the titanic dataset',
             batch_source=titanic_source_scd,
+            stream_source=redis.stream(name='titanic_stream').with_coder(JsonRecordCoder('json')),
         )
 
         passenger_id = Entity(dtype=Int32())

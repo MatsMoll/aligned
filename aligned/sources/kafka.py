@@ -30,7 +30,7 @@ class KafkaTopicConfig(StreamDataSource):
         consumer.assign([TopicPartition(self.topic_name, 0)])
         return consumer
 
-    def consumer(self) -> KafkaReadableStream:
+    def consumer(self, from_timestamp: str | None = None) -> KafkaReadableStream:
         return KafkaReadableStream(self.kafka_consumer())
 
 

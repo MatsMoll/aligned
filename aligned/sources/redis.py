@@ -23,6 +23,7 @@ from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import RetrivalJob
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import Feature, FeatureType
+from aligned.schemas.record_coders import PassthroughRecordCoder, RecordCoder
 from aligned.schemas.vector_storage import VectorIndex, VectorStorage
 
 logger = logging.getLogger(__name__)
@@ -224,18 +225,27 @@ class RedisStreamSource(StreamDataSource, SinkableDataSource):
     config: RedisConfig
 
     mappings: dict[str, str] = field(default_factory=dict)
+    record_coder: RecordCoder = field(default_factory=PassthroughRecordCoder)
 
     name: str = 'redis'
 
-    def consumer(self) -> ReadableStream:
+    def with_coder(self, coder: RecordCoder) -> RedisStreamSource:
+        self.record_coder = coder
+        return self
+
+    def consumer(self, from_timestamp: str | None = None) -> ReadableStream:
         from aligned.streams.redis import RedisStream
 
-        return RedisStream(self.config.redis(), self.topic_name)
+        return RedisStream(
+            self.config.redis(),
+            self.topic_name,
+            record_coder=self.record_coder,
+            read_timestamp=from_timestamp or '0-0',
+        )
 
     def map_values(self, mappings: dict[str, str]) -> RedisStreamSource:
-        return RedisStreamSource(
-            topic_name=self.topic_name, config=self.config, mappings=self.mappings | mappings
-        )
+        self.mappings = self.mappings | mappings
+        return self
 
     def make_redis_friendly(self, data: pl.LazyFrame, features: set[Feature]) -> pl.LazyFrame:
         # Run one query per row

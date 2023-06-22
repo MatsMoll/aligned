@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 
+from aligned.schemas.record_coders import PassthroughRecordCoder, RecordCoder
 from aligned.streams.interface import ReadableStream, SinakableStream
 
 try:
@@ -20,11 +21,12 @@ class RedisStream(ReadableStream, SinakableStream):
     client: Redis
     stream_name: str
     read_timestamp: str = field(default='0-0')
+    record_coder: RecordCoder = field(default_factory=lambda: PassthroughRecordCoder())
 
     async def read(self, max_records: int = None, max_wait: float = None) -> list[dict]:
 
         stream_values = await self.client.xread(
-            streams={self.stream_name: self.read_timestamp}, count=max_records, block=max_wait
+            streams={self.stream_name: self.read_timestamp}, count=max_records, block=max_wait or 1000
         )
 
         if not stream_values:
@@ -36,8 +38,8 @@ class RedisStream(ReadableStream, SinakableStream):
         self.read_timestamp = values[-1][0]
 
         # We only care about the record, so discarding all ids
-        return [record for _, record in values]
+        return self.record_coder.decode([record for _, record in values])
 
     async def sink(self, records: list[dict]) -> None:
-        for record in records:
+        for record in self.record_coder.encode(records):
             await self.client.xadd(self.stream_name, record)

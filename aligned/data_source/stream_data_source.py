@@ -62,7 +62,7 @@ class StreamDataSource(ABC, Codable, SerializableType):
         data_class = StreamDataSourceFactory.shared().supported_data_sources[name]
         return data_class.from_dict(value)
 
-    def consumer(self) -> ReadableStream:
+    def consumer(self, from_timestamp: str | None = None) -> ReadableStream:
         """Returns a consumer that actually can load data
 
         E.g:
