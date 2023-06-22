@@ -390,6 +390,9 @@ class LiteralDictJob(RetrivalJob):
     async def to_polars(self) -> pl.LazyFrame:
         return pl.DataFrame(self.data).lazy()
 
+    def describe(self) -> str:
+        return f'LiteralDictJob {self.data}'
+
 
 @dataclass
 class LogJob(RetrivalJob, ModificationJob):

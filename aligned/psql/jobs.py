@@ -273,10 +273,7 @@ class FactPsqlJob(FactualRetrivalJob):
             psql_job = self.build_sql_entity_query(self.facts)
             return f'Loading features for {self.facts.describe()}\n\nQuery: {psql_job}'
         else:
-            raise ValueError(
-                'Only PostgreSqlJob is supported as facts when describing,'
-                f'but fetching features for facts: {self.facts.describe()}'
-            )
+            return f'Loading features from {self.facts.describe()}, and its related features'
 
     async def to_pandas(self) -> pd.DataFrame:
         job = await self.psql_job()
@@ -289,7 +286,8 @@ class FactPsqlJob(FactualRetrivalJob):
     async def psql_job(self) -> PostgreSqlJob:
         if isinstance(self.facts, PostgreSqlJob):
             return PostgreSqlJob(self.config, self.build_sql_entity_query(self.facts))
-        return PostgreSqlJob(self.config, await self.build_request())
+        entities = await self.build_request()
+        return PostgreSqlJob(self.config, entities)
 
     def dtype_to_sql_type(self, dtype: object) -> str:
         if isinstance(dtype, str):

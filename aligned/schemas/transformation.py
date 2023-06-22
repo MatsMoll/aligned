@@ -4,7 +4,7 @@ import asyncio
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 import pandas as pd
@@ -15,6 +15,9 @@ from aligned.schemas.codable import Codable
 from aligned.schemas.feature import FeatureType
 from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.text_vectoriser import TextVectoriserModel
+
+if TYPE_CHECKING:
+    from aligned.sources.s3 import AwsS3Config
 
 
 @dataclass
@@ -205,8 +208,10 @@ class SupportedTransformations:
             GrayscaleImage,
             Power,
             PowerFeature,
+            PresignedAwsUrl,
             AppendConstString,
             AppendStrings,
+            PrependConstString,
             ConcatStringAggregation,
             SumAggregation,
             MeanAggregation,
@@ -511,7 +516,7 @@ class Inverse(Transformation):
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isnull()),
-            transformation=lambda dfv: dfv[self.key] != True,  # noqa: E712
+            transformation=lambda dfv: ~dfv[self.key],
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
@@ -1638,6 +1643,22 @@ class AppendStrings(Transformation):
 
 
 @dataclass
+class PrependConstString(Transformation):
+
+    string: str
+    key: str
+
+    name = 'prepend_const_string'
+    dtype = FeatureType('').string
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return self.string + df[self.key]
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        return pl.concat_str([pl.lit(self.string), pl.col(self.key).fill_null('')], sep='').alias(alias)
+
+
+@dataclass
 class ConcatStringAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
@@ -1881,4 +1902,35 @@ class Clip(Transformation, PsqlTransformation, RedshiftTransformation):
             transformation=Clip(key='a', lower=LiteralValue.from_value(0), upper=LiteralValue.from_value(1)),
             input={'a': [-1, 0.1, 0.9, 2]},
             output=[0, 0.1, 0.9, 1],
+        )
+
+
+@dataclass
+class PresignedAwsUrl(Transformation):
+
+    config: AwsS3Config
+    key: str
+
+    max_age_seconds: int = field(default=30)
+
+    name = 'presigned_aws_url'
+    dtype = FeatureType('').string
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        from aioaws.s3 import S3Client
+        from httpx import AsyncClient
+
+        s3 = S3Client(AsyncClient(), config=self.config.s3_config)
+        return df[self.key].apply(lambda x: s3.signed_download_url(x, max_age=self.max_age_seconds))
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        from aioaws.s3 import S3Client
+        from httpx import AsyncClient
+
+        s3 = S3Client(AsyncClient(), config=self.config.s3_config)
+
+        return df.with_columns(
+            pl.col(self.key)
+            .apply(lambda x: s3.signed_download_url(x, max_age=self.max_age_seconds))
+            .alias(alias)
         )

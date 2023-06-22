@@ -6,6 +6,7 @@ from typing import Any, Callable
 import pandas as pd
 import polars as pl
 
+from aligned import AwsS3Config
 from aligned.compiler.feature_factory import FeatureFactory, Transformation, TransformationFactory
 from aligned.schemas.transformation import LiteralValue, TextVectoriserModel
 
@@ -688,6 +689,40 @@ class AppendStrings(TransformationFactory):
             return AppendConstString(self.first_feature.name, self.second_feature.value)
         else:
             return AppendStrings(self.first_feature.name, self.second_feature.name, self.separator)
+
+
+@dataclass
+class PresignedAwsUrlFactory(TransformationFactory):
+
+    aws_config: AwsS3Config
+    url_feature: FeatureFactory
+    max_age_seconds: int = field(default=30)
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.url_feature]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import PresignedAwsUrl
+
+        return PresignedAwsUrl(self.aws_config, self.url_feature.name, self.max_age_seconds)
+
+
+@dataclass
+class PrependConstString(TransformationFactory):
+
+    first_feature: str
+    second_feature: FeatureFactory
+    separator: str = field(default='')
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.second_feature]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import PrependConstString
+
+        return PrependConstString(self.first_feature, self.second_feature.name)
 
 
 @dataclass

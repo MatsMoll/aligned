@@ -36,6 +36,7 @@ from aligned.schemas.vector_storage import VectorStorage
 
 if TYPE_CHECKING:
     from aligned.compiler.transformation_factory import FillNaStrategy
+    from aligned.sources.s3 import AwsS3Config
 
 
 class TransformationFactory:
@@ -846,6 +847,29 @@ class String(
         else:
             feature.transformation = AppendStrings(self, LiteralValue.from_value(other))
         return feature
+
+    def prepend(self, other: FeatureFactory | str) -> String:
+        from aligned.compiler.transformation_factory import AppendStrings, PrependConstString
+
+        feature = String()
+        if isinstance(other, FeatureFactory):
+            feature.transformation = AppendStrings(other, self)
+        else:
+            feature.transformation = PrependConstString(other, self)
+        return feature
+
+    def as_presigned_aws_url(self, credentials: AwsS3Config, max_age_seconds: int | None = None) -> ImageUrl:
+        from aligned.compiler.transformation_factory import PresignedAwsUrlFactory
+
+        feature = ImageUrl()
+        feature.transformation = PresignedAwsUrlFactory(credentials, self, max_age_seconds or 30)
+
+        return feature
+
+    def as_image_url(self) -> ImageUrl:
+        image_url = ImageUrl()
+        image_url.transformation = self.transformation
+        return image_url
 
 
 class Entity(FeatureFactory):

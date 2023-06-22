@@ -14,12 +14,21 @@ class ActiveLearningMetric:
         raise NotImplementedError()
 
     @staticmethod
-    def max_probability() -> ActiveLearningMetric:
-        return ActivLearningPolarsExprMetric(
-            lambda model: pl.concat_list(
-                [prob.feature.name for prob in model.predictions_view.probabilities]
-            ).arr.max()
-        )
+    def max_confidence() -> ActiveLearningMetric:
+        def metric_selection(model: Model) -> pl.Expr:
+            view = model.predictions_view
+
+            if view.classification_targets and len(view.classification_targets) > 0:
+                confidence = [prob.confidence.name for prob in view.classification_targets if prob.confidence]
+                return pl.concat_list(confidence).arr.max()
+
+            if view.regression_targets and len(view.regression_targets) > 0:
+                confidence = [prob.confidence.name for prob in view.regression_targets if prob.confidence]
+                return pl.concat_list(confidence).arr.max()
+
+            return pl.lit(1)
+
+        return ActivLearningPolarsExprMetric(metric_selection)
 
 
 @dataclass

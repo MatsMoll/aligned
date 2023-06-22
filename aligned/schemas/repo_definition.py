@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from aligned.enricher import Enricher
-from aligned.feature_source import FeatureSource
+from aligned.feature_source import FeatureSource, FeatureSourceFactory
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature_view import CompiledCombinedFeatureView, CompiledFeatureView
 from aligned.schemas.model import Model
@@ -93,7 +93,7 @@ class RepoReference:
 class FeatureServer:
     @staticmethod
     def from_reference(
-        reference: StorageFileReference, online_source: FeatureSource | None = None
+        reference: StorageFileReference, online_source: FeatureSource | FeatureSourceFactory | None = None
     ) -> FastAPI | None:
         """Creates a feature server
         This can process and serve features for both models and feature views

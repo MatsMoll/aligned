@@ -98,7 +98,7 @@ class StreamWorker:
     ) -> StreamWorker:
         self.active_learning_configs.append(
             ActiveLearningConfig(
-                metric=metric or ActiveLearningMetric.max_probability(),
+                metric=metric or ActiveLearningMetric.max_confidence(),
                 selection=selection or ActiveLearningSelection.under_threshold(0.5),
                 write_policy=write_policy or ActiveLearningWritePolicy.sample_size(10, 1000),
                 model_names=model_names,
