@@ -4,6 +4,7 @@ import asyncio
 import logging
 import timeit
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
 from prometheus_client import Counter, Histogram
@@ -46,7 +47,9 @@ class StreamWorker:
     should_prune_unused_features: bool = field(default=False)
     active_learning_configs: list[ActiveLearningConfig] = field(default_factory=list)
     metric_logging_port: int | None = field(default=None)
+
     read_timestamps: dict[str, str] = field(default_factory=dict)
+    default_start_timestamp: datetime | None = field(default=None)
 
     @staticmethod
     def from_reference(
@@ -111,6 +114,10 @@ class StreamWorker:
         self.read_timestamps = timestamps
         return self
 
+    def set_default_start_timestamp(self, timestamp: datetime) -> StreamWorker:
+        self.default_start_timestamp = timestamp
+        return self
+
     def metrics_port(self, port: int) -> StreamWorker:
         self.metric_logging_port = port
         return self
@@ -159,7 +166,9 @@ class StreamWorker:
             if should_prune_unused_features:
                 process_views = [view.with_optimised_write() for view in process_views]
             stream: StreamDataSource = views[0].view.stream_data_source
-            stream_consumer = stream.consumer(self.read_timestamps.get(topic_name, None))
+            stream_consumer = stream.consumer(
+                self.read_timestamps.get(topic_name, self.default_start_timestamp)
+            )
             processes.append(process(stream_consumer, topic_name, process_views))
 
         for active_learning_config in self.active_learning_configs:

@@ -215,7 +215,6 @@ class RedisSource(FeatureSource, WritableFeatureSource):
                     pipe.hset(record['id'], mapping={key: value for key, value in record.items() if value})
                     for key, value in record.items():
                         if value is None:
-                            logger.info(f"Deleting {key} from {record['id']}")
                             pipe.hdel(record['id'], key)
                 await pipe.execute()
 
