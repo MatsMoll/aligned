@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -9,6 +11,7 @@ from prometheus_client import Histogram
 
 from aligned.compiler.model import Model
 from aligned.data_file import DataFileReference
+from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.enricher import Enricher
 from aligned.exceptions import CombinedFeatureViewQuerying
 from aligned.feature_source import (
@@ -94,7 +97,7 @@ class FeatureStore:
         self.models = models
 
     @staticmethod
-    def experimental() -> 'FeatureStore':
+    def experimental() -> FeatureStore:
         return FeatureStore.from_definition(
             RepoDefinition(
                 metadata=RepoMetadata(created_at=datetime.utcnow(), name='experimental'),
@@ -138,7 +141,7 @@ class FeatureStore:
             )
 
     @staticmethod
-    def from_definition(repo: RepoDefinition, feature_source: FeatureSource | None = None) -> 'FeatureStore':
+    def from_definition(repo: RepoDefinition, feature_source: FeatureSource | None = None) -> FeatureStore:
         """Creates a feature store based on a repo definition
         A feature source can also be defined if wanted, otherwise will the batch source be used for reads
 
@@ -184,7 +187,7 @@ class FeatureStore:
     @staticmethod
     async def from_reference_at_path(
         path: str = '.', reference_file: str = 'feature_store_location.py'
-    ) -> 'FeatureStore':
+    ) -> FeatureStore:
         """Looks for a file reference struct, and loads the associated repo.
 
         This can be used for changing which feature store definitions
@@ -203,7 +206,7 @@ class FeatureStore:
         return FeatureStore.from_definition(repo_def)
 
     @staticmethod
-    async def from_dir(path: str = '.') -> 'FeatureStore':
+    async def from_dir(path: str = '.') -> FeatureStore:
         """Reads and generates a feature store based on the given directory's content.
 
         This will read the feature views, services etc in a given repo and generate a feature store.
@@ -267,7 +270,7 @@ class FeatureStore:
 
         return self.features_for_request(requests, entities, feature_names)
 
-    def model(self, name: str) -> 'ModelFeatureStore':
+    def model(self, name: str) -> ModelFeatureStore:
         model = self.models[name]
         return ModelFeatureStore(model, self)
 
@@ -333,7 +336,7 @@ class FeatureStore:
     def requests_for(self, feature_request: RawStringFeatureRequest) -> FeatureRequest:
         return FeatureStore._requests_for(feature_request, self.feature_views, self.combined_feature_views)
 
-    def feature_view(self, view: str) -> 'FeatureViewStore':
+    def feature_view(self, view: str) -> FeatureViewStore:
         """
         Selects a feature view based on a name.
 
@@ -399,7 +402,7 @@ class FeatureStore:
         compiled_model = type(model).compile()
         self.models[compiled_model.name] = compiled_model
 
-    def with_source(self, source: FeatureSource | FeatureSourceFactory | None = None) -> 'FeatureStore':
+    def with_source(self, source: FeatureSource | FeatureSourceFactory | None = None) -> FeatureStore:
         """
         Creates a new instance of a feature store, but changes where to fetch the features from
 
@@ -432,7 +435,7 @@ class FeatureStore:
             feature_source=feature_source,
         )
 
-    def offline_store(self) -> 'FeatureStore':
+    def offline_store(self) -> FeatureStore:
         """
         Will set the source to the defined batch sources.
 
@@ -448,6 +451,15 @@ class FeatureStore:
                 {feature.name for feature in model.features if feature.location.name == view_name}
             )
         return all_model_features
+
+    def views_with_batch_source(self, source: BatchDataSource) -> list[FeatureViewStore]:
+        encoded_source = source.to_dict()
+        views: list[FeatureViewStore] = []
+        for view_name, view in self.feature_views.items():
+            encoded_view_source = view.batch_data_source.to_dict()
+            if encoded_source == encoded_view_source:
+                views.append(self.feature_view(view_name))
+        return views
 
 
 @dataclass
@@ -485,7 +497,7 @@ class ModelFeatureStore:
 
         return job.filter(request.features_to_include)
 
-    def with_target(self) -> 'SupervisedModelFeatureStore':
+    def with_target(self) -> SupervisedModelFeatureStore:
         return SupervisedModelFeatureStore(self.model, self.store)
 
     def cached_at(self, location: DataFileReference) -> RetrivalJob:
@@ -566,7 +578,10 @@ class FeatureViewStore:
     view: CompiledFeatureView
     event_triggers: set[EventTrigger] = field(default_factory=set)
     feature_filter: set[str] | None = field(default=None)
-    only_write_model_features: bool = field(default=False)
+
+    @property
+    def name(self) -> str:
+        return self.view.name
 
     @property
     def request(self) -> RetrivalRequest:
@@ -581,7 +596,7 @@ class FeatureViewStore:
     def source(self) -> FeatureSource:
         return self.store.feature_source
 
-    def with_optimised_write(self) -> 'FeatureViewStore':
+    def with_optimised_write(self) -> FeatureViewStore:
         features_in_models = self.store.model_features_for(self.view.name)
         return self.select(features_in_models)
 
@@ -640,7 +655,7 @@ class FeatureViewStore:
         else:
             return job
 
-    def select(self, features: set[str]) -> 'FeatureViewStore':
+    def select(self, features: set[str]) -> FeatureViewStore:
         logger.info(f'Selecting features {features}')
         return FeatureViewStore(self.store, self.view, self.event_triggers, features)
 

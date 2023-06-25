@@ -229,6 +229,6 @@ class FeatureView(ABC):
         return store.feature_view(self.metadata.name)
 
     @classmethod
-    async def process(cls, data: list[dict] | dict[str, Any]) -> list[dict]:
+    async def process(cls, data: dict[str, list[Any]]) -> list[dict]:
         df = await cls.query().process_input(data).to_polars()
         return df.collect().to_dicts()
