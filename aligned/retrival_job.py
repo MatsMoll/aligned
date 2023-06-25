@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import timeit
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, TypeVar
 
 import pandas as pd
 import polars as pl
+from prometheus_client import Histogram
 
 from aligned.exceptions import UnableToFindFileException
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
@@ -284,8 +286,11 @@ class RetrivalJob(ABC):
     def validate(self, validator: Validator) -> RetrivalJob:
         return ValidationJob(self, validator)
 
-    def derive_features(self, requests: list[RetrivalRequest]) -> RetrivalJob:
-        return DerivedFeatureJob(job=self, requests=requests)
+    def monitor_time_used(self, time_metric: Histogram, labels: list[str] | None = None) -> RetrivalJob:
+        return TimeMetricLoggerJob(self, time_metric, labels)
+
+    def derive_features(self, requests: list[RetrivalRequest] | None = None) -> RetrivalJob:
+        return DerivedFeatureJob(job=self, requests=requests or self.retrival_requests)
 
     def combined_features(self, requests: list[RetrivalRequest] | None = None) -> RetrivalJob:
         return CombineFactualJob([self], requests or self.retrival_requests)
@@ -888,6 +893,38 @@ class WithRequests(RetrivalJob, ModificationJob):
 
     async def to_polars(self) -> pl.LazyFrame:
         return await self.job.to_polars()
+
+
+@dataclass
+class TimeMetricLoggerJob(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+
+    time_metric: Histogram
+    labels: list[str] | None = field(default=None)
+
+    async def to_pandas(self) -> pd.DataFrame:
+        start_time = timeit.default_timer()
+        df = await self.job.to_pandas()
+        elapsed = timeit.default_timer() - start_time
+        logger.info(f'Computed records in {elapsed} seconds')
+        if self.labels:
+            self.time_metric.labels(*self.labels).observe(elapsed)
+        else:
+            self.time_metric.observe(elapsed)
+        return df
+
+    async def to_polars(self) -> pl.LazyFrame:
+        start_time = timeit.default_timer()
+        df = await self.job.to_polars()
+        concrete = df.collect()
+        elapsed = timeit.default_timer() - start_time
+        logger.info(f'Computed records in {elapsed} seconds')
+        if self.labels:
+            self.time_metric.labels(*self.labels).observe(elapsed)
+        else:
+            self.time_metric.observe(elapsed)
+        return concrete.lazy()
 
 
 @dataclass

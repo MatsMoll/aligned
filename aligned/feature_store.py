@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 from importlib import import_module
 from typing import Any
 
+from prometheus_client import Histogram
+
 from aligned.compiler.model import Model
 from aligned.data_file import DataFileReference
 from aligned.enricher import Enricher
@@ -27,6 +29,12 @@ from aligned.schemas.model import Model as ModelSchema
 from aligned.schemas.repo_definition import EnricherReference, RepoDefinition, RepoMetadata
 
 logger = logging.getLogger(__name__)
+
+feature_view_write_time = Histogram(
+    'feature_view_write_time',
+    'The time used to write data related to a feature view',
+    labelnames=['feature_view'],
+)
 
 
 @dataclass
@@ -562,8 +570,9 @@ class FeatureViewStore:
 
     @property
     def request(self) -> RetrivalRequest:
-        if self.only_write_model_features:
+        if self.feature_filter is not None:
             features_in_models = self.store.model_features_for(self.view.name)
+            logger.info(f'Only processing model features: {features_in_models}')
             return self.view.request_for(features_in_models).needed_requests[0]
         else:
             return self.view.request_all.needed_requests[0]
@@ -632,6 +641,7 @@ class FeatureViewStore:
             return job
 
     def select(self, features: set[str]) -> 'FeatureViewStore':
+        logger.info(f'Selecting features {features}')
         return FeatureViewStore(self.store, self.view, self.event_triggers, features)
 
     @property
@@ -650,6 +660,10 @@ class FeatureViewStore:
         from aligned.schemas.derivied_feature import AggregateOver
 
         request = self.view.request_all.needed_requests[0]
+        if self.feature_filter is not None:
+            logger.info(f'Filtering features to {self.feature_filter}')
+            request = self.view.request_for(self.feature_filter)
+
         job = (
             RetrivalJob.from_dict(values, request)
             .validate_entites()
@@ -673,6 +687,11 @@ class FeatureViewStore:
                 checkpoints[aggregation] = FileSource.parquet_at(name)
 
             job = StreamAggregationJob(job, checkpoints)
+
+        job = job.derive_features([request])
+
+        if self.feature_filter:
+            job = job.filter(self.feature_filter)
 
         await self.batch_write(job)
 
@@ -710,14 +729,16 @@ class FeatureViewStore:
         else:
             raise ValueError(f'values must be a dict or a RetrivalJob, was {type(values)}')
 
-        job = (
-            core_job.derive_features([request])
-            .listen_to_events(self.event_triggers)
-            .update_vector_index(self.view.indexes)
-        )
+        # job = (
+        #     core_job.derive_features([request])
+        #     .listen_to_events(self.event_triggers)
+        #     .update_vector_index(self.view.indexes)
+        # )
+        job = core_job
 
-        if self.feature_filter:
-            logger.info(f'Only writing features used by models: {self.feature_filter}')
-            job = job.filter(self.feature_filter)
+        # if self.feature_filter:
+        #     logger.info(f'Only writing features used by models: {self.feature_filter}')
+        #     job = job.filter(self.feature_filter)
 
-        await self.source.write(job, job.retrival_requests)
+        with feature_view_write_time.labels(self.view.name).time():
+            await self.source.write(job, job.retrival_requests)

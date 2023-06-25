@@ -4,7 +4,6 @@ import asyncio
 import logging
 import timeit
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
 
 from prometheus_client import Counter, Histogram
@@ -13,7 +12,7 @@ from aligned.active_learning.selection import ActiveLearningMetric, ActiveLearni
 from aligned.active_learning.write_policy import ActiveLearningWritePolicy
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.feature_source import WritableFeatureSource
-from aligned.feature_store import FeatureViewStore, ModelFeatureStore
+from aligned.feature_store import FeatureStore, FeatureViewStore, ModelFeatureStore
 from aligned.retrival_job import RetrivalJob, StreamAggregationJob
 from aligned.sources.local import StorageFileReference
 from aligned.streams.interface import ReadableStream
@@ -49,7 +48,7 @@ class StreamWorker:
     metric_logging_port: int | None = field(default=None)
 
     read_timestamps: dict[str, str] = field(default_factory=dict)
-    default_start_timestamp: datetime | None = field(default=None)
+    default_start_timestamp: str | None = field(default=None)
 
     @staticmethod
     def from_reference(
@@ -114,57 +113,75 @@ class StreamWorker:
         self.read_timestamps = timestamps
         return self
 
-    def set_default_start_timestamp(self, timestamp: datetime) -> StreamWorker:
+    def read_from(self, timestamp: str) -> StreamWorker:
         self.default_start_timestamp = timestamp
         return self
 
-    def metrics_port(self, port: int) -> StreamWorker:
+    def expose_metrics_at(self, port: int) -> StreamWorker:
         self.metric_logging_port = port
         return self
 
-    async def start(self, should_prune_unused_features: bool) -> None:
-        from prometheus_client import start_http_server
+    def prune_unused_features(self, should_prune_unused_features: bool | None = None) -> StreamWorker:
+        self.should_prune_unused_features = True
+        if should_prune_unused_features:
+            self.should_prune_unused_features = should_prune_unused_features
+        return self
 
+    def feature_views_by_topic(self, store: FeatureStore) -> dict[str, list[FeatureViewStore]]:
         from aligned.data_source.stream_data_source import HttpStreamSource
 
-        store = await self.feature_store_reference.feature_store()
-        store = store.with_source(self.sink_source)
-
-        views = self.views_to_process or set()
+        feature_views_to_process = self.views_to_process or set()
         if not self.views_to_process:
-            views = [
+            feature_views_to_process = {
                 view.name
                 for view in store.feature_views.values()
                 if view.stream_data_source is not None
                 and not isinstance(view.stream_data_source, HttpStreamSource)
-            ]
-        if not views:
+            }
+        if not feature_views_to_process:
             raise ValueError('No feature views with streaming source to process')
-
-        feature_views_to_process = views
 
         feature_views: dict[str, list[FeatureViewStore]] = {}
 
         for view in store.feature_views.values():
             if view.name not in feature_views_to_process:
                 continue
-
             if not view.stream_data_source:
+                logger.info(f'View: {view.name} have no stream source. Therefore, it will not be processed')
                 continue
+
             source = view.stream_data_source
 
+            view_store = store.feature_view(view.name)
+            if self.should_prune_unused_features:
+                logger.info(f'Optimising the write for {view.name} based on model usage')
+                view_store = view_store.with_optimised_write()
+
+            request = view_store.request
+            if len(request.all_features) == 0:
+                logger.info(
+                    f'View: {view.name} had no features to process. Therefore, it will not be ignored'
+                )
+                continue
+
             if source.topic_name in feature_views:
-                feature_views[source.topic_name] = feature_views[source.topic_name] + [
-                    store.feature_view(view.name)
-                ]
+                feature_views[source.topic_name] = feature_views[source.topic_name] + [view_store]
             else:
-                feature_views[source.topic_name] = [store.feature_view(view.name)]
+                feature_views[source.topic_name] = [view_store]
+
+        return feature_views
+
+    async def start(self) -> None:
+        from prometheus_client import start_http_server
+
+        store = await self.feature_store_reference.feature_store()
+        store = store.with_source(self.sink_source)
+
+        feature_views = self.feature_views_by_topic(store)
 
         processes = []
         for topic_name, views in feature_views.items():
             process_views = views
-            if should_prune_unused_features:
-                process_views = [view.with_optimised_write() for view in process_views]
             stream: StreamDataSource = views[0].view.stream_data_source
             stream_consumer = stream.consumer(
                 self.read_timestamps.get(topic_name, self.default_start_timestamp)
@@ -231,30 +248,6 @@ async def process_predictions(
         logger.info(f'Processing {len(records)} predictions in {timeit.default_timer() - start_time} seconds')
 
 
-async def single_processing(
-    stream_source: ReadableStream, topic_name: str, feature_view: FeatureViewStore
-) -> None:
-    logger.info(f'Started listning to {topic_name}')
-    while True:
-        logger.info(f'Reading {topic_name}')
-        records = await stream_source.read()
-        logger.info(f'Read {topic_name} values: {len(records)}')
-
-        if not records:
-            continue
-
-        start_time = timeit.default_timer()
-        job = stream_job(records, feature_view)
-
-        await feature_view.batch_write(job)  # type: ignore [arg-type]
-        elapsed = timeit.default_timer() - start_time
-
-        process_time.labels(feature_view.view.name).observe(elapsed)
-        processed_rows_count.labels(feature_view.view.name).inc(len(records))
-
-        logger.info(f'Wrote {len(records)} records in {elapsed} seconds')
-
-
 def stream_job(values: list[dict], feature_view: FeatureViewStore) -> RetrivalJob:
     from aligned import FileSource
 
@@ -279,15 +272,16 @@ def stream_job(values: list[dict], feature_view: FeatureViewStore) -> RetrivalJo
             name += f'_{time_window.time_window.total_seconds()}'
         checkpoints[aggregation] = FileSource.parquet_at(name)
 
-    return StreamAggregationJob(job, checkpoints)
+    job = StreamAggregationJob(job, checkpoints).derive_features()
+    if feature_view.feature_filter:
+        job = job.filter(feature_view.feature_filter)
+    return job
 
 
 async def monitor_process(values: list[dict], view: FeatureViewStore):
-    start_time = timeit.default_timer()
-    await view.batch_write(stream_job(values, view))
-    elapsed = timeit.default_timer() - start_time
-    process_time.labels(view.view.name).observe(elapsed)
-    processed_rows_count.labels(view.view.name).inc(len(values))
+    await view.batch_write(stream_job(values, view).monitor_time_used(process_time, labels=[view.view.name]))
+    record_count = len(values)
+    processed_rows_count.labels(view.view.name).inc(record_count)
 
 
 async def multi_processing(
@@ -295,12 +289,28 @@ async def multi_processing(
 ) -> None:
     logger.info(f'Started listning to {topic_name}')
     while True:
+        logger.info(f'Reading {topic_name}')
         stream_values = await stream_source.read()
+        logger.info(f'Read {topic_name} values: {len(stream_values)}')
 
         if not stream_values:
             continue
 
         await asyncio.gather(*[monitor_process(stream_values, view) for view in feature_views])
+
+
+async def single_processing(
+    stream_source: ReadableStream, topic_name: str, feature_view: FeatureViewStore
+) -> None:
+    logger.info(f'Started listning to {topic_name}')
+    while True:
+        logger.info(f'Reading {topic_name}')
+        records = await stream_source.read()
+        logger.info(f'Read {topic_name} values: {len(records)}')
+
+        if not records:
+            continue
+        await monitor_process(records, feature_view)
 
 
 async def process(
