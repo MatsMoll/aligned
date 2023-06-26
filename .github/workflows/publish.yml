@@ -20,18 +20,20 @@ jobs:
           path: |
             ~/.local
             .venv
-          key: ${{ hashFiles('**/poetry.lock') }}-${{ steps.setup-python.outputs.python-version }}-0
+          key: ${{ hashFiles('**/poetry.lock') }}-${{ steps.setup-python.outputs.python-version }}-1
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
           virtualenvs-create: false
-          version: 1.4.0
+          version: 1.5.0
+          installation-arguments: --all-extras
       - run: |
           python -m venv .venv --upgrade-deps
           source .venv/bin/activate
           poetry install --no-interaction
         if: steps.cache-venv.outputs.cache-hit != 'true'
+
 
       - name: Run tests
         run: |

@@ -26,7 +26,7 @@ jobs:
         uses: snok/install-poetry@v1
         with:
           virtualenvs-create: false
-          version: 1.4.0
+          version: 1.5.0
           installation-arguments: --all-extras
       - run: |
           python -m venv .venv --upgrade-deps
