@@ -10,6 +10,7 @@ from aligned.schemas.codable import Codable
 from aligned.schemas.feature import Feature
 
 if TYPE_CHECKING:
+    from aligned.compiler.feature_factory import FeatureFactory
     from aligned.request.retrival_request import RetrivalRequest
     from aligned.retrival_job import DateRangeJob, FullExtractJob, RetrivalJob
 
@@ -101,6 +102,62 @@ class BatchDataSource(ABC, Codable, SerializableType):
 
     def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
         return type(self).multi_source_features_for(facts, [(self, request)])
+
+    async def schema(self) -> dict[str, FeatureFactory]:
+        """Returns the schema for the data source
+
+        ```python
+        source = FileSource.parquet_at('test_data/titanic.parquet')
+        schema = await source.schema()
+        >>> {'passenger_id': FeatureType(name='int64'), ...}
+        ```
+
+        Raises:
+            NotImplementedError: By default will this error be raised if not implemented
+
+        Returns:
+            dict[str, FeatureType]: A dictionary containing the column name and the feature type
+        """
+        raise NotImplementedError(f'`schema()` is not implemented for {type(self)}.')
+
+    async def feature_view_code(self, view_name: str) -> str:
+        """Setup the code needed to represent the data source as a feature view
+
+        ```python
+        FileSource.parquet("my_path.parquet").feature_view_code(view_name="my_view")
+
+        >>> \"\"\"from aligned import FeatureView, String, Int64, Float
+
+        class MyView(FeatureView):
+
+            metadata = FeatureView.metadata_with(
+                name="Embarked",
+                description="some description",
+                batch_source=FileSource.parquest("my_path.parquet")
+                stream_source=None,
+            )
+
+            Passenger_id = Int64()
+            Survived = Int64()
+            Pclass = Int64()
+            Name = String()
+            Sex = String()
+            Age = Float()
+            Sibsp = Int64()
+            Parch = Int64()
+            Ticket = String()
+            Fare = Float()
+            Cabin = String()
+            Embarked = String()\"\"\"
+        ```
+
+        Returns:
+            str: The code needed to setup a basic feature view
+        """
+        from aligned import FeatureView
+
+        schema = await self.schema()
+        return FeatureView.feature_view_code_template(schema, f'{self}', view_name)
 
 
 class ColumnFeatureMappable:

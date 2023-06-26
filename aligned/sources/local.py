@@ -20,10 +20,12 @@ from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
 from aligned.s3.storage import FileStorage, HttpStorage
 from aligned.schemas.codable import Codable
+from aligned.schemas.feature import FeatureType
 from aligned.schemas.folder import Folder
 from aligned.storage import Storage
 
 if TYPE_CHECKING:
+    from aligned.compiler.feature_factory import FeatureFactory
     from aligned.feature_store import FeatureStore
 
 
@@ -160,6 +162,22 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
             facts=facts,
         )
 
+    async def schema(self) -> dict[str, FeatureFactory]:
+        df = await self.to_polars()
+        return {name: FeatureType.from_polars(pl_type).feature_factory for name, pl_type in df.schema.items()}
+
+    async def feature_view_code(self, view_name: str) -> str:
+        from aligned import FeatureView
+
+        schema = await self.schema()
+        data_source_code = f'FileSource.csv_at("{self.path}", csv_config={self.csv_config})'
+        return FeatureView.feature_view_code_template(
+            schema,
+            data_source_code,
+            view_name,
+            'from aligned import FileSource\nfrom aligned.sources.local import CsvConfig',
+        )
+
 
 @dataclass
 class ParquetConfig(Codable):
@@ -234,6 +252,21 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
             source=source,
             requests=[request for _, request in requests],
             facts=facts,
+        )
+
+    async def schema(self) -> dict[str, FeatureFactory]:
+        parquet_schema = pl.read_parquet_schema(self.path)
+        return {
+            name: FeatureType.from_polars(pl_type).feature_factory for name, pl_type in parquet_schema.items()
+        }
+
+    async def feature_view_code(self, view_name: str) -> str:
+        from aligned import FeatureView
+
+        schema = await self.schema()
+        data_source_code = f'FileSource.parquet_at("{self.path}")'
+        return FeatureView.feature_view_code_template(
+            schema, data_source_code, view_name, 'from aligned import FileSource'
         )
 
 

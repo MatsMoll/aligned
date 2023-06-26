@@ -1,9 +1,7 @@
 name: publish package
 
 on:
-  push:
-    branches:
-      - main
+  pull_request:
 
 jobs:
   test:
@@ -37,12 +35,3 @@ jobs:
         run: |
           source .venv/bin/activate
           pytest
-
-  build-and-publish:
-    needs: [test]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: MatsMoll/.github/workflows/publish@patch-1
-        with:
-          token: ${{ secrets.PYPI_TOKEN }}
-          python-version: '3.10.9'

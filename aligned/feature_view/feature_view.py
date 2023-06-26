@@ -17,6 +17,7 @@ from aligned.schemas.feature import FeatureLocation, FeatureReferance
 from aligned.schemas.feature_view import CompiledFeatureView
 
 if TYPE_CHECKING:
+    from aligned.compiler.feature_factory import FeatureFactory
     from aligned.feature_store import FeatureViewStore
 
 # Enables code compleation in the select method
@@ -232,3 +233,68 @@ class FeatureView(ABC):
     async def process(cls, data: dict[str, list[Any]]) -> list[dict]:
         df = await cls.query().process_input(data).to_polars()
         return df.collect().to_dicts()
+
+    @staticmethod
+    def feature_view_code_template(
+        schema: dict[str, FeatureFactory], batch_source_code: str, view_name: str, imports: str | None = None
+    ) -> str:
+        """Setup the code needed to represent the data source as a feature view
+
+        ```python
+
+        source = FileSource.parquet_at("file.parquet")
+        schema = await source.schema()
+        FeatureView.feature_view_code_template(schema, batch_source_code=f"{source}", view_name="my_view")
+
+        >>> \"\"\"from aligned import FeatureView, String, Int64, Float
+
+        class MyView(FeatureView):
+
+            metadata = FeatureView.metadata_with(
+                name="titanic",
+                description="some description",
+                batch_source=FileSource.parquest("my_path.parquet")
+                stream_source=None,
+            )
+
+            Passenger_id = Int64()
+            Survived = Int64()
+            Pclass = Int64()
+            Name = String()
+            Sex = String()
+            Age = Float()
+            Sibsp = Int64()
+            Parch = Int64()
+            Ticket = String()
+            Fare = Float()
+            Cabin = String()
+            Embarked = String()\"\"\"
+        ```
+
+        Returns:
+            str: The code needed to setup a basic feature view
+        """
+        data_types: set[str] = set()
+        feature_code = ''
+        for name, dtype in schema.items():
+            type_name = dtype.__class__.__name__
+            data_types.add(type_name)
+            feature_code += f'{name} = {type_name}()\n    '
+
+        all_types = ', '.join(data_types)
+
+        return f"""
+from aligned import FeatureView, {all_types}
+{imports or ""}
+
+class MyView(FeatureView):
+
+    metadata = FeatureView.metadata_with(
+        name="{view_name}",
+        description="some description",
+        batch_source={batch_source_code}
+        stream_source=None,
+    )
+
+    {feature_code}
+    """
