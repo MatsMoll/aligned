@@ -27,11 +27,10 @@ jobs:
         with:
           virtualenvs-create: false
           version: 1.5.0
-          installation-arguments: --all-extras
       - run: |
           python -m venv .venv --upgrade-deps
           source .venv/bin/activate
-          poetry install --no-interaction
+          poetry install --no-interaction --all-extras
         if: steps.cache-venv.outputs.cache-hit != 'true'
 
 
