@@ -238,7 +238,7 @@ class FeatureStore:
         else:
             entity_request = entities
 
-        return self.feature_source.features_for(entity_request, requests)
+        return self.feature_source.features_for(entity_request, requests).filter(feature_names)
 
     def features_for(self, entities: dict[str, list] | RetrivalJob, features: list[str]) -> RetrivalJob:
 
