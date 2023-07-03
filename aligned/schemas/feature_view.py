@@ -271,11 +271,13 @@ class CompiledCombinedFeatureView(Codable):
                         entities=request.entities,
                         features=set(),
                         derived_features=set(),
+                        aggregated_features=set(),
                         event_timestamp=request.event_timestamp,
                     )
                 current = dependent_views[request.location]
                 current.derived_features = current.derived_features.union(request.derived_features)
                 current.features = current.features.union(request.features)
+                current.aggregated_features = current.aggregated_features.union(request.aggregated_features)
                 dependent_views[request.location] = current
 
         dependent_views[self.name] = RetrivalRequest(  # Add the request we want
@@ -284,6 +286,7 @@ class CompiledCombinedFeatureView(Codable):
             entities=self.entity_features,
             features=set(),
             derived_features={feature for feature in self.features if feature.name in feature_names},
+            aggregated_features=set(),
             event_timestamp=None,
         )
 

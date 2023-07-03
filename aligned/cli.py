@@ -246,9 +246,7 @@ def serve_command(
     default='.env',
     help='The path to env variables',
 )
-async def serve_worker_command(
-    repo_path: str, worker_path: str, env_file: str, prune_unused_features: bool
-) -> None:
+async def serve_worker_command(repo_path: str, worker_path: str, env_file: str) -> None:
     """
     Starts a API serving the feature store
     """

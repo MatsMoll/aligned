@@ -179,7 +179,7 @@ class RetrivalRequest(Codable):
         return list(grouped_requests.values())
 
     @staticmethod
-    def unsafe_combine(requests: list['RetrivalRequest']) -> list['RetrivalRequest']:
+    def unsafe_combine(requests: list['RetrivalRequest']) -> 'RetrivalRequest':
 
         result_request = RetrivalRequest(
             name=requests[0].name,

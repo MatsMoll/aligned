@@ -356,6 +356,7 @@ class FeatureStore:
             FeatureViewStore: The selected feature view ready for querying
         """
         if view in self.combined_feature_views:
+            return FeatureViewStore(self, self.combined_feature_views[view], set())
             raise CombinedFeatureViewQuerying(
                 'You are trying to get a combined feature view. ',
                 'This is only possible through store.features_for(...), as of now.\n',
@@ -671,7 +672,6 @@ class FeatureViewStore:
 
     async def write(self, values: dict[str, list[Any]]) -> None:
         from aligned import FileSource
-        from aligned.data_file import DataFileReference
         from aligned.schemas.derivied_feature import AggregateOver
 
         request = self.view.request_all.needed_requests[0]

@@ -961,6 +961,26 @@ class Embedding(FeatureFactory):
         return self
 
 
+@dataclass
+class List(FeatureFactory):
+
+    sub_type: FeatureFactory
+
+    def copy_type(self) -> List:
+        return List(self.sub_type.copy_type())
+
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType('').array
+
+    def contains(self, value: Any) -> Bool:
+        from aligned.compiler.transformation_factory import ArrayContainsFactory
+
+        feature = Bool()
+        feature.transformation = ArrayContainsFactory(LiteralValue.from_value(value), self)
+        return feature
+
+
 class ImageUrl(StringValidatable):
     @property
     def dtype(self) -> FeatureType:

@@ -225,6 +225,7 @@ class SupportedTransformations:
             PercentileAggregation,
             JsonPath,
             Clip,
+            ArrayContains,
         ]:
             self.add(tran_type)
 
@@ -420,7 +421,7 @@ class Equals(Transformation):
         return df[self.key] == self.value.python_value
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_columns((pl.col(self.key) == self.value.python_value).alias(alias))
+        return pl.col(self.key) == self.value.python_value
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -549,7 +550,7 @@ class NotEquals(Transformation):
         return df[self.key] != self.value.python_value
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_columns((pl.col(self.key) != self.value.python_value).alias(alias))
+        return pl.col(self.key) != self.value.python_value
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -573,7 +574,7 @@ class GreaterThenValue(Transformation):
         return df[self.key] > self.value
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_columns((pl.col(self.key) > self.value).alias(alias))
+        return pl.col(self.key) > self.value
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -599,7 +600,7 @@ class GreaterThen(Transformation):
         return df[self.left_key] > df[self.right_key]
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_columns((pl.col(self.left_key) > pl.col(self.right_key)).alias(alias))
+        return pl.col(self.left_key) > pl.col(self.right_key)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -1034,9 +1035,6 @@ class DateComponent(Transformation):
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        pl.col(self.key).str.strptime(pl.Datetime, strict=False)
-        pl.when(pl.col(self.key))
-
         col = pl.col(self.key).cast(pl.Datetime).dt
         match self.component:
             case 'day':
@@ -1104,6 +1102,39 @@ class DateComponent(Transformation):
                 ]
             },
             output=[20, nan, 23, 1],
+        )
+
+
+@dataclass
+class ArrayContains(Transformation):
+    """Checks if an array contains a value
+
+    some_array = List(String())
+    contains_a_char = some_array.contains("a")
+    """
+
+    key: str
+    value: LiteralValue
+
+    name: str = 'array_contains'
+    dtype: FeatureType = FeatureType('').bool
+
+    def __init__(self, key: str, value: str) -> None:
+        self.key = key
+        self.value = value
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return pl.Series(df[self.key]).arr.contains(self.value.python_value).to_pandas()
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        return pl.col(self.key).arr.contains(self.value.python_value)
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            ArrayContains('x', 'test'),
+            input={'x': [['Hello', 'test'], ['nah'], ['test', 'espania', None]]},
+            output=[True, False, True],
         )
 
 

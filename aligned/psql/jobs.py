@@ -108,13 +108,21 @@ class PostgreSqlJob(RetrivalJob):
     def retrival_requests(self) -> list[RetrivalRequest]:
         return self.requests
 
+    def will_load_list_feature(self) -> bool:
+        for request in self.requests:
+            for feature in request.all_features:
+                if feature.dtype == FeatureType('').array:
+                    return True
+        return False
+
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.to_polars()
         return df.collect().to_pandas()
 
     async def to_polars(self) -> pl.LazyFrame:
         try:
-            return pl.read_sql(self.query, self.config.url).lazy()
+            engine = 'adbc' if self.will_load_list_feature() else 'connectorx'
+            return pl.read_sql(self.query, self.config.url, engine=engine).lazy()
         except Exception as e:
             logger.error(f'Error running query: {self.query}')
             logger.error(f'Error: {e}')
@@ -153,7 +161,7 @@ class FullExtractPsqlJob(FullExtractJob):
         return await self.psql_job().to_polars()
 
     def psql_job(self) -> PostgreSqlJob:
-        return PostgreSqlJob(self.config, self.build_request())
+        return PostgreSqlJob(self.config, self.build_request(), self.retrival_requests)
 
     def build_request(self) -> str:
 
@@ -202,7 +210,7 @@ class DateRangePsqlJob(DateRangeJob):
         return await self.psql_job().to_polars()
 
     def psql_job(self) -> PostgreSqlJob:
-        return PostgreSqlJob(self.config, self.build_request())
+        return PostgreSqlJob(self.config, self.build_request(), self.retrival_requests)
 
     def build_request(self) -> str:
 
@@ -285,9 +293,14 @@ class FactPsqlJob(FactualRetrivalJob):
 
     async def psql_job(self) -> PostgreSqlJob:
         if isinstance(self.facts, PostgreSqlJob):
-            return PostgreSqlJob(self.config, self.build_sql_entity_query(self.facts))
+            return PostgreSqlJob(self.config, self.build_sql_entity_query(self.facts), self.retrival_requests)
         entities = await self.build_request()
-        return PostgreSqlJob(self.config, entities)
+        return PostgreSqlJob(self.config, entities, self.retrival_requests)
+
+    def ignore_event_timestamp(self) -> RetrivalJob:
+        return FactPsqlJob(
+            self.sources, [request.without_event_timestamp() for request in self.requests], self.facts
+        )
 
     def dtype_to_sql_type(self, dtype: object) -> str:
         if isinstance(dtype, str):
@@ -391,10 +404,10 @@ class FactPsqlJob(FactualRetrivalJob):
             for feature in features
         }
 
-        id_column = window.group_by[0].name
+        id_column = 'row_id'
+        # id_column = window.group_by[0].name
         event_timestamp_clause: str | None = None
         if request.event_timestamp:
-            id_column = 'row_id'
             group_by_names = {id_column}
             # Use row_id as the main join key
             event_timestamp_name = source.feature_identifier_for([request.event_timestamp.name])[0]
@@ -500,71 +513,68 @@ class FactPsqlJob(FactualRetrivalJob):
         return fetches
 
     async def build_request(self) -> str:
-        import numpy as np
 
         final_select_names: set[str] = set()
-        entity_types: dict[str, FeatureType] = {}
         has_event_timestamp = False
+        all_entities = {'row_id'}
+        entity_types: dict[str, FeatureType] = {'row_id': FeatureType('').int64}
 
         for request in self.requests:
-            final_select_names = final_select_names.union(
-                {f'{request.location.name}_cte.{feature}' for feature in request.all_required_feature_names}
-            )
             final_select_names = final_select_names.union(
                 {f'entities.{entity}' for entity in request.entity_names}
             )
             for entity in request.entities:
                 entity_types[entity.name] = entity.dtype
+                all_entities.add(entity.name)
+
             if request.event_timestamp:
                 has_event_timestamp = True
+                entity_types['event_timestamp'] = FeatureType('').datetime
+                all_entities.add('event_timestamp')
 
         if has_event_timestamp:
             final_select_names.add('event_timestamp')
-            entity_types['event_timestamp'] = FeatureType('').datetime
+
+        all_entities_list = list(all_entities)
 
         # Need to replace nan as it will not be encoded
-        fact_df = await self.facts.to_pandas()
-        fact_df = fact_df.replace(np.nan, None)
+        fact_df = (await self.facts.to_polars()).with_row_count(name='row_id').collect()
 
-        number_of_values = fact_df.shape[0]
-        # + 1 is needed as 0 is evaluated for null
-        fact_df['row_id'] = list(range(1, number_of_values + 1))
-
-        entity_type_list = [
-            self.dtype_to_sql_type(entity_types.get(entity, FeatureType('').int32))
-            for entity in fact_df.columns
-        ]
+        entity_type_list = {
+            entity: self.dtype_to_sql_type(entity_types.get(entity, FeatureType('').int32))
+            for entity in all_entities
+        }
 
         query_values: list[list[SqlValue]] = []
-        all_entities = []
-        for values in fact_df.values:
+        for values in fact_df[all_entities_list].to_dicts():
             row_placeholders = []
-            for column_index, value in enumerate(values):
-                row_placeholders.append(SqlValue(value, entity_type_list[column_index]))
-                if fact_df.columns[column_index] not in all_entities:
-                    all_entities.append(fact_df.columns[column_index])
-            query_values.append(row_placeholders)
+            for key, value in values.items():
+                row_placeholders.append(SqlValue(value, entity_type_list[key]))
 
-        feature_view_names: list[str] = [location.name for location in self.sources.keys()]
+            query_values.append(row_placeholders)
         # Add the joins to the fact
 
         tables: list[TableFetch] = []
         aggregates: list[TableFetch] = []
         for request in self.requests:
-            fetch = self.value_selection(request, has_event_timestamp)
-            tables.append(fetch)
-            aggregate_fetches = self.aggregated_values_from_request(request)
-            aggregates.extend(aggregate_fetches)
-            for aggregate in aggregate_fetches:
+            all_entities.update(request.entity_names)
+
+            if request.aggregated_features:
+                aggregate_fetches = self.aggregated_values_from_request(request)
+                aggregates.extend(aggregate_fetches)
+                for aggregate in aggregate_fetches:
+                    final_select_names = final_select_names.union(
+                        {column.alias for column in aggregate.columns if column.alias != 'entities.row_id'}
+                    )
+            else:
+                fetch = self.value_selection(request, has_event_timestamp)
+                tables.append(fetch)
                 final_select_names = final_select_names.union(
-                    {column.alias for column in aggregate.columns if column.alias != aggregate.id_column}
+                    {f'{fetch.name}.{feature}' for feature in request.all_required_feature_names}
                 )
 
         joins = '\n    '.join(
-            [
-                f'LEFT JOIN {feature_view}_cte ON {feature_view}_cte.row_id = entities.row_id'
-                for feature_view in feature_view_names
-            ]
+            [f'LEFT JOIN {table.name} ON {table.name}.row_id = entities.row_id' for table in tables]
         )
         if aggregates:
             joins += '\n    '
@@ -578,13 +588,91 @@ class FactPsqlJob(FactualRetrivalJob):
         entity_values = self.build_entities_from_values(query_values)
 
         return self.generate_query(
-            entity_columns=list(all_entities),
+            entity_columns=all_entities_list,
             entity_query=entity_values,
             tables=tables,
             aggregates=aggregates,
             final_select=list(final_select_names),
             final_joins=joins,
         )
+        # import numpy as np
+
+        # final_select_names: set[str] = set()
+        # entity_types: dict[str, FeatureType] = {}
+        # has_event_timestamp = False
+
+        # for request in self.requests:
+        #     final_select_names = final_select_names.union(
+        #         {f'{request.name}_cte.{feature}' for feature in request.all_required_feature_names}
+        #     )
+        #     final_select_names = final_select_names.union(
+        #         {f'entities.{entity}' for entity in request.entity_names}
+        #     )
+        #     for entity in request.entities:
+        #         entity_types[entity.name] = entity.dtype
+        #     if request.event_timestamp:
+        #         has_event_timestamp = True
+
+        # if has_event_timestamp:
+        #     final_select_names.add('event_timestamp')
+        #     entity_types['event_timestamp'] = FeatureType('').datetime
+
+        # entities = list(entity_types.keys()) + ['row_id']
+
+        # # Need to replace nan as it will not be encoded
+        # fact_df = (await self.facts.to_polars()).with_row_count(name='row_id').collect()
+
+        # entity_type_list = {
+        #     entity: self.dtype_to_sql_type(entity_types.get(entity, FeatureType('').int32))
+        #     for entity in entities
+        # }
+
+        # query_values: list[list[SqlValue]] = []
+        # all_entities = entities
+        # for values in fact_df[entities].to_dicts():
+        #     row_placeholders = []
+        #     for key, value in values.items():
+        #         row_placeholders.append(SqlValue(value, entity_type_list[key]))
+
+        #     query_values.append(row_placeholders)
+
+        # feature_view_names: list[str] = [location.name for location in self.sources.keys()]
+        # # Add the joins to the fact
+
+        # tables: list[TableFetch] = []
+        # aggregates: list[TableFetch] = []
+        # for request in self.requests:
+        #     fetch = self.value_selection(request, has_event_timestamp)
+        #     tables.append(fetch)
+        #     aggregate_fetches = self.aggregated_values_from_request(request)
+        #     aggregates.extend(aggregate_fetches)
+        #     for aggregate in aggregate_fetches:
+        #         final_select_names = final_select_names.union(
+        #             {column.alias for column in aggregate.columns if column.alias != aggregate.id_column}
+        #         )
+
+        # joins = '\n    '.join(
+        #     [f'LEFT JOIN {table.name} ON {table.name}.row_id = entities.row_id' for table in tables]
+        # )
+        # if aggregates:
+        #     joins += '\n    '
+        #     joins += '\n    '.join(
+        #         [
+        #             f'LEFT JOIN {table.name} ON {table.name}.{table.id_column} = entities.{table.id_column}'
+        #             for table in aggregates
+        #         ]
+        #     )
+
+        # entity_values = self.build_entities_from_values(query_values)
+
+        # return self.generate_query(
+        #     entity_columns=list(all_entities),
+        #     entity_query=entity_values,
+        #     tables=tables,
+        #     aggregates=aggregates,
+        #     final_select=list(final_select_names),
+        #     final_joins=joins,
+        # )
 
     def build_entities_from_values(self, values: list[list[SqlValue]]) -> str:
         query = 'VALUES '

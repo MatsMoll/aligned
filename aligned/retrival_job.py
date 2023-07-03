@@ -46,8 +46,7 @@ def split(
         column = data[event_timestamp_column]
         if column.dtype != 'datetime64[ns]':
             column = pd.to_datetime(data[event_timestamp_column])
-        values = column.quantile([start_ratio, end_ratio])
-        return data.loc[(column >= values.iloc[0]) & (column <= values.iloc[1])].index
+        data = data.sort_values(column)
 
     group_size = data.shape[0]
     start_index = round(group_size * start_ratio)
@@ -61,28 +60,32 @@ def split(
 
 
 def split_polars(
-    data: pl.LazyFrame, start_ratio: float, end_ratio: float, event_timestamp_column: str | None = None
-) -> pl.DataFrame:
-    if event_timestamp_column:
-        values = data.select(
-            [
-                pl.col(event_timestamp_column).quantile(start_ratio).alias('start_value'),
-                pl.col(event_timestamp_column).quantile(end_ratio).alias('end_value'),
-            ]
-        )
-        return data.filter(
-            pl.col(event_timestamp_column).is_between(values[0, 'start_value'], values[0, 'end_value'])
-        ).collect()
+    data: pl.DataFrame, start_ratio: float, end_ratio: float, event_timestamp_column: str | None = None
+) -> pd.Series:
 
-    collected = data.collect()
-    group_size = collected.shape[0]
+    row_name = 'row_nr'
+    data = data.with_row_count(row_name)
+
+    if event_timestamp_column:
+        data = data.sort(event_timestamp_column)
+        # values = data.select(
+        #     [
+        #         pl.col(event_timestamp_column).quantile(start_ratio).alias('start_value'),
+        #         pl.col(event_timestamp_column).quantile(end_ratio).alias('end_value'),
+        #     ]
+        # )
+        # return data.filter(
+        #     pl.col(event_timestamp_column).is_between(values[0, 'start_value'], values[0, 'end_value'])
+        # ).collect()
+
+    group_size = data.shape[0]
     start_index = round(group_size * start_ratio)
     end_index = round(group_size * end_ratio)
 
     if end_index >= group_size:
-        return collected[start_index:]
+        return data[start_index:][row_name].to_pandas()
     else:
-        return collected[start_index:end_index]
+        return data[start_index:end_index][row_name].to_pandas()
 
 
 @dataclass
@@ -172,15 +175,18 @@ class SupervisedTrainJob:
     async def to_polars(self) -> TrainTestSet[pl.DataFrame]:
         # Use the pandas method, as the split is not created for polars yet
         # A but unsure if I should use the same index concept for polars
-        pandas_data = await self.to_pandas()
+        core_data = await self.job.to_polars()
+
+        data = core_data.data.collect()
+
         return TrainTestSet(
-            data=pl.from_pandas(pandas_data.data),
-            entity_columns=pandas_data.entity_columns,
-            features=pandas_data.features,
-            target_columns=pandas_data.target_columns,
-            train_index=pandas_data.train_index,
-            test_index=pandas_data.test_index,
-            event_timestamp_column=pandas_data.event_timestamp_column,
+            data=data,
+            entity_columns=core_data.entity_columns,
+            features=core_data.features,
+            target_columns=core_data.target_columns,
+            train_index=split_polars(data, 0, self.train_size, core_data.event_timestamp_column),
+            test_index=split_polars(data, self.train_size, 1, core_data.event_timestamp_column),
+            event_timestamp_column=core_data.event_timestamp_column,
         )
 
     def validation_set(self, validation_size: float) -> SupervisedValidationJob:
@@ -316,6 +322,14 @@ class RetrivalJob(ABC):
     def fill_missing_columns(self) -> RetrivalJob:
         return FillMissingColumnsJob(self)
 
+    def rename(self, mappings: dict[str, str]) -> RetrivalJob:
+        return RenameJob(self, mappings)
+
+    def ignore_event_timestamp(self) -> RetrivalJob:
+        if isinstance(self, ModificationJob):
+            return self.copy_with(self.job.ignore_event_timestamp())
+        raise NotImplementedError('Not implemented ignore_event_timestamp')
+
     @staticmethod
     def from_dict(data: dict[str, list], request: list[RetrivalRequest] | RetrivalRequest) -> RetrivalJob:
         if isinstance(request, RetrivalRequest):
@@ -339,6 +353,21 @@ class ModificationJob:
     def copy_with(self: JobType, job: RetrivalJob) -> JobType:
         self.job = job  # type: ignore
         return self
+
+
+@dataclass
+class RenameJob(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+    mappings: dict[str, str]
+
+    async def to_pandas(self) -> pd.DataFrame:
+        df = await self.job.to_pandas()
+        return df.rename(self.mappings)
+
+    async def to_polars(self) -> pl.LazyFrame:
+        df = await self.job.to_polars()
+        return df.rename(self.mappings)
 
 
 @dataclass
@@ -530,13 +559,13 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
                     df[feature.name] = await feature.transformation.transform_pandas(
                         df[feature.depending_on_names]
                     )
-                    if df[feature.name].dtype != feature.dtype.pandas_type:
-                        if feature.dtype.is_numeric:
-                            df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce').astype(
-                                feature.dtype.pandas_type
-                            )
-                        else:
-                            df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
+                    # if df[feature.name].dtype != feature.dtype.pandas_type:
+                    #     if feature.dtype.is_numeric:
+                    #         df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce').astype(
+                    #             feature.dtype.pandas_type
+                    #         )
+                    #     else:
+                    #         df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
         return df
 
     async def to_pandas(self) -> pd.DataFrame:
@@ -822,6 +851,11 @@ class FileCachedJob(RetrivalJob, ModificationJob):
             df = await self.job.to_polars()
             logger.info('Writing result to cache')
             await self.location.write_polars(df)
+        except FileNotFoundError:
+            logger.info('Unable to load file, so fetching from source')
+            df = await self.job.to_polars()
+            logger.info('Writing result to cache')
+            await self.location.write_polars(df)
         return df
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
@@ -944,13 +978,16 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.job.to_pandas()
         for request in self.requests:
+            features_to_check = request.all_required_features
+
             if request.aggregated_features:
-                continue
-            for feature in request.all_required_features:
+                features_to_check = {feature.derived_feature for feature in request.aggregated_features}
+
+            for feature in features_to_check:
 
                 mask = ~df[feature.name].isnull()
 
-                with suppress(AttributeError):
+                with suppress(AttributeError, TypeError):
                     df[feature.name] = df[feature.name].mask(
                         ~mask, other=df.loc[mask, feature.name].str.strip('"')
                     )
@@ -959,7 +996,7 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                     df[feature.name] = pd.to_datetime(df[feature.name], infer_datetime_format=True, utc=True)
                 elif feature.dtype == FeatureType('').datetime or feature.dtype == FeatureType('').string:
                     continue
-                else:
+                elif feature.dtype != FeatureType('').array:
 
                     if feature.dtype.is_numeric:
                         df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce').astype(
@@ -967,7 +1004,8 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                         )
                     else:
                         df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
-            if request.event_timestamp:
+
+            if request.event_timestamp and request.event_timestamp.name in df.columns:
                 feature = request.event_timestamp
                 df[feature.name] = pd.to_datetime(df[feature.name], infer_datetime_format=True, utc=True)
         return df
@@ -975,10 +1013,11 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
     async def to_polars(self) -> pl.LazyFrame:
         df = await self.job.to_polars()
         for request in self.requests:
+            features_to_check = request.all_required_features
             if request.aggregated_features:
-                continue
+                features_to_check = {feature.derived_feature for feature in request.aggregated_features}
 
-            for feature in request.all_required_features:
+            for feature in features_to_check:
                 if feature.dtype == FeatureType('').bool:
                     df = df.with_columns(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
                 elif feature.dtype == FeatureType('').datetime:
@@ -991,6 +1030,10 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                         .cast(pl.Datetime(time_zone='UTC'))
                         .alias(feature.name)
                     )
+                elif feature.dtype == FeatureType('').array:
+                    dtype = df.select(feature.name).dtypes[0]
+                    if dtype == pl.Utf8:
+                        df = df.with_columns(pl.col(feature.name).str.json_extract(pl.List(pl.Utf8)))
                 else:
                     df = df.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type, strict=False))
 
@@ -1057,7 +1100,13 @@ class CombineFactualJob(RetrivalJob):
 
     @property
     def retrival_requests(self) -> list[RetrivalRequest]:
-        return [job.retrival_requests for job in self.jobs] + [self.combined_requests]
+        jobs = []
+        for job in self.jobs:
+            jobs.extend(job.retrival_requests)
+        return jobs + self.combined_requests
+
+    def ignore_event_timestamp(self) -> RetrivalJob:
+        return CombineFactualJob([job.ignore_event_timestamp() for job in self.jobs], self.combined_requests)
 
     async def combine_data(self, df: pd.DataFrame) -> pd.DataFrame:
         for request in self.combined_requests:
@@ -1170,7 +1219,6 @@ class FilterJob(RetrivalJob, ModificationJob):
         return FilterJob(self.include_features, self.job.validate(validator))
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
-
         return FilterJob(self.include_features, self.job.cached_at(location))
 
     def with_subfeatures(self) -> RetrivalJob:
@@ -1178,6 +1226,12 @@ class FilterJob(RetrivalJob, ModificationJob):
 
     def remove_derived_features(self) -> RetrivalJob:
         return self.job.remove_derived_features()
+
+    def ignore_event_timestamp(self):
+        return FilterJob(
+            include_features=self.include_features - {'event_timestamp'},
+            job=self.job.ignore_event_timestamp(),
+        )
 
 
 @dataclass

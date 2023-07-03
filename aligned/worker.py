@@ -10,6 +10,7 @@ from prometheus_client import Counter, Histogram
 
 from aligned.active_learning.selection import ActiveLearningMetric, ActiveLearningSelection
 from aligned.active_learning.write_policy import ActiveLearningWritePolicy
+from aligned.data_source.batch_data_source import ColumnFeatureMappable
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.feature_source import WritableFeatureSource
 from aligned.feature_store import FeatureStore, FeatureViewStore, ModelFeatureStore
@@ -252,16 +253,21 @@ def stream_job(values: list[dict], feature_view: FeatureViewStore) -> RetrivalJo
     from aligned import FileSource
 
     request = feature_view.request
-    job = (
-        RetrivalJob.from_dict(values, request)
-        .validate_entites()
-        .fill_missing_columns()
-        .ensure_types([request])
-    )
+    mappings: dict[str, str] | None = None
+
+    if isinstance(feature_view.view.stream_data_source, ColumnFeatureMappable):
+        mappings = feature_view.view.stream_data_source.mapping_keys
+
+    value_job = RetrivalJob.from_dict(values, request)
+
+    if mappings:
+        value_job = value_job.rename(mappings)
+
+    job = value_job.validate_entites().fill_missing_columns().ensure_types([request])
 
     aggregations = request.aggregate_over()
     if not aggregations:
-        return job
+        return job.derive_features()
 
     checkpoints = {}
 
@@ -279,7 +285,8 @@ def stream_job(values: list[dict], feature_view: FeatureViewStore) -> RetrivalJo
 
 
 async def monitor_process(values: list[dict], view: FeatureViewStore):
-    await view.batch_write(stream_job(values, view).monitor_time_used(process_time, labels=[view.view.name]))
+    job = stream_job(values, view).monitor_time_used(process_time, labels=[view.view.name])
+    await view.batch_write(job)
     record_count = len(values)
     processed_rows_count.labels(view.view.name).inc(record_count)
 
@@ -319,14 +326,14 @@ async def process(
     feature_views: list[FeatureViewStore],
     error_count: int = 0,
 ) -> None:
-    try:
-        if len(feature_views) == 1:
-            await single_processing(stream_source, topic_name, feature_views[0])
-        else:
-            await multi_processing(stream_source, topic_name, feature_views)
-    except Exception as e:
-        logger.error(f'Error processing {topic_name}: {type(e)} - {e}')
-        if error_count > 5:
-            raise e
-        await asyncio.sleep(5)
-        await process(stream_source, topic_name, feature_views, error_count=error_count + 1)
+    # try:
+    if len(feature_views) == 1:
+        await single_processing(stream_source, topic_name, feature_views[0])
+    else:
+        await multi_processing(stream_source, topic_name, feature_views)
+    # except Exception as e:
+    #     logger.error(f'Error processing {topic_name}: {type(e)} - {e}')
+    #     if error_count > 5:
+    #         raise e
+    #     await asyncio.sleep(5)
+    #     await process(stream_source, topic_name, feature_views, error_count=error_count + 1)
