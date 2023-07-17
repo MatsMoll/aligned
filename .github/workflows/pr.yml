@@ -43,7 +43,7 @@ jobs:
 
       - name: Run tests
         env:
-          PSQL_DATABASE_TEST: postgres://postgres:postgres@localhost:5432/postgres
+          PSQL_DATABASE_TEST: postgresql://postgres:postgres@localhost:5432/postgres
         run: |
           source .venv/bin/activate
           pytest
