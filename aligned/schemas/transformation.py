@@ -1132,7 +1132,7 @@ class ArrayContains(Transformation):
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
-            ArrayContains('x', 'test'),
+            ArrayContains('x', LiteralValue.from_value('test')),
             input={'x': [['Hello', 'test'], ['nah'], ['test', 'espania', None]]},
             output=[True, False, True],
         )
@@ -1885,7 +1885,7 @@ class MedianAggregation(Transformation, PsqlTransformation, RedshiftTransformati
         return pl.col(self.key).median()
 
     def as_psql(self) -> str:
-        return f'PERCENTILE_CONT(0.5) WITHIN GROUP(ORDER BY {self.key})'
+        return f'percentile_cont(0.5) WITHIN GROUP(ORDER BY {self.key})'
 
 
 @dataclass
@@ -1905,7 +1905,7 @@ class PercentileAggregation(Transformation, PsqlTransformation, RedshiftTransfor
         return pl.col(self.key).quantile(self.percentile)
 
     def as_psql(self) -> str:
-        return f'PERCENTILE_CONT({self.percentile}) WITHIN GROUP(ORDER BY {self.key})'
+        return f'percentile_cont({self.percentile}) WITHIN GROUP(ORDER BY {self.key})'
 
 
 @dataclass

@@ -28,7 +28,7 @@ class PanderaValidator(Validator):
     }
 
     datatype_check = {
-        FeatureType('').bool,
+        # FeatureType('').bool,
         FeatureType('').string,
         FeatureType('').uuid,
         FeatureType('').date,

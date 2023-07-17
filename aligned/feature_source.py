@@ -68,18 +68,17 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
         combined_requests = [
             request for request in request.needed_requests if request.location.identifier not in self.sources
         ]
-        jobs = [
-            self.source_types[source_group]
-            .multi_source_features_for(
-                facts=facts,
-                requests=[
-                    (source, req) for source, req in core_requests if source.job_group_key() == source_group
-                ],
+        jobs = []
+        for source_group in source_groupes:
+            requests = [
+                (source, req) for source, req in core_requests if source.job_group_key() == source_group
+            ]
+            jobs.append(
+                self.source_types[source_group]
+                .multi_source_features_for(facts=facts, requests=requests)
+                .ensure_types([req for _, req in requests])
+                .derive_features()
             )
-            .ensure_types(request.needed_requests)
-            .derive_features()
-            for source_group in source_groupes
-        ]
         return CombineFactualJob(
             jobs=jobs,
             combined_requests=combined_requests,

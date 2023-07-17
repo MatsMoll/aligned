@@ -31,7 +31,9 @@ class SqlColumn:
     def sql_select(self) -> str:
         selection = self.selection
         # if not special operation e.g function. Then wrap in quotes
-        if not ('(' in selection or '-' in selection or '.' in selection or selection == '*'):
+        if not (
+            '(' in selection or '-' in selection or '.' in selection or ' ' in selection or selection == '*'
+        ):
             selection = f'"{self.selection}"'
 
         if self.selection == self.alias:
@@ -277,9 +279,14 @@ class FactPsqlJob(FactualRetrivalJob):
         return list(self.sources.values())[0].config
 
     def describe(self) -> str:
+        from aligned.retrival_job import LiteralDictJob
+
         if isinstance(self.facts, PostgreSqlJob):
             psql_job = self.build_sql_entity_query(self.facts)
             return f'Loading features for {self.facts.describe()}\n\nQuery: {psql_job}'
+        elif isinstance(self.facts, LiteralDictJob):
+            psql_job = self.build_request_from_facts(pl.DataFrame(self.facts.data).lazy())
+            return f'Loading features from dicts \n\nQuery: {psql_job}'
         else:
             return f'Loading features from {self.facts.describe()}, and its related features'
 
@@ -335,7 +342,7 @@ class FactPsqlJob(FactualRetrivalJob):
         if request.event_timestamp and entities_has_event_timestamp:
             event_timestamp_column = source.feature_identifier_for([request.event_timestamp.name])[0]
             event_timestamp_clause = f'entities.event_timestamp >= ta.{event_timestamp_column}'
-            sort_query += f', {event_timestamp_column} DESC'
+            sort_query += f', ta.{event_timestamp_column} DESC'
 
         join_conditions = [
             f'ta."{entity_db_name}" = entities.{entity}'
@@ -513,6 +520,10 @@ class FactPsqlJob(FactualRetrivalJob):
         return fetches
 
     async def build_request(self) -> str:
+        facts = await self.facts.to_polars()
+        return self.build_request_from_facts(facts)
+
+    def build_request_from_facts(self, facts: pl.LazyFrame) -> str:
 
         final_select_names: set[str] = set()
         has_event_timestamp = False
@@ -533,12 +544,12 @@ class FactPsqlJob(FactualRetrivalJob):
                 all_entities.add('event_timestamp')
 
         if has_event_timestamp:
-            final_select_names.add('event_timestamp')
+            final_select_names.add('entities.event_timestamp')
 
         all_entities_list = list(all_entities)
 
         # Need to replace nan as it will not be encoded
-        fact_df = (await self.facts.to_polars()).with_row_count(name='row_id').collect()
+        fact_df = facts.with_row_count(name='row_id', offset=1).collect()
 
         entity_type_list = {
             entity: self.dtype_to_sql_type(entity_types.get(entity, FeatureType('').int32))
@@ -701,7 +712,7 @@ class FactPsqlJob(FactualRetrivalJob):
             )
 
         if has_event_timestamp:
-            final_select_names.add('event_timestamp')
+            final_select_names.add('entities.event_timestamp')
 
         # Add the joins to the fact
 

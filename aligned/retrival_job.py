@@ -46,7 +46,7 @@ def split(
         column = data[event_timestamp_column]
         if column.dtype != 'datetime64[ns]':
             column = pd.to_datetime(data[event_timestamp_column])
-        data = data.sort_values(column)
+        data = data.iloc[column.sort_values().index]
 
     group_size = data.shape[0]
     start_index = round(group_size * start_ratio)
@@ -264,7 +264,7 @@ class RetrivalJob(ABC):
 
     def log_each_job(self) -> RetrivalJob:
         if isinstance(self, ModificationJob):
-            return self.copy_with(self.job.log_each_job())
+            return LogJob(self.copy_with(self.job.log_each_job()))
         return LogJob(self)
 
     def chuncked(self, size: int) -> DataLoaderJob:
@@ -672,6 +672,7 @@ class StreamAggregationJob(RetrivalJob, ModificationJob):
         if window.window:
             time_window = window.window
             filter_expr = pl.col(time_window.time_column.name) > now - time_window.time_window
+
         if window.condition:
             raise ValueError('Condition is not supported for stream aggregation, yet')
 
@@ -1178,6 +1179,9 @@ class CombineFactualJob(RetrivalJob):
     def remove_derived_features(self) -> RetrivalJob:
         return CombineFactualJob([job.remove_derived_features() for job in self.jobs], self.combined_requests)
 
+    def log_each_job(self) -> RetrivalJob:
+        return CombineFactualJob([job.log_each_job() for job in self.jobs], self.combined_requests)
+
     def describe(self) -> str:
         description = f'Combining {len(self.jobs)} jobs:\n'
         for index, job in enumerate(self.jobs):
@@ -1227,7 +1231,7 @@ class FilterJob(RetrivalJob, ModificationJob):
     def remove_derived_features(self) -> RetrivalJob:
         return self.job.remove_derived_features()
 
-    def ignore_event_timestamp(self):
+    def ignore_event_timestamp(self) -> RetrivalJob:
         return FilterJob(
             include_features=self.include_features - {'event_timestamp'},
             job=self.job.ignore_event_timestamp(),

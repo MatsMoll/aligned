@@ -331,3 +331,10 @@ class FeatureRequest(Codable):
             features_to_include=self.features_to_include,
             needed_requests=[request.without_event_timestamp(name_sufix) for request in self.needed_requests],
         )
+
+    def rename_entities(self, mappings: dict[str, str]) -> 'FeatureRequest':
+        return FeatureRequest(
+            location=self.location,
+            features_to_include=self.features_to_include,
+            needed_requests=[request.rename_entities(mappings) for request in self.needed_requests],
+        )

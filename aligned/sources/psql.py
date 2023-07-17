@@ -5,14 +5,13 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Callable
 
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
-from aligned.enricher import SqlDatabaseEnricher, StatisticEricher
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
 from aligned.schemas.codable import Codable
 
 if TYPE_CHECKING:
     from aligned.compiler.feature_factory import FeatureFactory
-    from aligned.enricher import Enricher, TimespanSelector
+    from aligned.enricher import Enricher
     from aligned.entity_data_source import EntityDataSource
 
 
@@ -61,7 +60,7 @@ class PostgreSQLConfig(Codable):
 
 
 @dataclass
-class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher):
+class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable):
 
     config: PostgreSQLConfig
     table: str
@@ -74,38 +73,6 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, StatisticEric
 
     def __hash__(self) -> int:
         return hash(self.table)
-
-    def mean(
-        self, columns: set[str], time: TimespanSelector | None = None, limit: int | None = None
-    ) -> Enricher:
-        reverse_map = {value: key for key, value in self.mapping_keys.items()}
-        sql_columns = ', '.join([f'AVG({reverse_map.get(column, column)}) AS {column}' for column in columns])
-
-        query = f'SELECT {sql_columns} FROM {self.table}'
-        if time:
-            seconds = time.timespand.total_seconds()
-            query += f' WHERE {time.time_column} >= NOW() - interval \'{seconds} seconds\''
-        if limit and isinstance(limit, int):
-            query += f' LIMIT {limit}'
-
-        return SqlDatabaseEnricher(self.config.env_var, query)
-
-    def std(
-        self, columns: set[str], time: TimespanSelector | None = None, limit: int | None = None
-    ) -> Enricher:
-        reverse_map = {value: key for key, value in self.mapping_keys.items()}
-        sql_columns = ', '.join(
-            [f'STDDEV({reverse_map.get(column, column)}) AS {column}' for column in columns]
-        )
-
-        query = f'SELECT {sql_columns} FROM {self.table}'
-        if time:
-            seconds = time.timespand.total_seconds()
-            query += f' WHERE {time.time_column} >= NOW() - interval \'{seconds} seconds\''
-        if limit and isinstance(limit, int):
-            query += f' LIMIT {limit}'
-
-        return SqlDatabaseEnricher(self.config.env_var, query)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
         from aligned.psql.jobs import FullExtractPsqlJob

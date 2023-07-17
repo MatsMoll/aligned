@@ -77,13 +77,16 @@ class FeatureView(ABC):
 
     @classmethod
     def compile(cls) -> CompiledFeatureView:
+        return cls().compile_instance()
+
+    def compile_instance(self) -> CompiledFeatureView:
         from aligned.compiler.feature_factory import FeatureFactory
 
         # Used to deterministicly init names for hidden features
         hidden_features = 0
 
-        metadata = cls().metadata
-        var_names = [name for name in cls().__dir__() if not name.startswith('_')]
+        metadata = self.metadata
+        var_names = [name for name in self.__dir__() if not name.startswith('_')]
 
         view = CompiledFeatureView(
             name=metadata.name,
@@ -101,7 +104,7 @@ class FeatureView(ABC):
         aggregations: list[FeatureFactory] = []
 
         for var_name in var_names:
-            feature = getattr(cls, var_name)
+            feature = getattr(self, var_name)
 
             if not isinstance(feature, FeatureFactory):
                 continue
@@ -176,7 +179,7 @@ class FeatureView(ABC):
                     raise Exception(
                         'Can only have one EventTimestamp for each'
                         ' FeatureViewDefinition. Check that this is the case for'
-                        f' {cls.__name__}'
+                        f' {type(self).__name__}'
                     )
                 view.features.add(compiled_feature)
                 view.event_timestamp = feature.event_timestamp()
@@ -222,6 +225,26 @@ class FeatureView(ABC):
 
     @classmethod
     def query(cls) -> FeatureViewStore:
+        """Makes it possible to query the feature view for features
+
+        ```python
+        class SomeView(FeatureView):
+
+            metadata = ...
+
+            id = Int32().as_entity()
+
+            a = Int32()
+            b = Int32()
+
+        data = await SomeView.query().features_for({
+            "id": [1, 2, 3],
+        }).to_pandas()
+        ```
+
+        Returns:
+            FeatureViewStore: Returns a queryable `FeatureViewStore` containing the feature view
+        """
         from aligned import FeatureStore
 
         self = cls()

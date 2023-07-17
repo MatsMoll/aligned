@@ -13,7 +13,6 @@ from aligned.compiler.model import Model
 from aligned.data_file import DataFileReference
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.enricher import Enricher
-from aligned.exceptions import CombinedFeatureViewQuerying
 from aligned.feature_source import (
     BatchFeatureSource,
     FeatureSource,
@@ -357,10 +356,6 @@ class FeatureStore:
         """
         if view in self.combined_feature_views:
             return FeatureViewStore(self, self.combined_feature_views[view], set())
-            raise CombinedFeatureViewQuerying(
-                'You are trying to get a combined feature view. ',
-                'This is only possible through store.features_for(...), as of now.\n',
-            )
         feature_view = self.feature_views[view]
         return FeatureViewStore(self, feature_view, self.event_triggers_for(view))
 
@@ -382,7 +377,7 @@ class FeatureStore:
         Args:
             feature_view (FeatureView): The feature view to add
         """
-        compiled_view = type(feature_view).compile()
+        compiled_view = feature_view.compile_instance()
         self.feature_views[compiled_view.name] = compiled_view
         if isinstance(self.feature_source, BatchFeatureSource):
             self.feature_source.sources[

@@ -167,6 +167,9 @@ class FileFactualJob(FactualRetrivalJob):
     def request_result(self) -> RequestResult:
         return RequestResult.from_request_list(self.requests)
 
+    def describe(self) -> str:
+        return f'Reading file at {self.source}'
+
     async def file_transformations(self, df: pl.LazyFrame) -> pl.LazyFrame:
         """Selects only the wanted subset from the loaded source
 

@@ -1,5 +1,7 @@
+from dataclasses import dataclass
 from math import ceil, floor
 
+import polars as pl
 import pytest
 import pytest_asyncio
 
@@ -12,6 +14,7 @@ from aligned import (
     FileSource,
     Float,
     Int32,
+    Int64,
     Model,
     RedisConfig,
     String,
@@ -208,7 +211,9 @@ def breast_scan_feature_viewout_with_datetime(scan_without_datetime: CsvFileSour
 
 
 @pytest_asyncio.fixture
-async def breast_scan_without_timestamp_feature_store(breast_scan_feature_viewout_with_datetime: FeatureView):
+async def breast_scan_without_timestamp_feature_store(
+    breast_scan_feature_viewout_with_datetime: FeatureView,
+) -> FeatureStore:
     store = FeatureStore.experimental()
     store.add_feature_view(breast_scan_feature_viewout_with_datetime)
     return store
@@ -342,7 +347,9 @@ def breast_scan_feature_view_with_datetime_and_aggregation(scan_with_datetime: C
 
 
 @pytest_asyncio.fixture
-async def breast_scan_with_timestamp_feature_store(breast_scan_feature_view_with_datetime: FeatureView):
+async def breast_scan_with_timestamp_feature_store(
+    breast_scan_feature_view_with_datetime: FeatureView,
+) -> FeatureStore:
     store = FeatureStore.experimental()
     store.add_feature_view(breast_scan_feature_view_with_datetime)
     return store
@@ -351,7 +358,7 @@ async def breast_scan_with_timestamp_feature_store(breast_scan_feature_view_with
 @pytest_asyncio.fixture
 async def breast_scan_with_timestamp_and_aggregation_feature_store(
     breast_scan_feature_view_with_datetime_and_aggregation: FeatureView,
-):
+) -> FeatureStore:
     store = FeatureStore.experimental()
     store.add_feature_view(breast_scan_feature_view_with_datetime_and_aggregation)
     return store
@@ -438,10 +445,16 @@ def titanic_model(titanic_feature_view: FeatureView) -> Model:
         metadata = Model.metadata_with(
             'titanic',
             'A model predicting if a passenger will survive',
-            features=[features.age, features.sibsp, features.has_siblings, features.is_male, features.is_mr],
+            features=[
+                features.age,  # type: ignore
+                features.sibsp,  # type: ignore
+                features.has_siblings,  # type: ignore
+                features.is_male,  # type: ignore
+                features.is_mr,  # type: ignore
+            ],
         )
 
-        will_survive = features.survived.as_classification_target()
+        will_survive = features.survived.as_classification_target()  # type: ignore
 
     return Titanic()
 
@@ -544,7 +557,7 @@ async def alot_of_transforation_feature_store(
 
 @pytest_asyncio.fixture
 async def combined_view(
-    titanic_feature_view, breast_scan_feature_viewout_with_datetime
+    titanic_feature_view: FeatureView, breast_scan_feature_viewout_with_datetime: FeatureView
 ) -> CombinedFeatureView:
     class SomeCombinedView(CombinedFeatureView):
 
@@ -555,8 +568,8 @@ async def combined_view(
         titanic = titanic_feature_view
         cancer_scan = breast_scan_feature_viewout_with_datetime
 
-        some_feature = titanic.age + cancer_scan.radius_mean
-        other_feature = titanic.sibsp + cancer_scan.radius_mean
+        some_feature = titanic.age + cancer_scan.radius_mean  # type: ignore
+        other_feature = titanic.sibsp + cancer_scan.radius_mean  # type: ignore
 
     return SomeCombinedView()
 
@@ -632,10 +645,10 @@ def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> Model:
         metadata = Model.metadata_with(
             'titanic',
             'A model predicting if a passenger will survive',
-            features=[features.age, features.sibsp, features.has_siblings, features.is_male],
+            features=[features.age, features.sibsp, features.has_siblings, features.is_male],  # type: ignore
         )
 
-        will_survive = features.survived.as_classification_target()
+        will_survive = features.survived.as_classification_target()  # type: ignore
         probability = will_survive.probability_of(True)
 
     return Titanic()
@@ -650,3 +663,141 @@ async def titanic_feature_store_scd(
     feature_store.add_feature_view(titanic_feature_view_parquet)
     feature_store.add_model(titanic_model_scd)
     return feature_store
+
+
+@dataclass
+class FeatureData:
+    data: pl.DataFrame
+    view: FeatureView
+
+
+@dataclass
+class DataTest:
+    sources: list[FeatureData]
+    entities: pl.DataFrame
+    feature_reference: list[str]
+    expected_output: pl.DataFrame
+
+
+@pytest.fixture
+def point_in_time_data_test() -> DataTest:
+    from datetime import datetime, timezone
+
+    placeholder_ds = FileSource.parquet_at('placeholder')
+
+    class CreditHistory(FeatureView):
+
+        metadata = FeatureView.metadata_with('credit_history', description='', batch_source=placeholder_ds)
+
+        dob_ssn = String().as_entity()
+        event_timestamp = EventTimestamp()
+        credit_card_due = Int64()
+        student_loan_due = Int64()
+
+        due_sum = credit_card_due + student_loan_due
+
+        bankruptcies = Int32()
+
+    class CreditHistoryAggregate(FeatureView):
+
+        metadata = FeatureView.metadata_with(
+            'credit_history_agg', description='', batch_source=placeholder_ds
+        )
+
+        dob_ssn = String().as_entity()
+        event_timestamp = EventTimestamp()
+        credit_card_due = Int64()
+
+        credit_sum = credit_card_due.aggregate().over(weeks=1).sum()
+
+    class Loan(FeatureView):
+
+        metadata = FeatureView.metadata_with('loan', description='', batch_source=placeholder_ds)
+
+        loan_id = Int32().as_entity()
+        event_timestamp = EventTimestamp()
+        loan_status = Bool().description('If the loan was granted or not')
+        personal_income = Int64()
+        loan_amount = Int64()
+
+    first_event_timestamp = datetime(2020, 4, 26, 18, 1, 4, 746575, tzinfo=timezone.utc)
+    second_event_timestamp = datetime(2020, 4, 27, 18, 1, 4, 746575, tzinfo=timezone.utc)
+
+    credit_data = pl.DataFrame(
+        {
+            'dob_ssn': [
+                '19530219_5179',
+                '19520816_8737',
+                '19860413_2537',
+                '19530219_5179',
+                '19520816_8737',
+                '19860413_2537',
+            ],
+            'event_timestamp': [
+                first_event_timestamp,
+                first_event_timestamp,
+                first_event_timestamp,
+                second_event_timestamp,
+                second_event_timestamp,
+                second_event_timestamp,
+            ],
+            'credit_card_due': [8419, 2944, 833, 5936, 1575, 6263],
+            'student_loan_due': [22328, 2515, 33000, 48955, 9501, 35510],
+            'bankruptcies': [0, 0, 0, 0, 0, 0],
+        }
+    )
+
+    loan_data = pl.DataFrame(
+        {
+            'loan_id': [10000, 10001, 10002, 10000, 10001, 10002],
+            'event_timestamp': [
+                first_event_timestamp,
+                first_event_timestamp,
+                first_event_timestamp,
+                second_event_timestamp,
+                second_event_timestamp,
+                second_event_timestamp,
+            ],
+            'loan_status': [1, 0, 1, 1, 1, 1],
+            'personal_income': [59000, 9600, 9600, 65500, 54400, 9900],
+            'loan_amount': [35000, 1000, 5500, 35000, 35000, 2500],
+        }
+    )
+
+    entities = pl.DataFrame(
+        {
+            'dob_ssn': ['19530219_5179', '19520816_8737', '19860413_2537'],
+            'loan_id': [10000, 10001, 10002],
+            'event_timestamp': [first_event_timestamp, first_event_timestamp, second_event_timestamp],
+        }
+    )
+
+    expected_output = pl.DataFrame(
+        {
+            'dob_ssn': ['19530219_5179', '19520816_8737', '19860413_2537'],
+            'loan_id': [10000, 10001, 10002],
+            'event_timestamp': [first_event_timestamp, first_event_timestamp, second_event_timestamp],
+            'credit_card_due': [8419, 2944, 6263],
+            'credit_sum': [8419, 2944, 833 + 6263],
+            'student_loan_due': [22328, 2515, 35510],
+            'due_sum': [22328 + 8419, 2515 + 2944, 35510 + 6263],
+            'personal_income': [59000, 9600, 9900],
+        }
+    )
+
+    return DataTest(
+        sources=[
+            FeatureData(data=credit_data, view=CreditHistory()),
+            FeatureData(data=loan_data, view=Loan()),
+            FeatureData(data=credit_data, view=CreditHistoryAggregate()),
+        ],
+        entities=entities,
+        feature_reference=[
+            'credit_history:credit_card_due',
+            'credit_history:student_loan_due',
+            'credit_history:due_sum',
+            'credit_history_agg:credit_sum',
+            'loan:personal_income',
+        ],
+        expected_output=expected_output,
+    )
