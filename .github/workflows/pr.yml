@@ -16,6 +16,8 @@ jobs:
           POSTGRES_PORT: 5432
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
+        ports:
+          - '127.0.0.1:5432:5432'
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
