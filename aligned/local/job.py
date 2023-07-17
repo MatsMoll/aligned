@@ -221,7 +221,9 @@ class FileFactualJob(FactualRetrivalJob):
 
         result = await self.facts.to_polars()
         event_timestamp_col = 'aligned_event_timestamp'
+        using_event_timestamp = False
         if 'event_timestamp' in result.columns:
+            using_event_timestamp = True
             result = result.rename({'event_timestamp': event_timestamp_col})
         row_id_name = 'row_id'
         result = result.with_row_count(row_id_name)
@@ -290,7 +292,10 @@ class FileFactualJob(FactualRetrivalJob):
             result = result.join(unique, on=row_id_name, how='left')
             result = result.select(pl.exclude('.*_right$'))
 
-        return result.select([pl.exclude('row_id')]).rename({event_timestamp_col: 'event_timestamp'})
+        if using_event_timestamp:
+            result = result.rename({event_timestamp_col: 'event_timestamp'})
+
+        return result.select([pl.exclude('row_id')])
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_polars()).collect().to_pandas()
