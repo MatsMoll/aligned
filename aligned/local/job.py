@@ -4,7 +4,7 @@ from datetime import datetime
 import pandas as pd
 import polars as pl
 
-from aligned.request.retrival_request import RetrivalRequest
+from aligned.request.retrival_request import AggregatedFeature, AggregateOver, RetrivalRequest
 from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RequestResult, RetrivalJob
 from aligned.schemas.feature import Feature
 from aligned.sources.local import DataFileReference
@@ -170,6 +170,36 @@ class FileFactualJob(FactualRetrivalJob):
     def describe(self) -> str:
         return f'Reading file at {self.source}'
 
+    async def aggregate_over(
+        self,
+        group: AggregateOver,
+        features: set[AggregatedFeature],
+        df: pl.LazyFrame,
+        event_timestamp_col: str,
+    ) -> pl.LazyFrame:
+
+        subset = df
+        if group.condition:
+            raise NotImplementedError('Condition aggregation not implemented for file data source')
+
+        if group.window:
+            event_timestamp = group.window.time_column.name
+            end = pl.col(event_timestamp_col)
+            start = end - group.window.time_window
+            subset = subset.filter(pl.col(event_timestamp).is_between(start, end))
+
+        transformations = []
+        for feature in features:
+            expr = await feature.derived_feature.transformation.transform_polars(
+                subset, feature.derived_feature.name
+            )
+            if isinstance(expr, pl.Expr):
+                transformations.append(expr.alias(feature.name))
+            else:
+                raise NotImplementedError('Only expressions are supported for file data source')
+
+        return subset.groupby('row_id').agg(transformations)
+
     async def file_transformations(self, df: pl.LazyFrame) -> pl.LazyFrame:
         """Selects only the wanted subset from the loaded source
 
@@ -190,7 +220,9 @@ class FileFactualJob(FactualRetrivalJob):
             all_features.update(request.all_required_features)
 
         result = await self.facts.to_polars()
-        event_timestamp_col = 'event_timestamp'
+        event_timestamp_col = 'aligned_event_timestamp'
+        if 'event_timestamp' in result.columns:
+            result = result.rename({'event_timestamp': event_timestamp_col})
         row_id_name = 'row_id'
         result = result.with_row_count(row_id_name)
 
@@ -221,7 +253,7 @@ class FileFactualJob(FactualRetrivalJob):
 
             column_selects = list(entity_names.union({'row_id'}))
             if request.event_timestamp:
-                column_selects.append('event_timestamp')
+                column_selects.append(event_timestamp_col)
 
             # Need to only select the relevent entities and row_id
             # Otherwise will we get a duplicate column error
@@ -230,6 +262,10 @@ class FileFactualJob(FactualRetrivalJob):
                 feature_df, on=list(entity_names), how='left'
             )
             new_result = new_result.select(pl.exclude(list(entity_names)))
+
+            for group, features in request.aggregate_over().items():
+                aggregated_df = await self.aggregate_over(group, features, new_result, event_timestamp_col)
+                new_result = new_result.join(aggregated_df, on='row_id', how='left')
 
             if request.event_timestamp:
                 field = request.event_timestamp.name
@@ -248,13 +284,13 @@ class FileFactualJob(FactualRetrivalJob):
                     new_result = new_result.filter(
                         pl.col(field).is_null() | (pl.col(field) <= pl.col(event_timestamp_col))
                     )
-                new_result = new_result.select(pl.exclude(field))
+                new_result = new_result.sort(field, descending=True).select(pl.exclude(field))
 
             unique = new_result.unique(subset=row_id_name, keep='first')
             result = result.join(unique, on=row_id_name, how='left')
             result = result.select(pl.exclude('.*_right$'))
 
-        return result.select([pl.exclude('row_id')])
+        return result.select([pl.exclude('row_id')]).rename({event_timestamp_col: 'event_timestamp'})
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_polars()).collect().to_pandas()

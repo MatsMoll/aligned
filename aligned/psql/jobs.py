@@ -487,13 +487,7 @@ class FactPsqlJob(FactualRetrivalJob):
 
     def aggregated_values_from_request(self, request: RetrivalRequest) -> list[TableFetch]:
 
-        aggregation_windows: dict[AggregateOver, set[AggregatedFeature]] = {}
-
-        for aggregate in request.aggregated_features:
-            if aggregate.aggregate_over not in aggregation_windows:
-                aggregation_windows[aggregate.aggregate_over] = {aggregate}
-            else:
-                aggregation_windows[aggregate.aggregate_over].add(aggregate)
+        aggregation_windows = request.aggregate_over()
 
         fetches: list[TableFetch] = []
         supported_aggregation_features = set(request.feature_names).union(request.entity_names)
