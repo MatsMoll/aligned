@@ -676,6 +676,9 @@ class SupervisedModelFeatureStore:
         >>> └──────────┘ └───────┴─────────┴─────────────────────┴──────────────┘
         ```
 
+        Args:
+            entities (dict[str, list] | RetrivalJob): A dictionary of entity names to lists of entity values
+
         Returns:
             SupervisedJob: A object that will load the features and lables in your desired format
         """
@@ -711,6 +714,36 @@ class SupervisedModelFeatureStore:
         )
 
     def predictions_for(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
+        """Loads the predictions and labels / ground truths for a model
+
+        ```python
+        entities = {
+            "trip_id": ["ea6b8d5d-62fd-4664-a112-4889ebfcdf2b", ...],
+            "vendor_id": [2, ...],
+        }
+        preds = await store.model("taxi")\\
+            .with_labels()\\
+            .predictions_for(entities)\\
+            .to_polars()
+
+        print(preds.collect())
+        >>> ┌──────────┬───────────┬────────────────────┬───────────────────────────────────┐
+        >>> │ duration ┆ vendor_id ┆ predicted_duration ┆ trip_id                           │
+        >>> │ ---      ┆ ---       ┆ ---                ┆ ---                               │
+        >>> │ i64      ┆ i32       ┆ i64                ┆ str                               │
+        >>> ╞══════════╪═══════════╪════════════════════╪═══════════════════════════════════╡
+        >>> │ 408      ┆ 2         ┆ 500                ┆ ea6b8d5d-62fd-4664-a112-4889ebfc… │
+        >>> │ 280      ┆ 1         ┆ 292                ┆ 64c4c94f-2a85-406f-86e6-082f1f7a… │
+        >>> │ 712      ┆ 4         ┆ 689                ┆ 3258461f-6113-4c5e-864b-75a0dee8… │
+        >>> └──────────┴───────────┴────────────────────┴───────────────────────────────────┘
+        ```
+
+        Args:
+            entities (dict[str, list] | RetrivalJob): A dictionary of entity names to lists of entity values
+
+        Returns:
+            RetrivalJob: A object that will load the features and lables in your desired format
+        """
 
         pred_view = self.model.predictions_view
         if pred_view.source is None:
