@@ -341,9 +341,11 @@ class FactPsqlJob(FactualRetrivalJob):
         sort_query = 'entities.row_id'
 
         event_timestamp_clause: str | None = None
-        if request.event_timestamp and entities_has_event_timestamp:
-            event_timestamp_column = source.feature_identifier_for([request.event_timestamp.name])[0]
-            event_timestamp_clause = f'entities.event_timestamp >= ta.{event_timestamp_column}'
+        if request.event_timestamp_request and entities_has_event_timestamp:
+            timestamp = request.event_timestamp_request.event_timestamp
+            entity_column = request.event_timestamp_request.entity_column
+            event_timestamp_column = source.feature_identifier_for([timestamp.name])[0]
+            event_timestamp_clause = f'entities.{entity_column} >= ta.{event_timestamp_column}'
             sort_query += f', ta.{event_timestamp_column} DESC'
 
         join_conditions = [
@@ -416,19 +418,21 @@ class FactPsqlJob(FactualRetrivalJob):
         id_column = 'row_id'
         # id_column = window.group_by[0].name
         event_timestamp_clause: str | None = None
-        if request.event_timestamp:
+        if request.event_timestamp_request:
+            timestamp = request.event_timestamp_request.event_timestamp
+            entity_column = request.event_timestamp_request.entity_column
             group_by_names = {id_column}
             # Use row_id as the main join key
-            event_timestamp_name = source.feature_identifier_for([request.event_timestamp.name])[0]
+            event_timestamp_name = source.feature_identifier_for([timestamp.name])[0]
             if window.window:
                 time_window_config = window.window
                 window_in_seconds = int(time_window_config.time_window.total_seconds())
                 event_timestamp_clause = (
-                    f'ta.{event_timestamp_name} BETWEEN entities.event_timestamp'
-                    f" - interval '{window_in_seconds} seconds' AND entities.event_timestamp"
+                    f'ta.{event_timestamp_name} BETWEEN entities.{entity_column}'
+                    f" - interval '{window_in_seconds} seconds' AND entities.{entity_column}"
                 )
             else:
-                event_timestamp_clause = f'ta.{event_timestamp_name} <= entities.event_timestamp'
+                event_timestamp_clause = f'ta.{event_timestamp_name} <= entities.{entity_column}'
 
         entities = list(request.entity_names)
         entity_db_name = source.feature_identifier_for(entities)
@@ -522,9 +526,9 @@ class FactPsqlJob(FactualRetrivalJob):
     def build_request_from_facts(self, facts: pl.LazyFrame) -> str:
 
         final_select_names: set[str] = set()
-        has_event_timestamp = False
         all_entities = {'row_id'}
         entity_types: dict[str, FeatureType] = {'row_id': FeatureType('').int64}
+        has_event_timestamp = False
 
         for request in self.requests:
             final_select_names = final_select_names.union(
@@ -534,13 +538,12 @@ class FactPsqlJob(FactualRetrivalJob):
                 entity_types[entity.name] = entity.dtype
                 all_entities.add(entity.name)
 
-            if request.event_timestamp:
+            if request.event_timestamp_request:
+                entity_column = request.event_timestamp_request.entity_column
                 has_event_timestamp = True
-                entity_types['event_timestamp'] = FeatureType('').datetime
-                all_entities.add('event_timestamp')
-
-        if has_event_timestamp:
-            final_select_names.add('entities.event_timestamp')
+                entity_types[entity_column] = FeatureType('').datetime
+                all_entities.add(entity_column)
+                final_select_names.add(f'entities.{entity_column}')
 
         all_entities_list = list(all_entities)
 
@@ -698,17 +701,17 @@ class FactPsqlJob(FactualRetrivalJob):
         has_event_timestamp = False
         all_entities = set()
 
-        if 'event_timestamp' in sql_facts.query:
-            has_event_timestamp = True
-            all_entities.add('event_timestamp')
-
         for request in self.requests:
             final_select_names = final_select_names.union(
                 {f'entities.{entity}' for entity in request.entity_names}
             )
+            if request.event_timestamp_request:
+                entity_column = request.event_timestamp_request.entity_column
 
-        if has_event_timestamp:
-            final_select_names.add('entities.event_timestamp')
+                if entity_column in sql_facts.query:
+                    has_event_timestamp = True
+                    all_entities.add(entity_column)
+                    final_select_names.add(f'entities.{entity_column}')
 
         # Add the joins to the fact
 
