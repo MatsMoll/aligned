@@ -454,7 +454,7 @@ def titanic_model(titanic_feature_view: FeatureView) -> ModelContract:
             ],
         )
 
-        will_survive = features.survived.as_classification_target()  # type: ignore
+        will_survive = features.survived.as_classification_label()  # type: ignore
 
     return Titanic()
 
@@ -648,7 +648,7 @@ def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> ModelContract:
             features=[features.age, features.sibsp, features.has_siblings, features.is_male],  # type: ignore
         )
 
-        will_survive = features.survived.as_classification_target()  # type: ignore
+        will_survive = features.survived.as_classification_label()  # type: ignore
         probability = will_survive.probability_of(True)
 
     return Titanic()

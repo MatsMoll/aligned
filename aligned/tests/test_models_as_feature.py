@@ -28,7 +28,7 @@ class First(ModelContract):
 
     metadata = ModelContract.metadata_with('test_model', '', features=[view.feature_a, other.feature_b])
 
-    target = other.is_true.as_classification_target()
+    target = other.is_true.as_classification_label()
 
 
 class Second(ModelContract):
