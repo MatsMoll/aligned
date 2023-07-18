@@ -85,7 +85,7 @@ class EventTrigger:
 @dataclass
 class TargetProbability:
     of_value: Any
-    target: ClassificationTarget
+    target: ClassificationLabel
     _name: str | None = None
 
     def __hash__(self) -> int:
@@ -107,7 +107,7 @@ class FeatureReferencable:
 
 
 @dataclass
-class RegressionTarget(FeatureReferencable):
+class RegressionLabel(FeatureReferencable):
     feature: FeatureFactory
     event_trigger: EventTrigger | None = field(default=None)
     ground_truth_event: StreamDataSource | None = field(default=None)
@@ -124,17 +124,17 @@ class RegressionTarget(FeatureReferencable):
             raise ValueError('Missing location, can not create reference')
         return FeatureReferance(self._name, self._location, self.feature.dtype)
 
-    def listen_to_ground_truth_event(self, stream: StreamDataSource) -> RegressionTarget:
-        return RegressionTarget(
+    def listen_to_ground_truth_event(self, stream: StreamDataSource) -> RegressionLabel:
+        return RegressionLabel(
             feature=self.feature,
             event_trigger=self.event_trigger,
             ground_truth_event=stream,
         )
 
-    def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> RegressionTarget:
+    def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> RegressionLabel:
         assert when.dtype == FeatureType('').bool, 'A trigger needs a boolean condition'
 
-        return RegressionTarget(
+        return RegressionLabel(
             self.feature, EventTrigger(when, sink_to), ground_truth_event=self.ground_truth_event
         )
 
@@ -162,7 +162,7 @@ class RegressionTarget(FeatureReferencable):
 
 
 @dataclass
-class ClassificationTarget(FeatureReferencable):
+class ClassificationLabel(FeatureReferencable):
     feature: FeatureFactory
     event_trigger: EventTrigger | None = field(default=None)
     ground_truth_event: StreamDataSource | None = field(default=None)
@@ -179,17 +179,17 @@ class ClassificationTarget(FeatureReferencable):
             raise ValueError('Missing location, can not create reference')
         return FeatureReferance(self._name, self._location, self.feature.dtype)
 
-    def listen_to_ground_truth_event(self, stream: StreamDataSource) -> ClassificationTarget:
-        return ClassificationTarget(
+    def listen_to_ground_truth_event(self, stream: StreamDataSource) -> ClassificationLabel:
+        return ClassificationLabel(
             feature=self.feature,
             event_trigger=self.event_trigger,
             ground_truth_event=stream,
         )
 
-    def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> ClassificationTarget:
+    def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> ClassificationLabel:
         assert when.dtype == FeatureType('').bool, 'A trigger needs a boolean condition'
 
-        return ClassificationTarget(self.feature, EventTrigger(when, sink_to))
+        return ClassificationLabel(self.feature, EventTrigger(when, sink_to))
 
     def probability_of(self, value: Any) -> TargetProbability:
         """Define a value that will be the probability of a certain target class.
@@ -299,11 +299,11 @@ class FeatureFactory(FeatureReferencable):
             constraints=self.constraints,
         )
 
-    def as_classification_target(self) -> ClassificationTarget:
-        return ClassificationTarget(self)
+    def as_classification_label(self) -> ClassificationLabel:
+        return ClassificationLabel(self)
 
-    def as_regression_target(self) -> RegressionTarget:
-        return RegressionTarget(self)
+    def as_regression_label(self) -> RegressionLabel:
+        return RegressionLabel(self)
 
     def compile(self) -> DerivedFeature:
 

@@ -63,6 +63,42 @@ class PredictionsView(Codable):
 
         return schema
 
+    def request(self, name: str) -> RetrivalRequest:
+        return RetrivalRequest(
+            name=name,
+            location=FeatureLocation.model(name),
+            entities=self.entities,
+            features=self.features,
+            derived_features=self.derived_features,
+            event_timestamp=self.event_timestamp,
+        )
+
+    def request_for(self, features: set[set], name: str) -> RetrivalRequest:
+        return RetrivalRequest(
+            name=name,
+            location=FeatureLocation.model(name),
+            entities=self.entities,
+            features={feature for feature in self.features if feature.name in features},
+            derived_features={feature for feature in self.derived_features if feature.name in features},
+            event_timestamp=self.event_timestamp,
+        )
+
+    def labels_estimates_refs(self) -> set[FeatureReferance]:
+        if self.classification_targets:
+            return {feature.estimating for feature in self.classification_targets}
+        elif self.regression_targets:
+            return {feature.estimating for feature in self.regression_targets}
+        else:
+            raise ValueError('Found no targets in the model')
+
+    def labels(self) -> set[Feature]:
+        if self.classification_targets:
+            return {feature.feature for feature in self.classification_targets}
+        elif self.regression_targets:
+            return {feature.feature for feature in self.regression_targets}
+        else:
+            raise ValueError('Found no targets in the model')
+
 
 @dataclass
 class Model(Codable):

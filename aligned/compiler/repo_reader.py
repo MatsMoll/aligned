@@ -121,7 +121,7 @@ class RepoReader:
                     )
                 else:
                     classes = super_classes_in(obj)
-                    if 'Model' in classes:
+                    if 'ModelContract' in classes:
                         repo.models.add(obj.compile())
                     elif 'FeatureView' in classes:
                         fv = obj.compile()

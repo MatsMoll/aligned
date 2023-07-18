@@ -9,7 +9,7 @@ from typing import Any
 
 from prometheus_client import Histogram
 
-from aligned.compiler.model import Model
+from aligned.compiler.model import ModelContract
 from aligned.data_file import DataFileReference
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.enricher import Enricher
@@ -161,17 +161,20 @@ class FeatureStore:
         combined_feature_views = {fv.name: fv for fv in repo.combined_feature_views}
 
         FeatureStore.register_enrichers(repo.enrichers)
+        sources = {
+            FeatureLocation.feature_view(view.name).identifier: view.batch_data_source
+            for view in repo.feature_views
+        } | {
+            FeatureLocation.model(model.name).identifier: model.predictions_view.source
+            for model in repo.models
+            if model.predictions_view.source is not None
+        }
 
         return FeatureStore(
             feature_views=feature_views,
             combined_feature_views=combined_feature_views,
             models={model.name: model for model in repo.models},
-            feature_source=BatchFeatureSource(
-                {
-                    FeatureLocation.feature_view(fv.name).identifier: fv.batch_data_source
-                    for fv in repo.feature_views
-                }
-            ),
+            feature_source=BatchFeatureSource(sources),
         )
 
     def repo_definition(self) -> RepoDefinition:
@@ -286,6 +289,7 @@ class FeatureStore:
         feature_request: RawStringFeatureRequest,
         feature_views: dict[str, CompiledFeatureView],
         combined_feature_views: dict[str, CompiledCombinedFeatureView],
+        models: dict[str, ModelSchema],
     ) -> FeatureRequest:
         features = feature_request.grouped_features
         requests: list[RetrivalRequest] = []
@@ -293,9 +297,21 @@ class FeatureStore:
         needs_event_timestamp = False
 
         for location in feature_request.locations:
-            feature_view_name = location.name
-            if feature_view_name in combined_feature_views:
-                cfv = combined_feature_views[feature_view_name]
+            location_name = location.name
+            if location.location == 'model':
+                model = models[location_name]
+                view = model.predictions_view
+                if len(features[location]) == 1 and list(features[location])[0] == '*':
+                    request = view.request(location_name)
+                else:
+                    request = view.request_for(features[location], location_name)
+                requests.append(request)
+                entity_names.update(request.entity_names)
+                if request.event_timestamp:
+                    needs_event_timestamp = True
+
+            elif location_name in combined_feature_views:
+                cfv = combined_feature_views[location_name]
                 if len(features[location]) == 1 and list(features[location])[0] == '*':
                     sub_requests = cfv.request_all
                 else:
@@ -306,8 +322,8 @@ class FeatureStore:
                     if request.event_timestamp:
                         needs_event_timestamp = True
 
-            elif feature_view_name in feature_views:
-                feature_view = feature_views[feature_view_name]
+            elif location_name in feature_views:
+                feature_view = feature_views[location_name]
                 if len(features[location]) == 1 and list(features[location])[0] == '*':
                     sub_requests = feature_view.request_all
                 else:
@@ -319,7 +335,7 @@ class FeatureStore:
                         needs_event_timestamp = True
             else:
                 raise ValueError(
-                    f'Unable to find: {feature_view_name}, '
+                    f'Unable to find: {location_name}, '
                     f'availible views are: {combined_feature_views.keys()}, and: {feature_views.keys()}'
                 )
 
@@ -333,7 +349,9 @@ class FeatureStore:
         )
 
     def requests_for(self, feature_request: RawStringFeatureRequest) -> FeatureRequest:
-        return FeatureStore._requests_for(feature_request, self.feature_views, self.combined_feature_views)
+        return FeatureStore._requests_for(
+            feature_request, self.feature_views, self.combined_feature_views, self.models
+        )
 
     def feature_view(self, view: str) -> FeatureViewStore:
         """
@@ -388,7 +406,7 @@ class FeatureStore:
         compiled_view = type(feature_view).compile()
         self.combined_feature_views[compiled_view.name] = compiled_view
 
-    def add_model(self, model: Model) -> None:
+    def add_model(self, model: ModelContract) -> None:
         """
         Compiles and adds the model to the store
 
@@ -417,12 +435,15 @@ class FeatureStore:
         if isinstance(source, FeatureSourceFactory):
             feature_source = source.feature_source()
         else:
-            feature_source = source or BatchFeatureSource(
-                {
-                    FeatureLocation.feature_view(view.name).identifier: view.batch_data_source
-                    for view in set(self.feature_views.values())
-                }
-            )
+            sources = {
+                FeatureLocation.feature_view(view.name).identifier: view.batch_data_source
+                for view in set(self.feature_views.values())
+            } | {
+                FeatureLocation.model(model.name).identifier: model.predictions_view.source
+                for model in set(self.models.values())
+                if model.predictions_view.source is not None
+            }
+            feature_source = source or BatchFeatureSource(sources=sources)
 
         return FeatureStore(
             feature_views=self.feature_views,
@@ -477,6 +498,33 @@ class ModelFeatureStore:
         )
 
     def features_for(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
+        """Returns the features for the given entities
+
+        ```python
+        store = await FileSource.json_at("features-latest.json").feature_store()
+
+        df = store.model("titanic")\\
+            .features_for({"passenger_id": [1, 2, 3]})\\
+            .to_polars()
+
+        print(df.collect())
+        >>> ┌──────────────┬───────┬─────────┬─────────────────────┬──────────────┐
+        >>> │ passenger_id ┆ is_mr ┆ is_male ┆ constant_filled_age ┆ has_siblings │
+        >>> │ ---          ┆ ---   ┆ ---     ┆ ---                 ┆ ---          │
+        >>> │ i32          ┆ bool  ┆ bool    ┆ f64                 ┆ bool         │
+        >>> ╞══════════════╪═══════╪═════════╪═════════════════════╪══════════════╡
+        >>> │ 1            ┆ true  ┆ true    ┆ 22.0                ┆ true         │
+        >>> │ 2            ┆ false ┆ false   ┆ 38.0                ┆ true         │
+        >>> │ 3            ┆ false ┆ false   ┆ 26.0                ┆ false        │
+        >>> └──────────────┴───────┴─────────┴─────────────────────┴──────────────┘
+        ```
+
+        Args:
+            entities (dict[str, list] | RetrivalJob): The entities to fetch features for
+
+        Returns:
+            RetrivalJob: A retrival job that can be used to fetch the features
+        """
         request = self.request()
         if isinstance(entities, dict):
             features = self.raw_string_features(set(entities.keys()))
@@ -493,10 +541,66 @@ class ModelFeatureStore:
 
         return job.filter(request.features_to_include)
 
-    def with_target(self) -> SupervisedModelFeatureStore:
+    def with_labels(self) -> SupervisedModelFeatureStore:
+        """Will also load the labels for the model
+
+        ```python
+        store = await FileSource.json_at("features-latest.json").feature_store()
+
+        data = store.model("titanic")\\
+            .with_labels()\\
+            .features_for({"passenger_id": [1, 2, 3]})\\
+            .to_polars()
+
+        print(data.labels.collect(), data.input.collect())
+        >>> ┌──────────┐ ┌───────┬─────────┬─────────────────────┬──────────────┐
+        >>> │ survived │ │ is_mr ┆ is_male ┆ constant_filled_age ┆ has_siblings │
+        >>> │ ---      │ │ ---   ┆ ---     ┆ ---                 ┆ ---          │
+        >>> │ bool     │ │ bool  ┆ bool    ┆ f64                 ┆ bool         │
+        >>> ╞══════════╡ ╞═══════╪═════════╪═════════════════════╪══════════════╡
+        >>> │ false    │ │ true  ┆ true    ┆ 22.0                ┆ true         │
+        >>> │ true     │ │ false ┆ false   ┆ 38.0                ┆ true         │
+        >>> │ true     │ │ false ┆ false   ┆ 26.0                ┆ false        │
+        >>> └──────────┘ └───────┴─────────┴─────────────────────┴──────────────┘
+        ```
+
+        Returns:
+            SupervisedModelFeatureStore: A new queryable feature store
+        """
         return SupervisedModelFeatureStore(self.model, self.store)
 
     def cached_at(self, location: DataFileReference) -> RetrivalJob:
+        """Loads the model features from a pre computed location
+
+        ```python
+        from aligned import FileSource
+
+        store = await FileSource.json_at("features-latest.json").feature_store()
+
+        cached_features = FileSource.parquet_at("titanic_features.parquet")
+
+        df = store.model("titanic")\\
+            .cached_at(cached_features)\\
+            .to_polars()
+
+        print(df.collect())
+        >>> ┌──────────────┬───────┬─────────┬─────────────────────┬──────────────┐
+        >>> │ passenger_id ┆ is_mr ┆ is_male ┆ constant_filled_age ┆ has_siblings │
+        >>> │ ---          ┆ ---   ┆ ---     ┆ ---                 ┆ ---          │
+        >>> │ i32          ┆ bool  ┆ bool    ┆ f64                 ┆ bool         │
+        >>> ╞══════════════╪═══════╪═════════╪═════════════════════╪══════════════╡
+        >>> │ 1            ┆ true  ┆ true    ┆ 22.0                ┆ true         │
+        >>> │ 2            ┆ false ┆ false   ┆ 38.0                ┆ true         │
+        >>> │ 3            ┆ false ┆ false   ┆ 26.0                ┆ false        │
+        >>> └──────────────┴───────┴─────────┴─────────────────────┴──────────────┘
+        ```
+
+        Args:
+            location (DataFileReference): _description_
+
+        Returns:
+            RetrivalJob: _description_
+        """
         from aligned.local.job import FileFullJob
 
         features = {f'{feature.location.identifier}:{feature.name}' for feature in self.model.features}
@@ -522,6 +626,26 @@ class ModelFeatureStore:
             .filter(request.features_to_include)
         )
 
+    def predictions_for(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
+
+        if self.model.predictions_view.source is None:
+            raise ValueError(
+                'Model does not have a prediction source. '
+                'This can be set in the metadata for a model contract.'
+            )
+
+        source = self.model.predictions_view.source
+        request = self.model.predictions_view.request(self.model.name)
+
+        if isinstance(entities, RetrivalJob):
+            job = entities
+        elif isinstance(entities, dict):
+            job = RetrivalJob.from_dict(entities, request=[request])
+        else:
+            raise ValueError(f'features must be a dict or a RetrivalJob, was {type(input)}')
+
+        return source.features_for(job, request).ensure_types([request]).derive_features()
+
 
 @dataclass
 class SupervisedModelFeatureStore:
@@ -530,22 +654,42 @@ class SupervisedModelFeatureStore:
     store: FeatureStore
 
     def features_for(self, entities: dict[str, list] | RetrivalJob) -> SupervisedJob:
+        """Loads the features and labels for a model
+
+        ```python
+        store = await FileSource.json_at("features-latest.json").feature_store()
+
+        data = store.model("titanic")\\
+            .with_labels()\\
+            .features_for({"passenger_id": [1, 2, 3]})\\
+            .to_polars()
+
+        print(data.labels.collect(), data.input.collect())
+        >>> ┌──────────┐ ┌───────┬─────────┬─────────────────────┬──────────────┐
+        >>> │ survived │ │ is_mr ┆ is_male ┆ constant_filled_age ┆ has_siblings │
+        >>> │ ---      │ │ ---   ┆ ---     ┆ ---                 ┆ ---          │
+        >>> │ bool     │ │ bool  ┆ bool    ┆ f64                 ┆ bool         │
+        >>> ╞══════════╡ ╞═══════╪═════════╪═════════════════════╪══════════════╡
+        >>> │ false    │ │ true  ┆ true    ┆ 22.0                ┆ true         │
+        >>> │ true     │ │ false ┆ false   ┆ 38.0                ┆ true         │
+        >>> │ true     │ │ false ┆ false   ┆ 26.0                ┆ false        │
+        >>> └──────────┘ └───────┴─────────┴─────────────────────┴──────────────┘
+        ```
+
+        Returns:
+            SupervisedJob: A object that will load the features and lables in your desired format
+        """
         feature_refs = self.model.features
         features = {f'{feature.location.identifier}:{feature.name}' for feature in feature_refs}
         pred_view = self.model.predictions_view
-        target_features = set()
+
+        target_feature_refs = pred_view.labels_estimates_refs()
+        target_features = {feature.identifier for feature in target_feature_refs}
+
         targets = set()
         if pred_view.classification_targets:
-            target_features = {
-                f'{feature.estimating.location.identifier}:{feature.estimating.name}'
-                for feature in pred_view.classification_targets
-            }
             targets = {feature.estimating.name for feature in pred_view.classification_targets}
         elif pred_view.regression_targets:
-            target_features = {
-                f'{feature.estimating.location.identifier}:{feature.estimating.name}'
-                for feature in pred_view.regression_targets
-            }
             targets = {feature.estimating.name for feature in pred_view.regression_targets}
         else:
             raise ValueError('Found no targets in the model')
@@ -565,6 +709,33 @@ class SupervisedModelFeatureStore:
             job.filter(total_request.features_to_include),
             target_columns=targets,
         )
+
+    def predictions_for(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
+
+        pred_view = self.model.predictions_view
+        if pred_view.source is None:
+            raise ValueError(
+                'Model does not have a prediction source. '
+                'This can be set in the metadata for a model contract.'
+            )
+
+        request = pred_view.request(self.model.name)
+
+        target_features = pred_view.labels_estimates_refs()
+        labels = pred_view.labels()
+        target_features = {feature.identifier for feature in target_features}
+        pred_features = {f'model:{self.model.name}:{feature.name}' for feature in labels}
+        request = self.store.requests_for(RawStringFeatureRequest(pred_features))
+        target_request = self.store.requests_for(
+            RawStringFeatureRequest(target_features)
+        ).without_event_timestamp(name_sufix='target')
+
+        total_request = FeatureRequest(
+            FeatureLocation.model(self.model.name),
+            request.features_to_include.union(target_request.features_to_include),
+            request.needed_requests + target_request.needed_requests,
+        )
+        return self.store.features_for_request(total_request, entities, total_request.features_to_include)
 
 
 @dataclass

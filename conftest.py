@@ -15,7 +15,7 @@ from aligned import (
     Float,
     Int32,
     Int64,
-    Model,
+    ModelContract,
     RedisConfig,
     String,
     TextVectoriserModel,
@@ -437,12 +437,12 @@ def titanic_feature_view(titanic_source: CsvFileSource) -> FeatureView:
 
 
 @pytest.fixture
-def titanic_model(titanic_feature_view: FeatureView) -> Model:
-    class Titanic(Model):
+def titanic_model(titanic_feature_view: FeatureView) -> ModelContract:
+    class Titanic(ModelContract):
 
         features = titanic_feature_view
 
-        metadata = Model.metadata_with(
+        metadata = ModelContract.metadata_with(
             'titanic',
             'A model predicting if a passenger will survive',
             features=[
@@ -499,7 +499,7 @@ def titanic_feature_view_parquet(titanic_source_parquet: ParquetFileSource) -> F
 
 @pytest_asyncio.fixture
 async def titanic_feature_store(
-    titanic_feature_view: FeatureView, titanic_feature_view_parquet: FeatureView, titanic_model: Model
+    titanic_feature_view: FeatureView, titanic_feature_view_parquet: FeatureView, titanic_model: ModelContract
 ) -> FeatureStore:
     feature_store = FeatureStore.experimental()
     feature_store.add_feature_view(titanic_feature_view)
@@ -637,12 +637,12 @@ def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureView:
 
 
 @pytest.fixture
-def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> Model:
-    class Titanic(Model):
+def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> ModelContract:
+    class Titanic(ModelContract):
 
         features = titanic_feature_view_scd
 
-        metadata = Model.metadata_with(
+        metadata = ModelContract.metadata_with(
             'titanic',
             'A model predicting if a passenger will survive',
             features=[features.age, features.sibsp, features.has_siblings, features.is_male],  # type: ignore
@@ -656,7 +656,9 @@ def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> Model:
 
 @pytest_asyncio.fixture
 async def titanic_feature_store_scd(
-    titanic_feature_view_scd: FeatureView, titanic_feature_view_parquet: FeatureView, titanic_model_scd: Model
+    titanic_feature_view_scd: FeatureView,
+    titanic_feature_view_parquet: FeatureView,
+    titanic_model_scd: ModelContract,
 ) -> FeatureStore:
     feature_store = FeatureStore.experimental()
     feature_store.add_feature_view(titanic_feature_view_scd)

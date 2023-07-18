@@ -327,7 +327,9 @@ class FactPsqlJob(FactualRetrivalJob):
         source = self.sources[request.location]
 
         entity_selects = {f'entities.{entity}' for entity in request.entity_names}
-        field_selects = request.all_required_feature_names.union(entity_selects).union({'entities.row_id'})
+        field_selects = list(
+            request.all_required_feature_names.union(entity_selects).union({'entities.row_id'})
+        )
         field_identifiers = source.feature_identifier_for(field_selects)
         selects = {
             SqlColumn(db_field_name, feature)

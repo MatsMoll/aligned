@@ -7,11 +7,11 @@ from typing import Callable
 import polars as pl
 
 from aligned.compiler.feature_factory import (
-    ClassificationTarget,
+    ClassificationLabel,
     EventTimestamp,
     FeatureFactory,
     FeatureReferencable,
-    RegressionTarget,
+    RegressionLabel,
     TargetProbability,
 )
 from aligned.data_source.batch_data_source import BatchDataSource
@@ -68,7 +68,7 @@ class ModelMetedata:
     dataset_folder: Folder | None = field(default=None)
 
 
-class Model(ABC):
+class ModelContract(ABC):
     @staticmethod
     def metadata_with(
         name: str,
@@ -123,17 +123,17 @@ class Model(ABC):
             if isinstance(feature, FeatureView):
                 compiled = feature.compile()
                 inference_view.entities.update(compiled.entities)
-            elif isinstance(feature, Model):
+            elif isinstance(feature, ModelContract):
                 compiled = feature.compile()
                 inference_view.entities.update(compiled.predictions_view.entities)
-            elif isinstance(feature, ClassificationTarget):
+            elif isinstance(feature, ClassificationLabel):
                 assert feature._name
                 feature._location = FeatureLocation.model(metadata.name)
                 target_feature = feature.compile()
 
                 classification_targets[var_name] = target_feature
                 inference_view.classification_targets.add(target_feature)
-            elif isinstance(feature, RegressionTarget):
+            elif isinstance(feature, RegressionLabel):
                 assert feature._name
                 feature._location = FeatureLocation.model(metadata.name)
                 target_feature = feature.compile()

@@ -165,7 +165,7 @@ class SupervisedTrainJob:
         return TrainTestSet(
             data=data,
             entity_columns=core_data.entity_columns,
-            features=core_data.features,
+            features=core_data.feature_columns,
             target_columns=core_data.target_columns,
             train_index=split(data, 0, test_ratio_start, core_data.event_timestamp_column),
             test_index=split(data, test_ratio_start, 1, core_data.event_timestamp_column),
@@ -182,7 +182,7 @@ class SupervisedTrainJob:
         return TrainTestSet(
             data=data,
             entity_columns=core_data.entity_columns,
-            features=core_data.features,
+            features=core_data.feature_columns,
             target_columns=core_data.target_columns,
             train_index=split_polars(data, 0, self.train_size, core_data.event_timestamp_column),
             test_index=split_polars(data, self.train_size, 1, core_data.event_timestamp_column),
@@ -222,8 +222,8 @@ class SupervisedValidationJob:
         return TrainTestValidateSet(
             data=pl.from_pandas(data.data),
             entity_columns=data.entity_columns,
-            features=data.features,
-            target=data.target,
+            features=data.feature_columns,
+            target=data.labels,
             train_index=data.train_index,
             test_index=data.test_index,
             validate_index=data.validate_index,
@@ -445,14 +445,18 @@ class LogJob(RetrivalJob, ModificationJob):
         return self.job.retrival_requests
 
     async def to_pandas(self) -> pd.DataFrame:
+        if logger.level == 0:
+            logging.basicConfig(level=logging.INFO)
         df = await self.job.to_pandas()
-        logger.info(f'Results from {type(self.job)}')
+        logger.info(f'Results from {type(self.job).__name__}')
         logger.info(df)
         return df
 
     async def to_polars(self) -> pl.LazyFrame:
+        if logger.level == 0:
+            logging.basicConfig(level=logging.INFO)
         df = await self.job.to_polars()
-        logger.info(f'Results from {type(self.job)}')
+        logger.info(f'Results from {type(self.job).__name__}')
         logger.info(df.head(10).collect())
         return df
 
@@ -1015,6 +1019,7 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
         df = await self.job.to_polars()
         for request in self.requests:
             features_to_check = request.all_required_features
+
             if request.aggregated_features:
                 features_to_check = {feature.derived_feature for feature in request.aggregated_features}
 

@@ -328,7 +328,7 @@ class FeatureRequest(Codable):
     def without_event_timestamp(self, name_sufix: str | None = None) -> 'FeatureRequest':
         return FeatureRequest(
             location=self.location,
-            features_to_include=self.features_to_include,
+            features_to_include=self.features_to_include - {'event_timestamp'},
             needed_requests=[request.without_event_timestamp(name_sufix) for request in self.needed_requests],
         )
 

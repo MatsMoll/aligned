@@ -73,16 +73,23 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
             requests = [
                 (source, req) for source, req in core_requests if source.job_group_key() == source_group
             ]
-            jobs.append(
+            has_derived_features = any(req.derived_features for _, req in requests)
+            job = (
                 self.source_types[source_group]
                 .multi_source_features_for(facts=facts, requests=requests)
                 .ensure_types([req for _, req in requests])
-                .derive_features()
             )
-        return CombineFactualJob(
-            jobs=jobs,
-            combined_requests=combined_requests,
-        ).derive_features()
+            if has_derived_features:
+                job = job.derive_features()
+            jobs.append(job)
+
+        if len(combined_requests) > 0 or len(jobs) > 1:
+            return CombineFactualJob(
+                jobs=jobs,
+                combined_requests=combined_requests,
+            ).derive_features()
+        else:
+            return jobs[0]
 
     def all_for(self, request: FeatureRequest, limit: int | None = None) -> RetrivalJob:
         if len(request.needed_requests) != 1:

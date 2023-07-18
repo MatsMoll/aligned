@@ -312,3 +312,7 @@ class FeatureReferance(Codable):
 
     def __hash__(self) -> int:
         return hash(self.name)
+
+    @property
+    def identifier(self) -> str:
+        return f'{self.location.identifier}:{self.name}'

@@ -14,13 +14,13 @@ async def test_titanic_model_with_targets(titanic_feature_store: FeatureStore) -
 
     dataset = (
         await titanic_feature_store.model('titanic')
-        .with_target()
+        .with_labels()
         .features_for({'passenger_id': entity_list})
         .to_pandas()
     )
 
     assert dataset.input.shape == (8, 5)
-    assert dataset.target.shape == (8, 1)
+    assert dataset.labels.shape == (8, 1)
     assert dataset.entities.shape == (8, 1)
 
     assert np.all(dataset.entities['passenger_id'].to_numpy() == entity_list)
@@ -53,13 +53,13 @@ async def test_titanic_model_with_targets_and_scd(titanic_feature_store_scd: Fea
 
     dataset = (
         await titanic_feature_store_scd.model('titanic')
-        .with_target()
+        .with_labels()
         .features_for(entities.to_dict())
         .to_polars()
     )
 
     input_df = dataset.input.collect()
-    target_df = dataset.target.collect()
+    target_df = dataset.labels.collect()
 
     assert target_df['survived'].series_equal(expected_data['survived'])
     assert input_df['is_male'].series_equal(expected_data['is_male'])
