@@ -1,27 +1,28 @@
 from os import environ
+from typing import TYPE_CHECKING
 
 import pytest
-from sqlalchemy import create_engine
 
 from aligned import FeatureStore, FeatureView, PostgreSQLConfig
-from conftest import DataTest
+
+if TYPE_CHECKING:
+    from conftest import DataTest
 
 
 @pytest.mark.asyncio
 async def test_postgresql(point_in_time_data_test: DataTest) -> None:
 
     if 'PSQL_DATABASE_TEST' not in environ:
-        environ['PSQL_DATABASE_TEST'] = 'postgresql://matsmollestad:@localhost:5432/aligned-test'
+        environ['PSQL_DATABASE_TEST'] = 'postgresql://postgres:postgres@localhost:5432/aligned-test'
 
     psql_database = environ['PSQL_DATABASE_TEST']
-    db = create_engine(psql_database)
 
     store = FeatureStore.experimental()
 
     for source in point_in_time_data_test.sources:
         view = source.view
         db_name = view.metadata.name
-        source.data.to_pandas().to_sql(db_name, db, if_exists='replace')
+        source.data.write_database(db_name, psql_database, if_exists='replace', engine='sqlalchemy')
 
         view.metadata = FeatureView.metadata_with(  # type: ignore
             name=view.metadata.name,

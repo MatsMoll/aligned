@@ -1,15 +1,19 @@
 import logging
+from typing import TYPE_CHECKING
 from dataclasses import dataclass, field
 
-from aligned.data_source.batch_data_source import BatchDataSource
-from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.schemas.codable import Codable
-from aligned.schemas.derivied_feature import DerivedFeature
-from aligned.schemas.event_trigger import EventTrigger
-from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation, FeatureReferance
-from aligned.schemas.folder import Folder
-from aligned.schemas.target import ClassificationTarget, RegressionTarget
+from aligned.schemas.feature import FeatureLocation
+
+if TYPE_CHECKING:
+    from aligned.data_source.batch_data_source import BatchDataSource
+    from aligned.data_source.stream_data_source import StreamDataSource
+    from aligned.schemas.derivied_feature import DerivedFeature
+    from aligned.schemas.event_trigger import EventTrigger
+    from aligned.schemas.feature import EventTimestamp, Feature, FeatureReferance
+    from aligned.schemas.folder import Folder
+    from aligned.schemas.target import ClassificationTarget, RegressionTarget
 
 logger = logging.getLogger(__name__)
 
@@ -44,14 +48,14 @@ class PredictionsView(Codable):
     @property
     def full_schema(self) -> set[Feature]:
 
-        schema = self.features.union(self.entities).union(
-            {target.feature for target in self.classification_targets}
-        )
+        schema = self.features.union(self.entities)
 
-        for target in self.classification_targets:
+        for target in self.classification_targets or {}:
+            schema.add(target.feature)
             schema.update({prob.feature for prob in target.class_probabilities})
 
-        for target in self.regression_targets:
+        for target in self.regression_targets or {}:
+            schema.add(target.feature)
             if target.confidence:
                 schema.add(target.confidence)
 
@@ -73,7 +77,7 @@ class PredictionsView(Codable):
             event_timestamp=self.event_timestamp,
         )
 
-    def request_for(self, features: set[set], name: str) -> RetrivalRequest:
+    def request_for(self, features: set[str], name: str) -> RetrivalRequest:
         return RetrivalRequest(
             name=name,
             location=FeatureLocation.model(name),
