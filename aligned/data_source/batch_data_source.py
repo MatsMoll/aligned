@@ -83,7 +83,7 @@ class BatchDataSource(ABC, Codable, SerializableType):
         data_class = BatchDataSourceFactory.shared().supported_data_sources[name_type]
         return data_class.from_dict(value)
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         raise NotImplementedError()
 
     def all_between_dates(
@@ -91,7 +91,7 @@ class BatchDataSource(ABC, Codable, SerializableType):
         request: RetrivalRequest,
         start_date: datetime,
         end_date: datetime,
-    ) -> DateRangeJob:
+    ) -> RetrivalJob:
         raise NotImplementedError()
 
     @classmethod

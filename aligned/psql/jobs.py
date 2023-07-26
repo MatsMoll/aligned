@@ -8,7 +8,7 @@ import pandas as pd
 import polars as pl
 
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
-from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
+from aligned.retrival_job import FactualRetrivalJob, RetrivalJob
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver
 from aligned.schemas.feature import FeatureLocation, FeatureType
 from aligned.schemas.transformation import PsqlTransformation
@@ -29,19 +29,23 @@ class SqlColumn:
 
     @property
     def sql_select(self) -> str:
-        selection = self.selection
-        # if not special operation e.g function. Then wrap in quotes
-        if not (
-            '(' in selection or '-' in selection or '.' in selection or ' ' in selection or selection == '*'
-        ):
-            selection = f'"{self.selection}"'
-
-        if self.selection == self.alias:
-            return f'{selection}'
-        return f'{selection} AS "{self.alias}"'
+        return psql_select_column(self)
 
     def __hash__(self) -> int:
         return hash(self.sql_select)
+
+
+def psql_select_column(column: SqlColumn) -> str:
+    selection = column.selection
+    # if not special operation e.g function. Then wrap in quotes
+    if not (
+        '(' in selection or '-' in selection or '.' in selection or ' ' in selection or selection == '*'
+    ):
+        selection = f'"{column.selection}"'
+
+    if column.selection == column.alias:
+        return f'{selection}'
+    return f'{selection} AS "{column.alias}"'
 
 
 @dataclass
@@ -62,33 +66,37 @@ class TableFetch:
     order_by: str | None = field(default=None)
 
     def sql_query(self, distinct: str | None = None) -> str:
-        # Select the core features
-        wheres = ''
-        order_by = ''
-        group_by = ''
-        select = 'SELECT'
+        return psql_table_fetch(self, distinct)
 
-        if distinct:
-            select = f'SELECT DISTINCT ON ({distinct})'
 
-        if self.conditions:
-            wheres = 'WHERE ' + ' AND '.join(self.conditions)
+def psql_table_fetch(fetch: TableFetch, distinct: str | None = None) -> str:
+    # Select the core features
+    wheres = ''
+    order_by = ''
+    group_by = ''
+    select = 'SELECT'
 
-        if self.order_by:
-            order_by = 'ORDER BY ' + self.order_by
+    if distinct:
+        select = f'SELECT DISTINCT ON ({distinct})'
 
-        if self.group_by:
-            group_by = 'GROUP BY ' + ', '.join(self.group_by)
+    if fetch.conditions:
+        wheres = 'WHERE ' + ' AND '.join(fetch.conditions)
 
-        table_columns = [col.sql_select for col in self.columns]
+    if fetch.order_by:
+        order_by = 'ORDER BY ' + fetch.order_by
 
-        if isinstance(self.table, TableFetch):
-            from_sql = f'FROM ({self.table.sql_query()}) as entities'
-        else:
-            from_sql = f"""FROM entities
-    LEFT JOIN "{ self.table }" ta ON { ' AND '.join(self.joins) }"""
+    if fetch.group_by:
+        group_by = 'GROUP BY ' + ', '.join(fetch.group_by)
 
-        return f"""
+    table_columns = [col.sql_select for col in fetch.columns]
+
+    if isinstance(fetch.table, TableFetch):
+        from_sql = f'FROM ({fetch.table.sql_query()}) as entities'
+    else:
+        from_sql = f"""FROM entities
+LEFT JOIN "{ fetch.table }" ta ON { ' AND '.join(fetch.joins) }"""
+
+    return f"""
     { select } { ', '.join(table_columns) }
     { from_sql }
     { wheres }
@@ -123,8 +131,7 @@ class PostgreSqlJob(RetrivalJob):
 
     async def to_polars(self) -> pl.LazyFrame:
         try:
-            engine = 'adbc' if self.will_load_list_feature() else 'connectorx'
-            return pl.read_sql(self.query, self.config.url, engine=engine).lazy()
+            return pl.read_sql(self.query, self.config.url).lazy()
         except Exception as e:
             logger.error(f'Error running query: {self.query}')
             logger.error(f'Error: {e}')
@@ -133,111 +140,54 @@ class PostgreSqlJob(RetrivalJob):
     def describe(self) -> str:
         return f'PostgreSQL Job: \n{self.query}\n'
 
+def build_full_select_query_psql(source: PostgreSQLDataSource, request: RetrivalRequest, limit: int | None) -> str:
+    """
+    Generates the SQL query needed to select all features related to a psql data source
+    """
+    all_features = [
+        feature.name for feature in list(request.all_required_features.union(request.entities))
+    ]
+    sql_columns = source.feature_identifier_for(all_features)
+    columns = [
+        f'"{sql_col}" AS {alias}' if sql_col != alias else sql_col
+        for sql_col, alias in zip(sql_columns, all_features)
+    ]
+    column_select = ', '.join(columns)
 
-@dataclass
-class FullExtractPsqlJob(FullExtractJob):
+    config = source.config
+    schema = f'{config.schema}.' if config.schema else ''
 
-    source: PostgreSQLDataSource
-    request: RetrivalRequest
-    limit: int | None = None
+    limit_query = ''
+    if limit:
+        limit_query = f'LIMIT {int(limit)}'
 
-    @property
-    def request_result(self) -> RequestResult:
-        return RequestResult.from_request(self.request)
-
-    @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return [self.request]
-
-    @property
-    def config(self) -> PostgreSQLConfig:
-        return self.source.config
-
-    def describe(self) -> str:
-        return self.psql_job().describe()
-
-    async def to_pandas(self) -> pd.DataFrame:
-        return await self.psql_job().to_pandas()
-
-    async def to_polars(self) -> pl.LazyFrame:
-        return await self.psql_job().to_polars()
-
-    def psql_job(self) -> PostgreSqlJob:
-        return PostgreSqlJob(self.config, self.build_request(), self.retrival_requests)
-
-    def build_request(self) -> str:
-
-        all_features = [
-            feature.name for feature in list(self.request.all_required_features.union(self.request.entities))
-        ]
-        sql_columns = self.source.feature_identifier_for(all_features)
-        columns = [
-            f'"{sql_col}" AS {alias}' if sql_col != alias else sql_col
-            for sql_col, alias in zip(sql_columns, all_features)
-        ]
-        column_select = ', '.join(columns)
-        schema = f'{self.config.schema}.' if self.config.schema else ''
-
-        limit_query = ''
-        if self.limit:
-            limit_query = f'LIMIT {int(self.limit)}'
-
-        return f'SELECT {column_select} FROM {schema}"{self.source.table}" {limit_query}'
+    return f'SELECT {column_select} FROM {schema}"{source.table}" {limit_query}'
 
 
-@dataclass
-class DateRangePsqlJob(DateRangeJob):
+def build_date_range_query_psql(source: PostgreSQLDataSource, request: RetrivalRequest, start_date: datetime, end_date: datetime) -> str:
+    if not request.event_timestamp:
+        raise ValueError('Event timestamp is needed in order to run a data range job')
 
-    source: PostgreSQLDataSource
-    start_date: datetime
-    end_date: datetime
-    request: RetrivalRequest
+    event_timestamp_column = source.feature_identifier_for([request.event_timestamp.name])[0]
+    all_features = [
+        feature.name for feature in list(request.all_required_features.union(request.entities))
+    ]
+    sql_columns = source.feature_identifier_for(all_features)
+    columns = [
+        f'"{sql_col}" AS {alias}' if sql_col != alias else sql_col
+        for sql_col, alias in zip(sql_columns, all_features)
+    ]
+    column_select = ', '.join(columns)
 
-    @property
-    def request_result(self) -> RequestResult:
-        return RequestResult.from_request(self.request)
+    config = source.config
+    schema = f'{config.schema}.' if config.schema else ''
+    start_date_str = start_date.strftime('%Y-%m-%d %H:%M:%S')
+    end_date_str = end_date.strftime('%Y-%m-%d %H:%M:%S')
 
-    @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return [self.request]
-
-    @property
-    def config(self) -> PostgreSQLConfig:
-        return self.source.config
-
-    async def to_pandas(self) -> pd.DataFrame:
-        return await self.psql_job().to_pandas()
-
-    async def to_polars(self) -> pl.LazyFrame:
-        return await self.psql_job().to_polars()
-
-    def psql_job(self) -> PostgreSqlJob:
-        return PostgreSqlJob(self.config, self.build_request(), self.retrival_requests)
-
-    def build_request(self) -> str:
-
-        if not self.request.event_timestamp:
-            raise ValueError('Event timestamp is needed in order to run a data range job')
-
-        event_timestamp_column = self.source.feature_identifier_for([self.request.event_timestamp.name])[0]
-        all_features = [
-            feature.name for feature in list(self.request.all_required_features.union(self.request.entities))
-        ]
-        sql_columns = self.source.feature_identifier_for(all_features)
-        columns = [
-            f'"{sql_col}" AS {alias}' if sql_col != alias else sql_col
-            for sql_col, alias in zip(sql_columns, all_features)
-        ]
-        column_select = ', '.join(columns)
-        schema = f'{self.config.schema}.' if self.config.schema else ''
-        start_date = self.start_date.strftime('%Y-%m-%d %H:%M:%S')
-        end_date = self.end_date.strftime('%Y-%m-%d %H:%M:%S')
-
-        return (
-            f'SELECT {column_select} FROM {schema}"{self.source.table}" WHERE'
-            f' {event_timestamp_column} BETWEEN \'{start_date}\' AND \'{end_date}\''
-        )
-
+    return (
+        f'SELECT {column_select} FROM {schema}"{source.table}" WHERE'
+        f' {event_timestamp_column} BETWEEN \'{start_date_str}\' AND \'{end_date_str}\''
+    )
 
 @dataclass
 class SqlValue:

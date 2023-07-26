@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Callable
 
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.request.retrival_request import RetrivalRequest
-from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
+from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, RetrivalJob
 from aligned.schemas.codable import Codable
 
 if TYPE_CHECKING:
@@ -74,20 +74,30 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable):
     def __hash__(self) -> int:
         return hash(self.table)
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
-        from aligned.psql.jobs import FullExtractPsqlJob
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+        from aligned.psql.jobs import build_full_select_query_psql
+        from aligned.redshift.sql_job import SqlJob
 
-        return FullExtractPsqlJob(self, request, limit)
+        return SqlJob(
+            connection_uri=lambda: self.config.url,
+            query=build_full_select_query_psql(self, request, limit),
+            requests=[request]
+        )
 
     def all_between_dates(
         self,
         request: RetrivalRequest,
         start_date: datetime,
         end_date: datetime,
-    ) -> DateRangeJob:
-        from aligned.psql.jobs import DateRangePsqlJob
+    ) -> RetrivalJob:
+        from aligned.psql.jobs import build_date_range_query_psql
+        from aligned.redshift.sql_job import SqlJob
 
-        return DateRangePsqlJob(self, start_date, end_date, request)
+        return SqlJob(
+            connection_uri=lambda: self.config.url,
+            query=build_date_range_query_psql(self, request, start_date, end_date),
+            requests=[request]
+        )
 
     @classmethod
     def multi_source_features_for(

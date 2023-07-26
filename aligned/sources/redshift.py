@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Callable
 
@@ -12,6 +12,18 @@ from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import DateRangeJob, FullExtractJob, RetrivalJob
 from aligned.schemas.codable import Codable
 from aligned.sources.psql import PostgreSQLConfig, PostgreSQLDataSource
+
+
+@dataclass
+class RedshiftListReference:
+    """
+    A class representing a one to many relationship.
+    This can simulate how a list datatype
+    """
+    table_schema: str
+    table_name: str
+    value_column: str
+    id_column: str
 
 
 @dataclass
@@ -37,26 +49,36 @@ class RedshiftSQLConfig(Codable):
         os.environ['REDSHIFT_DATABASE'] = url.replace('redshift:', 'postgresql:')
         return RedshiftSQLConfig(env_var='REDSHIFT_DATABASE')
 
-    def table(self, table: str, mapping_keys: dict[str, str] | None = None) -> RedshiftSQLDataSource:
-        return RedshiftSQLDataSource(config=self, table=table, mapping_keys=mapping_keys or {})
+    def table(self, table: str, mapping_keys: dict[str, str] | None = None, list_references: dict[str, RedshiftListReference] | None = None) -> RedshiftSQLDataSource:
+        return RedshiftSQLDataSource(config=self, table=table, mapping_keys=mapping_keys or {}, list_references=list_references or {})
 
     def data_enricher(
         self, name: str, sql: str, redis: RedisConfig, values: dict | None = None, lock_timeout: int = 60
     ) -> Enricher:
-        from pathlib import Path
-
         from aligned.enricher import FileCacheEnricher, RedisLockEnricher, SqlDatabaseEnricher
 
         return FileCacheEnricher(
             timedelta(days=1),
-            file=Path(f'./cache/{name}.parquet'),
+            file_path=f'./cache/{name}.parquet',
             enricher=RedisLockEnricher(
                 name, SqlDatabaseEnricher(self.url, sql, values), redis, timeout=lock_timeout
             ),
         )
 
+    def with_schema(self, name: str) -> RedshiftSQLConfig:
+        return RedshiftSQLConfig(
+            env_var=self.env_var,
+            schema=name
+        )
+
     def entity_source(self, timestamp_column: str, sql: Callable[[str], str]) -> EntityDataSource:
         return SqlEntityDataSource(sql, self.url, timestamp_column)
+
+    def fetch(self, query: str) -> RetrivalJob:
+        from aligned.redshift.jobs import PostgreSqlJob
+
+        return PostgreSqlJob(self.psql_config, query)
+
 
 
 @dataclass
@@ -65,6 +87,7 @@ class RedshiftSQLDataSource(BatchDataSource, ColumnFeatureMappable):
     config: RedshiftSQLConfig
     table: str
     mapping_keys: dict[str, str]
+    list_references: dict[str, RedshiftListReference] = field(default_factory=dict)
 
     type_name = 'redshift'
 
@@ -77,19 +100,29 @@ class RedshiftSQLDataSource(BatchDataSource, ColumnFeatureMappable):
     def __hash__(self) -> int:
         return hash(self.table)
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
-        from aligned.psql.jobs import FullExtractPsqlJob
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+        from aligned.psql.jobs import build_full_select_query_psql
+        from aligned.redshift.sql_job import SqlJob
 
-        return FullExtractPsqlJob(self, request, limit)
+        source = PostgreSQLDataSource(self.config.psql_config, self.table, self.mapping_keys)
+        return SqlJob(
+            connection_uri=lambda: self.config.url,
+            query=build_full_select_query_psql(source, request, limit),
+            requests=[request]
+        )
 
     def all_between_dates(
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime
-    ) -> DateRangeJob:
-        from aligned.psql.jobs import DateRangePsqlJob, PostgreSQLDataSource
+    ) -> RetrivalJob:
+        from aligned.redshift.sql_job import SqlJob
+        from aligned.psql.jobs import build_date_range_query_psql
 
         source = PostgreSQLDataSource(self.config.psql_config, self.table, self.mapping_keys)
-
-        return DateRangePsqlJob(source, start_date, end_date, request)
+        return SqlJob(
+            connection_uri=lambda: self.config.url,
+            query=build_date_range_query_psql(source, request, start_date, end_date),
+            requests=[request]
+        )
 
     @classmethod
     def multi_source_features_for(
