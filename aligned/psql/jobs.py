@@ -38,9 +38,7 @@ class SqlColumn:
 def psql_select_column(column: SqlColumn) -> str:
     selection = column.selection
     # if not special operation e.g function. Then wrap in quotes
-    if not (
-        '(' in selection or '-' in selection or '.' in selection or ' ' in selection or selection == '*'
-    ):
+    if not ('(' in selection or '-' in selection or '.' in selection or ' ' in selection or selection == '*'):
         selection = f'"{column.selection}"'
 
     if column.selection == column.alias:
@@ -140,13 +138,14 @@ class PostgreSqlJob(RetrivalJob):
     def describe(self) -> str:
         return f'PostgreSQL Job: \n{self.query}\n'
 
-def build_full_select_query_psql(source: PostgreSQLDataSource, request: RetrivalRequest, limit: int | None) -> str:
+
+def build_full_select_query_psql(
+    source: PostgreSQLDataSource, request: RetrivalRequest, limit: int | None
+) -> str:
     """
     Generates the SQL query needed to select all features related to a psql data source
     """
-    all_features = [
-        feature.name for feature in list(request.all_required_features.union(request.entities))
-    ]
+    all_features = [feature.name for feature in list(request.all_required_features.union(request.entities))]
     sql_columns = source.feature_identifier_for(all_features)
     columns = [
         f'"{sql_col}" AS {alias}' if sql_col != alias else sql_col
@@ -164,14 +163,14 @@ def build_full_select_query_psql(source: PostgreSQLDataSource, request: Retrival
     return f'SELECT {column_select} FROM {schema}"{source.table}" {limit_query}'
 
 
-def build_date_range_query_psql(source: PostgreSQLDataSource, request: RetrivalRequest, start_date: datetime, end_date: datetime) -> str:
+def build_date_range_query_psql(
+    source: PostgreSQLDataSource, request: RetrivalRequest, start_date: datetime, end_date: datetime
+) -> str:
     if not request.event_timestamp:
         raise ValueError('Event timestamp is needed in order to run a data range job')
 
     event_timestamp_column = source.feature_identifier_for([request.event_timestamp.name])[0]
-    all_features = [
-        feature.name for feature in list(request.all_required_features.union(request.entities))
-    ]
+    all_features = [feature.name for feature in list(request.all_required_features.union(request.entities))]
     sql_columns = source.feature_identifier_for(all_features)
     columns = [
         f'"{sql_col}" AS {alias}' if sql_col != alias else sql_col
@@ -188,6 +187,7 @@ def build_date_range_query_psql(source: PostgreSQLDataSource, request: RetrivalR
         f'SELECT {column_select} FROM {schema}"{source.table}" WHERE'
         f' {event_timestamp_column} BETWEEN \'{start_date_str}\' AND \'{end_date_str}\''
     )
+
 
 @dataclass
 class SqlValue:

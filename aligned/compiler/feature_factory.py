@@ -434,12 +434,14 @@ class FeatureFactory(FeatureReferencable):
         instance.transformation = NotNullFactory(self)
         return instance
 
+
 class CouldBeModelVersion:
     def as_model_Version(self) -> ModelVersion:
         if isinstance(self, FeatureFactory):
             return ModelVersion(self)
 
         raise ValueError(f'{self} is not a feature factory, and can therefore not be a model version')
+
 
 class CouldBeEntityFeature:
     def as_entity(self) -> Entity:
@@ -893,6 +895,7 @@ class Json(FeatureFactory):
         feature = as_type.copy_type()
         feature.transformation = JsonPathFactory(self, path)
         return feature
+
 
 class ModelVersion(FeatureFactory):
 

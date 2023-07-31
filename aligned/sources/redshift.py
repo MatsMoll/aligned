@@ -20,6 +20,7 @@ class RedshiftListReference(Codable):
     A class representing a one to many relationship.
     This can simulate how a list datatype
     """
+
     table_schema: str
     table_name: str
     value_column: str
@@ -49,8 +50,15 @@ class RedshiftSQLConfig(Codable):
         os.environ['REDSHIFT_DATABASE'] = url.replace('redshift:', 'postgresql:')
         return RedshiftSQLConfig(env_var='REDSHIFT_DATABASE')
 
-    def table(self, table: str, mapping_keys: dict[str, str] | None = None, list_references: dict[str, RedshiftListReference] | None = None) -> RedshiftSQLDataSource:
-        return RedshiftSQLDataSource(config=self, table=table, mapping_keys=mapping_keys or {}, list_references=list_references or {})
+    def table(
+        self,
+        table: str,
+        mapping_keys: dict[str, str] | None = None,
+        list_references: dict[str, RedshiftListReference] | None = None,
+    ) -> RedshiftSQLDataSource:
+        return RedshiftSQLDataSource(
+            config=self, table=table, mapping_keys=mapping_keys or {}, list_references=list_references or {}
+        )
 
     def data_enricher(
         self, name: str, sql: str, redis: RedisConfig, values: dict | None = None, lock_timeout: int = 60
@@ -66,10 +74,7 @@ class RedshiftSQLConfig(Codable):
         )
 
     def with_schema(self, name: str) -> RedshiftSQLConfig:
-        return RedshiftSQLConfig(
-            env_var=self.env_var,
-            schema=name
-        )
+        return RedshiftSQLConfig(env_var=self.env_var, schema=name)
 
     def entity_source(self, timestamp_column: str, sql: Callable[[str], str]) -> EntityDataSource:
         return SqlEntityDataSource(sql, self.url, timestamp_column)
@@ -78,7 +83,6 @@ class RedshiftSQLConfig(Codable):
         from aligned.redshift.jobs import PostgreSqlJob
 
         return PostgreSqlJob(self.psql_config, query)
-
 
 
 @dataclass
@@ -109,9 +113,7 @@ class RedshiftSQLDataSource(BatchDataSource, ColumnFeatureMappable):
 
         source = PostgreSQLDataSource(self.config.psql_config, self.table, self.mapping_keys)
         return RedshiftSqlJob(
-            config=self.config,
-            query=build_full_select_query_psql(source, request, limit),
-            requests=[request]
+            config=self.config, query=build_full_select_query_psql(source, request, limit), requests=[request]
         )
 
     def all_between_dates(
@@ -124,7 +126,7 @@ class RedshiftSQLDataSource(BatchDataSource, ColumnFeatureMappable):
         return RedshiftSqlJob(
             config=self.config,
             query=build_date_range_query_psql(source, request, start_date, end_date),
-            requests=[request]
+            requests=[request],
         )
 
     @classmethod

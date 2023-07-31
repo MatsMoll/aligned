@@ -19,6 +19,7 @@ async def test_source_validation(titanic_feature_store: FeatureStore) -> None:
 
     assert {FeatureLocation.feature_view('titanic_parquet'): True} == validation
 
+
 @pytest.mark.asyncio
 async def test_source_validation_psql(titanic_feature_view: FeatureView) -> None:
 
@@ -26,7 +27,7 @@ async def test_source_validation_psql(titanic_feature_view: FeatureView) -> None
         environ['PSQL_DATABASE_TEST'] = 'postgresql://postgres:postgres@localhost:5432/aligned-test'
 
     psql_config = PostgreSQLConfig('PSQL_DATABASE_TEST')
-    titanic_feature_view.metadata.batch_source = psql_config.table("titanic")
+    titanic_feature_view.metadata.batch_source = psql_config.table('titanic')
 
     store = FeatureStore.experimental()
     store.add_feature_view(titanic_feature_view)
@@ -36,6 +37,7 @@ async def test_source_validation_psql(titanic_feature_view: FeatureView) -> None
     validation = await validate_sources_in(views)
 
     assert {FeatureLocation.feature_view('titanic'): False} == validation
+
 
 @pytest.mark.asyncio
 async def test_schema_loading() -> None:

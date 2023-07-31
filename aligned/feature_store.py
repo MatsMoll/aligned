@@ -38,12 +38,14 @@ feature_view_write_time = Histogram(
     labelnames=['feature_view'],
 )
 
+
 @dataclass
 class SourceRequest:
     """
     Represent a request to a source.
     This can be used validate the sources.
     """
+
     location: FeatureLocation
     source: BatchDataSource
     request: RetrivalRequest
@@ -263,7 +265,7 @@ class FeatureStore:
         ```
 
         Args:
-            entities (dict[str, list] | RetrivalJob): The entities to load data for 
+            entities (dict[str, list] | RetrivalJob): The entities to load data for
             features (list[str]): A list of features to load. Use the format (<feature_view>:<feature>)
 
         Returns:
@@ -305,7 +307,7 @@ class FeatureStore:
         """
         Selects a model for easy of use.
 
-        Returns: 
+        Returns:
             ModelFeatureStore: A new store that containes the selected model
         """
         model = self.models[name]
@@ -505,7 +507,8 @@ class FeatureStore:
             FeatureStore: A new feature store that loads features from the application source
         """
         sources = {
-            FeatureLocation.feature_view(view.name).identifier: view.application_source or view.batch_data_source
+            FeatureLocation.feature_view(view.name).identifier: view.application_source
+            or view.batch_data_source
             for view in set(self.feature_views.values())
         } | {
             FeatureLocation.model(model.name).identifier: model.predictions_view.source
@@ -516,7 +519,7 @@ class FeatureStore:
             feature_views=self.feature_views,
             combined_feature_views=self.combined_feature_views,
             models=self.models,
-            feature_source=BatchFeatureSource(sources=sources)
+            feature_source=BatchFeatureSource(sources=sources),
         )
 
     def model_features_for(self, view_name: str) -> set[str]:
@@ -547,20 +550,12 @@ class FeatureStore:
             request = view.request_all.needed_requests[0]
             if view.batch_data_source.contains_config(config):
                 views.append(
-                    SourceRequest(
-                        FeatureLocation.feature_view(view.name),
-                        view.batch_data_source,
-                        request
-                    )
+                    SourceRequest(FeatureLocation.feature_view(view.name), view.batch_data_source, request)
                 )
 
             if view.application_source and view.application_source.contains_config(config):
                 views.append(
-                    SourceRequest(
-                        FeatureLocation.feature_view(view.name),
-                        view.application_source,
-                        request
-                    )
+                    SourceRequest(FeatureLocation.feature_view(view.name), view.application_source, request)
                 )
         return views
 

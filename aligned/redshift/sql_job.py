@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 logger = getLogger(__name__)
 
+
 @dataclass
 class SQLQuery:
     sql: str
@@ -45,6 +46,7 @@ class TableFetch:
     """
     A configuration of an SQL query on a table
     """
+
     name: str
     id_column: str
     table: str | TableFetch
@@ -137,4 +139,3 @@ class RedshiftSqlJob(RetrivalJob):
 
     def describe(self) -> str:
         return f'RedshiftSql Job: \n{self.query}\n'
-

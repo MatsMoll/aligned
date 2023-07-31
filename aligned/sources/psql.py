@@ -81,9 +81,7 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable):
         from aligned.psql.jobs import build_full_select_query_psql, PostgreSqlJob
 
         return PostgreSqlJob(
-            config=self.config,
-            query=build_full_select_query_psql(self, request, limit),
-            requests=[request]
+            config=self.config, query=build_full_select_query_psql(self, request, limit), requests=[request]
         )
 
     def all_between_dates(
@@ -97,7 +95,7 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable):
         return PostgreSqlJob(
             config=self.config,
             query=build_date_range_query_psql(self, request, start_date, end_date),
-            requests=[request]
+            requests=[request],
         )
 
     @classmethod

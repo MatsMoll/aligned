@@ -42,7 +42,7 @@ class FeatureViewMetadata:
             tags=view.tags,
             batch_source=view.batch_data_source,
             stream_source=view.stream_data_source,
-            application_source=view.application_source
+            application_source=view.application_source,
         )
 
 

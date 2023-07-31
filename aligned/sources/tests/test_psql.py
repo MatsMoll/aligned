@@ -5,6 +5,7 @@ import pytest
 from aligned import FeatureStore, FeatureView, PostgreSQLConfig
 from conftest import DataTest
 
+
 @pytest.mark.asyncio
 async def test_postgresql(point_in_time_data_test: DataTest) -> None:
 
@@ -18,7 +19,7 @@ async def test_postgresql(point_in_time_data_test: DataTest) -> None:
     for source in point_in_time_data_test.sources:
         view = source.view
         db_name = view.metadata.name
-        source.data.write_database(db_name, psql_database, if_exists='replace', engine='sqlalchemy')
+        source.data.write_database(db_name, psql_database, if_exists='replace')
 
         view.metadata = FeatureView.metadata_with(  # type: ignore
             name=view.metadata.name,

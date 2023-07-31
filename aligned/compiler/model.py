@@ -13,7 +13,7 @@ from aligned.compiler.feature_factory import (
     FeatureReferencable,
     RegressionLabel,
     TargetProbability,
-    ModelVersion
+    ModelVersion,
 )
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
@@ -70,7 +70,6 @@ class ModelMetedata:
 
 
 class ModelContract(ABC):
-
     @staticmethod
     def metadata_with(
         name: str,
