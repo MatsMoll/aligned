@@ -131,7 +131,7 @@ class PostgreSqlJob(RetrivalJob):
 
     async def to_polars(self) -> pl.LazyFrame:
         try:
-            return pl.read_sql(self.query, self.config.url).lazy()
+            return pl.read_database(self.query, self.config.url).lazy()
         except Exception as e:
             logger.error(f'Error running query: {self.query}')
             logger.error(f'Error: {e}')

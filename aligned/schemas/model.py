@@ -1,19 +1,16 @@
 import logging
-from typing import TYPE_CHECKING
 from dataclasses import dataclass, field
 
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import FeatureLocation
-
-if TYPE_CHECKING:
-    from aligned.data_source.batch_data_source import BatchDataSource
-    from aligned.data_source.stream_data_source import StreamDataSource
-    from aligned.schemas.derivied_feature import DerivedFeature
-    from aligned.schemas.event_trigger import EventTrigger
-    from aligned.schemas.feature import EventTimestamp, Feature, FeatureReferance
-    from aligned.schemas.folder import Folder
-    from aligned.schemas.target import ClassificationTarget, RegressionTarget
+from aligned.schemas.feature import EventTimestamp, Feature, FeatureReferance
+from aligned.data_source.stream_data_source import StreamDataSource
+from aligned.schemas.event_trigger import EventTrigger
+from aligned.schemas.target import ClassificationTarget, RegressionTarget
+from aligned.schemas.derivied_feature import DerivedFeature
+from aligned.data_source.batch_data_source import BatchDataSource
+from aligned.schemas.folder import Folder
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +35,7 @@ class PredictionsView(Codable):
     entities: set[Feature]
     features: set[Feature]
     derived_features: set[DerivedFeature]
+    model_version_column: Feature | None = field(default=None)
     event_timestamp: EventTimestamp | None = field(default=None)
     source: BatchDataSource | None = field(default=None)
     stream_source: StreamDataSource | None = field(default=None)
@@ -65,23 +63,32 @@ class PredictionsView(Codable):
             if target.upper_confidence:
                 schema.add(target.upper_confidence)
 
+        if self.model_version_column:
+            schema.add(self.model_version_column)
+
         return schema
 
     def request(self, name: str) -> RetrivalRequest:
+        entities = self.entities
+        if self.model_version_column:
+            entities.add(self.model_version_column)
         return RetrivalRequest(
             name=name,
             location=FeatureLocation.model(name),
-            entities=self.entities,
+            entities=entities,
             features=self.features,
             derived_features=self.derived_features,
             event_timestamp=self.event_timestamp,
         )
 
     def request_for(self, features: set[str], name: str) -> RetrivalRequest:
+        entities = self.entities
+        if self.model_version_column:
+            entities.add(self.model_version_column)
         return RetrivalRequest(
             name=name,
             location=FeatureLocation.model(name),
-            entities=self.entities,
+            entities=entities,
             features={feature for feature in self.features if feature.name in features},
             derived_features={feature for feature in self.derived_features if feature.name in features},
             event_timestamp=self.event_timestamp,

@@ -444,7 +444,7 @@ def titanic_model(titanic_feature_view: FeatureView) -> ModelContract:
 
         metadata = ModelContract.metadata_with(
             'titanic',
-            'A model predicting if a passenger will survive',
+            description='A model predicting if a passenger will survive',
             features=[
                 features.age,  # type: ignore
                 features.sibsp,  # type: ignore
@@ -644,7 +644,7 @@ def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> ModelContract:
 
         metadata = ModelContract.metadata_with(
             'titanic',
-            'A model predicting if a passenger will survive',
+            description='A model predicting if a passenger will survive',
             features=[features.age, features.sibsp, features.has_siblings, features.is_male],  # type: ignore
         )
 

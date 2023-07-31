@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Any
 
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.request.retrival_request import RetrivalRequest
-from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, RetrivalJob
+from aligned.retrival_job import FactualRetrivalJob, RetrivalJob
 from aligned.schemas.codable import Codable
 
 if TYPE_CHECKING:
@@ -71,15 +71,17 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable):
     def job_group_key(self) -> str:
         return self.config.env_var
 
+    def contains_config(self, config: Any) -> bool:
+        return isinstance(config, PostgreSQLConfig) and config.env_var == self.config.env_var
+
     def __hash__(self) -> int:
         return hash(self.table)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
-        from aligned.psql.jobs import build_full_select_query_psql
-        from aligned.redshift.sql_job import SqlJob
+        from aligned.psql.jobs import build_full_select_query_psql, PostgreSqlJob
 
-        return SqlJob(
-            connection_uri=lambda: self.config.url,
+        return PostgreSqlJob(
+            config=self.config,
             query=build_full_select_query_psql(self, request, limit),
             requests=[request]
         )
@@ -90,11 +92,10 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable):
         start_date: datetime,
         end_date: datetime,
     ) -> RetrivalJob:
-        from aligned.psql.jobs import build_date_range_query_psql
-        from aligned.redshift.sql_job import SqlJob
+        from aligned.psql.jobs import build_date_range_query_psql, PostgreSqlJob
 
-        return SqlJob(
-            connection_uri=lambda: self.config.url,
+        return PostgreSqlJob(
+            config=self.config,
             query=build_date_range_query_psql(self, request, start_date, end_date),
             requests=[request]
         )

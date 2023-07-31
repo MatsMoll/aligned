@@ -26,6 +26,7 @@ class CompiledFeatureView(Codable):
 
     event_timestamp: EventTimestamp | None = field(default=None)
     stream_data_source: StreamDataSource | None = field(default=None)
+    application_source: BatchDataSource | None = field(default=None)
 
     event_triggers: set[EventTrigger] | None = field(default=None)
 
@@ -49,6 +50,8 @@ class CompiledFeatureView(Codable):
             assert isinstance(self.event_timestamp, EventTimestamp)
         if self.stream_data_source is not None:
             assert isinstance(self.stream_data_source, StreamDataSource)
+        if self.application_source is not None:
+            assert isinstance(self.application_source, BatchDataSource)
         if self.event_triggers is not None:
             for event_trigger in self.event_triggers:
                 assert isinstance(event_trigger, EventTrigger)

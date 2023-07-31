@@ -434,6 +434,12 @@ class FeatureFactory(FeatureReferencable):
         instance.transformation = NotNullFactory(self)
         return instance
 
+class CouldBeModelVersion:
+    def as_model_Version(self) -> ModelVersion:
+        if isinstance(self, FeatureFactory):
+            return ModelVersion(self)
+
+        raise ValueError(f'{self} is not a feature factory, and can therefore not be a model version')
 
 class CouldBeEntityFeature:
     def as_entity(self) -> Entity:
@@ -733,7 +739,7 @@ class Float(ArithmeticFeature, DecimalOperations):
         return ArithmeticAggregation(self)
 
 
-class Int32(ArithmeticFeature, CouldBeEntityFeature):
+class Int32(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion):
     def copy_type(self) -> Int32:
         return Int32()
 
@@ -745,7 +751,7 @@ class Int32(ArithmeticFeature, CouldBeEntityFeature):
         return ArithmeticAggregation(self)
 
 
-class Int64(ArithmeticFeature, CouldBeEntityFeature):
+class Int64(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion):
     def copy_type(self) -> Int64:
         return Int64()
 
@@ -796,6 +802,7 @@ class StringValidatable(FeatureFactory):
 class String(
     CategoricalEncodableFeature,
     NumberConvertableFeature,
+    CouldBeModelVersion,
     CouldBeEntityFeature,
     LengthValidatable,
     StringValidatable,
@@ -886,6 +893,20 @@ class Json(FeatureFactory):
         feature = as_type.copy_type()
         feature.transformation = JsonPathFactory(self, path)
         return feature
+
+class ModelVersion(FeatureFactory):
+
+    _dtype: FeatureFactory
+
+    @property
+    def dtype(self) -> FeatureType:
+        return self._dtype.dtype
+
+    def __init__(self, dtype: FeatureFactory):
+        self._dtype = dtype
+
+    def aggregate(self) -> CategoricalAggregation:
+        return CategoricalAggregation(self)
 
 
 class Entity(FeatureFactory):

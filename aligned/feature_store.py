@@ -38,6 +38,16 @@ feature_view_write_time = Histogram(
     labelnames=['feature_view'],
 )
 
+@dataclass
+class SourceRequest:
+    """
+    Represent a request to a source.
+    This can be used validate the sources.
+    """
+    location: FeatureLocation
+    source: BatchDataSource
+    request: RetrivalRequest
+
 
 @dataclass
 class RawStringFeatureRequest:
@@ -243,6 +253,22 @@ class FeatureStore:
         return self.feature_source.features_for(entity_request, requests).filter(feature_names)
 
     def features_for(self, entities: dict[str, list] | RetrivalJob, features: list[str]) -> RetrivalJob:
+        """
+        Returns a set of features given a set of entities.
+
+        ```python
+        entities = { "user_id": [1, 2, 3, ...] }
+        job = store.features_for(entities, features=["user:time_since_last_login", ...])
+        data = await job.to_pandas()
+        ```
+
+        Args:
+            entities (dict[str, list] | RetrivalJob): The entities to load data for 
+            features (list[str]): A list of features to load. Use the format (<feature_view>:<feature>)
+
+        Returns:
+            RetrivalJob: A job that knows how to fetch the features
+        """
 
         feature_request = RawStringFeatureRequest(features=set(features))
         requests = self.requests_for(feature_request)
@@ -251,6 +277,9 @@ class FeatureStore:
 
         if requests.needs_event_timestamp:
             feature_names.add(self.event_timestamp_column)
+            if isinstance(entities, dict) and self.event_timestamp_column not in entities:
+                length = len(list(entities.values())[0])
+                entities[self.event_timestamp_column] = [datetime.utcnow()] * length
 
         for view, feature_set in feature_request.grouped_features.items():
             if feature_set != {'*'}:
@@ -273,6 +302,12 @@ class FeatureStore:
         return self.features_for_request(requests, entities, feature_names)
 
     def model(self, name: str) -> ModelFeatureStore:
+        """
+        Selects a model for easy of use.
+
+        Returns: 
+            ModelFeatureStore: A new store that containes the selected model
+        """
         model = self.models[name]
         return ModelFeatureStore(model, self)
 
@@ -461,6 +496,29 @@ class FeatureStore:
         """
         return self.with_source()
 
+    def use_application_sources(self) -> FeatureStore:
+        """
+        Selects features from the application source if added.
+        Otherwise, the we will default back to the batch source.
+
+        Returns:
+            FeatureStore: A new feature store that loads features from the application source
+        """
+        sources = {
+            FeatureLocation.feature_view(view.name).identifier: view.application_source or view.batch_data_source
+            for view in set(self.feature_views.values())
+        } | {
+            FeatureLocation.model(model.name).identifier: model.predictions_view.source
+            for model in set(self.models.values())
+            if model.predictions_view.source is not None
+        }
+        return FeatureStore(
+            feature_views=self.feature_views,
+            combined_feature_views=self.combined_feature_views,
+            models=self.models,
+            feature_source=BatchFeatureSource(sources=sources)
+        )
+
     def model_features_for(self, view_name: str) -> set[str]:
         all_model_features: set[str] = set()
         for model in self.models.values():
@@ -469,13 +527,41 @@ class FeatureStore:
             )
         return all_model_features
 
-    def views_with_batch_source(self, source: BatchDataSource) -> list[FeatureViewStore]:
-        encoded_source = source.to_dict()
-        views: list[FeatureViewStore] = []
-        for view_name, view in self.feature_views.items():
-            encoded_view_source = view.batch_data_source.to_dict()
-            if encoded_source == encoded_view_source:
-                views.append(self.feature_view(view_name))
+    def views_with_config(self, config: Any) -> list[SourceRequest]:
+        """
+        Returns the feature views where the config match.
+
+        ```python
+        source = PostgreSQLConfig(env_var='SOURCE_URL')
+        store.views_with_conifg(source)
+        ```
+
+        Args:
+            config (Any): The config to find views for
+
+        Returns:
+            list[SourceRequest]: A list of data sources, the request and it's location
+        """
+        views: list[SourceRequest] = []
+        for view in self.feature_views.values():
+            request = view.request_all.needed_requests[0]
+            if view.batch_data_source.contains_config(config):
+                views.append(
+                    SourceRequest(
+                        FeatureLocation.feature_view(view.name),
+                        view.batch_data_source,
+                        request
+                    )
+                )
+
+            if view.application_source and view.application_source.contains_config(config):
+                views.append(
+                    SourceRequest(
+                        FeatureLocation.feature_view(view.name),
+                        view.application_source,
+                        request
+                    )
+                )
         return views
 
 
@@ -956,3 +1042,6 @@ class FeatureViewStore:
 
         with feature_view_write_time.labels(self.view.name).time():
             await self.source.write(job, job.retrival_requests)
+
+    async def validate_source(self) -> None:
+        row = await self.view.batch_data_source.all_data(self.request, limit=1).to_polars()

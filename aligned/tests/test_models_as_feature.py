@@ -26,7 +26,7 @@ class First(ModelContract):
     view = View()
     other = OtherView()
 
-    metadata = ModelContract.metadata_with('test_model', '', features=[view.feature_a, other.feature_b])
+    metadata = ModelContract.metadata_with('test_model', features=[view.feature_a, other.feature_b])
 
     target = other.is_true.as_classification_label()
 
@@ -35,7 +35,7 @@ class Second(ModelContract):
 
     first = First()
 
-    metadata = ModelContract.metadata_with('second_model', '', features=[first.target])
+    metadata = ModelContract.metadata_with('second_model', features=[first.target])
 
 
 def test_model_referenced_as_feature() -> None:

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING
 from dataclasses import dataclass, field
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 
@@ -7,6 +7,7 @@ import polars as pl
 from logging import getLogger
 
 from aligned.retrival_job import RetrivalJob
+from aligned.sources.redshift import RedshiftSQLConfig
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -109,23 +110,9 @@ def redshift_table_fetch(fetch: TableFetch, distinct: str | None = None) -> str:
 
 
 @dataclass
-class SqlJob(RetrivalJob):
-    """
-    Makes a generic sql query to the database to fetch some data.
+class RedshiftSqlJob(RetrivalJob):
 
-    The connection_uri is a callable to make it lazely evaluated.
-
-    ```python
-    job = SqlJob(
-        connection_uri=lambda: config.url,
-        query="SELECT * FROM my_table",
-        requests=[RetrivalRequest(...)]
-    )
-    data = job.to_polars()
-    ```
-    """
-
-    connection_uri: Callable[[], str]
+    config: RedshiftSQLConfig
     query: str
     requests: list[RetrivalRequest]
 
@@ -142,13 +129,12 @@ class SqlJob(RetrivalJob):
 
     async def to_polars(self) -> pl.LazyFrame:
         try:
-            return pl.read_sql(self.query, self.connection_uri()).lazy()
+            return pl.read_sql(self.query, self.config.url).lazy()
         except Exception as e:
             logger.error(f'Error running query: {self.query}')
             logger.error(f'Error: {e}')
             raise e
 
     def describe(self) -> str:
-        return f'SQL Job: \n{self.query}\n'
-
+        return f'RedshiftSql Job: \n{self.query}\n'
 

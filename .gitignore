@@ -2,6 +2,8 @@
 .pg/*
 .DS_STORE
 
+test_data/feature-store.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

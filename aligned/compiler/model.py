@@ -13,6 +13,7 @@ from aligned.compiler.feature_factory import (
     FeatureReferencable,
     RegressionLabel,
     TargetProbability,
+    ModelVersion
 )
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
@@ -69,11 +70,12 @@ class ModelMetedata:
 
 
 class ModelContract(ABC):
+
     @staticmethod
     def metadata_with(
         name: str,
-        description: str,
         features: list[FeatureReferencable],
+        description: str | None = None,
         contacts: list[str] | None = None,
         tags: dict[str, str] | None = None,
         predictions_source: BatchDataSource | None = None,
@@ -93,17 +95,36 @@ class ModelContract(ABC):
 
     @abstractproperty
     def metadata(self) -> ModelMetedata:
-        pass
+        raise NotImplementedError()
 
     @classmethod
     def compile(cls) -> ModelSchema:
-        var_names = [name for name in cls().__dir__() if not name.startswith('_')]
-        metadata = cls().metadata
+        return cls().compile_instance()
+
+    def compile_instance(self) -> ModelSchema:
+        """
+        Compiles the ModelContract in to ModelSchema structure that can further be encoded.
+
+        ```python
+        class MyModel(ModelContract):
+            ...
+
+            metadata = ModelContract.metadata_with(...)
+
+        model_schema = MyModel().compile_instance()
+
+        ```
+
+        Returns: The compiled Model schema
+        """
+        var_names = [name for name in self.__dir__() if not name.startswith('_')]
+        metadata = self.metadata
 
         inference_view: PredictionsView = PredictionsView(
             entities=set(),
             features=set(),
             derived_features=set(),
+            model_version_column=None,
             source=metadata.predictions_source,
             stream_source=metadata.predictions_stream,
             classification_targets=set(),
@@ -115,11 +136,13 @@ class ModelContract(ABC):
         regression_targets: dict[str, RegressionTargetSchema] = {}
 
         for var_name in var_names:
-            feature = getattr(cls, var_name)
+            feature = getattr(self, var_name)
 
             if isinstance(feature, FeatureFactory):
                 feature._location = FeatureLocation.model(metadata.name)
 
+            if isinstance(feature, ModelVersion):
+                inference_view.model_version_column = feature.feature()
             if isinstance(feature, FeatureView):
                 compiled = feature.compile()
                 inference_view.entities.update(compiled.entities)
@@ -189,7 +212,7 @@ class ModelContract(ABC):
             )
             inference_view.derived_features.add(arg_max_feature)
 
-        if not probability_features:
+        if not probability_features and inference_view.classification_targets:
             inference_view.features.update(
                 {target.feature for target in inference_view.classification_targets}
             )

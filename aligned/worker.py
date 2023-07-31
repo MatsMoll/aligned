@@ -43,7 +43,7 @@ class StreamWorker:
 
     feature_store_reference: StorageFileReference
     sink_source: WritableFeatureSource
-    views_to_process: set[str]
+    views_to_process: set[str] | None = field(default=None)
     should_prune_unused_features: bool = field(default=False)
     active_learning_configs: list[ActiveLearningConfig] = field(default_factory=list)
     metric_logging_port: int | None = field(default=None)

@@ -30,6 +30,7 @@ class FeatureViewMetadata:
     description: str
     batch_source: BatchDataSource
     stream_source: StreamDataSource | None = field(default=None)
+    application_source: BatchDataSource | None = field(default=None)
     contacts: list[str] | None = field(default=None)
     tags: dict[str, str] = field(default_factory=dict)
 
@@ -41,6 +42,7 @@ class FeatureViewMetadata:
             tags=view.tags,
             batch_source=view.batch_data_source,
             stream_source=view.stream_data_source,
+            application_source=view.application_source
         )
 
 
@@ -61,6 +63,7 @@ class FeatureView(ABC):
         description: str,
         batch_source: BatchDataSource,
         stream_source: StreamDataSource | None = None,
+        application_source: BatchDataSource | None = None,
         contacts: list[str] | None = None,
         tags: dict[str, str] | None = None,
     ) -> FeatureViewMetadata:
@@ -71,6 +74,7 @@ class FeatureView(ABC):
             description,
             batch_source,
             stream_source or HttpStreamSource(name),
+            application_source=application_source,
             contacts=contacts,
             tags=tags or {},
         )
@@ -99,6 +103,7 @@ class FeatureView(ABC):
             aggregated_features=set(),
             event_timestamp=None,
             stream_data_source=metadata.stream_source,
+            application_source=metadata.application_source,
             indexes=[],
         )
         aggregations: list[FeatureFactory] = []

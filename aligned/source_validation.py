@@ -1,7 +1,7 @@
-from aligned.feature_store import FeatureViewStore
+from aligned.feature_store import SourceRequest, FeatureLocation
 
 
-async def validate_sources_in(views: list[FeatureViewStore]) -> dict[str, bool]:
+async def validate_sources_in(views: list[SourceRequest]) -> dict[FeatureLocation, bool]:
     """Validateds if the sources can fulfill the needs required by the feature views
     Therefore, this means that the views get their "core features".
 
@@ -21,14 +21,13 @@ async def validate_sources_in(views: list[FeatureViewStore]) -> dict[str, bool]:
         dict[str, bool]: A dict containing the feature view name and if the source full fill the need
     """
 
-    results: dict[str, bool] = {}
+    results: dict[FeatureLocation, bool] = {}
 
     for view in views:
         try:
-            view.feature_filter = set(view.request.feature_names)
-            _ = await view.all(limit=1).to_polars()
-            results[view.name] = True
+            _ = (await view.source.all_data(view.request, limit=1).to_polars()).collect()
+            results[view.location] = True
         except Exception:
-            results[view.name] = False
+            results[view.location] = False
 
     return results

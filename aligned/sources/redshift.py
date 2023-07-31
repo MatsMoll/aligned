@@ -2,20 +2,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Callable
+from typing import Callable, Any
 
 from aligned import RedisConfig
 from aligned.compiler.model import EntityDataSource, SqlEntityDataSource
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.enricher import Enricher
 from aligned.request.retrival_request import RetrivalRequest
-from aligned.retrival_job import DateRangeJob, FullExtractJob, RetrivalJob
+from aligned.retrival_job import RetrivalJob
 from aligned.schemas.codable import Codable
 from aligned.sources.psql import PostgreSQLConfig, PostgreSQLDataSource
 
 
 @dataclass
-class RedshiftListReference:
+class RedshiftListReference(Codable):
     """
     A class representing a one to many relationship.
     This can simulate how a list datatype
@@ -97,16 +97,19 @@ class RedshiftSQLDataSource(BatchDataSource, ColumnFeatureMappable):
     def job_group_key(self) -> str:
         return self.config.env_var
 
+    def contains_config(self, config: Any) -> bool:
+        return isinstance(config, RedshiftSQLConfig) and config.env_var == self.config.env_var
+
     def __hash__(self) -> int:
         return hash(self.table)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         from aligned.psql.jobs import build_full_select_query_psql
-        from aligned.redshift.sql_job import SqlJob
+        from aligned.redshift.sql_job import RedshiftSqlJob
 
         source = PostgreSQLDataSource(self.config.psql_config, self.table, self.mapping_keys)
-        return SqlJob(
-            connection_uri=lambda: self.config.url,
+        return RedshiftSqlJob(
+            config=self.config,
             query=build_full_select_query_psql(source, request, limit),
             requests=[request]
         )
@@ -114,12 +117,12 @@ class RedshiftSQLDataSource(BatchDataSource, ColumnFeatureMappable):
     def all_between_dates(
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime
     ) -> RetrivalJob:
-        from aligned.redshift.sql_job import SqlJob
+        from aligned.redshift.sql_job import RedshiftSqlJob
         from aligned.psql.jobs import build_date_range_query_psql
 
         source = PostgreSQLDataSource(self.config.psql_config, self.table, self.mapping_keys)
-        return SqlJob(
-            connection_uri=lambda: self.config.url,
+        return RedshiftSqlJob(
+            config=self.config,
             query=build_date_range_query_psql(source, request, start_date, end_date),
             requests=[request]
         )

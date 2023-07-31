@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypeVar, Any
 
 from mashumaro.types import SerializableType
 
@@ -12,7 +12,7 @@ from aligned.schemas.feature import Feature
 if TYPE_CHECKING:
     from aligned.compiler.feature_factory import FeatureFactory
     from aligned.request.retrival_request import RetrivalRequest
-    from aligned.retrival_job import DateRangeJob, FullExtractJob, RetrivalJob
+    from aligned.retrival_job import RetrivalJob
 
 
 class BatchDataSourceFactory:
@@ -69,6 +69,34 @@ class BatchDataSource(ABC, Codable, SerializableType):
 
     def __hash__(self) -> int:
         return hash(self.job_group_key())
+
+    def contains_config(self, config: Any) -> bool:
+        """
+        Checks if a data source contains a source config.
+        This can be used to select different sources based on the data sources to connect to.
+
+        ```
+        config = PostgreSQLConfig(env_var='MY_APP_DB_URL')
+        source = config.table('my_table')
+
+        print(source.contains_config(config))
+        >> True
+
+        store = await FileSource.json_at("features.json").feature_store()
+        views = store.views_with_config(config)
+        print(len(views))
+        >> 3
+        ```
+
+        Args:
+            config: The config to check for
+
+        Returns:
+            bool: If the config is contained in the source
+        """
+        if isinstance(config, BatchDataSource):
+            return config.to_dict() == self.to_dict()
+        return False
 
     @classmethod
     def _deserialize(cls, value: dict) -> BatchDataSource:

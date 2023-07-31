@@ -1,13 +1,9 @@
 from os import environ
-from typing import TYPE_CHECKING
 
 import pytest
 
 from aligned import FeatureStore, FeatureView, PostgreSQLConfig
-
-if TYPE_CHECKING:
-    from conftest import DataTest
-
+from conftest import DataTest
 
 @pytest.mark.asyncio
 async def test_postgresql(point_in_time_data_test: DataTest) -> None:
