@@ -7,7 +7,7 @@ import pandas as pd
 import polars as pl
 
 from aligned.psql.jobs import PostgreSqlJob
-from aligned.redshift.sql_job import TableFetch, SqlColumn
+from aligned.redshift.sql_job import SqlColumn, TableFetch
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.retrival_job import FactualRetrivalJob, RetrivalJob
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, DerivedFeature

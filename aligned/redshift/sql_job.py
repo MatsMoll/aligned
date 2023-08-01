@@ -1,11 +1,12 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
-from dataclasses import dataclass, field
-from aligned.request.retrival_request import RequestResult, RetrivalRequest
 
-import polars as pl
+from dataclasses import dataclass, field
 from logging import getLogger
 
+import polars as pl
+
+from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.retrival_job import RetrivalJob
 from aligned.sources.redshift import RedshiftSQLConfig
 
