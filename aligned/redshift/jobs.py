@@ -13,7 +13,7 @@ from aligned.retrival_job import FactualRetrivalJob, RetrivalJob
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, DerivedFeature
 from aligned.schemas.feature import FeatureLocation, FeatureType
 from aligned.schemas.transformation import RedshiftTransformation
-from aligned.sources.psql import PostgreSQLConfig, PostgreSQLDataSource
+from aligned.sources.redshift import RedshiftSQLConfig, RedshiftSQLDataSource
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class FactRedshiftJob(FactualRetrivalJob):
     NB: It is expected that the data sources are for the same psql instance
     """
 
-    sources: dict[FeatureLocation, PostgreSQLDataSource]
+    sources: dict[FeatureLocation, RedshiftSQLDataSource]
     requests: list[RetrivalRequest]
     facts: RetrivalJob
 
@@ -56,7 +56,7 @@ class FactRedshiftJob(FactualRetrivalJob):
         return self.requests
 
     @property
-    def config(self) -> PostgreSQLConfig:
+    def config(self) -> RedshiftSQLConfig:
         return list(self.sources.values())[0].config
 
     async def to_pandas(self) -> pd.DataFrame:
@@ -69,12 +69,12 @@ class FactRedshiftJob(FactualRetrivalJob):
 
     async def psql_job(self) -> PostgreSqlJob:
         if isinstance(self.facts, PostgreSqlJob):
-            return PostgreSqlJob(self.config, self.build_sql_entity_query(self.facts))
+            return PostgreSqlJob(self.config.psql_config, self.build_sql_entity_query(self.facts))
         raise ValueError(f'Redshift only support SQL entity queries. Got: {self.facts}')
 
     def describe(self) -> str:
         if isinstance(self.facts, PostgreSqlJob):
-            return PostgreSqlJob(self.config, self.build_sql_entity_query(self.facts)).describe()
+            return PostgreSqlJob(self.config.psql_config, self.build_sql_entity_query(self.facts)).describe()
         raise ValueError(f'Redshift only support SQL entity queries. Got: {self.facts}')
 
     def dtype_to_sql_type(self, dtype: object) -> str:
@@ -95,13 +95,14 @@ class FactRedshiftJob(FactualRetrivalJob):
         source = self.sources[request.location]
 
         entity_selects = {f'{self.entity_table_name}.{entity}' for entity in request.entity_names}
-        field_selects = request.all_required_feature_names.union(entity_selects).union(
+        field_selects = list(request.all_required_feature_names.union(entity_selects).union(
             {f'{self.entity_table_name}.row_id'}
-        )
+        ))
         field_identifiers = source.feature_identifier_for(field_selects)
         selects = {
             SqlColumn(db_field_name, feature)
             for feature, db_field_name in zip(field_selects, field_identifiers)
+            if feature not in source.list_references
         }
 
         entities = list(request.entity_names)
@@ -123,12 +124,34 @@ class FactRedshiftJob(FactualRetrivalJob):
         if event_timestamp_clause:
             join_conditions.append(event_timestamp_clause)
 
+        join_tables: list[tuple[TableFetch, str]] = []
+        if source.list_references:
+            for feature_name, reference in source.list_references.items():
+                if feature_name not in request.all_feature_names:
+                    continue
+                selects.add(SqlColumn(feature_name, feature_name))
+                table_id = f"{feature_name}_list"
+                source_id_column = reference.join_column or list(request.entity_names)[0]
+                column = f"split_to_array(listagg({reference.value_column}, ','), ',')"
+                join_table = TableFetch(
+                    name=table_id,
+                    id_column=source_id_column,
+                    table=reference.table_name,
+                    schema=reference.table_schema,
+                    columns={SqlColumn(reference.id_column, reference.id_column), SqlColumn(column, feature_name)},
+                    group_by=[reference.id_column]
+                )
+                table_join_condition = f'{table_id}.{reference.id_column} = ta.{source_id_column}'
+                join_tables.append((join_table, table_join_condition))
+
+
         rename_fetch = TableFetch(
             name=f'{request.name}_cte',
             id_column='row_id',
             table=source.table,
             columns=selects,
             joins=join_conditions,
+            join_tables=join_tables,
             order_by=sort_query,
             schema=self.config.schema,
         )

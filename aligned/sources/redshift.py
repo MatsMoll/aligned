@@ -25,6 +25,7 @@ class RedshiftListReference(Codable):
     table_name: str
     value_column: str
     id_column: str
+    join_column: str | None = None
 
 
 @dataclass
@@ -47,7 +48,8 @@ class RedshiftSQLConfig(Codable):
     def from_url(url: str) -> RedshiftSQLConfig:
         import os
 
-        os.environ['REDSHIFT_DATABASE'] = url.replace('redshift:', 'postgresql:')
+        if 'REDSHIFT_DATABASE' not in os.environ:
+            os.environ['REDSHIFT_DATABASE'] = url.replace('redshift:', 'postgresql:')
         return RedshiftSQLConfig(env_var='REDSHIFT_DATABASE')
 
     def table(
@@ -138,7 +140,7 @@ class RedshiftSQLDataSource(BatchDataSource, ColumnFeatureMappable):
         from aligned.redshift.jobs import FactRedshiftJob
 
         return FactRedshiftJob(
-            sources={request.location: source.to_psql_source() for source, request in requests},
+            sources={request.location: source for source, request in requests},
             requests=[request for _, request in requests],
             facts=facts,
         )

@@ -54,6 +54,7 @@ class TableFetch:
     columns: set[SqlColumn]
     schema: str | None = field(default=None)
     joins: list[str] = field(default_factory=list)
+    join_tables: list[tuple[TableFetch, str]] = field(default_factory=list)
     conditions: list[str] = field(default_factory=list)
     group_by: list[str] = field(default_factory=list)
     order_by: str | None = field(default=None)
@@ -61,6 +62,40 @@ class TableFetch:
     def sql_query(self, distinct: str | None = None) -> str:
         return redshift_table_fetch(self, distinct)
 
+def select_table(table: TableFetch) -> str:
+    if isinstance(table.table, TableFetch):
+        raise ValueError("Do not support TableFetch in this select")
+    wheres = ''
+    order_by = ''
+    group_by = ''
+    from_table = 'FROM '
+    
+    columns = [
+        col.sql_select for col in table.columns
+    ]
+    select = f'SELECT {",".join(columns)}'
+
+    if table.conditions:
+        wheres = 'WHERE ' + ' AND '.join(table.conditions)
+
+    if table.order_by:
+        order_by = 'ORDER BY ' + table.order_by
+
+    if table.group_by:
+        group_by = 'GROUP BY ' + ', '.join(table.group_by)
+
+    if table.schema:
+        from_table += f'{table.schema}.'
+
+    from_table += f'"{table.table}"'
+
+    return f"""
+    {select}
+    {from_table}
+    {wheres}
+    {order_by}
+    {group_by}
+    """
 
 def redshift_table_fetch(fetch: TableFetch, distinct: str | None = None) -> str:
     wheres = ''
@@ -86,6 +121,13 @@ def redshift_table_fetch(fetch: TableFetch, distinct: str | None = None) -> str:
         schema = f'{fetch.schema}.' if fetch.schema else ''
         from_sql = f"""FROM entities
     LEFT JOIN {schema}"{ fetch.table }" ta ON { ' AND '.join(fetch.joins) }"""
+        if fetch.join_tables:
+            for join_table, join_condition in fetch.join_tables:
+                from_sql += f"""
+                LEFT JOIN (
+                    {select_table(join_table)}
+                ) AS {join_table.name} ON {join_condition}
+                """
 
     if distinct:
         aliases = [col.alias for col in fetch.columns]
