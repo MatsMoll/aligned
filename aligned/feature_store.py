@@ -24,7 +24,7 @@ from aligned.feature_view.combined_view import CombinedFeatureView, CompiledComb
 from aligned.feature_view.feature_view import FeatureView
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import FilterJob, RetrivalJob, StreamAggregationJob, SupervisedJob
-from aligned.schemas.feature import FeatureLocation
+from aligned.schemas.feature import FeatureLocation, Feature
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.model import EventTrigger
 from aligned.schemas.model import Model as ModelSchema
@@ -578,6 +578,9 @@ class ModelFeatureStore:
             RawStringFeatureRequest(self.raw_string_features(except_features or set()))
         )
 
+    def needed_entities(self) -> set[Feature]:
+        return self.request().request_result.entities
+
     def features_for(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
         """Returns the features for the given entities
 
@@ -1038,5 +1041,3 @@ class FeatureViewStore:
         with feature_view_write_time.labels(self.view.name).time():
             await self.source.write(job, job.retrival_requests)
 
-    async def validate_source(self) -> None:
-        row = await self.view.batch_data_source.all_data(self.request, limit=1).to_polars()

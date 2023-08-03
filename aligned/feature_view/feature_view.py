@@ -31,6 +31,7 @@ class FeatureViewMetadata:
     batch_source: BatchDataSource
     stream_source: StreamDataSource | None = field(default=None)
     application_source: BatchDataSource | None = field(default=None)
+    staging_source: BatchDataSource | None = field(default=None)
     contacts: list[str] | None = field(default=None)
     tags: dict[str, str] = field(default_factory=dict)
 
@@ -43,6 +44,7 @@ class FeatureViewMetadata:
             batch_source=view.batch_data_source,
             stream_source=view.stream_data_source,
             application_source=view.application_source,
+            staging_source=view.staging_source,
         )
 
 
@@ -55,7 +57,7 @@ class FeatureView(ABC):
 
     @abstractproperty
     def metadata(self) -> FeatureViewMetadata:
-        pass
+        raise NotImplementedError()
 
     @staticmethod
     def metadata_with(
@@ -64,6 +66,7 @@ class FeatureView(ABC):
         batch_source: BatchDataSource,
         stream_source: StreamDataSource | None = None,
         application_source: BatchDataSource | None = None,
+        staging_source: BatchDataSource | None = None,
         contacts: list[str] | None = None,
         tags: dict[str, str] | None = None,
     ) -> FeatureViewMetadata:
@@ -75,6 +78,7 @@ class FeatureView(ABC):
             batch_source,
             stream_source or HttpStreamSource(name),
             application_source=application_source,
+            staging_source=staging_source,
             contacts=contacts,
             tags=tags or {},
         )

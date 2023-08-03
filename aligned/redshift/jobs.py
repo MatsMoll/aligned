@@ -95,9 +95,11 @@ class FactRedshiftJob(FactualRetrivalJob):
         source = self.sources[request.location]
 
         entity_selects = {f'{self.entity_table_name}.{entity}' for entity in request.entity_names}
-        field_selects = list(request.all_required_feature_names.union(entity_selects).union(
-            {f'{self.entity_table_name}.row_id'}
-        ))
+        field_selects = list(
+            request.all_required_feature_names.union(entity_selects).union(
+                {f'{self.entity_table_name}.row_id'}
+            )
+        )
         field_identifiers = source.feature_identifier_for(field_selects)
         selects = {
             SqlColumn(db_field_name, feature)
@@ -130,20 +132,22 @@ class FactRedshiftJob(FactualRetrivalJob):
                 if feature_name not in request.all_feature_names:
                     continue
                 selects.add(SqlColumn(feature_name, feature_name))
-                table_id = f"{feature_name}_list"
+                table_id = f'{feature_name}_list'
                 source_id_column = reference.join_column or list(request.entity_names)[0]
-                column = f"split_to_array(listagg({reference.value_column}, ','), ',')"
+                column = f"'[\"' || listagg({reference.value_column}, '\",\"') || '\"]'"
                 join_table = TableFetch(
                     name=table_id,
                     id_column=source_id_column,
                     table=reference.table_name,
                     schema=reference.table_schema,
-                    columns={SqlColumn(reference.id_column, reference.id_column), SqlColumn(column, feature_name)},
-                    group_by=[reference.id_column]
+                    columns={
+                        SqlColumn(reference.id_column, reference.id_column),
+                        SqlColumn(column, feature_name),
+                    },
+                    group_by=[reference.id_column],
                 )
                 table_join_condition = f'{table_id}.{reference.id_column} = ta.{source_id_column}'
                 join_tables.append((join_table, table_join_condition))
-
 
         rename_fetch = TableFetch(
             name=f'{request.name}_cte',
@@ -153,7 +157,7 @@ class FactRedshiftJob(FactualRetrivalJob):
             joins=join_conditions,
             join_tables=join_tables,
             order_by=sort_query,
-            schema=self.config.schema,
+            schema=source.config.schema,
         )
 
         derived_map = request.derived_feature_map()
@@ -397,8 +401,8 @@ class FactRedshiftJob(FactualRetrivalJob):
         all_entities_list.append('row_id')
 
         entity_query = (
-            f'SELECT {all_entities_str}, ROW_NUMBER() OVER (ORDER BY '
-            f'{list(request.entity_names)[0]}) AS row_id FROM ({sql_facts.query}) AS {self.entity_table_name}'
+            f'SELECT {all_entities_str}, ROW_NUMBER() OVER ()'
+            f'AS row_id FROM ({sql_facts.query}) AS {self.entity_table_name}'
         )
         joins = '\n    '.join(
             [
