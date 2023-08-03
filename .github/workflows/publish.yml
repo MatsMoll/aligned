@@ -8,6 +8,16 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14.3-alpine
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - '127.0.0.1:5432:5432'
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -33,8 +43,9 @@ jobs:
           poetry install --no-interaction --all-extras
         if: steps.cache-venv.outputs.cache-hit != 'true'
 
-
       - name: Run tests
+        env:
+          PSQL_DATABASE_TEST: postgresql://postgres:postgres@localhost:5432/postgres
         run: |
           source .venv/bin/activate
           pytest
