@@ -259,10 +259,7 @@ class PandasFunctionTransformation(Transformation):
             exec(self.code)
 
         loaded = locals()[self.function_name]
-        if asyncio.iscoroutinefunction(loaded):
-            return await loaded(df)
-        else:
-            return loaded(df)
+        return await loaded(df) if asyncio.iscoroutinefunction(loaded) else loaded(df)
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         pandas_df = df.collect().to_pandas()
@@ -307,10 +304,7 @@ class PandasLambdaTransformation(Transformation):
         import dill
 
         loaded = dill.loads(self.method)
-        if asyncio.iscoroutinefunction(loaded):
-            return await loaded(df)
-        else:
-            return loaded(df)
+        return await loaded(df) if asyncio.iscoroutinefunction(loaded) else loaded(df)
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
 
@@ -375,10 +369,7 @@ class PolarsLambdaTransformation(Transformation):
         import dill
 
         tran: Callable[[pl.LazyFrame, str], pl.LazyFrame] = dill.loads(self.method)
-        if isinstance(tran, pl.Expr):
-            return tran
-        else:
-            return tran(df, alias)
+        return tran if isinstance(tran, pl.Expr) else tran(df, alias)
 
 
 @dataclass

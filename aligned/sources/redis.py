@@ -204,7 +204,10 @@ class RedisSource(FeatureSource, WritableFeatureSource):
                         )
                     elif feature.dtype == FeatureType('').datetime:
                         expr = pl.col(feature.name).dt.timestamp('ms').cast(pl.Utf8).alias(feature.name)
-                    elif feature.dtype == FeatureType('').embedding or feature.dtype == FeatureType('').array:
+                    elif feature.dtype in [
+                        FeatureType('').embedding,
+                        FeatureType('').array,
+                    ]:
                         expr = pl.col(feature.name).apply(lambda x: x.to_numpy().tobytes())
 
                     request_data = request_data.with_columns(expr)
@@ -260,7 +263,7 @@ class RedisStreamSource(StreamDataSource, SinkableDataSource, ColumnFeatureMappa
                 expr = pl.col(feature.name).cast(pl.Int8, strict=False)
             elif feature.dtype == FeatureType('').datetime:
                 expr = pl.col(feature.name).dt.timestamp('ms')
-            elif feature.dtype == FeatureType('').embedding or feature.dtype == FeatureType('').array:
+            elif feature.dtype in [FeatureType('').embedding, FeatureType('').array]:
 
                 expr = pl.col(feature.name).apply(lambda x: x.to_numpy().tobytes())
 

@@ -208,7 +208,7 @@ class StreamWorker:
         if self.metric_logging_port:
             start_http_server(self.metric_logging_port)
 
-        if len(processes) == 0:
+        if not processes:
             raise ValueError('No processes to start')
 
         await asyncio.gather(*processes)

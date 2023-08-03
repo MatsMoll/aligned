@@ -276,12 +276,11 @@ class RetrivalJob(ABC):
         return self
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
-        if isinstance(location, str):
-            from aligned.sources.local import ParquetFileSource
-
-            return FileCachedJob(ParquetFileSource(location), self)
-        else:
+        if not isinstance(location, str):
             return FileCachedJob(location, self)
+        from aligned.sources.local import ParquetFileSource
+
+        return FileCachedJob(ParquetFileSource(location), self)
 
     def test_size(self, test_size: float, target_column: str) -> SupervisedTrainJob:
         return SupervisedJob(self, {target_column}).train_set(train_size=1 - test_size)
@@ -501,12 +500,11 @@ class ValidationJob(RetrivalJob, ModificationJob):
         return ValidationJob(self.job.with_subfeatures(), self.validator)
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
-        if isinstance(location, str):
-            from aligned.sources.local import ParquetFileSource
-
-            return FileCachedJob(ParquetFileSource(location), self)
-        else:
+        if not isinstance(location, str):
             return FileCachedJob(location, self)
+        from aligned.sources.local import ParquetFileSource
+
+        return FileCachedJob(ParquetFileSource(location), self)
 
     def remove_derived_features(self) -> RetrivalJob:
         return self.job.remove_derived_features()
@@ -590,20 +588,26 @@ class ValidateEntitiesJob(RetrivalJob, ModificationJob):
     async def to_pandas(self) -> pd.DataFrame:
         data = await self.job.to_pandas()
 
-        for request in self.retrival_requests:
-            if request.entity_names - set(data.columns):
-                return pd.DataFrame({})
-
-        return data
+        return next(
+            (
+                pd.DataFrame({})
+                for request in self.retrival_requests
+                if request.entity_names - set(data.columns)
+            ),
+            data,
+        )
 
     async def to_polars(self) -> pl.DataFrame:
         data = await self.job.to_polars()
 
-        for request in self.retrival_requests:
-            if request.entity_names - set(data.columns):
-                return pl.DataFrame({}).lazy()
-
-        return data
+        return next(
+            (
+                pl.DataFrame({}).lazy()
+                for request in self.retrival_requests
+                if request.entity_names - set(data.columns)
+            ),
+            data,
+        )
 
 
 @dataclass
@@ -692,11 +696,7 @@ class StreamAggregationJob(RetrivalJob, ModificationJob):
             return new_data
         except FileNotFoundError:
 
-            if filter_expr is not None:
-                window_data = data.filter(filter_expr)
-            else:
-                window_data = data
-
+            window_data = data.filter(filter_expr) if filter_expr is not None else data
             await checkpoint.write_polars(window_data.lazy())
             return window_data
 
@@ -772,8 +772,7 @@ class DataLoaderJob:
                 .filter(features_to_include_names)
             )
 
-            chunked_df = await chunked_job.to_polars()
-            yield chunked_df
+            yield await chunked_job.to_polars()
 
     async def to_pandas(self) -> AsyncIterator[pd.DataFrame]:
         async for chunk in self.to_polars():
@@ -999,7 +998,10 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
 
                 if feature.dtype == FeatureType('').datetime:
                     df[feature.name] = pd.to_datetime(df[feature.name], infer_datetime_format=True, utc=True)
-                elif feature.dtype == FeatureType('').datetime or feature.dtype == FeatureType('').string:
+                elif feature.dtype in [
+                    FeatureType('').datetime,
+                    FeatureType('').string,
+                ]:
                     continue
                 elif feature.dtype != FeatureType('').array:
 

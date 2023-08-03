@@ -17,10 +17,7 @@ class LiteralRetrivalJob(RetrivalJob):
 
     def __init__(self, df: pl.LazyFrame | pd.DataFrame, result: RequestResult) -> None:
         self.result = result
-        if isinstance(df, pd.DataFrame):
-            self.df = pl.from_pandas(df).lazy()
-        else:
-            self.df = df
+        self.df = pl.from_pandas(df).lazy() if isinstance(df, pd.DataFrame) else df
 
     @property
     def request_result(self) -> RequestResult:
@@ -54,14 +51,9 @@ class FileFullJob(FullExtractJob):
         if isinstance(self.source, ColumnFeatureMappable):
             request_features = self.source.feature_identifier_for(all_names)
 
-        df = df.rename(
-            columns={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)},
-        )
+        df = df.rename(columns=dict(zip(request_features, all_names)))
 
-        if self.limit and df.shape[0] > self.limit:
-            return df.iloc[: self.limit]
-        else:
-            return df
+        return df.iloc[: self.limit] if self.limit and df.shape[0] > self.limit else df
 
     def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
@@ -79,10 +71,7 @@ class FileFullJob(FullExtractJob):
         }
         df = df.rename(mapping=renames)
 
-        if self.limit:
-            return df.limit(self.limit)
-        else:
-            return df
+        return df.limit(self.limit) if self.limit else df
 
     async def to_pandas(self) -> pd.DataFrame:
         file = await self.source.read_pandas()
@@ -115,10 +104,7 @@ class FileDateJob(DateRangeJob):
         if isinstance(self.source, ColumnFeatureMappable):
             request_features = self.source.feature_identifier_for(all_names)
 
-        df.rename(
-            columns={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)},
-            inplace=True,
-        )
+        df.rename(columns=dict(zip(request_features, all_names)), inplace=True)
 
         event_timestamp_column = self.request.event_timestamp.name
         # Making sure it is in the correct format
@@ -140,9 +126,7 @@ class FileDateJob(DateRangeJob):
         if isinstance(self.source, ColumnFeatureMappable):
             request_features = self.source.feature_identifier_for(all_names)
 
-        df = df.rename(
-            mapping={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)}
-        )
+        df = df.rename(mapping=dict(zip(request_features, all_names)))
         event_timestamp_column = self.request.event_timestamp.name
 
         return df.filter(pl.col(event_timestamp_column).is_between(self.start_date, self.end_date))
@@ -241,12 +225,11 @@ class FileFactualJob(FactualRetrivalJob):
 
             feature_df = df.select(request_features)
 
-            renames = {
+            if renames := {
                 org_name: wanted_name
                 for org_name, wanted_name in zip(request_features, all_names)
                 if org_name != wanted_name
-            }
-            if renames:
+            }:
                 feature_df = feature_df.rename(renames)
 
             for entity in request.entities:
@@ -271,13 +254,11 @@ class FileFactualJob(FactualRetrivalJob):
 
             if request.event_timestamp:
                 field = request.event_timestamp.name
-                ttl = request.event_timestamp.ttl
-
                 if new_result.select(field).dtypes[0] == pl.Utf8():
                     new_result = new_result.with_columns(
                         pl.col(field).str.strptime(pl.Datetime, '%+').alias(field)
                     )
-                if ttl:
+                if ttl := request.event_timestamp.ttl:
                     ttl_request = (pl.col(field) <= pl.col(event_timestamp_col)) & (
                         pl.col(field) >= pl.col(event_timestamp_col) - ttl
                     )

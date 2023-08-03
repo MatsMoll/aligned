@@ -87,9 +87,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
             return pd.read_csv(
                 self.path, sep=self.csv_config.seperator, compression=self.csv_config.compression
             )
-        except FileNotFoundError:
-            raise UnableToFindFileException()
-        except HTTPStatusError:
+        except (FileNotFoundError, HTTPStatusError):
             raise UnableToFindFileException()
 
     async def to_polars(self) -> pl.LazyFrame:
@@ -211,9 +209,7 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
     async def read_pandas(self) -> pd.DataFrame:
         try:
             return pd.read_parquet(self.path)
-        except FileNotFoundError:
-            raise UnableToFindFileException()
-        except HTTPStatusError:
+        except (FileNotFoundError, HTTPStatusError):
             raise UnableToFindFileException()
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
@@ -277,10 +273,7 @@ class StorageFileSource(StorageFileReference):
 
     @property
     def storage(self) -> Storage:
-        if self.path.startswith('http'):
-            return HttpStorage()
-        else:
-            return FileStorage()
+        return HttpStorage() if self.path.startswith('http') else FileStorage()
 
     def __hash__(self) -> int:
         return hash(self.path)

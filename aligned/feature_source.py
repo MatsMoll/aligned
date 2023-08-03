@@ -83,7 +83,7 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
                 job = job.derive_features()
             jobs.append(job)
 
-        if len(combined_requests) > 0 or len(jobs) > 1:
+        if combined_requests or len(jobs) > 1:
             return CombineFactualJob(
                 jobs=jobs,
                 combined_requests=combined_requests,

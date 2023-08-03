@@ -31,10 +31,7 @@ def coro(func: Callable) -> Callable:
 
 def make_tzaware(t: datetime) -> datetime:
     """We assume tz-naive datetimes are UTC"""
-    if t.tzinfo is None:
-        return t.replace(tzinfo=utc)
-    else:
-        return t
+    return t.replace(tzinfo=utc) if t.tzinfo is None else t
 
 
 def load_envs(path: Path) -> None:
@@ -121,11 +118,7 @@ async def apply_command(repo_path: str, reference_file: str, env_file: str, igno
     load_envs(dir / env_file)
     sys.path.append(str(dir))
 
-    excludes = []
-
-    if ignore_path.is_file():
-        excludes = ignore_path.read_text().split('\n')
-
+    excludes = ignore_path.read_text().split('\n') if ignore_path.is_file() else []
     repo_ref = RepoReference('const', {'const': FileSource.json_at('./feature-store.json')})
     with suppress(ValueError):
         repo_ref = RepoReference.reference_object(dir, reference_file_path, obj)
@@ -388,18 +381,17 @@ async def profile(repo_path: str, reference_file: str, env_file: str, output: st
         )
         for feature in all_features:
 
-            data_slice = data_set[feature.name]
-
             reference = f'{feature_view_name}:{feature.name}'
 
+            data_slice = data_set[feature.name]
             if (not feature.dtype.is_numeric) or feature.dtype.name == 'bool':
                 unique_values = data_slice.unique()
                 filter_unique_nan_values = [
                     value
                     for value in unique_values
-                    if not (
-                        str(value).lower() == 'nan' or str(value).lower() == 'nat' or str(value) == '<NA>'
-                    )
+                    if str(value).lower() != 'nan'
+                    and str(value).lower() != 'nat'
+                    and str(value) != '<NA>'
                 ]
 
                 results.categorical_features[reference] = CategoricalFeatureSummary(

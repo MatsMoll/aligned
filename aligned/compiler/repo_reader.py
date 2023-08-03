@@ -54,7 +54,7 @@ def find_files(repo_path: Path, ignore_path: Path | None = None, file_extension:
         path.resolve()
         for path in repo_path.resolve().glob(f'**/*.{file_extension}')
         if path.is_file()
-        and '__init__.py' != path.name
+        and path.name != '__init__.py'
         and not any(part.startswith('.') for part in path.parts)
     }
     if ignore_path:
@@ -62,7 +62,7 @@ def find_files(repo_path: Path, ignore_path: Path | None = None, file_extension:
             path.resolve()
             for path in ignore_path.glob(f'**/*.{file_extension}')
             if path.is_file()
-            and '__init__.py' != path.name
+            and path.name != '__init__.py'
             and not any(part.startswith('.') for part in path.parts)
         }
         files -= ignore_files
