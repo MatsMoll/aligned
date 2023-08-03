@@ -10,7 +10,7 @@ from conftest import DataTest
 async def test_postgresql(point_in_time_data_test: DataTest) -> None:
 
     if 'PSQL_DATABASE_TEST' not in environ:
-        environ['PSQL_DATABASE_TEST'] = 'postgresql://postgres:postgres@localhost:5432/aligned-test'
+        environ['PSQL_DATABASE_TEST'] = 'postgresql://postgres:postgres@localhost:5433/aligned-test'
 
     psql_database = environ['PSQL_DATABASE_TEST']
 
@@ -19,7 +19,7 @@ async def test_postgresql(point_in_time_data_test: DataTest) -> None:
     for source in point_in_time_data_test.sources:
         view = source.view
         db_name = view.metadata.name
-        source.data.write_database(db_name, psql_database, if_exists='replace')
+        source.data.to_pandas().to_sql(db_name, psql_database, if_exists='replace')
 
         view.metadata = FeatureView.metadata_with(  # type: ignore
             name=view.metadata.name,
