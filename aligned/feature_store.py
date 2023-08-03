@@ -1040,4 +1040,3 @@ class FeatureViewStore:
 
         with feature_view_write_time.labels(self.view.name).time():
             await self.source.write(job, job.retrival_requests)
-
