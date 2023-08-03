@@ -2,210 +2,20 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
 
 import pandas as pd
 import polars as pl
 
 from aligned.psql.jobs import PostgreSqlJob
+from aligned.redshift.sql_job import SqlColumn, TableFetch
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
-from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
+from aligned.retrival_job import FactualRetrivalJob, RetrivalJob
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, DerivedFeature
 from aligned.schemas.feature import FeatureLocation, FeatureType
 from aligned.schemas.transformation import RedshiftTransformation
-from aligned.sources.psql import PostgreSQLConfig, PostgreSQLDataSource
+from aligned.sources.redshift import RedshiftSQLConfig, RedshiftSQLDataSource
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class SQLQuery:
-    sql: str
-
-
-@dataclass
-class SqlColumn:
-    selection: str
-    alias: str
-
-    @property
-    def sql_select(self) -> str:
-        if self.selection == self.alias:
-            return f'{self.selection}'
-        return f'{self.selection} AS "{self.alias}"'
-
-    def __hash__(self) -> int:
-        return hash(self.sql_select)
-
-
-@dataclass
-class SqlJoin:
-    table: str
-    conditions: list[str]
-
-
-@dataclass
-class TableFetch:
-    name: str
-    id_column: str
-    table: str | TableFetch
-    columns: set[SqlColumn]
-    schema: str | None = field(default=None)
-    joins: list[str] = field(default_factory=list)
-    conditions: list[str] = field(default_factory=list)
-    group_by: list[str] = field(default_factory=list)
-    order_by: str | None = field(default=None)
-
-    def sql_query(self, distinct: str | None = None) -> str:
-        # Select the core features
-        wheres = ''
-        order_by = ''
-        group_by = ''
-        select = 'SELECT'
-
-        if self.conditions:
-            wheres = 'WHERE ' + ' AND '.join(self.conditions)
-
-        if self.order_by:
-            order_by = 'ORDER BY ' + self.order_by
-
-        if self.group_by:
-            group_by = 'GROUP BY ' + ', '.join(self.group_by)
-
-        table_columns = [col.sql_select for col in self.columns]
-
-        if isinstance(self.table, TableFetch):
-            from_sql = f'FROM ({self.table.sql_query()}) as entities'
-        else:
-            schema = f'{self.schema}.' if self.schema else ''
-            from_sql = f"""FROM entities
-        LEFT JOIN {schema}"{ self.table }" ta ON { ' AND '.join(self.joins) }"""
-
-        if distinct:
-            aliases = [col.alias for col in self.columns]
-            return f"""
-            SELECT { ', '.join(aliases) }
-            FROM (
-        { select } { ', '.join(table_columns) },
-            ROW_NUMBER() OVER(
-                PARTITION BY entities.row_id
-                { order_by }
-            ) AS row_number
-            { from_sql }
-            { wheres }
-            { order_by }
-            { group_by }
-        ) AS entities
-        WHERE row_number = 1"""
-        else:
-            return f"""
-        { select } { ', '.join(table_columns) }
-        { from_sql }
-        { wheres }
-        { order_by }
-        { group_by }"""
-
-
-@dataclass
-class FullExtractPsqlJob(FullExtractJob):
-
-    source: PostgreSQLDataSource
-    request: RetrivalRequest
-    limit: int | None = None
-
-    @property
-    def request_result(self) -> RequestResult:
-        return RequestResult.from_request(self.request)
-
-    @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return [self.request]
-
-    @property
-    def config(self) -> PostgreSQLConfig:
-        return self.source.config
-
-    async def to_pandas(self) -> pd.DataFrame:
-        return await self.psql_job().to_pandas()
-
-    async def to_polars(self) -> pl.LazyFrame:
-        return await self.psql_job().to_polars()
-
-    def psql_job(self) -> PostgreSqlJob:
-        return PostgreSqlJob(self.config, self.build_request())
-
-    def build_request(self) -> str:
-
-        all_features = [
-            feature.name for feature in list(self.request.all_required_features.union(self.request.entities))
-        ]
-        sql_columns = self.source.feature_identifier_for(all_features)
-        columns = [
-            f'"{sql_col}" AS {alias}' if sql_col != alias else sql_col
-            for sql_col, alias in zip(sql_columns, all_features)
-        ]
-        column_select = ', '.join(columns)
-        schema = f'{self.config.schema}.' if self.config.schema else ''
-
-        limit_query = ''
-        if self.limit:
-            limit_query = f'LIMIT {int(self.limit)}'
-
-        f'SELECT {column_select} FROM {schema}"{self.source.table}" {limit_query}',
-
-
-@dataclass
-class DateRangePsqlJob(DateRangeJob):
-
-    source: PostgreSQLDataSource
-    start_date: datetime
-    end_date: datetime
-    request: RetrivalRequest
-
-    @property
-    def request_result(self) -> RequestResult:
-        return RequestResult.from_request(self.request)
-
-    @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return [self.request]
-
-    @property
-    def config(self) -> PostgreSQLConfig:
-        return self.source.config
-
-    async def to_pandas(self) -> pd.DataFrame:
-        return await self.psql_job().to_pandas()
-
-    async def to_polars(self) -> pl.LazyFrame:
-        return await self.psql_job().to_polars()
-
-    def psql_job(self) -> PostgreSqlJob:
-        return PostgreSqlJob(self.config, self.build_request())
-
-    def build_request(self) -> str:
-
-        if not self.request.event_timestamp:
-            raise ValueError('Event timestamp is needed in order to run a data range job')
-
-        event_timestamp_column = self.source.feature_identifier_for([self.request.event_timestamp.name])[0]
-        all_features = [
-            feature.name for feature in list(self.request.all_required_features.union(self.request.entities))
-        ]
-        sql_columns = self.source.feature_identifier_for(all_features)
-        columns = [
-            f'"{sql_col}" AS {alias}' if sql_col != alias else sql_col
-            for sql_col, alias in zip(sql_columns, all_features)
-        ]
-        column_select = ', '.join(columns)
-        schema = f'{self.config.schema}.' if self.config.schema else ''
-        start_date = self.start_date.strftime('%Y-%m-%d %H:%M:%S')
-        end_date = self.end_date.strftime('%Y-%m-%d %H:%M:%S')
-
-        return (
-            f'SELECT {column_select} FROM {schema}"{self.source.table}" WHERE'
-            f' {event_timestamp_column} BETWEEN \'{start_date}\' AND \'{end_date}\''
-        )
 
 
 @dataclass
@@ -231,7 +41,7 @@ class FactRedshiftJob(FactualRetrivalJob):
     NB: It is expected that the data sources are for the same psql instance
     """
 
-    sources: dict[FeatureLocation, PostgreSQLDataSource]
+    sources: dict[FeatureLocation, RedshiftSQLDataSource]
     requests: list[RetrivalRequest]
     facts: RetrivalJob
 
@@ -246,7 +56,7 @@ class FactRedshiftJob(FactualRetrivalJob):
         return self.requests
 
     @property
-    def config(self) -> PostgreSQLConfig:
+    def config(self) -> RedshiftSQLConfig:
         return list(self.sources.values())[0].config
 
     async def to_pandas(self) -> pd.DataFrame:
@@ -259,12 +69,12 @@ class FactRedshiftJob(FactualRetrivalJob):
 
     async def psql_job(self) -> PostgreSqlJob:
         if isinstance(self.facts, PostgreSqlJob):
-            return PostgreSqlJob(self.config, self.build_sql_entity_query(self.facts))
+            return PostgreSqlJob(self.config.psql_config, self.build_sql_entity_query(self.facts))
         raise ValueError(f'Redshift only support SQL entity queries. Got: {self.facts}')
 
     def describe(self) -> str:
         if isinstance(self.facts, PostgreSqlJob):
-            return PostgreSqlJob(self.config, self.build_sql_entity_query(self.facts)).describe()
+            return PostgreSqlJob(self.config.psql_config, self.build_sql_entity_query(self.facts)).describe()
         raise ValueError(f'Redshift only support SQL entity queries. Got: {self.facts}')
 
     def dtype_to_sql_type(self, dtype: object) -> str:
@@ -285,13 +95,16 @@ class FactRedshiftJob(FactualRetrivalJob):
         source = self.sources[request.location]
 
         entity_selects = {f'{self.entity_table_name}.{entity}' for entity in request.entity_names}
-        field_selects = request.all_required_feature_names.union(entity_selects).union(
-            {f'{self.entity_table_name}.row_id'}
+        field_selects = list(
+            request.all_required_feature_names.union(entity_selects).union(
+                {f'{self.entity_table_name}.row_id'}
+            )
         )
         field_identifiers = source.feature_identifier_for(field_selects)
         selects = {
             SqlColumn(db_field_name, feature)
             for feature, db_field_name in zip(field_selects, field_identifiers)
+            if feature not in source.list_references
         }
 
         entities = list(request.entity_names)
@@ -313,14 +126,38 @@ class FactRedshiftJob(FactualRetrivalJob):
         if event_timestamp_clause:
             join_conditions.append(event_timestamp_clause)
 
+        join_tables: list[tuple[TableFetch, str]] = []
+        if source.list_references:
+            for feature_name, reference in source.list_references.items():
+                if feature_name not in request.all_feature_names:
+                    continue
+                selects.add(SqlColumn(feature_name, feature_name))
+                table_id = f'{feature_name}_list'
+                source_id_column = reference.join_column or list(request.entity_names)[0]
+                column = f"'[\"' || listagg({reference.value_column}, '\",\"') || '\"]'"
+                join_table = TableFetch(
+                    name=table_id,
+                    id_column=source_id_column,
+                    table=reference.table_name,
+                    schema=reference.table_schema,
+                    columns={
+                        SqlColumn(reference.id_column, reference.id_column),
+                        SqlColumn(column, feature_name),
+                    },
+                    group_by=[reference.id_column],
+                )
+                table_join_condition = f'{table_id}.{reference.id_column} = ta.{source_id_column}'
+                join_tables.append((join_table, table_join_condition))
+
         rename_fetch = TableFetch(
             name=f'{request.name}_cte',
             id_column='row_id',
             table=source.table,
             columns=selects,
             joins=join_conditions,
+            join_tables=join_tables,
             order_by=sort_query,
-            schema=self.config.schema,
+            schema=source.config.schema,
         )
 
         derived_map = request.derived_feature_map()
@@ -564,8 +401,8 @@ class FactRedshiftJob(FactualRetrivalJob):
         all_entities_list.append('row_id')
 
         entity_query = (
-            f'SELECT {all_entities_str}, ROW_NUMBER() OVER (ORDER BY '
-            f'{list(request.entity_names)[0]}) AS row_id FROM ({sql_facts.query}) AS {self.entity_table_name}'
+            f'SELECT {all_entities_str}, ROW_NUMBER() OVER ()'
+            f'AS row_id FROM ({sql_facts.query}) AS {self.entity_table_name}'
         )
         joins = '\n    '.join(
             [

@@ -1,4 +1,4 @@
-from aligned import Bool, FeatureStore, FeatureView, FileSource, Int32, Model, String
+from aligned import Bool, FeatureStore, FeatureView, FileSource, Int32, ModelContract, String
 from aligned.schemas.feature import FeatureLocation
 
 
@@ -21,21 +21,21 @@ class OtherView(FeatureView):
     is_true = Bool()
 
 
-class First(Model):
+class First(ModelContract):
 
     view = View()
     other = OtherView()
 
-    metadata = Model.metadata_with('test_model', '', features=[view.feature_a, other.feature_b])
+    metadata = ModelContract.metadata_with('test_model', features=[view.feature_a, other.feature_b])
 
-    target = other.is_true.as_classification_target()
+    target = other.is_true.as_classification_label()
 
 
-class Second(Model):
+class Second(ModelContract):
 
     first = First()
 
-    metadata = Model.metadata_with('second_model', '', features=[first.target])
+    metadata = ModelContract.metadata_with('second_model', features=[first.target])
 
 
 def test_model_referenced_as_feature() -> None:

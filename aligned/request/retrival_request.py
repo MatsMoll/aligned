@@ -7,6 +7,13 @@ from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
 
 
 @dataclass
+class EventTimestampRequest(Codable):
+
+    event_timestamp: EventTimestamp
+    entity_column: str = field(default='event_timestamp')
+
+
+@dataclass
 class RetrivalRequest(Codable):
     """
     Describes all the information needed for a request to be successful.
@@ -21,7 +28,11 @@ class RetrivalRequest(Codable):
     features: set[Feature]
     derived_features: set[DerivedFeature]
     aggregated_features: set[AggregatedFeature] = field(default_factory=set)
-    event_timestamp: EventTimestamp | None = field(default=None)
+    event_timestamp_request: EventTimestampRequest | None = field(default=None)
+
+    @property
+    def event_timestamp(self) -> EventTimestamp | None:
+        return self.event_timestamp_request.event_timestamp if self.event_timestamp_request else None
 
     features_to_include: set[str] = field(default_factory=set)
 
@@ -34,6 +45,7 @@ class RetrivalRequest(Codable):
         derived_features: set[DerivedFeature],
         aggregated_features: set[AggregatedFeature] | None = None,
         event_timestamp: EventTimestamp | None = None,
+        entity_timestamp_columns: str | None = None,
         features_to_include: set[str] | None = None,
     ):
         self.name = name
@@ -42,7 +54,11 @@ class RetrivalRequest(Codable):
         self.features = features
         self.derived_features = derived_features
         self.aggregated_features = aggregated_features or set()
-        self.event_timestamp = event_timestamp
+        if event_timestamp:
+            self.event_timestamp_request = EventTimestampRequest(
+                event_timestamp=event_timestamp,
+                entity_column=entity_timestamp_columns or 'event_timestamp',
+            )
         self.features_to_include = features_to_include or self.all_feature_names
 
     def filter_features(self, feature_names: set[str]) -> 'RetrivalRequest':
@@ -179,7 +195,7 @@ class RetrivalRequest(Codable):
         return list(grouped_requests.values())
 
     @staticmethod
-    def unsafe_combine(requests: list['RetrivalRequest']) -> list['RetrivalRequest']:
+    def unsafe_combine(requests: list['RetrivalRequest']) -> 'RetrivalRequest':
 
         result_request = RetrivalRequest(
             name=requests[0].name,
@@ -328,6 +344,13 @@ class FeatureRequest(Codable):
     def without_event_timestamp(self, name_sufix: str | None = None) -> 'FeatureRequest':
         return FeatureRequest(
             location=self.location,
-            features_to_include=self.features_to_include,
+            features_to_include=self.features_to_include - {'event_timestamp'},
             needed_requests=[request.without_event_timestamp(name_sufix) for request in self.needed_requests],
+        )
+
+    def rename_entities(self, mappings: dict[str, str]) -> 'FeatureRequest':
+        return FeatureRequest(
+            location=self.location,
+            features_to_include=self.features_to_include,
+            needed_requests=[request.rename_entities(mappings) for request in self.needed_requests],
         )

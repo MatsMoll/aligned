@@ -17,6 +17,7 @@ except ModuleNotFoundError:
     StrictRedis = Redis
     ConnectionPool = Redis
 
+from aligned.data_source.batch_data_source import ColumnFeatureMappable
 from aligned.data_source.stream_data_source import SinkableDataSource, StreamDataSource
 from aligned.feature_source import FeatureSource, FeatureSourceFactory, WritableFeatureSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
@@ -220,12 +221,12 @@ class RedisSource(FeatureSource, WritableFeatureSource):
 
 
 @dataclass
-class RedisStreamSource(StreamDataSource, SinkableDataSource):
+class RedisStreamSource(StreamDataSource, SinkableDataSource, ColumnFeatureMappable):
 
     topic_name: str
     config: RedisConfig
 
-    mappings: dict[str, str] = field(default_factory=dict)
+    mapping_keys: dict[str, str] = field(default_factory=dict)
     record_coder: RecordCoder = field(default_factory=PassthroughRecordCoder)
 
     name: str = 'redis'
@@ -245,7 +246,7 @@ class RedisStreamSource(StreamDataSource, SinkableDataSource):
         )
 
     def map_values(self, mappings: dict[str, str]) -> RedisStreamSource:
-        self.mappings = self.mappings | mappings
+        self.mapping_keys = self.mapping_keys | mappings
         return self
 
     def make_redis_friendly(self, data: pl.LazyFrame, features: set[Feature]) -> pl.LazyFrame:

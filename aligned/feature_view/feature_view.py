@@ -17,6 +17,7 @@ from aligned.schemas.feature import FeatureLocation, FeatureReferance
 from aligned.schemas.feature_view import CompiledFeatureView
 
 if TYPE_CHECKING:
+    from aligned.compiler.feature_factory import FeatureFactory
     from aligned.feature_store import FeatureViewStore
 
 # Enables code compleation in the select method
@@ -29,6 +30,8 @@ class FeatureViewMetadata:
     description: str
     batch_source: BatchDataSource
     stream_source: StreamDataSource | None = field(default=None)
+    application_source: BatchDataSource | None = field(default=None)
+    staging_source: BatchDataSource | None = field(default=None)
     contacts: list[str] | None = field(default=None)
     tags: dict[str, str] = field(default_factory=dict)
 
@@ -40,6 +43,8 @@ class FeatureViewMetadata:
             tags=view.tags,
             batch_source=view.batch_data_source,
             stream_source=view.stream_data_source,
+            application_source=view.application_source,
+            staging_source=view.staging_source,
         )
 
 
@@ -52,7 +57,7 @@ class FeatureView(ABC):
 
     @abstractproperty
     def metadata(self) -> FeatureViewMetadata:
-        pass
+        raise NotImplementedError()
 
     @staticmethod
     def metadata_with(
@@ -60,6 +65,8 @@ class FeatureView(ABC):
         description: str,
         batch_source: BatchDataSource,
         stream_source: StreamDataSource | None = None,
+        application_source: BatchDataSource | None = None,
+        staging_source: BatchDataSource | None = None,
         contacts: list[str] | None = None,
         tags: dict[str, str] | None = None,
     ) -> FeatureViewMetadata:
@@ -70,19 +77,24 @@ class FeatureView(ABC):
             description,
             batch_source,
             stream_source or HttpStreamSource(name),
+            application_source=application_source,
+            staging_source=staging_source,
             contacts=contacts,
             tags=tags or {},
         )
 
     @classmethod
     def compile(cls) -> CompiledFeatureView:
+        return cls().compile_instance()
+
+    def compile_instance(self) -> CompiledFeatureView:
         from aligned.compiler.feature_factory import FeatureFactory
 
         # Used to deterministicly init names for hidden features
         hidden_features = 0
 
-        metadata = cls().metadata
-        var_names = [name for name in cls().__dir__() if not name.startswith('_')]
+        metadata = self.metadata
+        var_names = [name for name in self.__dir__() if not name.startswith('_')]
 
         view = CompiledFeatureView(
             name=metadata.name,
@@ -95,12 +107,13 @@ class FeatureView(ABC):
             aggregated_features=set(),
             event_timestamp=None,
             stream_data_source=metadata.stream_source,
+            application_source=metadata.application_source,
             indexes=[],
         )
         aggregations: list[FeatureFactory] = []
 
         for var_name in var_names:
-            feature = getattr(cls, var_name)
+            feature = getattr(self, var_name)
 
             if not isinstance(feature, FeatureFactory):
                 continue
@@ -175,7 +188,7 @@ class FeatureView(ABC):
                     raise Exception(
                         'Can only have one EventTimestamp for each'
                         ' FeatureViewDefinition. Check that this is the case for'
-                        f' {cls.__name__}'
+                        f' {type(self).__name__}'
                     )
                 view.features.add(compiled_feature)
                 view.event_timestamp = feature.event_timestamp()
@@ -221,6 +234,26 @@ class FeatureView(ABC):
 
     @classmethod
     def query(cls) -> FeatureViewStore:
+        """Makes it possible to query the feature view for features
+
+        ```python
+        class SomeView(FeatureView):
+
+            metadata = ...
+
+            id = Int32().as_entity()
+
+            a = Int32()
+            b = Int32()
+
+        data = await SomeView.query().features_for({
+            "id": [1, 2, 3],
+        }).to_pandas()
+        ```
+
+        Returns:
+            FeatureViewStore: Returns a queryable `FeatureViewStore` containing the feature view
+        """
         from aligned import FeatureStore
 
         self = cls()
@@ -229,6 +262,71 @@ class FeatureView(ABC):
         return store.feature_view(self.metadata.name)
 
     @classmethod
-    async def process(cls, data: list[dict] | dict[str, Any]) -> list[dict]:
+    async def process(cls, data: dict[str, list[Any]]) -> list[dict]:
         df = await cls.query().process_input(data).to_polars()
         return df.collect().to_dicts()
+
+    @staticmethod
+    def feature_view_code_template(
+        schema: dict[str, FeatureFactory], batch_source_code: str, view_name: str, imports: str | None = None
+    ) -> str:
+        """Setup the code needed to represent the data source as a feature view
+
+        ```python
+
+        source = FileSource.parquet_at("file.parquet")
+        schema = await source.schema()
+        FeatureView.feature_view_code_template(schema, batch_source_code=f"{source}", view_name="my_view")
+
+        >>> \"\"\"from aligned import FeatureView, String, Int64, Float
+
+        class MyView(FeatureView):
+
+            metadata = FeatureView.metadata_with(
+                name="titanic",
+                description="some description",
+                batch_source=FileSource.parquest("my_path.parquet")
+                stream_source=None,
+            )
+
+            Passenger_id = Int64()
+            Survived = Int64()
+            Pclass = Int64()
+            Name = String()
+            Sex = String()
+            Age = Float()
+            Sibsp = Int64()
+            Parch = Int64()
+            Ticket = String()
+            Fare = Float()
+            Cabin = String()
+            Embarked = String()\"\"\"
+        ```
+
+        Returns:
+            str: The code needed to setup a basic feature view
+        """
+        data_types: set[str] = set()
+        feature_code = ''
+        for name, dtype in schema.items():
+            type_name = dtype.__class__.__name__
+            data_types.add(type_name)
+            feature_code += f'{name} = {type_name}()\n    '
+
+        all_types = ', '.join(data_types)
+
+        return f"""
+from aligned import FeatureView, {all_types}
+{imports or ""}
+
+class MyView(FeatureView):
+
+    metadata = FeatureView.metadata_with(
+        name="{view_name}",
+        description="some description",
+        batch_source={batch_source_code}
+        stream_source=None,
+    )
+
+    {feature_code}
+    """

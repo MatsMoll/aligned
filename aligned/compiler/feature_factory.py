@@ -85,7 +85,7 @@ class EventTrigger:
 @dataclass
 class TargetProbability:
     of_value: Any
-    target: ClassificationTarget
+    target: ClassificationLabel
     _name: str | None = None
 
     def __hash__(self) -> int:
@@ -107,7 +107,7 @@ class FeatureReferencable:
 
 
 @dataclass
-class RegressionTarget(FeatureReferencable):
+class RegressionLabel(FeatureReferencable):
     feature: FeatureFactory
     event_trigger: EventTrigger | None = field(default=None)
     ground_truth_event: StreamDataSource | None = field(default=None)
@@ -124,17 +124,17 @@ class RegressionTarget(FeatureReferencable):
             raise ValueError('Missing location, can not create reference')
         return FeatureReferance(self._name, self._location, self.feature.dtype)
 
-    def listen_to_ground_truth_event(self, stream: StreamDataSource) -> RegressionTarget:
-        return RegressionTarget(
+    def listen_to_ground_truth_event(self, stream: StreamDataSource) -> RegressionLabel:
+        return RegressionLabel(
             feature=self.feature,
             event_trigger=self.event_trigger,
             ground_truth_event=stream,
         )
 
-    def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> RegressionTarget:
+    def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> RegressionLabel:
         assert when.dtype == FeatureType('').bool, 'A trigger needs a boolean condition'
 
-        return RegressionTarget(
+        return RegressionLabel(
             self.feature, EventTrigger(when, sink_to), ground_truth_event=self.ground_truth_event
         )
 
@@ -162,7 +162,7 @@ class RegressionTarget(FeatureReferencable):
 
 
 @dataclass
-class ClassificationTarget(FeatureReferencable):
+class ClassificationLabel(FeatureReferencable):
     feature: FeatureFactory
     event_trigger: EventTrigger | None = field(default=None)
     ground_truth_event: StreamDataSource | None = field(default=None)
@@ -179,17 +179,17 @@ class ClassificationTarget(FeatureReferencable):
             raise ValueError('Missing location, can not create reference')
         return FeatureReferance(self._name, self._location, self.feature.dtype)
 
-    def listen_to_ground_truth_event(self, stream: StreamDataSource) -> ClassificationTarget:
-        return ClassificationTarget(
+    def listen_to_ground_truth_event(self, stream: StreamDataSource) -> ClassificationLabel:
+        return ClassificationLabel(
             feature=self.feature,
             event_trigger=self.event_trigger,
             ground_truth_event=stream,
         )
 
-    def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> ClassificationTarget:
+    def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> ClassificationLabel:
         assert when.dtype == FeatureType('').bool, 'A trigger needs a boolean condition'
 
-        return ClassificationTarget(self.feature, EventTrigger(when, sink_to))
+        return ClassificationLabel(self.feature, EventTrigger(when, sink_to))
 
     def probability_of(self, value: Any) -> TargetProbability:
         """Define a value that will be the probability of a certain target class.
@@ -299,11 +299,11 @@ class FeatureFactory(FeatureReferencable):
             constraints=self.constraints,
         )
 
-    def as_classification_target(self) -> ClassificationTarget:
-        return ClassificationTarget(self)
+    def as_classification_label(self) -> ClassificationLabel:
+        return ClassificationLabel(self)
 
-    def as_regression_target(self) -> RegressionTarget:
-        return RegressionTarget(self)
+    def as_regression_label(self) -> RegressionLabel:
+        return RegressionLabel(self)
 
     def compile(self) -> DerivedFeature:
 
@@ -433,6 +433,14 @@ class FeatureFactory(FeatureReferencable):
         instance = Bool()
         instance.transformation = NotNullFactory(self)
         return instance
+
+
+class CouldBeModelVersion:
+    def as_model_Version(self) -> ModelVersion:
+        if isinstance(self, FeatureFactory):
+            return ModelVersion(self)
+
+        raise ValueError(f'{self} is not a feature factory, and can therefore not be a model version')
 
 
 class CouldBeEntityFeature:
@@ -733,7 +741,7 @@ class Float(ArithmeticFeature, DecimalOperations):
         return ArithmeticAggregation(self)
 
 
-class Int32(ArithmeticFeature, CouldBeEntityFeature):
+class Int32(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion):
     def copy_type(self) -> Int32:
         return Int32()
 
@@ -745,7 +753,7 @@ class Int32(ArithmeticFeature, CouldBeEntityFeature):
         return ArithmeticAggregation(self)
 
 
-class Int64(ArithmeticFeature, CouldBeEntityFeature):
+class Int64(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion):
     def copy_type(self) -> Int64:
         return Int64()
 
@@ -796,6 +804,7 @@ class StringValidatable(FeatureFactory):
 class String(
     CategoricalEncodableFeature,
     NumberConvertableFeature,
+    CouldBeModelVersion,
     CouldBeEntityFeature,
     LengthValidatable,
     StringValidatable,
@@ -888,6 +897,21 @@ class Json(FeatureFactory):
         return feature
 
 
+class ModelVersion(FeatureFactory):
+
+    _dtype: FeatureFactory
+
+    @property
+    def dtype(self) -> FeatureType:
+        return self._dtype.dtype
+
+    def __init__(self, dtype: FeatureFactory):
+        self._dtype = dtype
+
+    def aggregate(self) -> CategoricalAggregation:
+        return CategoricalAggregation(self)
+
+
 class Entity(FeatureFactory):
 
     _dtype: FeatureFactory
@@ -959,6 +983,26 @@ class Embedding(FeatureFactory):
             )
         )
         return self
+
+
+@dataclass
+class List(FeatureFactory):
+
+    sub_type: FeatureFactory
+
+    def copy_type(self) -> List:
+        return List(self.sub_type.copy_type())
+
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType('').array
+
+    def contains(self, value: Any) -> Bool:
+        from aligned.compiler.transformation_factory import ArrayContainsFactory
+
+        feature = Bool()
+        feature.transformation = ArrayContainsFactory(LiteralValue.from_value(value), self)
+        return feature
 
 
 class ImageUrl(StringValidatable):

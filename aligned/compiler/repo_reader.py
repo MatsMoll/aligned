@@ -82,7 +82,7 @@ class RepoReader:
     async def definition_from_path(repo_path: Path, excludes: list[str] | None = None) -> RepoDefinition:
 
         excluded_files: list[Path] = []
-        for exclude in excludes:
+        for exclude in excludes or []:
             excluded_files.extend(repo_path.resolve().glob(exclude))
 
         metadata = RepoMetadata(created_at=datetime.now(), name=repo_path.name, github_url=None)
@@ -121,7 +121,7 @@ class RepoReader:
                     )
                 else:
                     classes = super_classes_in(obj)
-                    if 'Model' in classes:
+                    if 'ModelContract' in classes:
                         repo.models.add(obj.compile())
                     elif 'FeatureView' in classes:
                         fv = obj.compile()

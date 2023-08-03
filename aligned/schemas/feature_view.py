@@ -26,6 +26,8 @@ class CompiledFeatureView(Codable):
 
     event_timestamp: EventTimestamp | None = field(default=None)
     stream_data_source: StreamDataSource | None = field(default=None)
+    application_source: BatchDataSource | None = field(default=None)
+    staging_source: BatchDataSource | None = field(default=None)
 
     event_triggers: set[EventTrigger] | None = field(default=None)
 
@@ -49,6 +51,8 @@ class CompiledFeatureView(Codable):
             assert isinstance(self.event_timestamp, EventTimestamp)
         if self.stream_data_source is not None:
             assert isinstance(self.stream_data_source, StreamDataSource)
+        if self.application_source is not None:
+            assert isinstance(self.application_source, BatchDataSource)
         if self.event_triggers is not None:
             for event_trigger in self.event_triggers:
                 assert isinstance(event_trigger, EventTrigger)
@@ -271,11 +275,13 @@ class CompiledCombinedFeatureView(Codable):
                         entities=request.entities,
                         features=set(),
                         derived_features=set(),
+                        aggregated_features=set(),
                         event_timestamp=request.event_timestamp,
                     )
                 current = dependent_views[request.location]
                 current.derived_features = current.derived_features.union(request.derived_features)
                 current.features = current.features.union(request.features)
+                current.aggregated_features = current.aggregated_features.union(request.aggregated_features)
                 dependent_views[request.location] = current
 
         dependent_views[self.name] = RetrivalRequest(  # Add the request we want
@@ -284,6 +290,7 @@ class CompiledCombinedFeatureView(Codable):
             entities=self.entity_features,
             features=set(),
             derived_features={feature for feature in self.features if feature.name in feature_names},
+            aggregated_features=set(),
             event_timestamp=None,
         )
 

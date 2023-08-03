@@ -78,7 +78,7 @@ class JsonRecordCoder(RecordCoder):
     def decode(self, records: list[dict]) -> list[dict]:
         import json
 
-        decoded = [json.loads(record[self.key]) for record in records]
+        decoded = [json.loads(record[self.key]) for record in records if self.key in record]
         return [record for record in decoded if isinstance(record, dict)]
 
     def encode(self, records: list[dict]) -> list[dict]:

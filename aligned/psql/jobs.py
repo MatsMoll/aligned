@@ -8,7 +8,7 @@ import pandas as pd
 import polars as pl
 
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
-from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
+from aligned.retrival_job import FactualRetrivalJob, RetrivalJob
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver
 from aligned.schemas.feature import FeatureLocation, FeatureType
 from aligned.schemas.transformation import PsqlTransformation
@@ -29,17 +29,21 @@ class SqlColumn:
 
     @property
     def sql_select(self) -> str:
-        selection = self.selection
-        # if not special operation e.g function. Then wrap in quotes
-        if not ('(' in selection or '-' in selection or '.' in selection or selection == '*'):
-            selection = f'"{self.selection}"'
-
-        if self.selection == self.alias:
-            return f'{selection}'
-        return f'{selection} AS "{self.alias}"'
+        return psql_select_column(self)
 
     def __hash__(self) -> int:
         return hash(self.sql_select)
+
+
+def psql_select_column(column: SqlColumn) -> str:
+    selection = column.selection
+    # if not special operation e.g function. Then wrap in quotes
+    if not ('(' in selection or '-' in selection or '.' in selection or ' ' in selection or selection == '*'):
+        selection = f'"{column.selection}"'
+
+    if column.selection == column.alias:
+        return f'{selection}'
+    return f'{selection} AS "{column.alias}"'
 
 
 @dataclass
@@ -60,33 +64,37 @@ class TableFetch:
     order_by: str | None = field(default=None)
 
     def sql_query(self, distinct: str | None = None) -> str:
-        # Select the core features
-        wheres = ''
-        order_by = ''
-        group_by = ''
-        select = 'SELECT'
+        return psql_table_fetch(self, distinct)
 
-        if distinct:
-            select = f'SELECT DISTINCT ON ({distinct})'
 
-        if self.conditions:
-            wheres = 'WHERE ' + ' AND '.join(self.conditions)
+def psql_table_fetch(fetch: TableFetch, distinct: str | None = None) -> str:
+    # Select the core features
+    wheres = ''
+    order_by = ''
+    group_by = ''
+    select = 'SELECT'
 
-        if self.order_by:
-            order_by = 'ORDER BY ' + self.order_by
+    if distinct:
+        select = f'SELECT DISTINCT ON ({distinct})'
 
-        if self.group_by:
-            group_by = 'GROUP BY ' + ', '.join(self.group_by)
+    if fetch.conditions:
+        wheres = 'WHERE ' + ' AND '.join(fetch.conditions)
 
-        table_columns = [col.sql_select for col in self.columns]
+    if fetch.order_by:
+        order_by = 'ORDER BY ' + fetch.order_by
 
-        if isinstance(self.table, TableFetch):
-            from_sql = f'FROM ({self.table.sql_query()}) as entities'
-        else:
-            from_sql = f"""FROM entities
-    LEFT JOIN "{ self.table }" ta ON { ' AND '.join(self.joins) }"""
+    if fetch.group_by:
+        group_by = 'GROUP BY ' + ', '.join(fetch.group_by)
 
-        return f"""
+    table_columns = [col.sql_select for col in fetch.columns]
+
+    if isinstance(fetch.table, TableFetch):
+        from_sql = f'FROM ({fetch.table.sql_query()}) as entities'
+    else:
+        from_sql = f"""FROM entities
+LEFT JOIN "{ fetch.table }" ta ON { ' AND '.join(fetch.joins) }"""
+
+    return f"""
     { select } { ', '.join(table_columns) }
     { from_sql }
     { wheres }
@@ -108,13 +116,20 @@ class PostgreSqlJob(RetrivalJob):
     def retrival_requests(self) -> list[RetrivalRequest]:
         return self.requests
 
+    def will_load_list_feature(self) -> bool:
+        for request in self.requests:
+            for feature in request.all_features:
+                if feature.dtype == FeatureType('').array:
+                    return True
+        return False
+
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.to_polars()
         return df.collect().to_pandas()
 
     async def to_polars(self) -> pl.LazyFrame:
         try:
-            return pl.read_sql(self.query, self.config.url).lazy()
+            return pl.read_database(self.query, self.config.url).lazy()
         except Exception as e:
             logger.error(f'Error running query: {self.query}')
             logger.error(f'Error: {e}')
@@ -124,109 +139,54 @@ class PostgreSqlJob(RetrivalJob):
         return f'PostgreSQL Job: \n{self.query}\n'
 
 
-@dataclass
-class FullExtractPsqlJob(FullExtractJob):
+def build_full_select_query_psql(
+    source: PostgreSQLDataSource, request: RetrivalRequest, limit: int | None
+) -> str:
+    """
+    Generates the SQL query needed to select all features related to a psql data source
+    """
+    all_features = [feature.name for feature in list(request.all_required_features.union(request.entities))]
+    sql_columns = source.feature_identifier_for(all_features)
+    columns = [
+        f'"{sql_col}" AS {alias}' if sql_col != alias else sql_col
+        for sql_col, alias in zip(sql_columns, all_features)
+    ]
+    column_select = ', '.join(columns)
 
-    source: PostgreSQLDataSource
-    request: RetrivalRequest
-    limit: int | None = None
+    config = source.config
+    schema = f'{config.schema}.' if config.schema else ''
 
-    @property
-    def request_result(self) -> RequestResult:
-        return RequestResult.from_request(self.request)
+    limit_query = ''
+    if limit:
+        limit_query = f'LIMIT {int(limit)}'
 
-    @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return [self.request]
-
-    @property
-    def config(self) -> PostgreSQLConfig:
-        return self.source.config
-
-    def describe(self) -> str:
-        return self.psql_job().describe()
-
-    async def to_pandas(self) -> pd.DataFrame:
-        return await self.psql_job().to_pandas()
-
-    async def to_polars(self) -> pl.LazyFrame:
-        return await self.psql_job().to_polars()
-
-    def psql_job(self) -> PostgreSqlJob:
-        return PostgreSqlJob(self.config, self.build_request())
-
-    def build_request(self) -> str:
-
-        all_features = [
-            feature.name for feature in list(self.request.all_required_features.union(self.request.entities))
-        ]
-        sql_columns = self.source.feature_identifier_for(all_features)
-        columns = [
-            f'"{sql_col}" AS {alias}' if sql_col != alias else sql_col
-            for sql_col, alias in zip(sql_columns, all_features)
-        ]
-        column_select = ', '.join(columns)
-        schema = f'{self.config.schema}.' if self.config.schema else ''
-
-        limit_query = ''
-        if self.limit:
-            limit_query = f'LIMIT {int(self.limit)}'
-
-        return f'SELECT {column_select} FROM {schema}"{self.source.table}" {limit_query}'
+    return f'SELECT {column_select} FROM {schema}"{source.table}" {limit_query}'
 
 
-@dataclass
-class DateRangePsqlJob(DateRangeJob):
+def build_date_range_query_psql(
+    source: PostgreSQLDataSource, request: RetrivalRequest, start_date: datetime, end_date: datetime
+) -> str:
+    if not request.event_timestamp:
+        raise ValueError('Event timestamp is needed in order to run a data range job')
 
-    source: PostgreSQLDataSource
-    start_date: datetime
-    end_date: datetime
-    request: RetrivalRequest
+    event_timestamp_column = source.feature_identifier_for([request.event_timestamp.name])[0]
+    all_features = [feature.name for feature in list(request.all_required_features.union(request.entities))]
+    sql_columns = source.feature_identifier_for(all_features)
+    columns = [
+        f'"{sql_col}" AS {alias}' if sql_col != alias else sql_col
+        for sql_col, alias in zip(sql_columns, all_features)
+    ]
+    column_select = ', '.join(columns)
 
-    @property
-    def request_result(self) -> RequestResult:
-        return RequestResult.from_request(self.request)
+    config = source.config
+    schema = f'{config.schema}.' if config.schema else ''
+    start_date_str = start_date.strftime('%Y-%m-%d %H:%M:%S')
+    end_date_str = end_date.strftime('%Y-%m-%d %H:%M:%S')
 
-    @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return [self.request]
-
-    @property
-    def config(self) -> PostgreSQLConfig:
-        return self.source.config
-
-    async def to_pandas(self) -> pd.DataFrame:
-        return await self.psql_job().to_pandas()
-
-    async def to_polars(self) -> pl.LazyFrame:
-        return await self.psql_job().to_polars()
-
-    def psql_job(self) -> PostgreSqlJob:
-        return PostgreSqlJob(self.config, self.build_request())
-
-    def build_request(self) -> str:
-
-        if not self.request.event_timestamp:
-            raise ValueError('Event timestamp is needed in order to run a data range job')
-
-        event_timestamp_column = self.source.feature_identifier_for([self.request.event_timestamp.name])[0]
-        all_features = [
-            feature.name for feature in list(self.request.all_required_features.union(self.request.entities))
-        ]
-        sql_columns = self.source.feature_identifier_for(all_features)
-        columns = [
-            f'"{sql_col}" AS {alias}' if sql_col != alias else sql_col
-            for sql_col, alias in zip(sql_columns, all_features)
-        ]
-        column_select = ', '.join(columns)
-        schema = f'{self.config.schema}.' if self.config.schema else ''
-        start_date = self.start_date.strftime('%Y-%m-%d %H:%M:%S')
-        end_date = self.end_date.strftime('%Y-%m-%d %H:%M:%S')
-
-        return (
-            f'SELECT {column_select} FROM {schema}"{self.source.table}" WHERE'
-            f' {event_timestamp_column} BETWEEN \'{start_date}\' AND \'{end_date}\''
-        )
+    return (
+        f'SELECT {column_select} FROM {schema}"{source.table}" WHERE'
+        f' {event_timestamp_column} BETWEEN \'{start_date_str}\' AND \'{end_date_str}\''
+    )
 
 
 @dataclass
@@ -269,9 +229,14 @@ class FactPsqlJob(FactualRetrivalJob):
         return list(self.sources.values())[0].config
 
     def describe(self) -> str:
+        from aligned.retrival_job import LiteralDictJob
+
         if isinstance(self.facts, PostgreSqlJob):
             psql_job = self.build_sql_entity_query(self.facts)
             return f'Loading features for {self.facts.describe()}\n\nQuery: {psql_job}'
+        elif isinstance(self.facts, LiteralDictJob):
+            psql_job = self.build_request_from_facts(pl.DataFrame(self.facts.data).lazy())
+            return f'Loading features from dicts \n\nQuery: {psql_job}'
         else:
             return f'Loading features from {self.facts.describe()}, and its related features'
 
@@ -285,9 +250,14 @@ class FactPsqlJob(FactualRetrivalJob):
 
     async def psql_job(self) -> PostgreSqlJob:
         if isinstance(self.facts, PostgreSqlJob):
-            return PostgreSqlJob(self.config, self.build_sql_entity_query(self.facts))
+            return PostgreSqlJob(self.config, self.build_sql_entity_query(self.facts), self.retrival_requests)
         entities = await self.build_request()
-        return PostgreSqlJob(self.config, entities)
+        return PostgreSqlJob(self.config, entities, self.retrival_requests)
+
+    def ignore_event_timestamp(self) -> RetrivalJob:
+        return FactPsqlJob(
+            self.sources, [request.without_event_timestamp() for request in self.requests], self.facts
+        )
 
     def dtype_to_sql_type(self, dtype: object) -> str:
         if isinstance(dtype, str):
@@ -307,7 +277,9 @@ class FactPsqlJob(FactualRetrivalJob):
         source = self.sources[request.location]
 
         entity_selects = {f'entities.{entity}' for entity in request.entity_names}
-        field_selects = request.all_required_feature_names.union(entity_selects).union({'entities.row_id'})
+        field_selects = list(
+            request.all_required_feature_names.union(entity_selects).union({'entities.row_id'})
+        )
         field_identifiers = source.feature_identifier_for(field_selects)
         selects = {
             SqlColumn(db_field_name, feature)
@@ -319,10 +291,12 @@ class FactPsqlJob(FactualRetrivalJob):
         sort_query = 'entities.row_id'
 
         event_timestamp_clause: str | None = None
-        if request.event_timestamp and entities_has_event_timestamp:
-            event_timestamp_column = source.feature_identifier_for([request.event_timestamp.name])[0]
-            event_timestamp_clause = f'entities.event_timestamp >= ta.{event_timestamp_column}'
-            sort_query += f', {event_timestamp_column} DESC'
+        if request.event_timestamp_request and entities_has_event_timestamp:
+            timestamp = request.event_timestamp_request.event_timestamp
+            entity_column = request.event_timestamp_request.entity_column
+            event_timestamp_column = source.feature_identifier_for([timestamp.name])[0]
+            event_timestamp_clause = f'entities.{entity_column} >= ta.{event_timestamp_column}'
+            sort_query += f', ta.{event_timestamp_column} DESC'
 
         join_conditions = [
             f'ta."{entity_db_name}" = entities.{entity}'
@@ -391,22 +365,24 @@ class FactPsqlJob(FactualRetrivalJob):
             for feature in features
         }
 
-        id_column = window.group_by[0].name
+        id_column = 'row_id'
+        # id_column = window.group_by[0].name
         event_timestamp_clause: str | None = None
-        if request.event_timestamp:
-            id_column = 'row_id'
+        if request.event_timestamp_request:
+            timestamp = request.event_timestamp_request.event_timestamp
+            entity_column = request.event_timestamp_request.entity_column
             group_by_names = {id_column}
             # Use row_id as the main join key
-            event_timestamp_name = source.feature_identifier_for([request.event_timestamp.name])[0]
+            event_timestamp_name = source.feature_identifier_for([timestamp.name])[0]
             if window.window:
                 time_window_config = window.window
                 window_in_seconds = int(time_window_config.time_window.total_seconds())
                 event_timestamp_clause = (
-                    f'ta.{event_timestamp_name} BETWEEN entities.event_timestamp'
-                    f" - interval '{window_in_seconds} seconds' AND entities.event_timestamp"
+                    f'ta.{event_timestamp_name} BETWEEN entities.{entity_column}'
+                    f" - interval '{window_in_seconds} seconds' AND entities.{entity_column}"
                 )
             else:
-                event_timestamp_clause = f'ta.{event_timestamp_name} <= entities.event_timestamp'
+                event_timestamp_clause = f'ta.{event_timestamp_name} <= entities.{entity_column}'
 
         entities = list(request.entity_names)
         entity_db_name = source.feature_identifier_for(entities)
@@ -467,13 +443,7 @@ class FactPsqlJob(FactualRetrivalJob):
 
     def aggregated_values_from_request(self, request: RetrivalRequest) -> list[TableFetch]:
 
-        aggregation_windows: dict[AggregateOver, set[AggregatedFeature]] = {}
-
-        for aggregate in request.aggregated_features:
-            if aggregate.aggregate_over not in aggregation_windows:
-                aggregation_windows[aggregate.aggregate_over] = {aggregate}
-            else:
-                aggregation_windows[aggregate.aggregate_over].add(aggregate)
+        aggregation_windows = request.aggregate_over()
 
         fetches: list[TableFetch] = []
         supported_aggregation_features = set(request.feature_names).union(request.entity_names)
@@ -500,71 +470,71 @@ class FactPsqlJob(FactualRetrivalJob):
         return fetches
 
     async def build_request(self) -> str:
-        import numpy as np
+        facts = await self.facts.to_polars()
+        return self.build_request_from_facts(facts)
+
+    def build_request_from_facts(self, facts: pl.LazyFrame) -> str:
 
         final_select_names: set[str] = set()
-        entity_types: dict[str, FeatureType] = {}
+        all_entities = {'row_id'}
+        entity_types: dict[str, FeatureType] = {'row_id': FeatureType('').int64}
         has_event_timestamp = False
 
         for request in self.requests:
-            final_select_names = final_select_names.union(
-                {f'{request.location.name}_cte.{feature}' for feature in request.all_required_feature_names}
-            )
             final_select_names = final_select_names.union(
                 {f'entities.{entity}' for entity in request.entity_names}
             )
             for entity in request.entities:
                 entity_types[entity.name] = entity.dtype
-            if request.event_timestamp:
-                has_event_timestamp = True
+                all_entities.add(entity.name)
 
-        if has_event_timestamp:
-            final_select_names.add('event_timestamp')
-            entity_types['event_timestamp'] = FeatureType('').datetime
+            if request.event_timestamp_request:
+                entity_column = request.event_timestamp_request.entity_column
+                has_event_timestamp = True
+                entity_types[entity_column] = FeatureType('').datetime
+                all_entities.add(entity_column)
+                final_select_names.add(f'entities.{entity_column}')
+
+        all_entities_list = list(all_entities)
 
         # Need to replace nan as it will not be encoded
-        fact_df = await self.facts.to_pandas()
-        fact_df = fact_df.replace(np.nan, None)
+        fact_df = facts.with_row_count(name='row_id', offset=1).collect()
 
-        number_of_values = fact_df.shape[0]
-        # + 1 is needed as 0 is evaluated for null
-        fact_df['row_id'] = list(range(1, number_of_values + 1))
-
-        entity_type_list = [
-            self.dtype_to_sql_type(entity_types.get(entity, FeatureType('').int32))
-            for entity in fact_df.columns
-        ]
+        entity_type_list = {
+            entity: self.dtype_to_sql_type(entity_types.get(entity, FeatureType('').int32))
+            for entity in all_entities
+        }
 
         query_values: list[list[SqlValue]] = []
-        all_entities = []
-        for values in fact_df.values:
+        for values in fact_df[all_entities_list].to_dicts():
             row_placeholders = []
-            for column_index, value in enumerate(values):
-                row_placeholders.append(SqlValue(value, entity_type_list[column_index]))
-                if fact_df.columns[column_index] not in all_entities:
-                    all_entities.append(fact_df.columns[column_index])
-            query_values.append(row_placeholders)
+            for key, value in values.items():
+                row_placeholders.append(SqlValue(value, entity_type_list[key]))
 
-        feature_view_names: list[str] = [location.name for location in self.sources.keys()]
+            query_values.append(row_placeholders)
         # Add the joins to the fact
 
         tables: list[TableFetch] = []
         aggregates: list[TableFetch] = []
         for request in self.requests:
-            fetch = self.value_selection(request, has_event_timestamp)
-            tables.append(fetch)
-            aggregate_fetches = self.aggregated_values_from_request(request)
-            aggregates.extend(aggregate_fetches)
-            for aggregate in aggregate_fetches:
+            all_entities.update(request.entity_names)
+
+            if request.aggregated_features:
+                aggregate_fetches = self.aggregated_values_from_request(request)
+                aggregates.extend(aggregate_fetches)
+                for aggregate in aggregate_fetches:
+                    final_select_names = final_select_names.union(
+                        {column.alias for column in aggregate.columns if column.alias != 'entities.row_id'}
+                    )
+            else:
+                fetch = self.value_selection(request, has_event_timestamp)
+                tables.append(fetch)
                 final_select_names = final_select_names.union(
-                    {column.alias for column in aggregate.columns if column.alias != aggregate.id_column}
+                    {f'{fetch.name}.{feature}' for feature in request.all_required_feature_names}
                 )
 
         joins = '\n    '.join(
-            [
-                f'LEFT JOIN {feature_view}_cte ON {feature_view}_cte.row_id = entities.row_id'
-                for feature_view in feature_view_names
-            ]
+            [f'LEFT JOIN {table.name} ON {table.name}.row_id = entities.row_id' for table in tables]
         )
         if aggregates:
             joins += '\n    '
@@ -578,13 +548,91 @@ class FactPsqlJob(FactualRetrivalJob):
         entity_values = self.build_entities_from_values(query_values)
 
         return self.generate_query(
-            entity_columns=list(all_entities),
+            entity_columns=all_entities_list,
             entity_query=entity_values,
             tables=tables,
             aggregates=aggregates,
             final_select=list(final_select_names),
             final_joins=joins,
         )
+        # import numpy as np
+
+        # final_select_names: set[str] = set()
+        # entity_types: dict[str, FeatureType] = {}
+        # has_event_timestamp = False
+
+        # for request in self.requests:
+        #     final_select_names = final_select_names.union(
+        #         {f'{request.name}_cte.{feature}' for feature in request.all_required_feature_names}
+        #     )
+        #     final_select_names = final_select_names.union(
+        #         {f'entities.{entity}' for entity in request.entity_names}
+        #     )
+        #     for entity in request.entities:
+        #         entity_types[entity.name] = entity.dtype
+        #     if request.event_timestamp:
+        #         has_event_timestamp = True
+
+        # if has_event_timestamp:
+        #     final_select_names.add('event_timestamp')
+        #     entity_types['event_timestamp'] = FeatureType('').datetime
+
+        # entities = list(entity_types.keys()) + ['row_id']
+
+        # # Need to replace nan as it will not be encoded
+        # fact_df = (await self.facts.to_polars()).with_row_count(name='row_id').collect()
+
+        # entity_type_list = {
+        #     entity: self.dtype_to_sql_type(entity_types.get(entity, FeatureType('').int32))
+        #     for entity in entities
+        # }
+
+        # query_values: list[list[SqlValue]] = []
+        # all_entities = entities
+        # for values in fact_df[entities].to_dicts():
+        #     row_placeholders = []
+        #     for key, value in values.items():
+        #         row_placeholders.append(SqlValue(value, entity_type_list[key]))
+
+        #     query_values.append(row_placeholders)
+
+        # feature_view_names: list[str] = [location.name for location in self.sources.keys()]
+        # # Add the joins to the fact
+
+        # tables: list[TableFetch] = []
+        # aggregates: list[TableFetch] = []
+        # for request in self.requests:
+        #     fetch = self.value_selection(request, has_event_timestamp)
+        #     tables.append(fetch)
+        #     aggregate_fetches = self.aggregated_values_from_request(request)
+        #     aggregates.extend(aggregate_fetches)
+        #     for aggregate in aggregate_fetches:
+        #         final_select_names = final_select_names.union(
+        #             {column.alias for column in aggregate.columns if column.alias != aggregate.id_column}
+        #         )
+
+        # joins = '\n    '.join(
+        #     [f'LEFT JOIN {table.name} ON {table.name}.row_id = entities.row_id' for table in tables]
+        # )
+        # if aggregates:
+        #     joins += '\n    '
+        #     joins += '\n    '.join(
+        #         [
+        #             f'LEFT JOIN {table.name} ON {table.name}.{table.id_column} = entities.{table.id_column}'
+        #             for table in aggregates
+        #         ]
+        #     )
+
+        # entity_values = self.build_entities_from_values(query_values)
+
+        # return self.generate_query(
+        #     entity_columns=list(all_entities),
+        #     entity_query=entity_values,
+        #     tables=tables,
+        #     aggregates=aggregates,
+        #     final_select=list(final_select_names),
+        #     final_joins=joins,
+        # )
 
     def build_entities_from_values(self, values: list[list[SqlValue]]) -> str:
         query = 'VALUES '
@@ -603,17 +651,17 @@ class FactPsqlJob(FactualRetrivalJob):
         has_event_timestamp = False
         all_entities = set()
 
-        if 'event_timestamp' in sql_facts.query:
-            has_event_timestamp = True
-            all_entities.add('event_timestamp')
-
         for request in self.requests:
             final_select_names = final_select_names.union(
                 {f'entities.{entity}' for entity in request.entity_names}
             )
+            if request.event_timestamp_request:
+                entity_column = request.event_timestamp_request.entity_column
 
-        if has_event_timestamp:
-            final_select_names.add('event_timestamp')
+                if entity_column in sql_facts.query:
+                    has_event_timestamp = True
+                    all_entities.add(entity_column)
+                    final_select_names.add(f'entities.{entity_column}')
 
         # Add the joins to the fact
 

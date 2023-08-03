@@ -3,8 +3,89 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+import polars as pl
+
+import aligned.compiler.feature_factory as ff
 from aligned.schemas.codable import Codable
 from aligned.schemas.constraints import Constraint
+
+NAME_POLARS_MAPPING = {
+    'string': pl.Utf8,
+    'int32': pl.Int32,
+    'int64': pl.Int64,
+    'float': pl.Float64,
+    'double': pl.Float64,
+    'bool': pl.Boolean,
+    'date': pl.Date,
+    'datetime': pl.Datetime,
+    'time': pl.Time,
+    'timedelta': pl.Duration,
+    'uuid': pl.Utf8,
+    'array': pl.List(pl.Utf8),
+    'embedding': pl.List,
+}
+
+
+# @dataclass
+# class SupportedTypes(Codable):
+
+#     string: String | None = field(default=None)
+
+#     def dtype(self) -> DataTypeInterface:
+#         values = [self.string]
+#         for value in values:
+#             if value:
+#                 return value
+#         raise ValueError("Found no data type, the config could be corrupt.")
+
+
+# @dataclass
+# class DataTypeInterface(Codable):
+
+#     @property
+#     def python_type(self) -> type:
+#         raise NotImplementedError()
+
+#     @property
+#     def pandas_type(self) -> str | type:
+#         raise NotImplementedError()
+
+#     @property
+#     def polars_type(self) -> pl.DataType:
+#         raise NotImplementedError()
+
+# @dataclass
+# class String(DataTypeInterface):
+
+#     @property
+#     def python_type(self) -> type:
+#         return str
+
+#     @property
+#     def pandas_type(self) -> str | type:
+#         return str
+
+#     @property
+#     def polars_type(self) -> pl.DataType:
+#         return pl.Utf8()
+
+
+# @dataclass
+# class List(DataTypeInterface):
+
+#     inner_type: DataTypeInterface
+
+#     @property
+#     def python_type(self) -> type:
+#         return list
+
+#     @property
+#     def pandas_type(self) -> str | type:
+#         return str
+
+#     @property
+#     def polars_type(self) -> pl.DataType:
+#         return pl.List(self.inner_type.polars_type)
 
 
 @dataclass
@@ -62,22 +143,24 @@ class FeatureType(Codable):
 
     @property
     def polars_type(self) -> type:
-        import polars as pl
+        return NAME_POLARS_MAPPING[self.name]
 
+    @property
+    def feature_factory(self) -> ff.FeatureFactory:
         return {
-            'string': pl.Utf8,
-            'int32': pl.Int32,
-            'int64': pl.Int64,
-            'float': pl.Float64,
-            'double': pl.Float64,
-            'bool': pl.Boolean,
-            'date': pl.Date,
-            'datetime': pl.Datetime,
-            'time': pl.Time,
-            'timedelta': pl.Duration,
-            'uuid': pl.Utf8,
-            'array': pl.List,
-            'embedding': pl.List,
+            'string': ff.String(),
+            'int32': ff.Int32(),
+            'int64': ff.Int64(),
+            'float': ff.Float(),
+            'double': ff.Float(),
+            'bool': ff.Bool(),
+            'date': ff.Timestamp(),
+            'datetime': ff.Timestamp(),
+            'time': ff.Timestamp(),
+            'timedelta': ff.Timestamp(),
+            'uuid': ff.UUID(),
+            'array': ff.Embedding(),
+            'embedding': ff.Embedding(),
         }[self.name]
 
     def __eq__(self, other: object) -> bool:
@@ -91,6 +174,13 @@ class FeatureType(Codable):
     def __pre_serialize__(self) -> FeatureType:
         assert isinstance(self.name, str)
         return self
+
+    @staticmethod
+    def from_polars(polars_type: pl.DataType) -> FeatureType:
+        for name, dtype in NAME_POLARS_MAPPING.items():
+            if polars_type.is_(dtype):
+                return FeatureType(name=name)
+        raise ValueError(f'Unable to find a value that can represent {polars_type}')
 
     @property
     def string(self) -> FeatureType:
@@ -222,3 +312,7 @@ class FeatureReferance(Codable):
 
     def __hash__(self) -> int:
         return hash(self.name)
+
+    @property
+    def identifier(self) -> str:
+        return f'{self.location.identifier}:{self.name}'

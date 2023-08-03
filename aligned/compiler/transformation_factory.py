@@ -85,6 +85,22 @@ class OrdinalFactory(TransformationFactory):
 
 
 @dataclass
+class ArrayContainsFactory(TransformationFactory):
+
+    value: LiteralValue
+    in_feature: FeatureFactory
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.in_feature]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import ArrayContains
+
+        return ArrayContains(self.in_feature.name, self.value)
+
+
+@dataclass
 class ContainsFactory(TransformationFactory):
 
     text: str

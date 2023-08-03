@@ -77,13 +77,13 @@ class SupervisedDataSet(Generic[DatasetType]):
     data: DatasetType
 
     entity_columns: set[str]
-    features: set[str]
+    feature_columns: set[str]
     target_columns: set[str]
     event_timestamp_column: str | None
 
     @property
     def sorted_features(self) -> list[str]:
-        return sorted(self.features)
+        return sorted(self.feature_columns)
 
     def __init__(
         self,
@@ -95,7 +95,7 @@ class SupervisedDataSet(Generic[DatasetType]):
     ):
         self.data = data
         self.entity_columns = entity_columns
-        self.features = features
+        self.feature_columns = features
         self.target_columns = target
         self.event_timestamp_column = event_timestamp_column
 
@@ -112,7 +112,7 @@ class SupervisedDataSet(Generic[DatasetType]):
         return self.data[self.sorted_features]
 
     @property
-    def target(self) -> DatasetType:
+    def labels(self) -> DatasetType:
         if isinstance(self.data, (pl.LazyFrame, pl.DataFrame)):
             return self.data.select(list(self.target_columns))
         return self.data[list(self.target_columns)]
@@ -123,7 +123,7 @@ class TrainTestValidateSet(Generic[DatasetType]):
     data: DatasetType
 
     entity_columns: set[str]
-    features: set[str]
+    feature_columns: set[str]
     target_columns: set[str]
 
     train_index: Index
@@ -144,7 +144,7 @@ class TrainTestValidateSet(Generic[DatasetType]):
     ):
         self.data = data
         self.entity_columns = entity_columns
-        self.features = features
+        self.feature_columns = features
         self.target_columns = target
         self.train_index = train_index
         self.test_index = test_index
@@ -153,7 +153,7 @@ class TrainTestValidateSet(Generic[DatasetType]):
 
     @property
     def sorted_features(self) -> list[str]:
-        return sorted(self.features)
+        return sorted(self.feature_columns)
 
     @property
     def input(self) -> DatasetType:
@@ -162,7 +162,7 @@ class TrainTestValidateSet(Generic[DatasetType]):
         return self.data[self.sorted_features]
 
     @property
-    def target(self) -> DatasetType:
+    def labels(self) -> DatasetType:
         if isinstance(self.data, pl.LazyFrame):
             return self.data.select(sorted(self.target_columns))
         return self.data[sorted(self.target_columns)]
@@ -177,7 +177,7 @@ class TrainTestValidateSet(Generic[DatasetType]):
         return SupervisedDataSet(
             data,
             self.entity_columns,
-            self.features,
+            self.feature_columns,
             self.target_columns,
             self.event_timestamp_column,
         )
@@ -188,7 +188,7 @@ class TrainTestValidateSet(Generic[DatasetType]):
 
     @property
     def train_target(self) -> DatasetType:
-        return self.train.target
+        return self.train.labels
 
     @property
     def test(self) -> SupervisedDataSet[DatasetType]:
@@ -201,7 +201,7 @@ class TrainTestValidateSet(Generic[DatasetType]):
         return SupervisedDataSet(
             data,
             set(self.entity_columns),
-            set(self.features),
+            set(self.feature_columns),
             self.target_columns,
             self.event_timestamp_column,
         )
@@ -212,7 +212,7 @@ class TrainTestValidateSet(Generic[DatasetType]):
 
     @property
     def test_target(self) -> DatasetType:
-        return self.test.target
+        return self.test.labels
 
     @property
     def validate(self) -> SupervisedDataSet[DatasetType]:
@@ -223,7 +223,7 @@ class TrainTestValidateSet(Generic[DatasetType]):
         return SupervisedDataSet(
             data,
             self.entity_columns,
-            set(self.features),
+            set(self.feature_columns),
             self.target_columns,
             self.event_timestamp_column,
         )
@@ -234,7 +234,7 @@ class TrainTestValidateSet(Generic[DatasetType]):
 
     @property
     def validate_target(self) -> DatasetType:
-        return self.validate.target
+        return self.validate.labels
 
 
 class SplitDataSet(Generic[DatasetType]):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypeVar, Any
 
 from mashumaro.types import SerializableType
 
@@ -10,8 +10,9 @@ from aligned.schemas.codable import Codable
 from aligned.schemas.feature import Feature
 
 if TYPE_CHECKING:
+    from aligned.compiler.feature_factory import FeatureFactory
     from aligned.request.retrival_request import RetrivalRequest
-    from aligned.retrival_job import DateRangeJob, FullExtractJob, RetrivalJob
+    from aligned.retrival_job import RetrivalJob
 
 
 class BatchDataSourceFactory:
@@ -69,6 +70,34 @@ class BatchDataSource(ABC, Codable, SerializableType):
     def __hash__(self) -> int:
         return hash(self.job_group_key())
 
+    def contains_config(self, config: Any) -> bool:
+        """
+        Checks if a data source contains a source config.
+        This can be used to select different sources based on the data sources to connect to.
+
+        ```
+        config = PostgreSQLConfig(env_var='MY_APP_DB_URL')
+        source = config.table('my_table')
+
+        print(source.contains_config(config))
+        >> True
+
+        store = await FileSource.json_at("features.json").feature_store()
+        views = store.views_with_config(config)
+        print(len(views))
+        >> 3
+        ```
+
+        Args:
+            config: The config to check for
+
+        Returns:
+            bool: If the config is contained in the source
+        """
+        if isinstance(config, BatchDataSource):
+            return config.to_dict() == self.to_dict()
+        return False
+
     @classmethod
     def _deserialize(cls, value: dict) -> BatchDataSource:
         name_type = value['type_name']
@@ -82,7 +111,7 @@ class BatchDataSource(ABC, Codable, SerializableType):
         data_class = BatchDataSourceFactory.shared().supported_data_sources[name_type]
         return data_class.from_dict(value)
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         raise NotImplementedError()
 
     def all_between_dates(
@@ -90,7 +119,7 @@ class BatchDataSource(ABC, Codable, SerializableType):
         request: RetrivalRequest,
         start_date: datetime,
         end_date: datetime,
-    ) -> DateRangeJob:
+    ) -> RetrivalJob:
         raise NotImplementedError()
 
     @classmethod
@@ -101,6 +130,62 @@ class BatchDataSource(ABC, Codable, SerializableType):
 
     def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
         return type(self).multi_source_features_for(facts, [(self, request)])
+
+    async def schema(self) -> dict[str, FeatureFactory]:
+        """Returns the schema for the data source
+
+        ```python
+        source = FileSource.parquet_at('test_data/titanic.parquet')
+        schema = await source.schema()
+        >>> {'passenger_id': FeatureType(name='int64'), ...}
+        ```
+
+        Raises:
+            NotImplementedError: By default will this error be raised if not implemented
+
+        Returns:
+            dict[str, FeatureType]: A dictionary containing the column name and the feature type
+        """
+        raise NotImplementedError(f'`schema()` is not implemented for {type(self)}.')
+
+    async def feature_view_code(self, view_name: str) -> str:
+        """Setup the code needed to represent the data source as a feature view
+
+        ```python
+        FileSource.parquet("my_path.parquet").feature_view_code(view_name="my_view")
+
+        >>> \"\"\"from aligned import FeatureView, String, Int64, Float
+
+        class MyView(FeatureView):
+
+            metadata = FeatureView.metadata_with(
+                name="Embarked",
+                description="some description",
+                batch_source=FileSource.parquest("my_path.parquet")
+                stream_source=None,
+            )
+
+            Passenger_id = Int64()
+            Survived = Int64()
+            Pclass = Int64()
+            Name = String()
+            Sex = String()
+            Age = Float()
+            Sibsp = Int64()
+            Parch = Int64()
+            Ticket = String()
+            Fare = Float()
+            Cabin = String()
+            Embarked = String()\"\"\"
+        ```
+
+        Returns:
+            str: The code needed to setup a basic feature view
+        """
+        from aligned import FeatureView
+
+        schema = await self.schema()
+        return FeatureView.feature_view_code_template(schema, f'{self}', view_name)
 
 
 class ColumnFeatureMappable:
