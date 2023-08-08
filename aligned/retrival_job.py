@@ -128,6 +128,12 @@ class SupervisedJob:
     def with_subfeatures(self) -> SupervisedJob:
         return SupervisedJob(self.job.with_subfeatures(), self.target_columns)
 
+    def cache_raw_data(self, location: DataFileReference | str) -> SupervisedJob:
+        return SupervisedJob(
+            self.job.cache_raw_data(location),
+            self.target_columns,
+        )
+
     def cached_at(self, location: DataFileReference | str) -> SupervisedJob:
         return SupervisedJob(
             self.job.cached_at(location),
@@ -274,6 +280,11 @@ class RetrivalJob(ABC):
         if isinstance(self, ModificationJob):
             return self.copy_with(self.job.with_subfeatures())
         return self
+
+    def cache_raw_data(self, location: DataFileReference | str) -> RetrivalJob:
+        if isinstance(self, ModificationJob):
+            return self.copy_with(self.job.cache_raw_data(location))
+        return self.cached_at(location)
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         if isinstance(location, str):
@@ -1177,6 +1188,9 @@ class CombineFactualJob(RetrivalJob):
 
         # df = pl.concat(dfs_to_concat, how='horizontal')
         return await self.combine_polars_data(df)
+
+    def cache_raw_data(self, location: DataFileReference | str) -> RetrivalJob:
+        return CombineFactualJob([job.cache_raw_data(location) for job in self.jobs], self.combined_requests)
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         return CombineFactualJob([job.cached_at(location) for job in self.jobs], self.combined_requests)

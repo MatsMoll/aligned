@@ -46,6 +46,7 @@ class RetrivalRequest(Codable):
         aggregated_features: set[AggregatedFeature] | None = None,
         event_timestamp: EventTimestamp | None = None,
         entity_timestamp_columns: str | None = None,
+        event_timestamp_request: EventTimestampRequest | None = None,
         features_to_include: set[str] | None = None,
     ):
         self.name = name
@@ -54,7 +55,9 @@ class RetrivalRequest(Codable):
         self.features = features
         self.derived_features = derived_features
         self.aggregated_features = aggregated_features or set()
-        if event_timestamp:
+        if event_timestamp_request:
+            self.event_timestamp_request = event_timestamp_request
+        elif event_timestamp:
             self.event_timestamp_request = EventTimestampRequest(
                 event_timestamp=event_timestamp,
                 entity_column=entity_timestamp_columns or 'event_timestamp',

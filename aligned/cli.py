@@ -96,7 +96,7 @@ def cli() -> None:
 )
 @click.option(
     '--reference-file',
-    default='feature_store_location.py:source',
+    default='source.py:source',
     help='The path to a feature store reference file. Defining where to read and write the feature store',
 )
 @click.option(
