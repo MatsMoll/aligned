@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 from dataclasses import dataclass
@@ -14,6 +16,7 @@ from aligned.feature_source import WritableFeatureSource
 from aligned.feature_store import FeatureStore
 from aligned.schemas.feature import Feature
 from aligned.schemas.feature_view import CompiledFeatureView
+from aligned.sources.local import StorageFileReference
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +168,7 @@ class FastAPIServer:
             return Response(content=f'{{{body}}}', media_type='application/json')
 
     @staticmethod
-    def app(feature_store: FeatureStore) -> FastAPI:
+    def app(feature_store: FeatureStore, auth_tokens: list[str] | None = None) -> FastAPI:
         from asgi_correlation_id import CorrelationIdMiddleware
         from fastapi import FastAPI
         from fastapi.middleware import Middleware
@@ -248,3 +251,17 @@ class FastAPIServer:
         app = FastAPIServer.app(feature_store)
 
         uvicorn.run(app, host=host or '127.0.0.1', port=port or 8000, workers=workers or workers)
+
+
+class FeatureServer:
+
+    definition_reference: StorageFileReference
+    auth_keys: list[str] | None = None
+
+    @staticmethod
+    def from_reference(source: StorageFileReference) -> FeatureServer:
+        return FeatureServer(source)
+
+    async def build_app(self) -> FastAPI:
+        definitions = await self.definition_reference.feature_store()
+        return FastAPIServer.app(definitions)

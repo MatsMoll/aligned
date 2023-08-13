@@ -15,3 +15,12 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
     ports:
       - 6379:6379
+
+  testing:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python", "-m", "pytest"]
+    volumes:
+      - ./pyproject.toml:/opt/app/pyproject.toml
+      - ./aligned:/opt/app/aligned
