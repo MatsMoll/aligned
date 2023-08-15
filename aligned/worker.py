@@ -193,7 +193,14 @@ class StreamWorker:
             stream_consumer = stream.consumer(
                 self.read_timestamps.get(topic_name, self.default_start_timestamp)
             )
-            processes.append(process(stream_consumer, topic_name, process_views, trim_duration=self.trim_timestamps.get(topic_name)))
+            processes.append(
+                process(
+                    stream_consumer,
+                    topic_name,
+                    process_views,
+                    trim_duration=self.trim_timestamps.get(topic_name),
+                )
+            )
 
         for active_learning_config in self.active_learning_configs:
 
@@ -298,7 +305,10 @@ async def monitor_process(values: list[dict], view: FeatureViewStore):
 
 
 async def multi_processing(
-    stream_source: ReadableStream, topic_name: str, feature_views: list[FeatureViewStore], trim_duration: timedelta | None = None
+    stream_source: ReadableStream,
+    topic_name: str,
+    feature_views: list[FeatureViewStore],
+    trim_duration: timedelta | None = None,
 ) -> None:
     logger.info(f'Started listning to {topic_name}')
     while True:
@@ -317,7 +327,10 @@ async def multi_processing(
 
 
 async def single_processing(
-    stream_source: ReadableStream, topic_name: str, feature_view: FeatureViewStore, trim_duration: timedelta | None = None
+    stream_source: ReadableStream,
+    topic_name: str,
+    feature_view: FeatureViewStore,
+    trim_duration: timedelta | None = None,
 ) -> None:
     logger.info(f'Started listning to {topic_name}')
     while True:
@@ -333,13 +346,12 @@ async def single_processing(
             await stream_source.trim_records_before(now - trim_duration)
 
 
-
 async def process(
     stream_source: ReadableStream,
     topic_name: str,
     feature_views: list[FeatureViewStore],
     error_count: int = 0,
-    trim_duration: timedelta | None = None
+    trim_duration: timedelta | None = None,
 ) -> None:
     try:
         if len(feature_views) == 1:
