@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timedelta
 import logging
 import timeit
 from dataclasses import dataclass, field
@@ -16,7 +17,7 @@ from aligned.feature_source import WritableFeatureSource
 from aligned.feature_store import FeatureStore, FeatureViewStore, ModelFeatureStore
 from aligned.retrival_job import RetrivalJob, StreamAggregationJob
 from aligned.sources.local import StorageFileReference
-from aligned.streams.interface import ReadableStream
+from aligned.streams.interface import ReadableStream, TrimableStream
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,7 @@ class StreamWorker:
 
     read_timestamps: dict[str, str] = field(default_factory=dict)
     default_start_timestamp: str | None = field(default=None)
+    trim_timestamps: dict[str, timedelta] = field(default_factory=dict)
 
     @staticmethod
     def from_reference(
@@ -172,6 +174,10 @@ class StreamWorker:
 
         return feature_views
 
+    def trim(self, topics: dict[str, timedelta]) -> StreamWorker:
+        self.trim_timestamps = topics
+        return self
+
     async def start(self) -> None:
         from prometheus_client import start_http_server
 
@@ -187,7 +193,7 @@ class StreamWorker:
             stream_consumer = stream.consumer(
                 self.read_timestamps.get(topic_name, self.default_start_timestamp)
             )
-            processes.append(process(stream_consumer, topic_name, process_views))
+            processes.append(process(stream_consumer, topic_name, process_views, trim_duration=self.trim_timestamps.get(topic_name)))
 
         for active_learning_config in self.active_learning_configs:
 
@@ -292,10 +298,11 @@ async def monitor_process(values: list[dict], view: FeatureViewStore):
 
 
 async def multi_processing(
-    stream_source: ReadableStream, topic_name: str, feature_views: list[FeatureViewStore]
+    stream_source: ReadableStream, topic_name: str, feature_views: list[FeatureViewStore], trim_duration: timedelta | None = None
 ) -> None:
     logger.info(f'Started listning to {topic_name}')
     while True:
+        now = datetime.now()
         logger.info(f'Reading {topic_name}')
         stream_values = await stream_source.read()
         logger.info(f'Read {topic_name} values: {len(stream_values)}')
@@ -305,12 +312,16 @@ async def multi_processing(
 
         await asyncio.gather(*[monitor_process(stream_values, view) for view in feature_views])
 
+        if trim_duration and isinstance(stream_source, TrimableStream):
+            await stream_source.trim_records_before(now - trim_duration)
+
 
 async def single_processing(
-    stream_source: ReadableStream, topic_name: str, feature_view: FeatureViewStore
+    stream_source: ReadableStream, topic_name: str, feature_view: FeatureViewStore, trim_duration: timedelta | None = None
 ) -> None:
     logger.info(f'Started listning to {topic_name}')
     while True:
+        now = datetime.now()
         logger.info(f'Reading {topic_name}')
         records = await stream_source.read()
         logger.info(f'Read {topic_name} values: {len(records)}')
@@ -318,6 +329,9 @@ async def single_processing(
         if not records:
             continue
         await monitor_process(records, feature_view)
+        if trim_duration and isinstance(stream_source, TrimableStream):
+            await stream_source.trim_records_before(now - trim_duration)
+
 
 
 async def process(
@@ -325,15 +339,16 @@ async def process(
     topic_name: str,
     feature_views: list[FeatureViewStore],
     error_count: int = 0,
+    trim_duration: timedelta | None = None
 ) -> None:
-    # try:
-    if len(feature_views) == 1:
-        await single_processing(stream_source, topic_name, feature_views[0])
-    else:
-        await multi_processing(stream_source, topic_name, feature_views)
-    # except Exception as e:
-    #     logger.error(f'Error processing {topic_name}: {type(e)} - {e}')
-    #     if error_count > 5:
-    #         raise e
-    #     await asyncio.sleep(5)
-    #     await process(stream_source, topic_name, feature_views, error_count=error_count + 1)
+    try:
+        if len(feature_views) == 1:
+            await single_processing(stream_source, topic_name, feature_views[0], trim_duration)
+        else:
+            await multi_processing(stream_source, topic_name, feature_views, trim_duration)
+    except Exception as e:
+        logger.error(f'Error processing {topic_name}: {type(e)} - {e}')
+        if error_count > 5:
+            raise e
+        await asyncio.sleep(5)
+        await process(stream_source, topic_name, feature_views, error_count=error_count + 1)

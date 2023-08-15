@@ -1,7 +1,8 @@
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from aligned.schemas.record_coders import PassthroughRecordCoder, RecordCoder
-from aligned.streams.interface import ReadableStream, SinakableStream
+from aligned.streams.interface import ReadableStream, SinakableStream, TrimableStream
 
 try:
     from redis.asyncio import Redis  # type: ignore
@@ -14,9 +15,12 @@ except ModuleNotFoundError:
         async def xadd(self, stream: str, record: dict) -> None:
             pass
 
+        async def xtrim(self, topic: str, minid: str, approximate: bool) -> None:
+            pass
+
 
 @dataclass
-class RedisStream(ReadableStream, SinakableStream):
+class RedisStream(ReadableStream, SinakableStream, TrimableStream):
 
     client: Redis
     stream_name: str
@@ -44,3 +48,8 @@ class RedisStream(ReadableStream, SinakableStream):
     async def sink(self, records: list[dict]) -> None:
         for record in self.record_coder.encode(records):
             await self.client.xadd(self.stream_name, record)
+
+    async def trim_records_before(self, timestamp: datetime) -> None:
+        posix_timestamp = int(timestamp.timestamp() * 1000)
+        redis_timestamp_id = f'{posix_timestamp}-0'
+        await self.client.xtrim(self.stream_name, minid=redis_timestamp_id, approximate=False)

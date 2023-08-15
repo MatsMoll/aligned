@@ -1,3 +1,14 @@
+from datetime import datetime
+
+
+class TrimableStream:
+    async def trim_records_before(self, timestamp: datetime) -> None:
+        """
+        Trimes a set of records before a timestamp
+        """
+        raise NotImplementedError()
+
+
 class ReadableStream:
     async def read(self, max_records: int = None, max_wait: float = None) -> list[dict]:
         """Reads a stream of data
