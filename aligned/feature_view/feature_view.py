@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractproperty
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, Generic, Type, Callable
 
 from aligned.compiler.feature_factory import (
     AggregationTransformationFactory,
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from aligned.feature_store import FeatureViewStore
 
 # Enables code compleation in the select method
-FVType = TypeVar('FVType')
+T = TypeVar('T')
 
 
 @dataclass
@@ -46,6 +46,60 @@ class FeatureViewMetadata:
             application_source=view.application_source,
             staging_source=view.staging_source,
         )
+
+
+def feature_view(
+    name: str, description: str, batch_source: BatchDataSource
+) -> Callable[[Type[T]], FeatureViewWrapper[T]]:
+    def decorator(cls: Type[T]) -> FeatureViewWrapper[T]:
+        return FeatureViewWrapper(FeatureViewMetadata(name, description, batch_source), cls)
+
+    return decorator
+
+
+@dataclass
+class FeatureViewWrapper(Generic[T]):
+
+    metadata: FeatureViewMetadata
+    view: Type[T]
+
+    def __call__(self) -> T:
+        return self.view()
+
+    def compile(self) -> CompiledFeatureView:
+
+        return FeatureView.compile_with_metadata(self.view(), self.metadata)
+
+    def query(self) -> FeatureViewStore:
+        """Makes it possible to query the feature view for features
+
+        ```python
+        class SomeView(FeatureView):
+
+            metadata = ...
+
+            id = Int32().as_entity()
+
+            a = Int32()
+            b = Int32()
+
+        data = await SomeView.query().features_for({
+            "id": [1, 2, 3],
+        }).to_pandas()
+        ```
+
+        Returns:
+            FeatureViewStore: Returns a queryable `FeatureViewStore` containing the feature view
+        """
+        from aligned import FeatureStore
+
+        store = FeatureStore.experimental()
+        store.add_compiled_view(self.compile())
+        return store.feature_view(self.metadata.name)
+
+    async def process(self, data: dict[str, list[Any]]) -> list[dict]:
+        df = await self.query().process_input(data).to_polars()
+        return df.collect().to_dicts()
 
 
 class FeatureView(ABC):
@@ -88,13 +142,16 @@ class FeatureView(ABC):
         return cls().compile_instance()
 
     def compile_instance(self) -> CompiledFeatureView:
+        return FeatureView.compile_with_metadata(self, self.metadata)
+
+    @staticmethod
+    def compile_with_metadata(feature_view: Any, metadata: FeatureViewMetadata) -> CompiledFeatureView:
         from aligned.compiler.feature_factory import FeatureFactory
 
         # Used to deterministicly init names for hidden features
         hidden_features = 0
 
-        metadata = self.metadata
-        var_names = [name for name in self.__dir__() if not name.startswith('_')]
+        var_names = [name for name in feature_view.__dir__() if not name.startswith('_')]
 
         view = CompiledFeatureView(
             name=metadata.name,
@@ -113,7 +170,7 @@ class FeatureView(ABC):
         aggregations: list[FeatureFactory] = []
 
         for var_name in var_names:
-            feature = getattr(self, var_name)
+            feature = getattr(feature_view, var_name)
 
             if not isinstance(feature, FeatureFactory):
                 continue
@@ -188,7 +245,7 @@ class FeatureView(ABC):
                     raise Exception(
                         'Can only have one EventTimestamp for each'
                         ' FeatureViewDefinition. Check that this is the case for'
-                        f' {type(self).__name__}'
+                        f' {type(view).__name__}'
                     )
                 view.features.add(compiled_feature)
                 view.event_timestamp = feature.event_timestamp()

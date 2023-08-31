@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Callable, Any
+from typing import Callable, Any, TYPE_CHECKING
 
 from aligned import RedisConfig
 from aligned.compiler.model import EntityDataSource, SqlEntityDataSource
@@ -12,6 +12,9 @@ from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import RetrivalJob
 from aligned.schemas.codable import Codable
 from aligned.sources.psql import PostgreSQLConfig, PostgreSQLDataSource
+
+if TYPE_CHECKING:
+    from aligned import EventTimestamp
 
 
 @dataclass
@@ -144,3 +147,7 @@ class RedshiftSQLDataSource(BatchDataSource, ColumnFeatureMappable):
             requests=[request for _, request in requests],
             facts=facts,
         )
+
+    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+        f'SELECT MAX({event_timestamp.name})'
+        return await super().freshness(event_timestamp)

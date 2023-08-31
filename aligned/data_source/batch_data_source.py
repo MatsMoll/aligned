@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from datetime import datetime
 from typing import TYPE_CHECKING, TypeVar, Any
 
 from mashumaro.types import SerializableType
 
 from aligned.schemas.codable import Codable
-from aligned.schemas.feature import Feature
+from aligned.schemas.feature import EventTimestamp, Feature
 
 if TYPE_CHECKING:
     from aligned.compiler.feature_factory import FeatureFactory
     from aligned.request.retrival_request import RetrivalRequest
     from aligned.retrival_job import RetrivalJob
+    from datetime import datetime
 
 
 class BatchDataSourceFactory:
@@ -186,6 +186,15 @@ class BatchDataSource(ABC, Codable, SerializableType):
 
         schema = await self.schema()
         return FeatureView.feature_view_code_template(schema, f'{self}', view_name)
+
+    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+        """
+        my_table_freshenss = await (PostgreSQLConfig("DB_URL")
+            .table("my_table")
+            .freshness()
+        )
+        """
+        raise NotImplementedError(f'Freshness is not implemented for {type(self)}.')
 
 
 class ColumnFeatureMappable:

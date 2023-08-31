@@ -18,6 +18,7 @@ from aligned.feature_view import (
     CombinedFeatureViewMetadata,
     FeatureView,
     FeatureViewMetadata,
+    feature_view,
 )
 from aligned.schemas.text_vectoriser import TextVectoriserModel
 from aligned.sources.kafka import KafkaConfig
@@ -31,6 +32,7 @@ __all__ = [
     'FeatureStore',
     'FeatureView',
     'FeatureViewMetadata',
+    'feature_view',
     'CombinedFeatureView',
     'CombinedFeatureViewMetadata',
     # Batch Data sources

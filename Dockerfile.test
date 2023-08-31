@@ -1,0 +1,17 @@
+FROM python:3.10.5-slim
+
+WORKDIR /opt/app
+
+RUN pip install poetry
+RUN poetry config virtualenvs.create false
+RUN pip install pip --upgrade
+RUN apt-get update && apt-get install -y libpq-dev gcc
+
+COPY ./pyproject.toml /opt/app/pyproject.toml
+
+RUN mkdir /opt/app/aligned
+RUN poetry install --no-root --all-extras
+
+COPY ./aligned /opt/app/aligned
+COPY ./conftest.py /opt/app/conftest.py
+COPY ./test_data /opt/app/test_data

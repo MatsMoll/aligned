@@ -4,7 +4,8 @@ import asyncio
 import logging
 import timeit
 from dataclasses import dataclass, field
-from pathlib import Path
+
+from typing import TYPE_CHECKING
 
 from prometheus_client import Counter, Histogram
 
@@ -15,8 +16,11 @@ from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.feature_source import WritableFeatureSource
 from aligned.feature_store import FeatureStore, FeatureViewStore, ModelFeatureStore
 from aligned.retrival_job import RetrivalJob, StreamAggregationJob
-from aligned.sources.local import StorageFileReference
+from aligned.sources.local import AsRepoDefinition
 from aligned.streams.interface import ReadableStream
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +45,7 @@ class ActiveLearningConfig:
 @dataclass
 class StreamWorker:
 
-    feature_store_reference: StorageFileReference
+    repo_definition: AsRepoDefinition
     sink_source: WritableFeatureSource
     views_to_process: set[str] | None = field(default=None)
     should_prune_unused_features: bool = field(default=False)
@@ -53,7 +57,7 @@ class StreamWorker:
 
     @staticmethod
     def from_reference(
-        source: StorageFileReference,
+        source: AsRepoDefinition,
         sink_source: WritableFeatureSource,
         views_to_process: set[str] | None = None,
     ) -> StreamWorker:
@@ -175,7 +179,7 @@ class StreamWorker:
     async def start(self) -> None:
         from prometheus_client import start_http_server
 
-        store = await self.feature_store_reference.feature_store()
+        store = await self.repo_definition.feature_store()
         store = store.with_source(self.sink_source)
 
         feature_views = self.feature_views_by_topic(store)

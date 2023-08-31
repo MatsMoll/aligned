@@ -1,18 +1,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Any
 
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import FactualRetrivalJob, RetrivalJob
 from aligned.schemas.codable import Codable
+from datetime import datetime
 
 if TYPE_CHECKING:
     from aligned.compiler.feature_factory import FeatureFactory
     from aligned.enricher import Enricher
     from aligned.entity_data_source import EntityDataSource
+    from aligned.schemas.feature import EventTimestamp
 
 
 @dataclass
@@ -152,3 +153,19 @@ WHERE table_schema = '{schema}'
         }
         values = df.select(['column_name', 'data_type']).to_dicts()
         return {value['column_name']: psql_types[value['data_type']] for value in values}
+
+    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+        import polars as pl
+
+        value = pl.read_database(
+            f'SELECT MAX({event_timestamp.name}) as freshness FROM {self.table}',
+            connection_uri=self.config.url,
+        )['freshness'].max()
+
+        if value:
+            if isinstance(value, datetime):
+                return value
+            else:
+                raise ValueError(f'Unsupported freshness value {value}')
+        else:
+            return None
