@@ -98,6 +98,14 @@ class UpperBoundInclusive(Constraint):
 
 
 @dataclass
+class Unique(Constraint):
+    name = 'unique'
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+@dataclass
 class MinLength(Constraint):
     value: int
 

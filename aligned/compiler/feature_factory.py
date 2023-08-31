@@ -18,6 +18,7 @@ from aligned.schemas.constraints import (
     LowerBoundInclusive,
     MaxLength,
     MinLength,
+    Unique,
     Regex,
     StartsWith,
     UpperBound,
@@ -719,6 +720,36 @@ class DateFeature(FeatureFactory):
         feature.transformation = DateComponentFactory(component, self)
         return feature
 
+    def day(self) -> Int32:
+        return self.date_component('day')
+
+    def hour(self) -> Int32:
+        return self.date_component('hour')
+
+    def second(self) -> Int32:
+        return self.date_component('second')
+
+    def minute(self) -> Int32:
+        return self.date_component('minute')
+
+    def quarter(self) -> Int32:
+        return self.date_component('quarter')
+
+    def week(self) -> Int32:
+        return self.date_component('week')
+
+    def year(self) -> Int32:
+        return self.date_component('year')
+
+    def month(self) -> Int32:
+        return self.date_component('month')
+
+    def weekday(self) -> Int32:
+        return self.date_component('dayofweek')
+
+    def day_of_year(self) -> Int32:
+        return self.date_component('ordinal_day')
+
 
 class Bool(EquatableFeature, LogicalOperatableFeature):
     @property
@@ -775,6 +806,12 @@ class UUID(FeatureFactory, CouldBeEntityFeature):
 
     def aggregate(self) -> CategoricalAggregation:
         return CategoricalAggregation(self)
+
+
+class UniqueValidateable(FeatureFactory):
+    def is_unique(self: T) -> T:
+        self._add_constraint(Unique())
+        return self
 
 
 class LengthValidatable(FeatureFactory):

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 from uuid import uuid4
@@ -20,19 +19,29 @@ from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
 from aligned.s3.storage import FileStorage, HttpStorage
 from aligned.schemas.codable import Codable
-from aligned.schemas.feature import FeatureType
+from aligned.schemas.feature import EventTimestamp, FeatureType
 from aligned.schemas.folder import Folder
+from aligned.schemas.repo_definition import RepoDefinition
 from aligned.storage import Storage
+from aligned.feature_store import FeatureStore
 
 if TYPE_CHECKING:
     from aligned.compiler.feature_factory import FeatureFactory
-    from aligned.feature_store import FeatureStore
+    from datetime import datetime
 
 
 logger = logging.getLogger(__name__)
 
 
-class StorageFileReference:
+class AsRepoDefinition:
+    async def as_repo_definition(self) -> RepoDefinition:
+        raise NotImplementedError()
+
+    async def feature_store(self) -> FeatureStore:
+        return FeatureStore.from_definition(await self.as_repo_definition())
+
+
+class StorageFileReference(AsRepoDefinition):
     """
     A reference to a file that can be loaded as bytes.
 
@@ -45,12 +54,15 @@ class StorageFileReference:
     async def write(self, content: bytes) -> None:
         raise NotImplementedError()
 
-    async def feature_store(self) -> FeatureStore:
-        from aligned import FeatureStore
-        from aligned.schemas.repo_definition import RepoDefinition
-
+    async def as_repo_definition(self) -> RepoDefinition:
         file = await self.read()
-        return FeatureStore.from_definition(RepoDefinition.from_json(file))
+        return RepoDefinition.from_json(file)
+
+
+async def data_file_freshness(reference: DataFileReference, column_name: str) -> datetime:
+    file = await reference.to_polars()
+    file.select(pl.col(column_name).max().alias('max_value'))
+    return file.collect()['max_value'].to_list()[0]
 
 
 @dataclass
@@ -178,6 +190,9 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
             'from aligned import FileSource\nfrom aligned.sources.local import CsvConfig',
         )
 
+    async def freshness(self, event_timestamp: EventTimestamp) -> datetime:
+        return await data_file_freshness(self, event_timestamp.name)
+
 
 @dataclass
 class ParquetConfig(Codable):
@@ -292,6 +307,18 @@ class StorageFileSource(StorageFileReference):
         await self.storage.write(self.path, content)
 
 
+@dataclass
+class DirectoryRepo(AsRepoDefinition):
+
+    dir: Path
+    exclude: list[str] | None = field(default=None)
+
+    async def as_repo_definition(self) -> RepoDefinition:
+        from aligned.compiler.repo_reader import RepoReader
+
+        return await RepoReader.definition_from_path(self.dir, self.exclude)
+
+
 class FileSource:
     """
     A factory class, creating references to files.
@@ -319,6 +346,11 @@ class FileSource:
     @staticmethod
     def folder(path: str) -> Folder:
         return LocalFolder(base_path=Path(path))
+
+    @staticmethod
+    def repo_from_dir(dir: str, exclude: list[str] | None = None) -> AsRepoDefinition:
+
+        return DirectoryRepo(Path(dir), exclude)
 
 
 @dataclass

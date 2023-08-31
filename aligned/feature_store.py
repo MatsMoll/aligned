@@ -414,6 +414,30 @@ class FeatureStore:
         feature_view = self.feature_views[view]
         return FeatureViewStore(self, feature_view, self.event_triggers_for(view))
 
+    def add_compiled_view(self, view: CompiledFeatureView) -> None:
+        """
+        Compiles and adds the feature view to the store
+
+        ```python
+        @feature_view(...)
+        class MyFeatureView:
+
+            id = Int32().as_entity()
+
+            my_feature = String()
+
+        store.add_compiled_view(MyFeatureView.compile())
+        ```
+
+        Args:
+            view (CompiledFeatureView): The feature view to add
+        """
+        self.feature_views[view.name] = view
+        if isinstance(self.feature_source, BatchFeatureSource):
+            self.feature_source.sources[
+                FeatureLocation.feature_view(view.name).identifier
+            ] = view.batch_data_source
+
     def add_feature_view(self, feature_view: FeatureView) -> None:
         """
         Compiles and adds the feature view to the store
@@ -432,12 +456,7 @@ class FeatureStore:
         Args:
             feature_view (FeatureView): The feature view to add
         """
-        compiled_view = feature_view.compile_instance()
-        self.feature_views[compiled_view.name] = compiled_view
-        if isinstance(self.feature_source, BatchFeatureSource):
-            self.feature_source.sources[
-                FeatureLocation.feature_view(compiled_view.name).identifier
-            ] = compiled_view.batch_data_source
+        self.add_compiled_view(feature_view.compile_instance())
 
     def add_combined_feature_view(self, feature_view: CombinedFeatureView) -> None:
         compiled_view = type(feature_view).compile()

@@ -4,13 +4,17 @@ import pytest
 
 from aligned import FeatureStore, FeatureView, PostgreSQLConfig
 from conftest import DataTest
+import platform
 
 
+@pytest.mark.skipif(
+    platform.uname().machine.startswith('arm'), reason='Needs psycopg2 which is not supported on arm'
+)
 @pytest.mark.asyncio
 async def test_postgresql(point_in_time_data_test: DataTest) -> None:
 
     if 'PSQL_DATABASE_TEST' not in environ:
-        environ['PSQL_DATABASE_TEST'] = 'postgresql://postgres:postgres@localhost:5433/aligned-test'
+        environ['PSQL_DATABASE_TEST'] = 'postgresql://postgres:postgres@127.0.0.1:5433/aligned-test'
 
     psql_database = environ['PSQL_DATABASE_TEST']
 

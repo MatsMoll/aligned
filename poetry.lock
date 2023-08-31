@@ -253,27 +253,27 @@ files = [
 
 [[package]]
 name = "connectorx"
-version = "0.3.2a7"
+version = "0.3.2"
 description = ""
 optional = false
 python-versions = "*"
 files = [
-    {file = "connectorx-0.3.2a7-cp310-cp310-macosx_10_7_x86_64.whl", hash = "sha256:4c9a770af18f81951fbcbaab0f896b95bbe90f6fac7be9f91b9085fcd29f61ac"},
-    {file = "connectorx-0.3.2a7-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:704b26855fa07a86c9131616904bd741fcdcde04c7f20b074f0a2e7a830bcbd6"},
-    {file = "connectorx-0.3.2a7-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:5cebd9ed2163b96f116404c8f874743344720562efb1f22cd06bd7e60d06ec75"},
-    {file = "connectorx-0.3.2a7-cp310-none-win_amd64.whl", hash = "sha256:d5278dae5a3347ba709e28512c0a5aa7454fa249590920ece6b310d5f27b3804"},
-    {file = "connectorx-0.3.2a7-cp311-cp311-macosx_10_7_x86_64.whl", hash = "sha256:b1d880a214bb37d17b194530e7459c5b7409bd7005141e85b7a9f3ad37ac1f16"},
-    {file = "connectorx-0.3.2a7-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:7f58e62c480ff16591b13343ba145cddcf4daeded764ad9d29cedf55b0570d9b"},
-    {file = "connectorx-0.3.2a7-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:73d2690b89c18cd10a1ce7aed2d71f749dda6178be8a6c77d339f65f063678a6"},
-    {file = "connectorx-0.3.2a7-cp311-none-win_amd64.whl", hash = "sha256:05a5672cdf054aab38e8b96269ffb610ba5fb2a6db688f320218b552d0f26fe5"},
-    {file = "connectorx-0.3.2a7-cp38-cp38-macosx_10_7_x86_64.whl", hash = "sha256:6da61612cc5dfed625076bd907652df1dc59eaaced478f3b7caf06c57afc1544"},
-    {file = "connectorx-0.3.2a7-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:848e5072ddafb58192edffc3a3d6d43cf57ba2651ad48748726aa8eb1d63b4b2"},
-    {file = "connectorx-0.3.2a7-cp38-cp38-manylinux_2_28_x86_64.whl", hash = "sha256:11e5dcf82d26ccc5bb8ad69f197181dc379378f1bbcabec2b6a432bf39ae30c0"},
-    {file = "connectorx-0.3.2a7-cp38-none-win_amd64.whl", hash = "sha256:b71b7ddfe8521e67a33e6178f313ee5d42957bbff626b56b87119ff6bc137b86"},
-    {file = "connectorx-0.3.2a7-cp39-cp39-macosx_10_7_x86_64.whl", hash = "sha256:35488a9efb4ec57590e57b41deb13b26d69af5a2957dfb913c8717f4fa08439f"},
-    {file = "connectorx-0.3.2a7-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:64cfa7debd7a9a56cf86f7485da1fcbff4ae2c4db42e46be8ce0915291c33f35"},
-    {file = "connectorx-0.3.2a7-cp39-cp39-manylinux_2_28_x86_64.whl", hash = "sha256:de21533fa65a2f3628edc3eef495c6bb6f832ed96fc5daa38cd26ad91c9d9bb8"},
-    {file = "connectorx-0.3.2a7-cp39-none-win_amd64.whl", hash = "sha256:6fcf949d85fce94c70fc9415b8b9078de1f777ae39f8519e9c9a8e46bb3a3dca"},
+    {file = "connectorx-0.3.2-cp310-cp310-macosx_10_7_x86_64.whl", hash = "sha256:98274242c64a2831a8b1c86e0fa2c46a557dd8cbcf00c3adcf5a602455fb02d7"},
+    {file = "connectorx-0.3.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:e2b11ba49efd330a7348bef3ce09c98218eea21d92a12dd75cd8f0ade5c99ffc"},
+    {file = "connectorx-0.3.2-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:3f6431a30304271f9137bd7854d2850231041f95164c6b749d9ede4c0d92d10c"},
+    {file = "connectorx-0.3.2-cp310-none-win_amd64.whl", hash = "sha256:b370ebe8f44d2049254dd506f17c62322cc2db1b782a57f22cce01ddcdcc8fed"},
+    {file = "connectorx-0.3.2-cp311-cp311-macosx_10_7_x86_64.whl", hash = "sha256:d5277fc936a80da3d1dcf889020e45da3493179070d9be8a47500c7001fab967"},
+    {file = "connectorx-0.3.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:8cc6c963237c3d3b02f7dcd47e1be9fc6e8b93ef0aeed8694f65c62b3c4688a1"},
+    {file = "connectorx-0.3.2-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:9403902685b3423cba786db01a36f36efef90ae3d429e45b74dadb4ae9e328dc"},
+    {file = "connectorx-0.3.2-cp311-none-win_amd64.whl", hash = "sha256:6b5f518194a2cf12d5ad031d488ded4e4678eff3b63551856f2a6f1a83197bb8"},
+    {file = "connectorx-0.3.2-cp38-cp38-macosx_10_7_x86_64.whl", hash = "sha256:a5602ae0531e55c58af8cfca92b8e9454fc1ccd82c801cff8ee0f17c728b4988"},
+    {file = "connectorx-0.3.2-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:7c5959bfb4a049bb8ce1f590b5824cd1105460b6552ffec336c4bd740eebd5bd"},
+    {file = "connectorx-0.3.2-cp38-cp38-manylinux_2_28_x86_64.whl", hash = "sha256:c4387bb27ba3acde0ab6921fdafa3811e09fce0db3d1f1ede8547d9de3aab685"},
+    {file = "connectorx-0.3.2-cp38-none-win_amd64.whl", hash = "sha256:4b1920c191be9a372629c31c92d5f71fc63f49f283e5adfc4111169de40427d9"},
+    {file = "connectorx-0.3.2-cp39-cp39-macosx_10_7_x86_64.whl", hash = "sha256:4473fc06ac3618c673cea63a7050e721fe536782d5c1b6e433589c37a63de704"},
+    {file = "connectorx-0.3.2-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:4009b16399457340326137a223921a24e3e166b45db4dbf3ef637b9981914dc2"},
+    {file = "connectorx-0.3.2-cp39-cp39-manylinux_2_28_x86_64.whl", hash = "sha256:74f5b93535663cf47f9fc3d7964f93e652c07003fa71c38d7a68f42167f54bba"},
+    {file = "connectorx-0.3.2-cp39-none-win_amd64.whl", hash = "sha256:0b80acca13326856c14ee726b47699011ab1baa10897180240c8783423ca5e8c"},
 ]
 
 [[package]]
@@ -1957,15 +1957,15 @@ files = [
 ]
 
 [extras]
-aws = ["aioaws", "connectorx"]
+aws = ["aioaws"]
 image = ["pillow"]
 kafka = ["kafka-python"]
 pandera = ["pandera"]
-psql = ["connectorx"]
+psql = []
 redis = ["redis"]
 server = ["asgi-correlation-id", "fastapi", "prometheus-fastapi-instrumentator", "uvicorn"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "44d7cb5d5d285970afbb810ded5a02db5e8082143774d17a1f8399939222be50"
+content-hash = "c8bec5d60cd754366d9b2680741dc9d80b73d30f60579d40511824d1ba0ef92a"

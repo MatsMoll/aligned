@@ -2,11 +2,13 @@ import logging
 from datetime import datetime
 from importlib import import_module
 from inspect import getmro, isclass
-from pathlib import Path
 from typing import Any
 
 from aligned.enricher import Enricher
+from aligned.feature_view.feature_view import FeatureViewWrapper
 from aligned.schemas.repo_definition import EnricherReference, RepoDefinition, RepoMetadata, RepoReference
+from pathlib import Path
+
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +72,7 @@ def find_files(repo_path: Path, ignore_path: Path | None = None, file_extension:
 
 
 def path_to_py_module(path: Path, repo_root: Path) -> str:
-    return str(path.relative_to(repo_root))[: -len('.py')].replace('./', '').replace('/', '.')
+    return str(path.relative_to(repo_root.resolve()))[: -len('.py')].replace('./', '').replace('/', '.')
 
 
 class RepoReader:
@@ -103,6 +105,7 @@ class RepoReader:
             imports = imports_for(py_file)
 
             module_path = path_to_py_module(py_file, repo_path)
+
             if module_path.startswith('aladdin') or module_path.startswith('.') or module_path.endswith('__'):
                 # Skip no feature defintion modules
                 continue
@@ -119,6 +122,8 @@ class RepoReader:
                     repo.enrichers.append(
                         EnricherReference(module=module_path, attribute_name=attribute, enricher=obj)
                     )
+                elif isinstance(obj, FeatureViewWrapper):
+                    repo.feature_views.add(obj.compile())
                 else:
                     classes = super_classes_in(obj)
                     if 'ModelContract' in classes:

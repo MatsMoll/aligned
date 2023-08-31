@@ -19,8 +19,10 @@ services:
   testing:
     build:
       context: .
-      dockerfile: Dockerfile
-    command: ["python", "-m", "pytest"]
+      dockerfile: Dockerfile.test
+    command: ["pytest"]
+    environment:
+      - PSQL_DATABASE_TEST=postgresql://postgres:postgres@psql_app_db:5432/aligned-test
     volumes:
       - ./pyproject.toml:/opt/app/pyproject.toml
       - ./aligned:/opt/app/aligned
