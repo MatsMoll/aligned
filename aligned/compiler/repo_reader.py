@@ -2,14 +2,12 @@ import logging
 from datetime import datetime
 from importlib import import_module
 from inspect import getmro, isclass
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 from aligned.enricher import Enricher
 from aligned.feature_view.feature_view import FeatureViewWrapper
 from aligned.schemas.repo_definition import EnricherReference, RepoDefinition, RepoMetadata, RepoReference
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from pathlib import Path
 
 
 logger = logging.getLogger(__name__)
