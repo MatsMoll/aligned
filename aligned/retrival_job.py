@@ -459,16 +459,16 @@ class LogJob(RetrivalJob, ModificationJob):
         if logger.level == 0:
             logging.basicConfig(level=logging.INFO)
         df = await self.job.to_pandas()
-        logger.info(f'Results from {type(self.job).__name__}')
-        logger.info(df)
+        logger.debug(f'Results from {type(self.job).__name__}')
+        logger.debug(df)
         return df
 
     async def to_polars(self) -> pl.LazyFrame:
         if logger.level == 0:
             logging.basicConfig(level=logging.INFO)
         df = await self.job.to_polars()
-        logger.info(f'Results from {type(self.job).__name__}')
-        logger.info(df.head(10).collect())
+        logger.debug(f'Results from {type(self.job).__name__}')
+        logger.debug(df.head(10).collect())
         return df
 
     def remove_derived_features(self) -> RetrivalJob:
@@ -546,10 +546,10 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
 
                 for feature in feature_round:
                     if feature.name in df.columns:
-                        logger.info(f'Skipped adding feature {feature.name} to computation plan')
+                        logger.debug(f'Skipped adding feature {feature.name} to computation plan')
                         continue
 
-                    logger.info(f'Adding feature to computation plan in polars: {feature.name}')
+                    logger.debug(f'Adding feature to computation plan in polars: {feature.name}')
 
                     method = await feature.transformation.transform_polars(df, feature.name)
                     if isinstance(method, pl.LazyFrame):
@@ -568,9 +568,9 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
             for feature_round in request.derived_features_order():
                 for feature in feature_round:
                     if feature.name in df.columns:
-                        logger.info(f'Skipping to compute {feature.name} as it is aleady computed')
+                        logger.debug(f'Skipping to compute {feature.name} as it is aleady computed')
                         continue
-                    logger.info(f'Computing feature with pandas: {feature.name}')
+                    logger.debug(f'Computing feature with pandas: {feature.name}')
                     df[feature.name] = await feature.transformation.transform_pandas(
                         df[feature.depending_on_names]
                     )
@@ -630,7 +630,7 @@ class FillMissingColumnsJob(RetrivalJob, ModificationJob):
             if not missing:
                 continue
 
-            logger.info(
+            logger.warn(
                 f"""
 Some features is missing.
 Will fill values with None, but it could be a potential problem: {missing}
@@ -648,7 +648,7 @@ Will fill values with None, but it could be a potential problem: {missing}
             if not missing:
                 continue
 
-            logger.info(
+            logger.warn(
                 f"""
 Some features is missing.
 Will fill values with None, but it could be a potential problem: {missing}
@@ -810,12 +810,12 @@ class RawFileCachedJob(RetrivalJob, ModificationJob):
         from aligned.sources.local import LiteralReference
 
         try:
-            logger.info('Trying to read cache file')
+            logger.debug('Trying to read cache file')
             df = await self.location.read_pandas()
         except UnableToFindFileException:
-            logger.info('Unable to load file, so fetching from source')
+            logger.debug('Unable to load file, so fetching from source')
             df = await self.job.job.to_pandas()
-            logger.info('Writing result to cache')
+            logger.debug('Writing result to cache')
             await self.location.write_pandas(df)
         return (
             await FileFullJob(LiteralReference(df), request=self.job.requests[0])
@@ -849,28 +849,28 @@ class FileCachedJob(RetrivalJob, ModificationJob):
 
     async def to_pandas(self) -> pd.DataFrame:
         try:
-            logger.info('Trying to read cache file')
+            logger.debug('Trying to read cache file')
             df = await self.location.read_pandas()
         except UnableToFindFileException:
-            logger.info('Unable to load file, so fetching from source')
+            logger.debug('Unable to load file, so fetching from source')
             df = await self.job.to_pandas()
-            logger.info('Writing result to cache')
+            logger.debug('Writing result to cache')
             await self.location.write_pandas(df)
         return df
 
     async def to_polars(self) -> pl.LazyFrame:
         try:
-            logger.info('Trying to read cache file')
+            logger.debug('Trying to read cache file')
             df = await self.location.to_polars()
         except UnableToFindFileException:
-            logger.info('Unable to load file, so fetching from source')
+            logger.debug('Unable to load file, so fetching from source')
             df = await self.job.to_polars()
-            logger.info('Writing result to cache')
+            logger.debug('Writing result to cache')
             await self.location.write_polars(df)
         except FileNotFoundError:
-            logger.info('Unable to load file, so fetching from source')
+            logger.debug('Unable to load file, so fetching from source')
             df = await self.job.to_polars()
-            logger.info('Writing result to cache')
+            logger.debug('Writing result to cache')
             await self.location.write_polars(df)
         return df
 
@@ -957,7 +957,7 @@ class TimeMetricLoggerJob(RetrivalJob, ModificationJob):
         start_time = timeit.default_timer()
         df = await self.job.to_pandas()
         elapsed = timeit.default_timer() - start_time
-        logger.info(f'Computed records in {elapsed} seconds')
+        logger.debug(f'Computed records in {elapsed} seconds')
         if self.labels:
             self.time_metric.labels(*self.labels).observe(elapsed)
         else:
@@ -969,7 +969,7 @@ class TimeMetricLoggerJob(RetrivalJob, ModificationJob):
         df = await self.job.to_polars()
         concrete = df.collect()
         elapsed = timeit.default_timer() - start_time
-        logger.info(f'Computed records in {elapsed} seconds')
+        logger.debug(f'Computed records in {elapsed} seconds')
         if self.labels:
             self.time_metric.labels(*self.labels).observe(elapsed)
         else:
@@ -1129,9 +1129,9 @@ class CombineFactualJob(RetrivalJob):
         for request in self.combined_requests:
             for feature in request.derived_features:
                 if feature.name in df.columns:
-                    logger.info(f'Skipping feature {feature.name}, already computed')
+                    logger.debug(f'Skipping feature {feature.name}, already computed')
                     continue
-                logger.info(f'Computing feature: {feature.name}')
+                logger.debug(f'Computing feature: {feature.name}')
                 df[feature.name] = await feature.transformation.transform_pandas(
                     df[feature.depending_on_names]
                 )
@@ -1139,12 +1139,12 @@ class CombineFactualJob(RetrivalJob):
 
     async def combine_polars_data(self, df: pl.LazyFrame) -> pl.LazyFrame:
         for request in self.combined_requests:
-            logger.info(f'{request.name}, {len(request.derived_features)}')
+            logger.debug(f'{request.name}, {len(request.derived_features)}')
             for feature in request.derived_features:
                 if feature.name in df.columns:
-                    logger.info(f'Skipping feature {feature.name}, already computed')
+                    logger.debug(f'Skipping feature {feature.name}, already computed')
                     continue
-                logger.info(f'Computing feature: {feature.name}')
+                logger.debug(f'Computing feature: {feature.name}')
                 result = await feature.transformation.transform_polars(df, feature.name)
                 if isinstance(result, pl.Expr):
                     df = df.with_columns([result.alias(feature.name)])

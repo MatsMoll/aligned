@@ -148,19 +148,19 @@ class StreamWorker:
             if view.name not in feature_views_to_process:
                 continue
             if not view.stream_data_source:
-                logger.info(f'View: {view.name} have no stream source. Therefore, it will not be processed')
+                logger.debug(f'View: {view.name} have no stream source. Therefore, it will not be processed')
                 continue
 
             source = view.stream_data_source
 
             view_store = store.feature_view(view.name)
             if self.should_prune_unused_features:
-                logger.info(f'Optimising the write for {view.name} based on model usage')
+                logger.debug(f'Optimising the write for {view.name} based on model usage')
                 view_store = view_store.with_optimised_write()
 
             request = view_store.request
             if len(request.all_features) == 0:
-                logger.info(
+                logger.debug(
                     f'View: {view.name} had no features to process. Therefore, it will not be ignored'
                 )
                 continue
@@ -199,7 +199,7 @@ class StreamWorker:
                 source = model.predictions_view.stream_source
 
                 if not source:
-                    logger.info(f'Skipping to setup active learning set for {model_name}')
+                    logger.debug(f'Skipping to setup active learning set for {model_name}')
 
                 processes.append(
                     process_predictions(source.consumer(), store.model(model_name), active_learning_config)
@@ -222,11 +222,11 @@ async def process_predictions(
     from aligned.active_learning.job import ActiveLearningJob
 
     if not active_learning_config:
-        logger.info('No active learning config found, will not listen to predictions')
+        logger.debug('No active learning config found, will not listen to predictions')
         return
 
     topic_name = model.model.predictions_view.stream_source.topic_name
-    logger.info(f'Started listning to {topic_name}')
+    logger.debug(f'Started listning to {topic_name}')
 
     while True:
         records = await stream_source.read()
@@ -246,7 +246,7 @@ async def process_predictions(
         )
         _ = await job.to_polars()
 
-        logger.info(f'Processing {len(records)} predictions in {timeit.default_timer() - start_time} seconds')
+        logger.debug(f'Processing {len(records)} predictions in {timeit.default_timer() - start_time} seconds')
 
 
 def stream_job(values: list[dict], feature_view: FeatureViewStore) -> RetrivalJob:
@@ -294,11 +294,11 @@ async def monitor_process(values: list[dict], view: FeatureViewStore):
 async def multi_processing(
     stream_source: ReadableStream, topic_name: str, feature_views: list[FeatureViewStore]
 ) -> None:
-    logger.info(f'Started listning to {topic_name}')
+    logger.debug(f'Started listning to {topic_name}')
     while True:
-        logger.info(f'Reading {topic_name}')
+        logger.debug(f'Reading {topic_name}')
         stream_values = await stream_source.read()
-        logger.info(f'Read {topic_name} values: {len(stream_values)}')
+        logger.debug(f'Read {topic_name} values: {len(stream_values)}')
 
         if not stream_values:
             continue
@@ -309,11 +309,11 @@ async def multi_processing(
 async def single_processing(
     stream_source: ReadableStream, topic_name: str, feature_view: FeatureViewStore
 ) -> None:
-    logger.info(f'Started listning to {topic_name}')
+    logger.debug(f'Started listning to {topic_name}')
     while True:
-        logger.info(f'Reading {topic_name}')
+        logger.debug(f'Reading {topic_name}')
         records = await stream_source.read()
-        logger.info(f'Read {topic_name} values: {len(records)}')
+        logger.debug(f'Read {topic_name} values: {len(records)}')
 
         if not records:
             continue
