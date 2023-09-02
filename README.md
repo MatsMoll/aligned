@@ -8,6 +8,7 @@ View the [`MatsMoll/aligned-example` repo](https://github.com/MatsMoll/aligned-e
 This is done by providing an new innovative way of describing feature transformations, and data flow in ML systems. While also collecting dependency metadata that would otherwise be too inconvenient and error prone to manually type out.
 
 Therefore, you get the following:
+- [Data Freshness](#data-freshness)
 - [Feature Store](https://matsmoll.github.io/posts/understanding-the-chaotic-landscape-of-mlops#feature-store)
 - [Feature Server](#feature-server)
 - [Stream Processing](#stream-worker)
@@ -41,18 +42,16 @@ Then get code completion and typesafety by referencing them in other features.
 This makes the features light weight, data source indipendent, and flexible.
 
 ```python
-class TitanicPassenger(FeatureView):
-
-    metadata = FeatureView.metadata_with(
-        name="passenger",
-        description="Some features from the titanic dataset",
-        batch_source=FileSource.csv_at("titanic.csv"),
-        stream_source=HttpStreamSource(topic_name="titanic")
-    )
+@feature_view(
+    name="passenger",
+    description="Some features from the titanic dataset",
+    batch_source=FileSource.csv_at("titanic.csv"),
+    stream_source=HttpStreamSource(topic_name="titanic")
+)
+class TitanicPassenger:
 
     passenger_id = Int32().as_entity()
 
-    # Input values
     age = (
         Float()
             .description("A float as some have decimals")
@@ -80,21 +79,23 @@ Only define where the data is, and we handle the dirty work.
 my_db = PostgreSQLConfig(env_var="DATABASE_URL")
 redis = RedisConfig(env_var="REDIS_URL")
 
-class TitanicPassenger(FeatureView):
-
-    metadata = FeatureView.metadata_with(
-        name="passenger",
-        description="Some features from the titanic dataset",
-        batch_source=my_db.table(
-            "passenger",
-            mapping_keys={
-                "Passenger_Id": "passenger_id"
-            }
-        ),
-        stream_source=redis.stream(topic="titanic")
-    )
+@feature_view(
+    name="passenger",
+    description="Some features from the titanic dataset",
+    batch_source=my_db.table(
+        "passenger",
+        mapping_keys={
+            "Passenger_Id": "passenger_id"
+        }
+    ),
+    stream_source=redis.stream(topic="titanic")
+)
+class TitanicPassenger:
 
     passenger_id = Int32().as_entity()
+
+    # Some features
+    ...
 ```
 
 ### Fast development
@@ -106,24 +107,22 @@ my_db = PostgreSQLConfig.localhost()
 
 aws_bucket = AwsS3Config(...)
 
-class SomeFeatures(FeatureView):
-
-    metadata = FeatureViewMetadata(
-        name="some_features",
-        description="...",
-        batch_source=my_db.table("local_features")
-    )
+@feature_view(
+    name="some_features",
+    description="...",
+    batch_source=my_db.table("local_features")
+)
+class SomeFeatures:
 
     # Some features
     ...
 
-class AwsFeatures(FeatureView):
-
-    metadata = FeatureViewMetadata(
-        name="aws",
-        description="...",
-        batch_source=aws_bucket.file_at("path/to/file.parquet")
-    )
+@feature_view(
+    name="aws",
+    description="...",
+    batch_source=aws_bucket.file_at("path/to/file.parquet")
+)
+class AwsFeatures:
 
     # Some features
     ...
@@ -136,31 +135,61 @@ This is where a `Model` comes in.
 Here can you define which features should be exposed.
 
 ```python
-class Titanic(Model):
+passenger = TitanicPassenger()
+location = LocationFeatures()
 
-    passenger = TitanicPassenger()
-    location = LocationFeatures()
+@model_contract(
+    name="titanic",
+    features=[ # aka. the model input
+        passenger.constant_filled_age,
+        passenger.ordinal_sex,
+        passenger.sibsp,
 
-    metadata = Model.metadata_with(
-        name="titanic",
-        features=[
-            passenger.constant_filled_age,
-            passenger.ordinal_sex,
-            passenger.sibsp,
-
-            location.distance_to_shore,
-            location.distance_to_closest_boat
-        ]
-    )
+        location.distance_to_shore,
+        location.distance_to_closest_boat
+    ]
+)
+class Titanic:
 
     # Referencing the passenger's survived feature as the target
     did_survive = passenger.survived.as_classification_target()
 ```
 
+## Data Freshness
+Making sure a source contains fresh data is a crucial part to create propper ML applications.
+Therefore, Aligned provides an easy way to check how fresh a source is.
+
+```python
+@feature_view(
+    name="departures",
+    description="Features related to the departure of a taxi ride",
+    batch_source=taxi_db.table("departures"),
+)
+class TaxiDepartures:
+
+    trip_id = UUID().as_entity()
+
+    pickuped_at = EventTimestamp()
+
+    number_of_passengers = Int32()
+
+    dropoff_latitude = Float().is_required()
+    dropoff_longitude = Float().is_required()
+
+    pickup_latitude = Float().is_required()
+    pickup_longitude = Float().is_required()
+
+
+freshness = await TaxiDepartures.freshness_in_batch_source()
+
+if freshness < datetime.now() - timedelta(days=2):
+    raise ValueError("To old data to create an ML model")
+```
+
 
 ## Data Enrichers
 
-In manny cases will extra data be needed in order to generate some features.
+In many cases will extra data be needed in order to generate some features.
 We therefore need some way of enriching the data.
 This can easily be done with Alinged's `DataEnricher`s.
 
@@ -184,9 +213,8 @@ async def distance_to_users(df: DataFrame) -> Series:
     ...
     return distances
 
-class SomeFeatures(FeatureView):
-
-    metadata = FeatureViewMetadata(...)
+@feature_view(...)
+class SomeFeatures:
 
     latitude = Float()
     longitude = Float()
@@ -263,7 +291,8 @@ Alinged will make sure all the different features gets formatted as the correct 
 In addition will aligned also make sure that the returend features aligne with defined constraints.
 
 ```python
-class TitanicPassenger(FeatureView):
+@feature_view(...)
+class TitanicPassenger:
 
     ...
 

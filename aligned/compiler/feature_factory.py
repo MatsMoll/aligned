@@ -437,7 +437,7 @@ class FeatureFactory(FeatureReferencable):
 
 
 class CouldBeModelVersion:
-    def as_model_Version(self) -> ModelVersion:
+    def as_model_version(self) -> ModelVersion:
         if isinstance(self, FeatureFactory):
             return ModelVersion(self)
 

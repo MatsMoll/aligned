@@ -33,12 +33,14 @@ class CombinedFeatureViewWrapper(Generic[T]):
     view: Type[T]
 
     def __call__(self) -> T:
+        # Needed to make sure that the `location` is set in the view's features
+        _ = self.compile()
         return self.view()
 
     def compile(self) -> CompiledCombinedFeatureView:
         return CombinedFeatureView.compile_with_metadata(self.view(), self.metadata)
 
-    def query(self) -> FeatureViewStore:
+    def query(self) -> 'FeatureViewStore':
         """Makes it possible to query the feature view for features
 
         ```python
