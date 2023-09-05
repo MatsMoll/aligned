@@ -196,8 +196,8 @@ class FeatureView(ABC):
     @staticmethod
     def metadata_with(
         name: str,
-        description: str,
         batch_source: BatchDataSource,
+        description: str | None = None,
         stream_source: StreamDataSource | None = None,
         application_source: BatchDataSource | None = None,
         staging_source: BatchDataSource | None = None,

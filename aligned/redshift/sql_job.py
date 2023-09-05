@@ -62,17 +62,16 @@ class TableFetch:
     def sql_query(self, distinct: str | None = None) -> str:
         return redshift_table_fetch(self, distinct)
 
+
 def select_table(table: TableFetch) -> str:
     if isinstance(table.table, TableFetch):
-        raise ValueError("Do not support TableFetch in this select")
+        raise ValueError('Do not support TableFetch in this select')
     wheres = ''
     order_by = ''
     group_by = ''
     from_table = 'FROM '
-    
-    columns = [
-        col.sql_select for col in table.columns
-    ]
+
+    columns = [col.sql_select for col in table.columns]
     select = f'SELECT {",".join(columns)}'
 
     if table.conditions:
@@ -96,6 +95,7 @@ def select_table(table: TableFetch) -> str:
     {order_by}
     {group_by}
     """
+
 
 def redshift_table_fetch(fetch: TableFetch, distinct: str | None = None) -> str:
     wheres = ''
