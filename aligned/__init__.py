@@ -10,7 +10,7 @@ from aligned.compiler.feature_factory import (
     String,
     Timestamp,
 )
-from aligned.compiler.model import ModelContract
+from aligned.compiler.model import ModelContract, model_contract
 from aligned.data_source.stream_data_source import HttpStreamSource
 from aligned.feature_store import FeatureStore
 from aligned.feature_view import (
@@ -19,6 +19,7 @@ from aligned.feature_view import (
     FeatureView,
     FeatureViewMetadata,
     feature_view,
+    combined_feature_view,
 )
 from aligned.schemas.text_vectoriser import TextVectoriserModel
 from aligned.sources.kafka import KafkaConfig
@@ -60,4 +61,7 @@ __all__ = [
     'Json',
     'ModelContract',
     'TextVectoriserModel',
+    'feature_view',
+    'combined_feature_view',
+    'model_contract',
 ]

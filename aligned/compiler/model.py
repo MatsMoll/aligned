@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractproperty
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Callable
+from typing import Any, Callable, Type, TypeVar, Generic
 
 import polars as pl
 
@@ -30,6 +30,8 @@ from aligned.schemas.target import RegressionTarget as RegressionTargetSchema
 
 logger = logging.getLogger(__name__)
 
+T = TypeVar('T')
+
 
 class SqlEntityDataSource(EntityDataSource):
 
@@ -56,7 +58,7 @@ class SqlEntityDataSource(EntityDataSource):
 
 
 @dataclass
-class ModelMetedata:
+class ModelMetadata:
     name: str
     features: list[FeatureReferencable]
     # Will log the feature inputs to a model. Therefore, enabling log and wait etc.
@@ -67,6 +69,42 @@ class ModelMetedata:
     predictions_source: BatchDataSource | None = field(default=None)
     predictions_stream: StreamDataSource | None = field(default=None)
     dataset_folder: Folder | None = field(default=None)
+
+
+@dataclass
+class ModelContractWrapper(Generic[T]):
+
+    metadata: ModelMetadata
+    contract: Type[T]
+
+    def compile(self) -> ModelSchema:
+        return ModelContract.compile_with_metadata(self.contract(), self.metadata)
+
+
+def model_contract(
+    name: str,
+    features: list[FeatureReferencable],
+    contacts: list[str] | None = None,
+    tags: dict[str, str] | None = None,
+    description: str | None = None,
+    predictions_source: BatchDataSource | None = None,
+    predictions_stream: StreamDataSource | None = None,
+    dataset_folder: Folder | None = None,
+) -> Callable[[Type[T]], ModelContractWrapper[T]]:
+    def decorator(cls: Type[T]) -> ModelContractWrapper[T]:
+        metadata = ModelMetadata(
+            name,
+            features,
+            contacts=contacts,
+            tags=tags,
+            description=description,
+            predictions_source=predictions_source,
+            predictions_stream=predictions_stream,
+            dataset_folder=dataset_folder,
+        )
+        return ModelContractWrapper(metadata, cls)
+
+    return decorator
 
 
 class ModelContract(ABC):
@@ -80,8 +118,8 @@ class ModelContract(ABC):
         predictions_source: BatchDataSource | None = None,
         predictions_stream: StreamDataSource | None = None,
         dataset_folder: Folder | None = None,
-    ) -> ModelMetedata:
-        return ModelMetedata(
+    ) -> ModelMetadata:
+        return ModelMetadata(
             name,
             features,
             contacts,
@@ -93,14 +131,16 @@ class ModelContract(ABC):
         )
 
     @abstractproperty
-    def metadata(self) -> ModelMetedata:
+    def metadata(self) -> ModelMetadata:
         raise NotImplementedError()
 
     @classmethod
     def compile(cls) -> ModelSchema:
-        return cls().compile_instance()
+        instance = cls()
+        return ModelContract.compile_with_metadata(instance, instance.metadata)
 
-    def compile_instance(self) -> ModelSchema:
+    @staticmethod
+    def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
         """
         Compiles the ModelContract in to ModelSchema structure that can further be encoded.
 
@@ -116,8 +156,7 @@ class ModelContract(ABC):
 
         Returns: The compiled Model schema
         """
-        var_names = [name for name in self.__dir__() if not name.startswith('_')]
-        metadata = self.metadata
+        var_names = [name for name in model.__dir__() if not name.startswith('_')]
 
         inference_view: PredictionsView = PredictionsView(
             entities=set(),
@@ -135,7 +174,7 @@ class ModelContract(ABC):
         regression_targets: dict[str, RegressionTargetSchema] = {}
 
         for var_name in var_names:
-            feature = getattr(self, var_name)
+            feature = getattr(model, var_name)
 
             if isinstance(feature, FeatureFactory):
                 feature._location = FeatureLocation.model(metadata.name)

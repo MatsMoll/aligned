@@ -19,6 +19,7 @@ from aligned.schemas.feature_view import CompiledFeatureView
 if TYPE_CHECKING:
     from aligned.compiler.feature_factory import FeatureFactory
     from aligned.feature_store import FeatureViewStore
+    from datetime import datetime
 
 # Enables code compleation in the select method
 T = TypeVar('T')
@@ -27,8 +28,8 @@ T = TypeVar('T')
 @dataclass
 class FeatureViewMetadata:
     name: str
-    description: str
     batch_source: BatchDataSource
+    description: str | None = field(default=None)
     stream_source: StreamDataSource | None = field(default=None)
     application_source: BatchDataSource | None = field(default=None)
     staging_source: BatchDataSource | None = field(default=None)
@@ -49,10 +50,27 @@ class FeatureViewMetadata:
 
 
 def feature_view(
-    name: str, description: str, batch_source: BatchDataSource
+    name: str,
+    batch_source: BatchDataSource,
+    description: str | None = None,
+    stream_source: StreamDataSource | None = None,
+    application_source: BatchDataSource | None = None,
+    staging_source: BatchDataSource | None = None,
+    contacts: list[str] | None = None,
+    tags: dict[str, str] | None = None,
 ) -> Callable[[Type[T]], FeatureViewWrapper[T]]:
     def decorator(cls: Type[T]) -> FeatureViewWrapper[T]:
-        return FeatureViewWrapper(FeatureViewMetadata(name, description, batch_source), cls)
+        metadata = FeatureViewMetadata(
+            name,
+            batch_source,
+            description=description,
+            stream_source=stream_source,
+            application_source=application_source,
+            staging_source=staging_source,
+            contacts=contacts,
+            tags=tags or {},
+        )
+        return FeatureViewWrapper(metadata, cls)
 
     return decorator
 
@@ -64,6 +82,8 @@ class FeatureViewWrapper(Generic[T]):
     view: Type[T]
 
     def __call__(self) -> T:
+        # Needs to compiile the model to set the location for the view features
+        _ = self.compile()
         return self.view()
 
     def compile(self) -> CompiledFeatureView:
@@ -101,6 +121,66 @@ class FeatureViewWrapper(Generic[T]):
         df = await self.query().process_input(data).to_polars()
         return df.collect().to_dicts()
 
+    async def freshness_in_source(self, source: BatchDataSource) -> datetime | None:
+        """
+        Returns the freshest datetime for a provided source
+
+        ```python
+        psql_source = PostgreSQLConfig.localhost()
+        my_data = FileSource.parquet_at("data.parquet")
+
+        @feature_view(
+            name="my_view",
+            batch_source=psql_source.table("my_view")
+        )
+        class MyView:
+
+            id = Int32().as_entity()
+
+            updated_at = EventTimestamp()
+
+            x = Float()
+
+
+        await MyView.freshness_in_source(my_data)
+
+        >>> datetime.datetime(2016, 1, 11, 23, 32, 55)
+        ```
+
+        Args:
+            source (BatchDataSource): The source to get the freshness for
+        """
+        compiled = self.compile()
+        return await FeatureView.freshness_in_source(compiled, source)
+
+    async def freshness_in_batch_source(self) -> datetime | None:
+        """
+        Returns the freshest datetime for a provided source
+
+        ```python
+        psql_source = PostgreSQLConfig.localhost()
+
+        @feature_view(
+            name="my_view",
+            batch_source=psql_source.table("my_view")
+        )
+        class MyView:
+
+            id = Int32().as_entity()
+
+            updated_at = EventTimestamp()
+
+            x = Float()
+
+
+        await MyView.freshness_in_batch_source()
+
+        >>> datetime.datetime(2016, 1, 11, 23, 32, 55)
+        ```
+        """
+        compiled = self.compile()
+        return await FeatureView.freshness_in_source(compiled, compiled.batch_data_source)
+
 
 class FeatureView(ABC):
     """
@@ -116,8 +196,8 @@ class FeatureView(ABC):
     @staticmethod
     def metadata_with(
         name: str,
-        description: str,
         batch_source: BatchDataSource,
+        description: str | None = None,
         stream_source: StreamDataSource | None = None,
         application_source: BatchDataSource | None = None,
         staging_source: BatchDataSource | None = None,
@@ -128,8 +208,8 @@ class FeatureView(ABC):
 
         return FeatureViewMetadata(
             name,
-            description,
             batch_source,
+            description,
             stream_source or HttpStreamSource(name),
             application_source=application_source,
             staging_source=staging_source,
@@ -143,6 +223,23 @@ class FeatureView(ABC):
 
     def compile_instance(self) -> CompiledFeatureView:
         return FeatureView.compile_with_metadata(self, self.metadata)
+
+    @classmethod
+    async def batch_source_freshness(cls) -> datetime | None:
+        """
+        Returns the freshest datetime for the batch data source
+        """
+        compiled = cls().compile_instance()
+        return await FeatureView.freshness_in_source(compiled, compiled.batch_data_source)
+
+    @staticmethod
+    async def freshness_in_source(view: CompiledFeatureView, source: BatchDataSource) -> datetime | None:
+        if not view.event_timestamp:
+            raise ValueError(
+                f'The feature view: {view.name}, needs an event timestamp',
+                'to compute the freshness of a source',
+            )
+        return await source.freshness(view.event_timestamp)
 
     @staticmethod
     def compile_with_metadata(feature_view: Any, metadata: FeatureViewMetadata) -> CompiledFeatureView:

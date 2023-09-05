@@ -3,8 +3,10 @@ from datetime import datetime
 from importlib import import_module
 from inspect import getmro, isclass
 from typing import Any
+from aligned.compiler.model import ModelContractWrapper
 
 from aligned.enricher import Enricher
+from aligned.feature_view.combined_view import CombinedFeatureViewWrapper
 from aligned.feature_view.feature_view import FeatureViewWrapper
 from aligned.schemas.repo_definition import EnricherReference, RepoDefinition, RepoMetadata, RepoReference
 from pathlib import Path
@@ -124,6 +126,10 @@ class RepoReader:
                     )
                 elif isinstance(obj, FeatureViewWrapper):
                     repo.feature_views.add(obj.compile())
+                elif isinstance(obj, CombinedFeatureViewWrapper):
+                    repo.combined_feature_views.add(obj.compile())
+                elif isinstance(obj, ModelContractWrapper):
+                    repo.models.add(obj.compile())
                 else:
                     classes = super_classes_in(obj)
                     if 'ModelContract' in classes:

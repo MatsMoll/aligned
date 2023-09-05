@@ -250,7 +250,9 @@ async def process_predictions(
         )
         _ = await job.to_polars()
 
-        logger.debug(f'Processing {len(records)} predictions in {timeit.default_timer() - start_time} seconds')
+        logger.debug(
+            f'Processing {len(records)} predictions in {timeit.default_timer() - start_time} seconds'
+        )
 
 
 def stream_job(values: list[dict], feature_view: FeatureViewStore) -> RetrivalJob:

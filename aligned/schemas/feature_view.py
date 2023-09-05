@@ -15,13 +15,13 @@ from aligned.schemas.vector_storage import VectorIndex
 @dataclass
 class CompiledFeatureView(Codable):
     name: str
-    description: str
     tags: dict[str, str]
     batch_data_source: BatchDataSource
 
     entities: set[Feature]
     features: set[Feature]
     derived_features: set[DerivedFeature]
+    description: str | None = field(default=None)
     aggregated_features: set[AggregatedFeature] = field(default_factory=set)
 
     event_timestamp: EventTimestamp | None = field(default=None)
