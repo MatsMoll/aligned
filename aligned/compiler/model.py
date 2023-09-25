@@ -14,6 +14,7 @@ from aligned.compiler.feature_factory import (
     RegressionLabel,
     TargetProbability,
     ModelVersion,
+    Entity,
 )
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
@@ -181,6 +182,9 @@ class ModelContract(ABC):
 
             if isinstance(feature, ModelVersion):
                 inference_view.model_version_column = feature.feature()
+            elif isinstance(feature, Entity):
+                inference_view.entities.add(feature.feature())
+
             if isinstance(feature, FeatureView):
                 compiled = feature.compile()
                 inference_view.entities.update(compiled.entities)

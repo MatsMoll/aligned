@@ -24,6 +24,7 @@ from aligned.split_strategy import (
     SupervisedDataSet,
     TrainTestSet,
     TrainTestValidateSet,
+    PredictionTruthSet,
 )
 from aligned.validation.interface import Validator
 
@@ -234,6 +235,36 @@ class SupervisedValidationJob:
             test_index=data.test_index,
             validate_index=data.validate_index,
             event_timestamp_column=data.event_timestamp_column,
+        )
+
+
+@dataclass
+class PredictionTruthJob:
+
+    job: RetrivalJob
+    prediction_columns: set[str]
+    ground_truth_columns: set[str]
+
+    async def to_pandas(self) -> PredictionTruthSet[pd.DataFrame]:
+        result = self.job.request_result
+        data = await self.job.to_pandas()
+        return PredictionTruthSet(
+            data,
+            set(result.entity_columns),
+            self.prediction_columns,
+            self.ground_truth_columns,
+            result.event_timestamp,
+        )
+
+    async def to_polars(self) -> PredictionTruthSet[pl.LazyFrame]:
+        result = self.job.request_result
+        data = await self.job.to_polars()
+        return PredictionTruthSet(
+            data,
+            set(result.entity_columns),
+            self.prediction_columns,
+            self.ground_truth_columns,
+            result.event_timestamp,
         )
 
 

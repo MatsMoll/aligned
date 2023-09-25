@@ -1,0 +1,38 @@
+FROM python:3.10.5
+
+WORKDIR /opt/app
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rustup.sh
+RUN chmod 755 rustup.sh
+RUN ./rustup.sh -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+RUN cargo install just
+RUN pip install poetry
+RUN apt-get update
+RUN apt-get install clang -y
+RUN git clone --single-branch --branch v0.3.2 https://github.com/sfu-db/connector-x.git connector-x
+
+WORKDIR /opt/app/connector-x
+
+RUN just bootstrap-python
+RUN pip install maturin[patchelf]
+RUN just build-python-wheel
+
+WORKDIR /opt/lib
+
+RUN poetry config virtualenvs.create false
+RUN pip install pip --upgrade
+
+COPY ./pyproject.toml /opt/lib/pyproject.toml
+# COPY ./poetry.lock /opt/app/poetry.lock
+
+RUN pip freeze
+RUN mkdir /opt/lib/aligned
+RUN poetry install --no-dev --no-root --extras "redis psql server aws"
+
+COPY ./aligned /opt/lib/aligned
+
+# COPY /. opt/app/aligned
+
+ENTRYPOINT ["python", "-m", "aligned.cli"]
+# RUN pip install -U 'opt/app/aligned[redis,aws,psql,server,text]'

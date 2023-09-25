@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import math
 from typing import Generic, TypeVar
 
@@ -71,6 +72,35 @@ class TrainTestSet(Generic[DatasetType]):
     @property
     def test_target(self) -> DatasetType:
         return self.test[list(self.target_columns)]
+
+
+@dataclass
+class PredictionTruthSet(Generic[DatasetType]):
+
+    data: DatasetType
+
+    entity_columns: set[str]
+    prediction_columns: set[str]
+    ground_truth_columns: set[str]
+    event_timestamp_column: str | None
+
+    @property
+    def entities(self) -> DatasetType:
+        if isinstance(self.data, (pl.LazyFrame, pl.DataFrame)):
+            return self.data.select(list(self.entity_columns))
+        return self.data[list(self.entity_columns)]
+
+    @property
+    def ground_truths(self) -> DatasetType:
+        if isinstance(self.data, (pl.LazyFrame, pl.DataFrame)):
+            return self.data.select(list(self.ground_truth_columns))
+        return self.data[list(self.ground_truth_columns)]
+
+    @property
+    def predictions(self) -> DatasetType:
+        if isinstance(self.data, (pl.LazyFrame, pl.DataFrame)):
+            return self.data.select(list(self.prediction_columns))
+        return self.data[list(self.prediction_columns)]
 
 
 class SupervisedDataSet(Generic[DatasetType]):

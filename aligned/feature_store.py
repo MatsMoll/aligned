@@ -23,7 +23,13 @@ from aligned.feature_source import (
 from aligned.feature_view.combined_view import CombinedFeatureView, CompiledCombinedFeatureView
 from aligned.feature_view.feature_view import FeatureView
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
-from aligned.retrival_job import FilterJob, RetrivalJob, StreamAggregationJob, SupervisedJob
+from aligned.retrival_job import (
+    FilterJob,
+    PredictionTruthJob,
+    RetrivalJob,
+    StreamAggregationJob,
+    SupervisedJob,
+)
 from aligned.schemas.feature import FeatureLocation, Feature
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.model import EventTrigger
@@ -822,7 +828,7 @@ class SupervisedModelFeatureStore:
             target_columns=targets,
         )
 
-    def predictions_for(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
+    def predictions_for(self, entities: dict[str, list] | RetrivalJob) -> PredictionTruthJob:
         """Loads the predictions and labels / ground truths for a model
 
         ```python
@@ -877,7 +883,11 @@ class SupervisedModelFeatureStore:
             request.features_to_include.union(target_request.features_to_include),
             request.needed_requests + target_request.needed_requests,
         )
-        return self.store.features_for_request(total_request, entities, total_request.features_to_include)
+        job = self.store.features_for_request(total_request, entities, total_request.features_to_include)
+
+        return PredictionTruthJob(
+            job, {label.name for label in labels}, set(target_request.request_result.feature_columns)
+        )
 
 
 @dataclass
