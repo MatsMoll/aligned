@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver
     from aligned.schemas.model import EventTrigger
     from aligned.sources.local import DataFileReference
+    from aligned.feature_source import WritableFeatureSource
 
 
 logger = logging.getLogger(__name__)
@@ -352,6 +353,27 @@ class RetrivalJob(ABC):
         from aligned.local.job import LiteralRetrivalJob
 
         return LiteralRetrivalJob(df.lazy(), RequestResult.from_request_list(request))
+
+    async def write_to_source(self, source: WritableFeatureSource):
+        """
+        Writes the output of the retrival job to the passed source.
+
+        ```python
+        redis_cluster = RedisConfig.localhost()
+
+        store = FeatureStore.from_dir(".")
+
+        await (store.model("taxi")
+            .all_predictions() # Reads predictions from a `prediction_source`
+            .write_to_source(redis_cluster)
+        )
+
+        ```
+
+        Args:
+            source (WritableFeatureSource): A source that we can write to.
+        """
+        await source.write(self, self.retrival_requests)
 
 
 JobType = TypeVar('JobType')
