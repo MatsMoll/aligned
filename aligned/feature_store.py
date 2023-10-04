@@ -755,6 +755,19 @@ class ModelFeatureStore:
 
         return source.features_for(job, request).ensure_types([request]).derive_features()
 
+    def all_predictions(self, limit: int | None = None) -> RetrivalJob:
+
+        pred_view = self.model.predictions_view
+
+        if pred_view.source is None:
+            raise ValueError(
+                'Model does not have a prediction source. '
+                'This can be set in the metadata for a model contract.'
+            )
+
+        request = pred_view.request(self.model.name)
+        return pred_view.source.all_data(request, limit=limit)
+
 
 @dataclass
 class SupervisedModelFeatureStore:
@@ -904,6 +917,34 @@ class FeatureViewStore:
     @property
     def source(self) -> FeatureSource:
         return self.store.feature_source
+
+    def using_source(self, source: BatchDataSource) -> FeatureViewStore:
+        """
+        Sets the source to load features from.
+
+        ```python
+        custom_source = PostgreSQLConfig.localhost("test")
+
+        store = FeatureView.from_dir(".")
+
+        features = await (store.feature_view("titanic")
+            .using_source(custom_source)
+            .all()
+        )
+        ```
+
+        Args:
+            source (BatchDataSource): The source to use
+
+        Returns:
+            A new `FeatureViewStore` that sends queries to the passed source
+        """
+        return FeatureViewStore(
+            store=self.store.with_source(BatchFeatureSource({self.view.name: source})),
+            view=self.view,
+            event_triggers=self.event_triggers,
+            feature_filter=self.feature_filter,
+        )
 
     def with_optimised_write(self) -> FeatureViewStore:
         features_in_models = self.store.model_features_for(self.view.name)
