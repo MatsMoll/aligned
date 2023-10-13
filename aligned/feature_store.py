@@ -591,6 +591,10 @@ class ModelFeatureStore:
     model: ModelSchema
     store: FeatureStore
 
+    @property
+    def location(self) -> FeatureLocation:
+        return FeatureLocation.model(self.model.name)
+
     def raw_string_features(self, except_features: set[str]) -> set[str]:
         return {
             f'{feature.location.identifier}:{feature.name}'
@@ -737,23 +741,8 @@ class ModelFeatureStore:
 
     def predictions_for(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
 
-        if self.model.predictions_view.source is None:
-            raise ValueError(
-                'Model does not have a prediction source. '
-                'This can be set in the metadata for a model contract.'
-            )
-
-        source = self.model.predictions_view.source
-        request = self.model.predictions_view.request(self.model.name)
-
-        if isinstance(entities, RetrivalJob):
-            job = entities
-        elif isinstance(entities, dict):
-            job = RetrivalJob.from_dict(entities, request=[request])
-        else:
-            raise ValueError(f'features must be a dict or a RetrivalJob, was {type(input)}')
-
-        return source.features_for(job, request).ensure_types([request]).derive_features()
+        location_id = self.location.identifier
+        return self.store.features_for(entities, features=[f'{location_id}:*'])
 
     def all_predictions(self, limit: int | None = None) -> RetrivalJob:
 

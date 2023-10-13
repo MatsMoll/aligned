@@ -70,3 +70,6 @@ async def test_postgresql_write(titanic_feature_store: FeatureStore, psql: Postg
     assert_frame_equal(
         pl.DataFrame(data), stored_data.collect(), check_row_order=False, check_column_order=False
     )
+
+    preds = await store.predictions_for({'passenger_id': [1, 3, 2, 4]}).to_polars()
+    assert_frame_equal(pl.DataFrame(data), preds.collect(), check_row_order=False, check_column_order=False)
