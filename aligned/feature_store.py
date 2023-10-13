@@ -591,6 +591,10 @@ class ModelFeatureStore:
     model: ModelSchema
     store: FeatureStore
 
+    @property
+    def location(self) -> FeatureLocation:
+        return FeatureLocation.model(self.model.name)
+
     def raw_string_features(self, except_features: set[str]) -> set[str]:
         return {
             f'{feature.location.identifier}:{feature.name}'
@@ -737,23 +741,8 @@ class ModelFeatureStore:
 
     def predictions_for(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
 
-        if self.model.predictions_view.source is None:
-            raise ValueError(
-                'Model does not have a prediction source. '
-                'This can be set in the metadata for a model contract.'
-            )
-
-        source = self.model.predictions_view.source
-        request = self.model.predictions_view.request(self.model.name)
-
-        if isinstance(entities, RetrivalJob):
-            job = entities
-        elif isinstance(entities, dict):
-            job = RetrivalJob.from_dict(entities, request=[request])
-        else:
-            raise ValueError(f'features must be a dict or a RetrivalJob, was {type(input)}')
-
-        return source.features_for(job, request).ensure_types([request]).derive_features()
+        location_id = self.location.identifier
+        return self.store.features_for(entities, features=[f'{location_id}:*'])
 
     def all_predictions(self, limit: int | None = None) -> RetrivalJob:
 
@@ -767,6 +756,66 @@ class ModelFeatureStore:
 
         request = pred_view.request(self.model.name)
         return pred_view.source.all_data(request, limit=limit)
+
+    def using_source(
+        self, source: FeatureSource | FeatureSourceFactory | BatchDataSource
+    ) -> ModelFeatureStore:
+
+        model_source: FeatureSource | FeatureSourceFactory
+
+        if isinstance(source, BatchDataSource):
+            model_source = BatchFeatureSource({FeatureLocation.model(self.model.name).identifier: source})
+        else:
+            model_source = source
+
+        return ModelFeatureStore(self.model, self.store.with_source(model_source))
+
+    async def write_predictions(self, predictions: dict[str, list] | RetrivalJob) -> None:
+        """
+        Writes data to a source defined as a prediction source
+
+        ```python
+        @model_contract(
+            name="taxi_eta",
+            features=[...]
+            predictions_source=FileSource.parquet_at("predictions.parquet")
+        )
+        class TaxiEta:
+            trip_id = Int32().as_entity()
+
+            duration = Int32()
+
+        ...
+
+        store = FeatureStore.from_dir(".")
+
+        await store.model("taxi_eta").write_predictions({
+            "trip_id": [1, 2, 3, ...],
+            "duration": [20, 33, 42, ...]
+        })
+        ```
+        """
+
+        source: Any = self.store.feature_source
+
+        if isinstance(source, BatchFeatureSource):
+            location = FeatureLocation.model(self.model.name).identifier
+            source = source.sources[location]
+
+        if not isinstance(source, WritableFeatureSource):
+            raise ValueError(f'The prediction source {type(source)} needs to be writable')
+
+        write_job: RetrivalJob
+        request = self.model.predictions_view.request(self.model.name)
+
+        if isinstance(predictions, dict):
+            write_job = RetrivalJob.from_dict(predictions, request)
+        elif isinstance(predictions, RetrivalJob):
+            write_job = predictions
+        else:
+            raise ValueError(f'Unable to write predictions of type {type(predictions)}')
+
+        await source.write(write_job, [request])
 
 
 @dataclass
@@ -918,7 +967,9 @@ class FeatureViewStore:
     def source(self) -> FeatureSource:
         return self.store.feature_source
 
-    def using_source(self, source: BatchDataSource) -> FeatureViewStore:
+    def using_source(
+        self, source: FeatureSource | FeatureSourceFactory | BatchDataSource
+    ) -> FeatureViewStore:
         """
         Sets the source to load features from.
 
@@ -939,8 +990,17 @@ class FeatureViewStore:
         Returns:
             A new `FeatureViewStore` that sends queries to the passed source
         """
+        view_source: FeatureSource | FeatureSourceFactory
+
+        if isinstance(source, BatchDataSource):
+            view_source = BatchFeatureSource(
+                {FeatureLocation.feature_view(self.view.name).identifier: source}
+            )
+        else:
+            view_source = source
+
         return FeatureViewStore(
-            store=self.store.with_source(BatchFeatureSource({self.view.name: source})),
+            self.store.with_source(view_source),
             view=self.view,
             event_triggers=self.event_triggers,
             feature_filter=self.feature_filter,

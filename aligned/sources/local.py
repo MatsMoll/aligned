@@ -61,8 +61,7 @@ class StorageFileReference(AsRepoDefinition):
 
 async def data_file_freshness(reference: DataFileReference, column_name: str) -> datetime:
     file = await reference.to_polars()
-    file.select(pl.col(column_name).max().alias('max_value'))
-    return file.collect()['max_value'].to_list()[0]
+    return file.select(column_name).max().collect()[0, column_name]
 
 
 @dataclass
@@ -123,6 +122,9 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
             compression=self.csv_config.compression,
             index=self.csv_config.should_write_index,
         )
+
+    async def write_polars(self, df: pl.LazyFrame) -> None:
+        await self.write_pandas(df.collect().to_pandas())
 
     def std(
         self, columns: set[str], time: TimespanSelector | None = None, limit: int | None = None
@@ -283,6 +285,11 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
         return FeatureView.feature_view_code_template(
             schema, data_source_code, view_name, 'from aligned import FileSource'
         )
+
+    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+        df = await self.to_polars()
+        et_name = event_timestamp.name
+        return df.select(et_name).max().collect()[0, et_name]
 
 
 @dataclass
