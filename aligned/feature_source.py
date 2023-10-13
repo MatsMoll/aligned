@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
+import asyncio
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -11,6 +11,10 @@ import polars as pl
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.request.retrival_request import FeatureRequest, RequestResult, RetrivalRequest
 from aligned.retrival_job import RetrivalJob
+from aligned.schemas.feature import FeatureLocation, EventTimestamp
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
 class FeatureSourceFactory:
@@ -20,6 +24,9 @@ class FeatureSourceFactory:
 
 class FeatureSource:
     def features_for(self, facts: RetrivalJob, request: FeatureRequest) -> RetrivalJob:
+        raise NotImplementedError()
+
+    async def freshness_for(self, locations: list[FeatureLocation]) -> dict[FeatureLocation, datetime]:
         raise NotImplementedError()
 
 
@@ -124,6 +131,15 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
             .ensure_types(request.needed_requests)
             .derive_features(requests=request.needed_requests)
         )
+
+    async def freshness_for(
+        self, locations: dict[FeatureLocation, EventTimestamp]
+    ) -> dict[FeatureLocation, datetime]:
+        locs = list(locations.keys())
+        results = await asyncio.gather(
+            *[self.sources[loc.identifier].freshness(locations[loc]) for loc in locs]
+        )
+        return dict(zip(locs, results))
 
 
 class FactualInMemoryJob(RetrivalJob):

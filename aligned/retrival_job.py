@@ -354,7 +354,7 @@ class RetrivalJob(ABC):
 
         return LiteralRetrivalJob(df.lazy(), RequestResult.from_request_list(request))
 
-    async def write_to_source(self, source: WritableFeatureSource) -> None:
+    async def write_to_source(self, source: WritableFeatureSource | DataFileReference) -> None:
         """
         Writes the output of the retrival job to the passed source.
 
@@ -373,7 +373,12 @@ class RetrivalJob(ABC):
         Args:
             source (WritableFeatureSource): A source that we can write to.
         """
-        await source.write(self, self.retrival_requests)
+        from aligned.sources.local import DataFileReference
+
+        if isinstance(source, DataFileReference):
+            await source.write_polars(await self.to_polars())
+        else:
+            await source.write(self, self.retrival_requests)
 
 
 JobType = TypeVar('JobType')
