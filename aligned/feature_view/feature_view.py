@@ -262,6 +262,7 @@ class FeatureView(ABC):
             event_timestamp=None,
             stream_data_source=metadata.stream_source,
             application_source=metadata.application_source,
+            staging_source=metadata.staging_source,
             indexes=[],
         )
         aggregations: list[FeatureFactory] = []

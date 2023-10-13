@@ -26,7 +26,9 @@ class FeatureSource:
     def features_for(self, facts: RetrivalJob, request: FeatureRequest) -> RetrivalJob:
         raise NotImplementedError()
 
-    async def freshness_for(self, locations: list[FeatureLocation]) -> dict[FeatureLocation, datetime]:
+    async def freshness_for(
+        self, locations: dict[FeatureLocation, EventTimestamp]
+    ) -> dict[FeatureLocation, datetime]:
         raise NotImplementedError()
 
 

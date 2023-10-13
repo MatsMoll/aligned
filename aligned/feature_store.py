@@ -654,6 +654,17 @@ class ModelFeatureStore:
 
         return job.filter(request.features_to_include)
 
+    async def freshness(self) -> dict[FeatureLocation, datetime]:
+        from aligned.schemas.feature import EventTimestamp
+
+        locs: dict[FeatureLocation, EventTimestamp] = {}
+
+        for req in self.request().needed_requests:
+            if req.event_timestamp:
+                locs[req.location]
+
+        return await self.store.feature_source.freshness_for(locs)
+
     def with_labels(self) -> SupervisedModelFeatureStore:
         """Will also load the labels for the model
 

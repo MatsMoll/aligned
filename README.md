@@ -2,6 +2,12 @@
 
 Aligned helps improving ML system visibility, while also reducing technical, and data debt, as described in [Sculley et al. [2015]](https://papers.nips.cc/paper/2015/file/86df7dcfd896fcaf2674f757a2463eba-Paper.pdf).
 
+## Docs
+
+Check out the [Aligned Docs](https://www.aligned.codes), but keep in mind that they are still work in progress.
+
+---
+
 Want to look at examples of how to use `aligned`?
 View the [`MatsMoll/aligned-example` repo](https://github.com/MatsMoll/aligned-example).
 
