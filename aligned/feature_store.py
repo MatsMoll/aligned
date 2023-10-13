@@ -807,16 +807,16 @@ class ModelFeatureStore:
         ```
         """
 
-        pred_view = self.model.predictions_view
+        source: Any = self.store.feature_source
 
-        if not pred_view.source:
-            raise ValueError('A Prediction Source must be set to use `write_predictions`.')
+        if isinstance(source, BatchFeatureSource):
+            source = source.sources[FeatureLocation.model(self.model.name).identifier]
 
-        if not isinstance(pred_view.source, WritableFeatureSource):
-            raise ValueError(f'The prediction source {type(pred_view.source)} needs to be writable')
+        if not isinstance(source, WritableFeatureSource):
+            raise ValueError(f'The prediction source {type(source)} needs to be writable')
 
         write_job: RetrivalJob
-        request = pred_view.request(self.model.name)
+        request = self.model.predictions_view.request(self.model.name)
 
         if isinstance(predictions, dict):
             write_job = RetrivalJob.from_dict(predictions, request)
@@ -825,7 +825,7 @@ class ModelFeatureStore:
         else:
             raise ValueError(f'Unable to write predictions of type {type(predictions)}')
 
-        await pred_view.source.write(write_job, [request])
+        await source.write(write_job, [request])
 
 
 @dataclass
