@@ -354,7 +354,7 @@ class RetrivalJob(ABC):
 
         return LiteralRetrivalJob(df.lazy(), RequestResult.from_request_list(request))
 
-    async def write_to_source(self, source: WritableFeatureSource):
+    async def write_to_source(self, source: WritableFeatureSource) -> None:
         """
         Writes the output of the retrival job to the passed source.
 

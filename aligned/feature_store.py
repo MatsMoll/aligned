@@ -768,6 +768,65 @@ class ModelFeatureStore:
         request = pred_view.request(self.model.name)
         return pred_view.source.all_data(request, limit=limit)
 
+    def using_source(
+        self, source: FeatureSource | FeatureSourceFactory | BatchDataSource
+    ) -> ModelFeatureStore:
+
+        model_source: FeatureSource | FeatureSourceFactory
+
+        if isinstance(source, BatchDataSource):
+            model_source = BatchFeatureSource({FeatureLocation.model(self.model.name).identifier: source})
+        else:
+            model_source = source
+
+        return ModelFeatureStore(self.model, self.store.with_source(model_source))
+
+    async def write_predictions(self, predictions: dict[str, list] | RetrivalJob) -> None:
+        """
+        Writes data to a source defined as a prediction source
+
+        ```python
+        @model_contract(
+            name="taxi_eta",
+            features=[...]
+            predictions_source=FileSource.parquet_at("predictions.parquet")
+        )
+        class TaxiEta:
+            trip_id = Int32().as_entity()
+
+            duration = Int32()
+
+        ...
+
+        store = FeatureStore.from_dir(".")
+
+        await store.model("taxi_eta").write_predictions({
+            "trip_id": [1, 2, 3, ...],
+            "duration": [20, 33, 42, ...]
+        })
+        ```
+        """
+
+        pred_view = self.model.predictions_view
+
+        if not pred_view.source:
+            raise ValueError('A Prediction Source must be set to use `write_predictions`.')
+
+        if not isinstance(pred_view.source, WritableFeatureSource):
+            raise ValueError(f'The prediction source {type(pred_view.source)} needs to be writable')
+
+        write_job: RetrivalJob
+        request = pred_view.request(self.model.name)
+
+        if isinstance(predictions, dict):
+            write_job = RetrivalJob.from_dict(predictions, request)
+        elif isinstance(predictions, RetrivalJob):
+            write_job = predictions
+        else:
+            raise ValueError(f'Unable to write predictions of type {type(predictions)}')
+
+        await pred_view.source.write(write_job, [request])
+
 
 @dataclass
 class SupervisedModelFeatureStore:
@@ -918,7 +977,9 @@ class FeatureViewStore:
     def source(self) -> FeatureSource:
         return self.store.feature_source
 
-    def using_source(self, source: BatchDataSource) -> FeatureViewStore:
+    def using_source(
+        self, source: FeatureSource | FeatureSourceFactory | BatchDataSource
+    ) -> FeatureViewStore:
         """
         Sets the source to load features from.
 
@@ -939,8 +1000,17 @@ class FeatureViewStore:
         Returns:
             A new `FeatureViewStore` that sends queries to the passed source
         """
+        view_source: FeatureSource | FeatureSourceFactory
+
+        if isinstance(source, BatchDataSource):
+            view_source = BatchFeatureSource(
+                {FeatureLocation.feature_view(self.view.name).identifier: source}
+            )
+        else:
+            view_source = source
+
         return FeatureViewStore(
-            store=self.store.with_source(BatchFeatureSource({self.view.name: source})),
+            self.store.with_source(view_source),
             view=self.view,
             event_triggers=self.event_triggers,
             feature_filter=self.feature_filter,

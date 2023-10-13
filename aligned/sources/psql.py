@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable, Any
 
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
+from aligned.feature_source import WritableFeatureSource
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import FactualRetrivalJob, RetrivalJob
 from aligned.schemas.codable import Codable
@@ -61,7 +62,7 @@ class PostgreSQLConfig(Codable):
 
 
 @dataclass
-class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable):
+class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, WritableFeatureSource):
 
     config: PostgreSQLConfig
     table: str
@@ -169,3 +170,15 @@ WHERE table_schema = '{schema}'
                 raise ValueError(f'Unsupported freshness value {value}')
         else:
             return None
+
+    async def write(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+
+        if len(requests) != 1:
+            raise ValueError(f'Only support writing for one request, got {len(requests)}.')
+
+        request = requests[0]
+
+        data = await job.to_polars()
+        data.select(request.all_returned_columns).collect().write_database(
+            self.table, connection_uri=self.config.url, if_exists='append'
+        )

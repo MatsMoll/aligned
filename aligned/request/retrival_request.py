@@ -77,6 +77,13 @@ class RetrivalRequest(Codable):
         )
 
     @property
+    def all_returned_columns(self) -> list[str]:
+        result = self.all_feature_names.union(self.entity_names)
+        if self.event_timestamp:
+            result = result.union({self.event_timestamp.name})
+        return list(result)
+
+    @property
     def returned_features(self) -> set[Feature]:
         return {feature for feature in self.all_features if feature.name in self.features_to_include}
 

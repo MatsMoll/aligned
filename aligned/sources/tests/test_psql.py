@@ -7,14 +7,19 @@ from conftest import DataTest
 import platform
 
 
+@pytest.fixture
+def psql() -> PostgreSQLConfig:
+    if 'PSQL_DATABASE_TEST' not in environ:
+        environ['PSQL_DATABASE_TEST'] = 'postgresql://postgres:postgres@127.0.0.1:5433/aligned-test'
+
+    return PostgreSQLConfig('PSQL_DATABASE_TEST')
+
+
 @pytest.mark.skipif(
     platform.uname().machine.startswith('arm'), reason='Needs psycopg2 which is not supported on arm'
 )
 @pytest.mark.asyncio
-async def test_postgresql(point_in_time_data_test: DataTest) -> None:
-
-    if 'PSQL_DATABASE_TEST' not in environ:
-        environ['PSQL_DATABASE_TEST'] = 'postgresql://postgres:postgres@127.0.0.1:5433/aligned-test'
+async def test_postgresql(point_in_time_data_test: DataTest, psql: PostgreSQLConfig) -> None:
 
     psql_database = environ['PSQL_DATABASE_TEST']
 
@@ -28,7 +33,7 @@ async def test_postgresql(point_in_time_data_test: DataTest) -> None:
         view.metadata = FeatureView.metadata_with(  # type: ignore
             name=view.metadata.name,
             description=view.metadata.description,
-            batch_source=PostgreSQLConfig('PSQL_DATABASE_TEST').table(db_name),
+            batch_source=psql.table(db_name),
         )
         store.add_feature_view(view)
 
@@ -44,3 +49,22 @@ async def test_postgresql(point_in_time_data_test: DataTest) -> None:
 
     ordered_columns = data.select(expected.columns)
     assert ordered_columns.frame_equal(expected), f'Expected: {expected}\nGot: {ordered_columns}'
+
+
+@pytest.mark.skipif(
+    platform.uname().machine.startswith('arm'), reason='Needs psycopg2 which is not supported on arm'
+)
+@pytest.mark.asyncio
+async def test_postgresql_write(titanic_feature_store: FeatureStore, psql: PostgreSQLConfig) -> None:
+    import polars as pl
+    from polars.testing import assert_frame_equal
+
+    source = psql.table('titanic')
+
+    data: dict[str, list] = {'passenger_id': [1, 2, 3, 4], 'will_survive': [False, True, True, False]}
+
+    store = titanic_feature_store.model('titanic').using_source(source)
+    await store.write_predictions(data)
+
+    stored_data = await psql.fetch('SELECT * FROM titanic').to_polars()
+    assert_frame_equal(pl.DataFrame(data), stored_data, check_row_order=False, check_column_order=False)
