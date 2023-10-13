@@ -67,4 +67,6 @@ async def test_postgresql_write(titanic_feature_store: FeatureStore, psql: Postg
     await store.write_predictions(data)
 
     stored_data = await psql.fetch('SELECT * FROM titanic').to_polars()
-    assert_frame_equal(pl.DataFrame(data), stored_data, check_row_order=False, check_column_order=False)
+    assert_frame_equal(
+        pl.DataFrame(data), stored_data.collect(), check_row_order=False, check_column_order=False
+    )

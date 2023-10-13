@@ -810,7 +810,8 @@ class ModelFeatureStore:
         source: Any = self.store.feature_source
 
         if isinstance(source, BatchFeatureSource):
-            source = source.sources[FeatureLocation.model(self.model.name).identifier]
+            location = FeatureLocation.model(self.model.name).identifier
+            source = source.sources[location]
 
         if not isinstance(source, WritableFeatureSource):
             raise ValueError(f'The prediction source {type(source)} needs to be writable')
