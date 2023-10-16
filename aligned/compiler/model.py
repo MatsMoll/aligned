@@ -77,6 +77,11 @@ class ModelContractWrapper(Generic[T]):
     metadata: ModelMetadata
     contract: Type[T]
 
+    def __call__(self) -> T:
+        # Needs to compiile the model to set the location for the view features
+        _ = self.compile()
+        return self.contract()
+
     def compile(self) -> ModelSchema:
         return ModelContract.compile_with_metadata(self.contract(), self.metadata)
 
