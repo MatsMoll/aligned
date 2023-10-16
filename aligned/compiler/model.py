@@ -8,6 +8,7 @@ import polars as pl
 
 from aligned.compiler.feature_factory import (
     ClassificationLabel,
+    Entity,
     EventTimestamp,
     FeatureFactory,
     FeatureReferencable,
@@ -230,6 +231,8 @@ class ModelContract(ABC):
                 probability_features[feature_name] = probability_features.get(feature_name, set()).union(
                     {feature}
                 )
+            elif isinstance(feature, Entity):
+                inference_view.entities.add(feature.feature())
             elif isinstance(feature, FeatureFactory):
                 inference_view.features.add(feature.feature())
 
