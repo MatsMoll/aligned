@@ -24,7 +24,7 @@ async def test_source_validation(titanic_feature_store: FeatureStore) -> None:
 async def test_source_validation_psql(titanic_feature_view: FeatureView) -> None:
 
     if 'PSQL_DATABASE_TEST' not in environ:
-        environ['PSQL_DATABASE_TEST'] = 'postgresql://postgres:postgres@localhost:5432/aligned-test'
+        environ['PSQL_DATABASE_TEST'] = 'postgresql://postgres:postgres@localhost:5433/aligned-test'
 
     psql_config = PostgreSQLConfig('PSQL_DATABASE_TEST')
     titanic_feature_view.metadata.batch_source = psql_config.table('titanic')

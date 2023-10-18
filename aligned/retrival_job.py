@@ -8,7 +8,7 @@ from collections import defaultdict
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Union, TypeVar
 
 import pandas as pd
 import polars as pl
@@ -238,6 +238,9 @@ class SupervisedValidationJob:
         )
 
 
+ConvertableToRetrivalJob = Union[dict[str, list], pd.DataFrame, pl.DataFrame, pl.LazyFrame]
+
+
 class RetrivalJob(ABC):
     @property
     def request_result(self) -> RequestResult:
@@ -353,6 +356,28 @@ class RetrivalJob(ABC):
         from aligned.local.job import LiteralRetrivalJob
 
         return LiteralRetrivalJob(df.lazy(), RequestResult.from_request_list(request))
+
+    @staticmethod
+    def from_convertable(
+        data: ConvertableToRetrivalJob, request: list[RetrivalRequest] | RetrivalRequest
+    ) -> RetrivalJob:
+        from aligned.local.job import LiteralRetrivalJob
+
+        if isinstance(request, RetrivalRequest):
+            request = [request]
+
+        if isinstance(data, dict):
+            return LiteralDictJob(data, request)
+
+        result = RequestResult.from_request_list(request)
+        if isinstance(data, pl.DataFrame):
+            return LiteralRetrivalJob(data.lazy(), result)
+        elif isinstance(data, pl.LazyFrame):
+            return LiteralRetrivalJob(data, result)
+        elif isinstance(data, pd.DataFrame):
+            return LiteralRetrivalJob(pl.from_pandas(data).lazy(), result)
+        else:
+            raise ValueError(f'Unable to convert {type(data)} to RetrivalJob')
 
     async def write_to_source(self, source: WritableFeatureSource | DataFileReference) -> None:
         """

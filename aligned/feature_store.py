@@ -23,7 +23,13 @@ from aligned.feature_source import (
 from aligned.feature_view.combined_view import CombinedFeatureView, CompiledCombinedFeatureView
 from aligned.feature_view.feature_view import FeatureView
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
-from aligned.retrival_job import FilterJob, RetrivalJob, StreamAggregationJob, SupervisedJob
+from aligned.retrival_job import (
+    FilterJob,
+    RetrivalJob,
+    StreamAggregationJob,
+    SupervisedJob,
+    ConvertableToRetrivalJob,
+)
 from aligned.schemas.feature import FeatureLocation, Feature
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.model import EventTrigger
@@ -240,21 +246,30 @@ class FeatureStore:
         return FeatureStore.from_definition(definition)
 
     def features_for_request(
-        self, requests: FeatureRequest, entities: dict[str, list] | RetrivalJob, feature_names: set[str]
+        self,
+        requests: FeatureRequest,
+        entities: ConvertableToRetrivalJob | RetrivalJob,
+        feature_names: set[str],
     ) -> RetrivalJob:
         entity_request: RetrivalJob
 
-        if isinstance(entities, dict):
-            if requests.needs_event_timestamp and self.event_timestamp_column not in entities:
-                raise ValueError(f'Missing {self.event_timestamp_column} in entities')
-
-            entity_request = RetrivalJob.from_dict(entities, requests)
-        else:
+        if isinstance(entities, RetrivalJob):
             entity_request = entities
+        else:
+            entity_request = RetrivalJob.from_convertable(entities, requests)
+
+            if (
+                isinstance(entities, dict)
+                and requests.needs_event_timestamp
+                and self.event_timestamp_column not in entities
+            ):
+                raise ValueError(f'Missing {self.event_timestamp_column} in entities')
 
         return self.feature_source.features_for(entity_request, requests).filter(feature_names)
 
-    def features_for(self, entities: dict[str, list] | RetrivalJob, features: list[str]) -> RetrivalJob:
+    def features_for(
+        self, entities: ConvertableToRetrivalJob | RetrivalJob, features: list[str]
+    ) -> RetrivalJob:
         """
         Returns a set of features given a set of entities.
 
@@ -316,7 +331,7 @@ class FeatureStore:
     def event_triggers_for(self, feature_view: str) -> set[EventTrigger]:
         triggers = self.feature_views[feature_view].event_triggers or set()
         for model in self.models.values():
-            for target in model.predictions_view.classification_targets:
+            for target in model.predictions_view.classification_targets or set():
                 if target.event_trigger and target.estimating.location.location == feature_view:
                     triggers.add(target.event_trigger)
         return triggers
@@ -610,7 +625,7 @@ class ModelFeatureStore:
     def needed_entities(self) -> set[Feature]:
         return self.request().request_result.entities
 
-    def features_for(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
+    def features_for(self, entities: ConvertableToRetrivalJob | RetrivalJob) -> RetrivalJob:
         """Returns the features for the given entities
 
         ```python
@@ -734,15 +749,13 @@ class ModelFeatureStore:
             request.features_to_include
         )
 
-    def process_features(self, input: RetrivalJob | dict[str, list]) -> RetrivalJob:
+    def process_features(self, input: RetrivalJob | ConvertableToRetrivalJob) -> RetrivalJob:
         request = self.request()
 
         if isinstance(input, RetrivalJob):
             job = input.filter(request.features_to_include)
-        elif isinstance(input, dict):
-            job = RetrivalJob.from_dict(input, request=request.needed_requests)
         else:
-            raise ValueError(f'features must be a dict or a RetrivalJob, was {type(input)}')
+            job = RetrivalJob.from_convertable(input, request=request.needed_requests)
 
         return (
             job.ensure_types(request.needed_requests)
@@ -750,7 +763,7 @@ class ModelFeatureStore:
             .filter(request.features_to_include)
         )
 
-    def predictions_for(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
+    def predictions_for(self, entities: ConvertableToRetrivalJob | RetrivalJob) -> RetrivalJob:
 
         location_id = self.location.identifier
         return self.store.features_for(entities, features=[f'{location_id}:*'])
@@ -781,7 +794,53 @@ class ModelFeatureStore:
 
         return ModelFeatureStore(self.model, self.store.with_source(model_source))
 
-    async def write_predictions(self, predictions: dict[str, list] | RetrivalJob) -> None:
+    def depends_on(self) -> set[FeatureLocation]:
+        """
+        Returns the views and models that the model depend on to compute it's output.
+
+        ```python
+        @feature_view(name="passenger", ...)
+        class Passenger:
+            passenger_id = Int32().as_entity()
+
+            age = Float()
+
+        @feature_view(name="location", ...)
+        class Location:
+            location_id = String().as_entity()
+
+            location_area = Float()
+
+
+        @model_contract(name="some_model", ...)
+        class SomeModel:
+            some_id = String().as_entity()
+
+            some_computed_metric = Int32()
+
+        @model_contract(
+            name="new_model",
+            features=[
+                Passenger().age,
+                Location().location_area,
+                SomeModel().some_computed_metric
+            ]
+        )
+        class NewModel:
+            ...
+
+        print(store.model("new_model").depends_on())
+        >>> {
+        >>>     FeatureLocation(location="feature_view", name="passenger"),
+        >>>     FeatureLocation(location="feature_view", name="location"),
+        >>>     FeatureLocation(location="model", name="some_model")
+        >>> }
+
+        ```
+        """
+        return {req.location for req in self.request().needed_requests}
+
+    async def write_predictions(self, predictions: ConvertableToRetrivalJob | RetrivalJob) -> None:
         """
         Writes data to a source defined as a prediction source
 
@@ -813,20 +872,21 @@ class ModelFeatureStore:
             location = FeatureLocation.model(self.model.name).identifier
             source = source.sources[location]
 
-        if not isinstance(source, WritableFeatureSource):
-            raise ValueError(f'The prediction source {type(source)} needs to be writable')
-
         write_job: RetrivalJob
         request = self.model.predictions_view.request(self.model.name)
 
-        if isinstance(predictions, dict):
-            write_job = RetrivalJob.from_dict(predictions, request)
-        elif isinstance(predictions, RetrivalJob):
+        if isinstance(predictions, RetrivalJob):
             write_job = predictions
         else:
-            raise ValueError(f'Unable to write predictions of type {type(predictions)}')
+            write_job = RetrivalJob.from_convertable(predictions, request)
 
-        await source.write(write_job, [request])
+        if isinstance(source, WritableFeatureSource):
+            await source.write(write_job, [request])
+        elif isinstance(source, DataFileReference):
+            polars_df = await write_job.to_polars()
+            await source.write_polars(polars_df.select(request.all_returned_columns))
+        else:
+            raise ValueError(f'The prediction source {type(source)} needs to be writable')
 
 
 @dataclass
@@ -835,7 +895,7 @@ class SupervisedModelFeatureStore:
     model: ModelSchema
     store: FeatureStore
 
-    def features_for(self, entities: dict[str, list] | RetrivalJob) -> SupervisedJob:
+    def features_for(self, entities: ConvertableToRetrivalJob | RetrivalJob) -> SupervisedJob:
         """Loads the features and labels for a model
 
         ```python
@@ -895,7 +955,7 @@ class SupervisedModelFeatureStore:
             target_columns=targets,
         )
 
-    def predictions_for(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
+    def predictions_for(self, entities: ConvertableToRetrivalJob | RetrivalJob) -> RetrivalJob:
         """Loads the predictions and labels / ground truths for a model
 
         ```python
@@ -1057,18 +1117,16 @@ class FeatureViewStore:
         start_date = end_date - timedelta(days=days, minutes=minutes, seconds=seconds)
         return self.between_dates(start_date, end_date)
 
-    def features_for(self, entities: dict[str, list] | RetrivalJob) -> RetrivalJob:
+    def features_for(self, entities: ConvertableToRetrivalJob | RetrivalJob) -> RetrivalJob:
 
         request = self.view.request_all
         if self.feature_filter:
             request = self.view.request_for(self.feature_filter)
 
-        if isinstance(entities, dict):
-            entity_job = RetrivalJob.from_dict(entities, request)
-        elif isinstance(entities, RetrivalJob):
+        if isinstance(entities, RetrivalJob):
             entity_job = entities
         else:
-            raise ValueError(f'entities must be a dict or a RetrivalJob, was {type(entities)}')
+            entity_job = RetrivalJob.from_convertable(entities, request.needed_requests)
 
         job = self.source.features_for(entity_job, request)
         if self.feature_filter:
@@ -1090,17 +1148,22 @@ class FeatureViewStore:
                 features.add(event_timestamp.name)
         return features
 
-    async def write(self, values: dict[str, list[Any]]) -> None:
+    async def write(self, values: ConvertableToRetrivalJob) -> None:
         from aligned import FileSource
         from aligned.schemas.derivied_feature import AggregateOver
 
-        request = self.view.request_all.needed_requests[0]
+        requests = self.view.request_all.needed_requests
         if self.feature_filter is not None:
             logger.info(f'Filtering features to {self.feature_filter}')
-            request = self.view.request_for(self.feature_filter)
+            requests = self.view.request_for(self.feature_filter).needed_requests
+
+        if len(requests) != 1:
+            raise ValueError(f'Something odd happend. Expected 1 request when writing, got {len(requests)}')
+
+        request = requests[0]
 
         job = (
-            RetrivalJob.from_dict(values, request)
+            RetrivalJob.from_convertable(values, request)
             .validate_entites()
             .fill_missing_columns()
             .ensure_types([request])
@@ -1130,15 +1193,15 @@ class FeatureViewStore:
 
         await self.batch_write(job)
 
-    def process_input(self, values: dict[str, list[Any]]) -> RetrivalJob:
+    def process_input(self, values: ConvertableToRetrivalJob) -> RetrivalJob:
 
         request = self.view.request_all.needed_requests[0]
 
-        job = RetrivalJob.from_dict(values, request)
+        job = RetrivalJob.from_convertable(values, request)
 
         return job.fill_missing_columns().ensure_types([request]).derive_features([request])
 
-    async def batch_write(self, values: dict[str, list[Any]] | RetrivalJob) -> None:
+    async def batch_write(self, values: ConvertableToRetrivalJob | RetrivalJob) -> None:
         """Takes a set of features, computes the derived features, and store them in the source
 
         Args:
@@ -1159,10 +1222,8 @@ class FeatureViewStore:
 
         if isinstance(values, RetrivalJob):
             core_job = values
-        elif isinstance(values, dict):
-            core_job = RetrivalJob.from_dict(values, request)
         else:
-            raise ValueError(f'values must be a dict or a RetrivalJob, was {type(values)}')
+            core_job = RetrivalJob.from_convertable(values, request)
 
         # job = (
         #     core_job.derive_features([request])
