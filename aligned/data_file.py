@@ -14,7 +14,7 @@ class DataFileReference:
         raise NotImplementedError()
 
     async def to_pandas(self) -> pd.DataFrame:
-        await self.read_pandas()
+        return await self.read_pandas()
 
     async def to_polars(self) -> pl.LazyFrame:
         raise NotImplementedError()

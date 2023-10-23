@@ -5,7 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from importlib import import_module
-from typing import Any
+from typing import Any, Union
 
 from prometheus_client import Histogram
 
@@ -43,6 +43,8 @@ feature_view_write_time = Histogram(
     'The time used to write data related to a feature view',
     labelnames=['feature_view'],
 )
+
+FeatureSourceable = Union[FeatureSource, FeatureSourceFactory, None]
 
 
 @dataclass
@@ -493,12 +495,12 @@ class FeatureStore:
         compiled_model = type(model).compile()
         self.models[compiled_model.name] = compiled_model
 
-    def with_source(self, source: FeatureSource | FeatureSourceFactory | None = None) -> FeatureStore:
+    def with_source(self, source: FeatureSourceable = None) -> FeatureStore:
         """
         Creates a new instance of a feature store, but changes where to fetch the features from
 
         ```
-        store = # Load the store
+        store = await FeatureStore.from_dir(".")
         redis_store = store.with_source(redis)
         batch_source = redis_store.with_source()
         ```
@@ -511,7 +513,7 @@ class FeatureStore:
         """
         if isinstance(source, FeatureSourceFactory):
             feature_source = source.feature_source()
-        else:
+        elif source is None:
             sources = {
                 FeatureLocation.feature_view(view.name).identifier: view.batch_data_source
                 for view in set(self.feature_views.values())
@@ -521,6 +523,13 @@ class FeatureStore:
                 if model.predictions_view.source is not None
             }
             feature_source = source or BatchFeatureSource(sources=sources)
+        elif isinstance(source, FeatureSource):
+            feature_source = source
+        else:
+            raise ValueError(
+                'Setting a dedicated source needs to be either a FeatureSource, '
+                f'or FeatureSourceFactory. Got: {type(source)}'
+            )
 
         return FeatureStore(
             feature_views=self.feature_views,
@@ -781,11 +790,9 @@ class ModelFeatureStore:
         request = pred_view.request(self.model.name)
         return pred_view.source.all_data(request, limit=limit)
 
-    def using_source(
-        self, source: FeatureSource | FeatureSourceFactory | BatchDataSource
-    ) -> ModelFeatureStore:
+    def using_source(self, source: FeatureSourceable | BatchDataSource) -> ModelFeatureStore:
 
-        model_source: FeatureSource | FeatureSourceFactory
+        model_source: FeatureSourceable
 
         if isinstance(source, BatchDataSource):
             model_source = BatchFeatureSource({FeatureLocation.model(self.model.name).identifier: source})
@@ -1038,9 +1045,7 @@ class FeatureViewStore:
     def source(self) -> FeatureSource:
         return self.store.feature_source
 
-    def using_source(
-        self, source: FeatureSource | FeatureSourceFactory | BatchDataSource
-    ) -> FeatureViewStore:
+    def using_source(self, source: FeatureSourceable | BatchDataSource) -> FeatureViewStore:
         """
         Sets the source to load features from.
 
@@ -1061,7 +1066,7 @@ class FeatureViewStore:
         Returns:
             A new `FeatureViewStore` that sends queries to the passed source
         """
-        view_source: FeatureSource | FeatureSourceFactory
+        view_source: FeatureSourceable
 
         if isinstance(source, BatchDataSource):
             view_source = BatchFeatureSource(
