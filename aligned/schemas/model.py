@@ -69,13 +69,10 @@ class PredictionsView(Codable):
         return schema
 
     def request(self, name: str) -> RetrivalRequest:
-        entities = self.entities
-        if self.model_version_column:
-            entities.add(self.model_version_column)
         return RetrivalRequest(
             name=name,
             location=FeatureLocation.model(name),
-            entities=entities,
+            entities=self.entities,
             features=self.features,
             derived_features=self.derived_features,
             event_timestamp=self.event_timestamp,
@@ -83,9 +80,6 @@ class PredictionsView(Codable):
 
     def request_for(self, features: set[str], name: str) -> RetrivalRequest:
         entities = self.entities
-
-        # if self.model_version_column:
-        #     entities.add(self.model_version_column)
 
         return RetrivalRequest(
             name=name,

@@ -58,27 +58,13 @@ class PanderaValidator(Validator):
         )
 
     def _build_schema(self, features: list[Feature]) -> DataFrameSchema:
-        return DataFrameSchema(columns={feature.name: self._column_for(feature) for feature in features})
+        return DataFrameSchema(
+            columns={feature.name: self._column_for(feature) for feature in features}, drop_invalid_rows=True
+        )
 
     async def validate_pandas(self, features: list[Feature], df: pd.DataFrame) -> pd.DataFrame:
-        from pandera.errors import SchemaError
-
         schema = self._build_schema(features)
-        try:
-            return schema.validate(df)
-        except SchemaError as error:
-            # Will only return one error at a time, so will remove
-            # errors and then run it recrusive
-
-            if error.failure_cases.shape[0] == df.shape[0]:
-                raise ValueError('Validation is removing all the data.')
-
-            if error.failure_cases['index'].iloc[0] is None:
-                raise ValueError(error)
-
-            return await self.validate_pandas(
-                features, df.loc[df.index.delete(error.failure_cases['index'])].reset_index()
-            )
+        return schema.validate(df, lazy=True)
 
     async def validate_polars(self, features: list[Feature], df: pl.LazyFrame) -> pl.LazyFrame:
         input_df = df.collect().to_pandas()

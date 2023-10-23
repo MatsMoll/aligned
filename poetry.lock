@@ -1107,6 +1107,17 @@ python-dateutil = ">=2.7"
 setuptools_scm = ">=7"
 
 [[package]]
+name = "multimethod"
+version = "1.10"
+description = "Multiple argument dispatching."
+optional = true
+python-versions = ">=3.8"
+files = [
+    {file = "multimethod-1.10-py3-none-any.whl", hash = "sha256:afd84da9c3d0445c84f827e4d63ad42d17c6d29b122427c6dee9032ac2d2a0d4"},
+    {file = "multimethod-1.10.tar.gz", hash = "sha256:daa45af3fe257f73abb69673fd54ddeaf31df0eb7363ad6e1251b7c9b192d8c5"},
+]
+
+[[package]]
 name = "mypy-extensions"
 version = "1.0.0"
 description = "Type system extensions for programs checked with the mypy type checker."
@@ -1300,34 +1311,36 @@ xml = ["lxml (>=4.8.0)"]
 
 [[package]]
 name = "pandera"
-version = "0.13.4"
+version = "0.17.2"
 description = "A light-weight and flexible data validation and testing tool for statistical data objects."
 optional = true
 python-versions = ">=3.7"
 files = [
-    {file = "pandera-0.13.4-py3-none-any.whl", hash = "sha256:9e91687861406284270add1d467f204630377892e7a4b45809bb7546f0013153"},
-    {file = "pandera-0.13.4.tar.gz", hash = "sha256:6ef2b7ee00d3439ac815d4347984421a08502da1020cec60c06dd0135e8aee2f"},
+    {file = "pandera-0.17.2-py3-none-any.whl", hash = "sha256:8e4e7b279c62f6d4b5109801544bf8d46e1c9fdf7ceceb8fedd5f3dad0c1bea1"},
+    {file = "pandera-0.17.2.tar.gz", hash = "sha256:67515984f855ba14d12443f893b5ff90ae6796f613d5f3df43abad406a48c373"},
 ]
 
 [package.dependencies]
+multimethod = "*"
 numpy = ">=1.19.0"
 packaging = ">=20.0"
 pandas = ">=1.2.0"
 pydantic = "*"
+typeguard = ">=3.0.2"
 typing-inspect = ">=0.6.0"
 wrapt = "*"
 
 [package.extras]
-all = ["black", "dask", "fastapi", "frictionless", "geopandas", "hypothesis (>=5.41.1)", "modin", "pandas-stubs (<=1.4.3.220807)", "pyspark (>=3.2.0)", "pyyaml (>=5.1)", "ray (<=1.7.0)", "scipy", "shapely"]
+all = ["black", "dask", "fastapi", "frictionless (<=4.40.8)", "geopandas", "hypothesis (>=5.41.1)", "modin", "pandas-stubs", "pyspark (>=3.2.0)", "pyyaml (>=5.1)", "ray", "scipy", "shapely"]
 dask = ["dask"]
 fastapi = ["fastapi"]
 geopandas = ["geopandas", "shapely"]
 hypotheses = ["scipy"]
-io = ["black", "frictionless", "pyyaml (>=5.1)"]
-modin = ["dask", "modin", "ray (<=1.7.0)"]
+io = ["black", "frictionless (<=4.40.8)", "pyyaml (>=5.1)"]
+modin = ["dask", "modin", "ray"]
 modin-dask = ["dask", "modin"]
-modin-ray = ["modin", "ray (<=1.7.0)"]
-mypy = ["pandas-stubs (<=1.4.3.220807)"]
+modin-ray = ["modin", "ray"]
+mypy = ["pandas-stubs"]
 pyspark = ["pyspark (>=3.2.0)"]
 strategies = ["hypothesis (>=5.41.1)"]
 
@@ -2077,6 +2090,24 @@ files = [
 ]
 
 [[package]]
+name = "typeguard"
+version = "4.1.5"
+description = "Run-time type checker for Python"
+optional = true
+python-versions = ">=3.8"
+files = [
+    {file = "typeguard-4.1.5-py3-none-any.whl", hash = "sha256:8923e55f8873caec136c892c3bed1f676eae7be57cdb94819281b3d3bc9c0953"},
+    {file = "typeguard-4.1.5.tar.gz", hash = "sha256:ea0a113bbc111bcffc90789ebb215625c963411f7096a7e9062d4e4630c155fd"},
+]
+
+[package.dependencies]
+typing-extensions = {version = ">=4.7.0", markers = "python_version < \"3.12\""}
+
+[package.extras]
+doc = ["Sphinx (>=7)", "packaging", "sphinx-autodoc-typehints (>=1.2.0)"]
+test = ["coverage[toml] (>=7)", "mypy (>=1.2.0)", "pytest (>=7)"]
+
+[[package]]
 name = "types-pyopenssl"
 version = "23.2.0.2"
 description = "Typing stubs for pyOpenSSL"
@@ -2279,4 +2310,4 @@ server = ["asgi-correlation-id", "fastapi", "prometheus-fastapi-instrumentator",
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "b44c29471b4d57bb29508c4cf59de347a6279a762b0cab93ff647451ad90fd11"
+content-hash = "7920f2f5aacee01ea109a63d13fb11116c3d26a889314e56cd030d81f868c02d"

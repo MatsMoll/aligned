@@ -44,9 +44,8 @@ class CombinedFeatureViewWrapper(Generic[T]):
         """Makes it possible to query the feature view for features
 
         ```python
-        class SomeView(FeatureView):
-
-            metadata = ...
+        @feature_view(...)
+        class SomeView:
 
             id = Int32().as_entity()
 

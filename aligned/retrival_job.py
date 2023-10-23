@@ -340,6 +340,9 @@ class RetrivalJob(ABC):
     def rename(self, mappings: dict[str, str]) -> RetrivalJob:
         return RenameJob(self, mappings)
 
+    def drop_duplicate_entities(self) -> RetrivalJob:
+        return DropDuplicateEntities(self)
+
     def ignore_event_timestamp(self) -> RetrivalJob:
         if isinstance(self, ModificationJob):
             return self.copy_with(self.job.ignore_event_timestamp())
@@ -431,6 +434,24 @@ class RenameJob(RetrivalJob, ModificationJob):
     async def to_polars(self) -> pl.LazyFrame:
         df = await self.job.to_polars()
         return df.rename(self.mappings)
+
+
+@dataclass
+class DropDuplicateEntities(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+
+    @property
+    def entity_columns(self) -> list[str]:
+        return self.job.request_result.entity_columns
+
+    async def to_polars(self) -> pl.LazyFrame:
+        df = await self.job.to_polars()
+        return df.unique(subset=self.entity_columns)
+
+    async def to_pandas(self) -> pd.DataFrame:
+        df = await self.job.to_pandas()
+        return df.drop_duplicates(subset=self.entity_columns)
 
 
 @dataclass

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aligned"
-version = "0.0.30"
+version = "0.0.31"
 description = "A scalable feature store that makes it easy to align offline and online ML systems"
 authors = ["Mats E. Mollestad <mats@mollestad.no>"]
 license = "Apache-2.0"
@@ -55,7 +55,7 @@ nest-asyncio = "^1.5.5"
 pydantic = "^2.0.0"
 prometheus_client = "^0.16.0"
 asgi-correlation-id = { version = "^3.0.0", optional = true }
-pandera = { version = "^0.13.3", optional = true}
+pandera = { version = "^0.17.0", optional = true}
 httpx = "^0.23.0"
 polars = { version = "^0.17.15", extras = ["all"] }
 pillow = { version = "^9.4.0", optional = true }
