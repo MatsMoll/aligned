@@ -15,7 +15,7 @@ import polars as pl
 from prometheus_client import Histogram
 
 from aligned.exceptions import UnableToFindFileException
-from aligned.request.retrival_request import RequestResult, RetrivalRequest
+from aligned.request.retrival_request import FeatureRequest, RequestResult, RetrivalRequest
 from aligned.schemas.feature import Feature, FeatureType
 from aligned.schemas.vector_storage import VectorIndex
 from aligned.split_strategy import (
@@ -362,12 +362,14 @@ class RetrivalJob(ABC):
 
     @staticmethod
     def from_convertable(
-        data: ConvertableToRetrivalJob, request: list[RetrivalRequest] | RetrivalRequest
+        data: ConvertableToRetrivalJob, request: list[RetrivalRequest] | RetrivalRequest | FeatureRequest
     ) -> RetrivalJob:
         from aligned.local.job import LiteralRetrivalJob
 
         if isinstance(request, RetrivalRequest):
             request = [request]
+        elif isinstance(request, FeatureRequest):
+            request = request.needed_requests
 
         if isinstance(data, dict):
             return LiteralDictJob(data, request)
