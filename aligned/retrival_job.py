@@ -17,6 +17,7 @@ from prometheus_client import Histogram
 from aligned.exceptions import UnableToFindFileException
 from aligned.request.retrival_request import FeatureRequest, RequestResult, RetrivalRequest
 from aligned.schemas.feature import Feature, FeatureType
+from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.vector_storage import VectorIndex
 from aligned.split_strategy import (
     SplitDataSet,
@@ -277,6 +278,22 @@ class RetrivalJob(ABC):
             return LogJob(self.copy_with(self.job.log_each_job()))
         return LogJob(self)
 
+    def join(self, job: RetrivalJob, method: str, on_columns: str | tuple[str, str]) -> RetrivalJob:
+
+        if isinstance(on_columns, tuple):
+            left_on, right_on = on_columns
+            pass
+        elif isinstance(on_columns, str):
+            left_on = on_columns
+            right_on = on_columns
+        else:
+            raise ValueError(f'Unable to set join condition using {on_columns}')
+
+        return JoinJobs(method=method, left_job=self, right_job=job, left_on=left_on, right_on=right_on)
+
+    def filter(self, condition: str | Feature | DerivedFeature) -> RetrivalJob:
+        return FilteredJob(self, condition)
+
     def chuncked(self, size: int) -> DataLoaderJob:
         return DataLoaderJob(self, size)
 
@@ -319,8 +336,8 @@ class RetrivalJob(ABC):
     def ensure_types(self, requests: list[RetrivalRequest]) -> RetrivalJob:
         return EnsureTypesJob(job=self, requests=requests)
 
-    def filter(self, include_features: set[str]) -> RetrivalJob:
-        return FilterJob(include_features, self)
+    def select_columns(self, include_features: set[str]) -> RetrivalJob:
+        return SelectColumnsJob(include_features, self)
 
     def with_request(self, requests: list[RetrivalRequest]) -> RetrivalJob:
         return WithRequests(self, requests)
@@ -358,7 +375,7 @@ class RetrivalJob(ABC):
     def from_polars_df(df: pl.DataFrame, request: list[RetrivalRequest]) -> RetrivalJob:
         from aligned.local.job import LiteralRetrivalJob
 
-        return LiteralRetrivalJob(df.lazy(), RequestResult.from_request_list(request))
+        return LiteralRetrivalJob(df.lazy(), request)
 
     @staticmethod
     def from_convertable(
@@ -374,13 +391,12 @@ class RetrivalJob(ABC):
         if isinstance(data, dict):
             return LiteralDictJob(data, request)
 
-        result = RequestResult.from_request_list(request)
         if isinstance(data, pl.DataFrame):
-            return LiteralRetrivalJob(data.lazy(), result)
+            return LiteralRetrivalJob(data.lazy(), request)
         elif isinstance(data, pl.LazyFrame):
-            return LiteralRetrivalJob(data, result)
+            return LiteralRetrivalJob(data, request)
         elif isinstance(data, pd.DataFrame):
-            return LiteralRetrivalJob(pl.from_pandas(data).lazy(), result)
+            return LiteralRetrivalJob(pl.from_pandas(data).lazy(), request)
         else:
             raise ValueError(f'Unable to convert {type(data)} to RetrivalJob')
 
@@ -421,6 +437,69 @@ class ModificationJob:
     def copy_with(self: JobType, job: RetrivalJob) -> JobType:
         self.job = job  # type: ignore
         return self
+
+
+@dataclass
+class JoinJobs(RetrivalJob):
+
+    method: str
+    left_job: RetrivalJob
+    right_job: RetrivalJob
+
+    left_on: str
+    right_on: str
+
+    async def to_polars(self) -> pl.LazyFrame:
+        left = await self.left_job.to_polars()
+        right = await self.right_job.to_polars()
+        return left.join(right, left_on=self.left_on, right_on=self.right_on, how=self.method)
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return await super().to_pandas()
+
+
+@dataclass
+class FilteredJob(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+    condition: DerivedFeature | Feature | str
+
+    async def to_polars(self) -> pl.LazyFrame:
+        df = await self.job.to_polars()
+
+        if isinstance(self.condition, str):
+            col = pl.col(self.condition)
+        elif isinstance(self.condition, DerivedFeature):
+            expr = await self.condition.transformation.transform_polars(df, self.condition.name)
+            if isinstance(expr, pl.Expr):
+                col = expr
+            else:
+                col = pl.col(self.condition.name)
+        elif isinstance(self.condition, Feature):
+            col = pl.col(self.condition.name)
+        else:
+            raise ValueError()
+
+        return df.filter(col)
+
+    async def to_pandas(self) -> pd.DataFrame:
+        df = await self.to_pandas()
+
+        if isinstance(self.condition, str):
+            mask = df[self.condition]
+        elif isinstance(self.condition, DerivedFeature):
+            mask = await self.condition.transformation.transform_pandas(df)
+        elif isinstance(self.condition, Feature):
+            mask = df[self.condition.name]
+        else:
+            raise ValueError()
+
+        return df.loc[mask]
+
+
+class JoinBuilder:
+
+    joins: list[str]
 
 
 @dataclass
@@ -855,7 +934,7 @@ class DataLoaderJob:
             chunked_job = (
                 LiteralRetrivalJob(df.lazy(), RequestResult.from_request_list(needed_requests))
                 .derive_features(needed_requests)
-                .filter(features_to_include_names)
+                .select_columns(features_to_include_names)
             )
 
             chunked_df = await chunked_job.to_polars()
@@ -1284,7 +1363,7 @@ class CombineFactualJob(RetrivalJob):
 
 
 @dataclass
-class FilterJob(RetrivalJob, ModificationJob):
+class SelectColumnsJob(RetrivalJob, ModificationJob):
 
     include_features: set[str]
     job: RetrivalJob
@@ -1314,10 +1393,10 @@ class FilterJob(RetrivalJob, ModificationJob):
             return df
 
     def validate(self, validator: Validator) -> RetrivalJob:
-        return FilterJob(self.include_features, self.job.validate(validator))
+        return SelectColumnsJob(self.include_features, self.job.validate(validator))
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
-        return FilterJob(self.include_features, self.job.cached_at(location))
+        return SelectColumnsJob(self.include_features, self.job.cached_at(location))
 
     def with_subfeatures(self) -> RetrivalJob:
         return self.job.with_subfeatures()
@@ -1326,7 +1405,7 @@ class FilterJob(RetrivalJob, ModificationJob):
         return self.job.remove_derived_features()
 
     def ignore_event_timestamp(self) -> RetrivalJob:
-        return FilterJob(
+        return SelectColumnsJob(
             include_features=self.include_features - {'event_timestamp'},
             job=self.job.ignore_event_timestamp(),
         )

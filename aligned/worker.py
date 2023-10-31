@@ -286,7 +286,7 @@ def stream_job(values: list[dict], feature_view: FeatureViewStore) -> RetrivalJo
 
     job = StreamAggregationJob(job, checkpoints).derive_features()
     if feature_view.feature_filter:
-        job = job.filter(feature_view.feature_filter)
+        job = job.select_columns(feature_view.feature_filter)
     return job
 
 

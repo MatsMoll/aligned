@@ -13,18 +13,22 @@ from aligned.sources.local import DataFileReference
 class LiteralRetrivalJob(RetrivalJob):
 
     df: pl.LazyFrame
-    result: RequestResult
+    requests: list[RetrivalRequest]
 
-    def __init__(self, df: pl.LazyFrame | pd.DataFrame, result: RequestResult) -> None:
-        self.result = result
+    def __init__(self, df: pl.LazyFrame | pd.DataFrame, requests: list[RetrivalRequest]) -> None:
+        self.requests = requests
         if isinstance(df, pd.DataFrame):
             self.df = pl.from_pandas(df).lazy()
         else:
             self.df = df
 
     @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.requests
+
+    @property
     def request_result(self) -> RequestResult:
-        return self.result
+        return RequestResult.from_request_list(self.requests)
 
     async def to_pandas(self) -> pd.DataFrame:
         return self.df.collect().to_pandas()
@@ -54,8 +58,9 @@ class FileFullJob(FullExtractJob):
         if isinstance(self.source, ColumnFeatureMappable):
             request_features = self.source.feature_identifier_for(all_names)
 
+        columns = {org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)}
         df = df.rename(
-            columns={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)},
+            columns=columns,
         )
 
         if self.limit and df.shape[0] > self.limit:

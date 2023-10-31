@@ -24,7 +24,7 @@ from aligned.feature_view.combined_view import CombinedFeatureView, CompiledComb
 from aligned.feature_view.feature_view import FeatureView
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import (
-    FilterJob,
+    SelectColumnsJob,
     RetrivalJob,
     StreamAggregationJob,
     SupervisedJob,
@@ -267,7 +267,7 @@ class FeatureStore:
             ):
                 raise ValueError(f'Missing {self.event_timestamp_column} in entities')
 
-        return self.feature_source.features_for(entity_request, requests).filter(feature_names)
+        return self.feature_source.features_for(entity_request, requests).select_columns(feature_names)
 
     def features_for(
         self, entities: ConvertableToRetrivalJob | RetrivalJob, features: list[str]
@@ -676,7 +676,7 @@ class ModelFeatureStore:
             if subset_request.request_result.feature_columns != request.request_result.feature_columns:
                 job = job.derive_features(request.needed_requests)
 
-        return job.filter(request.features_to_include)
+        return job.select_columns(request.features_to_include)
 
     async def freshness(self) -> dict[FeatureLocation, datetime]:
         from aligned.schemas.feature import EventTimestamp
@@ -754,7 +754,7 @@ class ModelFeatureStore:
         features = {f'{feature.location.identifier}:{feature.name}' for feature in self.model.features}
         request = self.store.requests_for(RawStringFeatureRequest(features))
 
-        return FileFullJob(location, RetrivalRequest.unsafe_combine(request.needed_requests)).filter(
+        return FileFullJob(location, RetrivalRequest.unsafe_combine(request.needed_requests)).select_columns(
             request.features_to_include
         )
 
@@ -762,14 +762,14 @@ class ModelFeatureStore:
         request = self.request()
 
         if isinstance(input, RetrivalJob):
-            job = input.filter(request.features_to_include)
+            job = input.select_columns(request.features_to_include)
         else:
             job = RetrivalJob.from_convertable(input, request=request.needed_requests)
 
         return (
             job.ensure_types(request.needed_requests)
             .derive_features(request.needed_requests)
-            .filter(request.features_to_include)
+            .select_columns(request.features_to_include)
         )
 
     def predictions_for(self, entities: ConvertableToRetrivalJob | RetrivalJob) -> RetrivalJob:
@@ -958,7 +958,7 @@ class SupervisedModelFeatureStore:
         )
         job = self.store.features_for_request(total_request, entities, total_request.features_to_include)
         return SupervisedJob(
-            job.filter(total_request.features_to_include),
+            job.select_columns(total_request.features_to_include),
             target_columns=targets,
         )
 
@@ -1100,7 +1100,7 @@ class FeatureViewStore:
             .derive_features(request.needed_requests)
         )
         if self.feature_filter:
-            return FilterJob(include_features=self.feature_filter, job=job)
+            return SelectColumnsJob(include_features=self.feature_filter, job=job)
         else:
             return job
 
@@ -1112,7 +1112,9 @@ class FeatureViewStore:
 
         if self.feature_filter:
             request = self.view.request_for(self.feature_filter)
-            return FilterJob(self.feature_filter, self.source.all_between(start_date, end_date, request))
+            return SelectColumnsJob(
+                self.feature_filter, self.source.all_between(start_date, end_date, request)
+            )
 
         request = self.view.request_all
         return self.source.all_between(start_date, end_date, request)
@@ -1135,7 +1137,7 @@ class FeatureViewStore:
 
         job = self.source.features_for(entity_job, request)
         if self.feature_filter:
-            return job.filter(self.feature_filter)
+            return job.select_columns(self.feature_filter)
         else:
             return job
 
@@ -1194,7 +1196,7 @@ class FeatureViewStore:
         job = job.derive_features([request])
 
         if self.feature_filter:
-            job = job.filter(self.feature_filter)
+            job = job.select_columns(self.feature_filter)
 
         await self.batch_write(job)
 
@@ -1243,3 +1245,15 @@ class FeatureViewStore:
 
         with feature_view_write_time.labels(self.view.name).time():
             await self.source.write(job, job.retrival_requests)
+
+    async def freshness(self) -> datetime:
+
+        view = self.view
+        if not view.event_timestamp:
+            raise ValueError(
+                f"View named '{view.name}' have no event timestamp. Therefore, unable to compute freshness"
+            )
+
+        location = FeatureLocation.feature_view(view.name)
+
+        return (await self.source.freshness_for({location: view.event_timestamp}))[location]

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, TypeVar, Any
+from dataclasses import dataclass
 
 from mashumaro.types import SerializableType
 
 from aligned.schemas.codable import Codable
+from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import EventTimestamp, Feature
 
 if TYPE_CHECKING:
@@ -27,14 +29,18 @@ class BatchDataSourceFactory:
         from aligned.sources.redshift import RedshiftSQLDataSource
         from aligned.sources.s3 import AwsS3CsvDataSource, AwsS3ParquetDataSource
 
-        self.supported_data_sources = {
-            PostgreSQLDataSource.type_name: PostgreSQLDataSource,
-            ParquetFileSource.type_name: ParquetFileSource,
-            CsvFileSource.type_name: CsvFileSource,
-            AwsS3CsvDataSource.type_name: AwsS3CsvDataSource,
-            AwsS3ParquetDataSource.type_name: AwsS3ParquetDataSource,
-            RedshiftSQLDataSource.type_name: RedshiftSQLDataSource,
-        }
+        source_types = [
+            PostgreSQLDataSource,
+            ParquetFileSource,
+            CsvFileSource,
+            AwsS3CsvDataSource,
+            AwsS3ParquetDataSource,
+            RedshiftSQLDataSource,
+            JoinDataSource,
+            FilteredDataSource,
+        ]
+
+        self.supported_data_sources = {source.type_name: source for source in source_types}
 
     @classmethod
     def shared(cls) -> BatchDataSourceFactory:
@@ -45,6 +51,14 @@ class BatchDataSourceFactory:
 
 
 T = TypeVar('T')
+
+
+class BatchSourceModification:
+
+    source: BatchDataSource
+
+    def wrap_job(self, job: RetrivalJob) -> RetrivalJob:
+        raise NotImplementedError()
 
 
 class BatchDataSource(ABC, Codable, SerializableType):
@@ -112,6 +126,8 @@ class BatchDataSource(ABC, Codable, SerializableType):
         return data_class.from_dict(value)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+        if isinstance(self, BatchSourceModification):
+            return self.wrap_job(self.source.all_data(request, limit))
         raise NotImplementedError()
 
     def all_between_dates(
@@ -120,13 +136,22 @@ class BatchDataSource(ABC, Codable, SerializableType):
         start_date: datetime,
         end_date: datetime,
     ) -> RetrivalJob:
+        if isinstance(self, BatchSourceModification):
+            return self.wrap_job(self.source.all_between_dates(request, start_date, end_date))
         raise NotImplementedError()
 
     @classmethod
     def multi_source_features_for(
         cls: type[T], facts: RetrivalJob, requests: list[tuple[T, RetrivalRequest]]
     ) -> RetrivalJob:
-        raise NotImplementedError()
+        if len(requests) != 1:
+            raise NotImplementedError()
+
+        source, _ = requests[0]
+        if not isinstance(source, BatchSourceModification):
+            raise NotImplementedError()
+
+        return source.wrap_job(type(source.source).multi_source_features_for(facts, requests))
 
     def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
         return type(self).multi_source_features_for(facts, [(self, request)])
@@ -146,6 +171,8 @@ class BatchDataSource(ABC, Codable, SerializableType):
         Returns:
             dict[str, FeatureType]: A dictionary containing the column name and the feature type
         """
+        if isinstance(self, BatchSourceModification):
+            return await self.source.schema()
         raise NotImplementedError(f'`schema()` is not implemented for {type(self)}.')
 
     async def feature_view_code(self, view_name: str) -> str:
@@ -195,6 +222,42 @@ class BatchDataSource(ABC, Codable, SerializableType):
         )
         """
         raise NotImplementedError(f'Freshness is not implemented for {type(self)}.')
+
+
+@dataclass
+class FilteredDataSource(BatchSourceModification, BatchDataSource):
+
+    source: BatchDataSource
+    condition: DerivedFeature | Feature
+
+    type_name: str = 'subset'
+
+    def job_group_key(self) -> str:
+        return f'subset/{self.source.job_group_key()}'
+
+    def wrap_job(self, job: RetrivalJob) -> RetrivalJob:
+        return job.filter(self.condition)
+
+
+@dataclass
+class JoinDataSource(BatchSourceModification, BatchDataSource):
+
+    source: BatchDataSource
+    right_source: BatchDataSource
+    right_request: RetrivalRequest
+    left_on: str
+    right_on: str
+    method: str
+
+    type_name: str = 'join'
+
+    def job_group_key(self) -> str:
+        return f'join/{self.source.job_group_key()}'
+
+    def wrap_job(self, job: RetrivalJob) -> RetrivalJob:
+
+        right_job = self.right_source.all_data(self.right_request, limit=None)
+        return job.join(right_job, self.method, (self.left_on, self.right_on))
 
 
 class ColumnFeatureMappable:

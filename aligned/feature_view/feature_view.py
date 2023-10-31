@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from abc import ABC, abstractproperty
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, TypeVar, Generic, Type, Callable
@@ -9,10 +11,15 @@ from aligned.compiler.feature_factory import (
     Embedding,
     Entity,
     EventTimestamp,
+    Bool,
 )
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
-from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, AggregationTimeWindow
+from aligned.schemas.derivied_feature import (
+    AggregatedFeature,
+    AggregateOver,
+    AggregationTimeWindow,
+)
 from aligned.schemas.feature import FeatureLocation, FeatureReferance
 from aligned.schemas.feature_view import CompiledFeatureView
 
@@ -23,6 +30,9 @@ if TYPE_CHECKING:
 
 # Enables code compleation in the select method
 T = TypeVar('T')
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -84,11 +94,101 @@ class FeatureViewWrapper(Generic[T]):
     def __call__(self) -> T:
         # Needs to compiile the model to set the location for the view features
         _ = self.compile()
-        return self.view()
+        view = self.view()
+        view.__view_wrapper__ = self
+        return view
 
     def compile(self) -> CompiledFeatureView:
 
         return FeatureView.compile_with_metadata(self.view(), self.metadata)
+
+    def with_filter(
+        self, named: str, where: Callable[[T], Bool], stored_at: BatchDataSource | None = None
+    ) -> FeatureViewWrapper[T]:
+
+        from aligned.data_source.batch_data_source import FilteredDataSource
+
+        meta = self.metadata
+        meta.name = named
+
+        condition = where(self.__call__())
+
+        if condition.transformation:
+            meta.batch_source = FilteredDataSource(self.metadata.batch_source, condition.compile())
+        else:
+            meta.batch_source = FilteredDataSource(self.metadata.batch_source, condition.feature())
+
+        if stored_at:
+            meta.staging_source = meta.batch_source
+            meta.batch_source = stored_at
+
+        return FeatureViewWrapper(metadata=meta, view=self.view)
+
+    def with_joined(self, view: Any, join_on: str, method: str = 'inner') -> BatchDataSource:
+        from aligned.data_source.batch_data_source import JoinDataSource
+
+        if not hasattr(view, '__view_wrapper__'):
+            raise ValueError(f'Unable to join {view}')
+
+        wrapper = getattr(view, '__view_wrapper__')
+        if not isinstance(wrapper, FeatureViewWrapper):
+            raise ValueError()
+
+        compiled_view = wrapper.compile()
+
+        request = compiled_view.request_all
+
+        return JoinDataSource(
+            source=self.metadata.batch_source,
+            right_source=compiled_view.batch_data_source,
+            right_request=request.needed_requests[0],
+            left_on=join_on,
+            right_on=join_on,
+            method=method,
+        )
+
+    def with_entity_renaming(self, named: str, renames: dict[str, str] | str) -> FeatureViewWrapper[T]:
+        from aligned.data_source.batch_data_source import ColumnFeatureMappable
+        import copy
+
+        compiled_view = self.compile()
+
+        meta = copy.deepcopy(self.metadata)
+        meta.name = named
+
+        all_data_sources = [
+            meta.batch_source,
+            meta.staging_source,
+            meta.application_source,
+            meta.stream_source,
+        ]
+
+        if isinstance(renames, str):
+            if not len(compiled_view.entities) == 1:
+                raise ValueError(
+                    f"Renaming entities for {compiled_view.name} with a string '{renames}'"
+                    'is impossible. Need to setup a dict to know which entity to rename.'
+                )
+
+            entity_name = list(compiled_view.entitiy_names)[0]
+            renames = {entity_name: renames}
+
+        for source in all_data_sources:
+            if not isinstance(source, ColumnFeatureMappable):
+                logger.info(
+                    f'Source {type(source)} do not conform to ColumnFeatureMappable,'
+                    'which could lead to problems'
+                )
+                continue
+            for key, value in renames.items():
+                existing_map = source.mapping_keys.get(key)
+
+                if existing_map:
+                    source.mapping_keys[value] = existing_map
+                else:
+                    source.mapping_keys[value] = key
+
+        return FeatureViewWrapper(metadata=meta, view=self.view)
 
     def query(self) -> FeatureViewStore:
         """Makes it possible to query the feature view for features

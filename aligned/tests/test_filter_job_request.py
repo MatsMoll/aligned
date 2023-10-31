@@ -20,7 +20,7 @@ def test_filter_job_result_request() -> None:
 
     assert set(job.request_result.feature_columns) == {'a', 'b', 'c'}
     assert set(job.request_result.entity_columns) == {'id'}
-    filtered_job = job.filter({'b'})
+    filtered_job = job.select_columns({'b'})
     assert set(filtered_job.request_result.feature_columns) == {'b'}
     assert set(filtered_job.request_result.entity_columns) == {'id'}
 
@@ -51,7 +51,7 @@ def test_filter_job_retrival_requests() -> None:
     assert set(job.request_result.feature_columns) == {'a', 'b', 'c'}
     assert set(job.request_result.entity_columns) == {'id'}
 
-    filtered_job = job.filter({'b'})
+    filtered_job = job.select_columns({'b'})
     retrival_requests = filtered_job.retrival_requests
 
     assert len(retrival_requests) == 1

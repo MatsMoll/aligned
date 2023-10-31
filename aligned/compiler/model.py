@@ -69,6 +69,7 @@ class ModelMetadata:
     description: str | None = field(default=None)
     predictions_source: BatchDataSource | None = field(default=None)
     predictions_stream: StreamDataSource | None = field(default=None)
+    historical_source: BatchDataSource | None = field(default=None)
     dataset_folder: Folder | None = field(default=None)
 
 
@@ -95,6 +96,7 @@ def model_contract(
     description: str | None = None,
     predictions_source: BatchDataSource | None = None,
     predictions_stream: StreamDataSource | None = None,
+    historical_source: BatchDataSource | None = None,
     dataset_folder: Folder | None = None,
 ) -> Callable[[Type[T]], ModelContractWrapper[T]]:
     def decorator(cls: Type[T]) -> ModelContractWrapper[T]:
@@ -106,6 +108,7 @@ def model_contract(
             description=description,
             predictions_source=predictions_source,
             predictions_stream=predictions_stream,
+            historical_source=historical_source,
             dataset_folder=dataset_folder,
         )
         return ModelContractWrapper(metadata, cls)
@@ -123,6 +126,7 @@ class ModelContract(ABC):
         tags: dict[str, str] | None = None,
         predictions_source: BatchDataSource | None = None,
         predictions_stream: StreamDataSource | None = None,
+        historical_source: BatchDataSource | None = None,
         dataset_folder: Folder | None = None,
     ) -> ModelMetadata:
         return ModelMetadata(
@@ -133,7 +137,8 @@ class ModelContract(ABC):
             description,
             predictions_source,
             predictions_stream,
-            dataset_folder,
+            historical_source=historical_source,
+            dataset_folder=dataset_folder,
         )
 
     @abstractproperty
