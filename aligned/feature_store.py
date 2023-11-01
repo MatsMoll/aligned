@@ -97,7 +97,6 @@ class FeatureStore:
     feature_views: dict[str, CompiledFeatureView]
     combined_feature_views: dict[str, CompiledCombinedFeatureView]
     models: dict[str, ModelSchema]
-    event_timestamp_column = 'event_timestamp'
 
     @property
     def all_models(self) -> list[str]:
@@ -260,17 +259,13 @@ class FeatureStore:
         else:
             entity_request = RetrivalJob.from_convertable(entities, requests)
 
-            if (
-                isinstance(entities, dict)
-                and requests.needs_event_timestamp
-                and self.event_timestamp_column not in entities
-            ):
-                raise ValueError(f'Missing {self.event_timestamp_column} in entities')
-
         return self.feature_source.features_for(entity_request, requests).select_columns(feature_names)
 
     def features_for(
-        self, entities: ConvertableToRetrivalJob | RetrivalJob, features: list[str]
+        self,
+        entities: ConvertableToRetrivalJob | RetrivalJob,
+        features: list[str],
+        event_timestamp_column: str | None = None,
     ) -> RetrivalJob:
         """
         Returns a set of features given a set of entities.
@@ -290,15 +285,15 @@ class FeatureStore:
         """
 
         feature_request = RawStringFeatureRequest(features=set(features))
-        requests = self.requests_for(feature_request)
+        requests = self.requests_for(feature_request, event_timestamp_column)
 
         feature_names = set()
 
-        if requests.needs_event_timestamp:
-            feature_names.add(self.event_timestamp_column)
-            if isinstance(entities, dict) and self.event_timestamp_column not in entities:
+        if event_timestamp_column:
+            feature_names.add(event_timestamp_column)
+            if isinstance(entities, dict) and event_timestamp_column in entities:
                 length = len(list(entities.values())[0])
-                entities[self.event_timestamp_column] = [datetime.utcnow()] * length
+                entities[event_timestamp_column] = [datetime.utcnow()] * length
 
         for view, feature_set in feature_request.grouped_features.items():
             if feature_set != {'*'}:
@@ -344,10 +339,12 @@ class FeatureStore:
         feature_views: dict[str, CompiledFeatureView],
         combined_feature_views: dict[str, CompiledCombinedFeatureView],
         models: dict[str, ModelSchema],
+        event_timestamp_column: str | None = None,
     ) -> FeatureRequest:
         features = feature_request.grouped_features
         requests: list[RetrivalRequest] = []
         entity_names = set()
+
         needs_event_timestamp = False
 
         for location in feature_request.locations:
@@ -393,8 +390,8 @@ class FeatureStore:
                     f'availible views are: {combined_feature_views.keys()}, and: {feature_views.keys()}'
                 )
 
-        if needs_event_timestamp:
-            entity_names.add('event_timestamp')
+        if needs_event_timestamp and event_timestamp_column:
+            entity_names.add(event_timestamp_column)
 
         return FeatureRequest(
             FeatureLocation.model('custom features'),
@@ -402,9 +399,15 @@ class FeatureStore:
             RetrivalRequest.combine(requests),
         )
 
-    def requests_for(self, feature_request: RawStringFeatureRequest) -> FeatureRequest:
+    def requests_for(
+        self, feature_request: RawStringFeatureRequest, event_timestamp_column: str | None = None
+    ) -> FeatureRequest:
         return FeatureStore._requests_for(
-            feature_request, self.feature_views, self.combined_feature_views, self.models
+            feature_request,
+            self.feature_views,
+            self.combined_feature_views,
+            self.models,
+            event_timestamp_column=event_timestamp_column,
         )
 
     def feature_view(self, view: str) -> FeatureViewStore:
@@ -626,15 +629,20 @@ class ModelFeatureStore:
             if feature.name not in except_features
         }
 
-    def request(self, except_features: set[str] | None = None) -> FeatureRequest:
+    def request(
+        self, except_features: set[str] | None = None, event_timestamp_column: str | None = None
+    ) -> FeatureRequest:
         return self.store.requests_for(
-            RawStringFeatureRequest(self.raw_string_features(except_features or set()))
+            RawStringFeatureRequest(self.raw_string_features(except_features or set())),
+            event_timestamp_column,
         )
 
     def needed_entities(self) -> set[Feature]:
         return self.request().request_result.entities
 
-    def features_for(self, entities: ConvertableToRetrivalJob | RetrivalJob) -> RetrivalJob:
+    def features_for(
+        self, entities: ConvertableToRetrivalJob | RetrivalJob, event_timestamp_column: str | None = None
+    ) -> RetrivalJob:
         """Returns the features for the given entities
 
         ```python
@@ -662,16 +670,18 @@ class ModelFeatureStore:
         Returns:
             RetrivalJob: A retrival job that can be used to fetch the features
         """
-        request = self.request()
+        request = self.request(event_timestamp_column=event_timestamp_column)
         if isinstance(entities, dict):
             features = self.raw_string_features(set(entities.keys()))
         else:
             features = self.raw_string_features(set())
 
-        job = self.store.features_for(entities, list(features)).with_request(request.needed_requests)
+        job = self.store.features_for(
+            entities, list(features), event_timestamp_column=event_timestamp_column
+        ).with_request(request.needed_requests)
 
         if isinstance(entities, dict):
-            subset_request = self.request(set(entities.keys()))
+            subset_request = self.request(set(entities.keys()), event_timestamp_column)
 
             if subset_request.request_result.feature_columns != request.request_result.feature_columns:
                 job = job.derive_features(request.needed_requests)
