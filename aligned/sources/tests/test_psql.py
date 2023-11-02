@@ -40,7 +40,7 @@ async def test_postgresql(point_in_time_data_test: DataTest, psql: PostgreSQLCon
     job = store.features_for(
         point_in_time_data_test.entities.to_dict(as_series=False),
         point_in_time_data_test.feature_reference,
-        event_timestamp_column='event_timestamp_column',
+        event_timestamp_column='event_timestamp',
     )
     data = (await job.to_polars()).collect()
 
@@ -114,7 +114,7 @@ async def test_postgresql_without_event(
     job = store.features_for(
         point_in_time_data_test_wituout_event_timestamp.entities.to_dict(as_series=False),
         point_in_time_data_test_wituout_event_timestamp.feature_reference,
-        event_timestamp_column='event_timestamp_column',
+        event_timestamp_column='event_timestamp',
     )
     data = (await job.to_polars()).collect()
 

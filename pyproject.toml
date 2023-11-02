@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aligned"
-version = "0.0.33"
+version = "0.0.34"
 description = "A scalable feature store that makes it easy to align offline and online ML systems"
 authors = ["Mats E. Mollestad <mats@mollestad.no>"]
 license = "Apache-2.0"
@@ -64,7 +64,7 @@ prometheus-fastapi-instrumentator = { version="^5.9.1", optional = true }
 # openai = { version = "^0.27.2", optional = true }
 # sentence-transformers = { version = "^2.2.2", optional = true }
 kafka-python = { version= "^2.0.2", optional = true }
-connectorx = "^0.3.2"
+connectorx = { version = "^0.3.2", optional = true }
 
 [tool.poetry.extras]
 aws = ["aioaws", "connectorx"]
