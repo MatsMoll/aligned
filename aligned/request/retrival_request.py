@@ -10,7 +10,7 @@ from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
 class EventTimestampRequest(Codable):
 
     event_timestamp: EventTimestamp
-    entity_column: str = field(default='event_timestamp')
+    entity_column: str | None = field(default=None)
 
 
 @dataclass
@@ -59,8 +59,7 @@ class RetrivalRequest(Codable):
             self.event_timestamp_request = event_timestamp_request
         elif event_timestamp:
             self.event_timestamp_request = EventTimestampRequest(
-                event_timestamp=event_timestamp,
-                entity_column=entity_timestamp_columns or 'event_timestamp',
+                event_timestamp=event_timestamp, entity_column=entity_timestamp_columns
             )
         self.features_to_include = features_to_include or self.all_feature_names
 
@@ -162,6 +161,11 @@ class RetrivalRequest(Codable):
         return features
 
     def without_event_timestamp(self, name_sufix: str | None = None) -> 'RetrivalRequest':
+
+        request = None
+        if self.event_timestamp_request:
+            request = EventTimestampRequest(self.event_timestamp_request.event_timestamp, None)
+
         return RetrivalRequest(
             name=f'{self.name}{name_sufix or ""}',
             location=self.location,
@@ -169,6 +173,21 @@ class RetrivalRequest(Codable):
             features=self.features,
             derived_features=self.derived_features,
             aggregated_features=self.aggregated_features,
+            event_timestamp_request=request,
+        )
+
+    def with_event_timestamp_column(self, column: str) -> 'RetrivalRequest':
+        et_request = None
+        if self.event_timestamp_request:
+            et_request = EventTimestampRequest(self.event_timestamp_request.event_timestamp, column)
+        return RetrivalRequest(
+            name=self.name,
+            location=self.location,
+            entities=self.entities,
+            features=self.features,
+            derived_features=self.derived_features,
+            aggregated_features=self.aggregated_features,
+            event_timestamp_request=et_request,
         )
 
     @staticmethod
@@ -187,7 +206,7 @@ class RetrivalRequest(Codable):
                     features=request.features,
                     derived_features=request.derived_features,
                     aggregated_features=request.aggregated_features,
-                    event_timestamp=request.event_timestamp,
+                    event_timestamp_request=request.event_timestamp_request,
                 )
                 returned_features[fv_name] = request.returned_features
             else:

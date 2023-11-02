@@ -289,11 +289,8 @@ class FeatureStore:
 
         feature_names = set()
 
-        if event_timestamp_column:
+        if event_timestamp_column and requests.needs_event_timestamp:
             feature_names.add(event_timestamp_column)
-            if isinstance(entities, dict) and event_timestamp_column in entities:
-                length = len(list(entities.values())[0])
-                entities[event_timestamp_column] = [datetime.utcnow()] * length
 
         for view, feature_set in feature_request.grouped_features.items():
             if feature_set != {'*'}:
@@ -345,8 +342,6 @@ class FeatureStore:
         requests: list[RetrivalRequest] = []
         entity_names = set()
 
-        needs_event_timestamp = False
-
         for location in feature_request.locations:
             location_name = location.name
             if location.location == 'model':
@@ -358,8 +353,6 @@ class FeatureStore:
                     request = view.request_for(features[location], location_name)
                 requests.append(request)
                 entity_names.update(request.entity_names)
-                if request.event_timestamp:
-                    needs_event_timestamp = True
 
             elif location_name in combined_feature_views:
                 cfv = combined_feature_views[location_name]
@@ -370,8 +363,6 @@ class FeatureStore:
                 requests.extend(sub_requests.needed_requests)
                 for request in sub_requests.needed_requests:
                     entity_names.update(request.entity_names)
-                    if request.event_timestamp:
-                        needs_event_timestamp = True
 
             elif location_name in feature_views:
                 feature_view = feature_views[location_name]
@@ -382,16 +373,18 @@ class FeatureStore:
                 requests.extend(sub_requests.needed_requests)
                 for request in sub_requests.needed_requests:
                     entity_names.update(request.entity_names)
-                    if request.event_timestamp:
-                        needs_event_timestamp = True
             else:
                 raise ValueError(
                     f'Unable to find: {location_name}, '
                     f'availible views are: {combined_feature_views.keys()}, and: {feature_views.keys()}'
                 )
 
-        if needs_event_timestamp and event_timestamp_column:
+        if event_timestamp_column:
             entity_names.add(event_timestamp_column)
+            requests = [request.with_event_timestamp_column(event_timestamp_column) for request in requests]
+
+        else:
+            requests = [request.without_event_timestamp() for request in requests]
 
         return FeatureRequest(
             FeatureLocation.model('custom features'),
@@ -688,14 +681,14 @@ class ModelFeatureStore:
 
         return job.select_columns(request.features_to_include)
 
-    async def freshness(self) -> dict[FeatureLocation, datetime]:
+    async def freshness(self) -> dict[FeatureLocation, datetime | None]:
         from aligned.schemas.feature import EventTimestamp
 
         locs: dict[FeatureLocation, EventTimestamp] = {}
 
         for req in self.request().needed_requests:
             if req.event_timestamp:
-                locs[req.location]
+                locs[req.location] = req.event_timestamp
 
         return await self.store.feature_source.freshness_for(locs)
 
@@ -782,10 +775,14 @@ class ModelFeatureStore:
             .select_columns(request.features_to_include)
         )
 
-    def predictions_for(self, entities: ConvertableToRetrivalJob | RetrivalJob) -> RetrivalJob:
+    def predictions_for(
+        self, entities: ConvertableToRetrivalJob | RetrivalJob, event_timestamp_column: str | None = None
+    ) -> RetrivalJob:
 
         location_id = self.location.identifier
-        return self.store.features_for(entities, features=[f'{location_id}:*'])
+        return self.store.features_for(
+            entities, features=[f'{location_id}:*'], event_timestamp_column=event_timestamp_column
+        )
 
     def all_predictions(self, limit: int | None = None) -> RetrivalJob:
 
@@ -912,7 +909,9 @@ class SupervisedModelFeatureStore:
     model: ModelSchema
     store: FeatureStore
 
-    def features_for(self, entities: ConvertableToRetrivalJob | RetrivalJob) -> SupervisedJob:
+    def features_for(
+        self, entities: ConvertableToRetrivalJob | RetrivalJob, event_timestamp_column: str | None = None
+    ) -> SupervisedJob:
         """Loads the features and labels for a model
 
         ```python
@@ -956,9 +955,11 @@ class SupervisedModelFeatureStore:
         else:
             raise ValueError('Found no targets in the model')
 
-        request = self.store.requests_for(RawStringFeatureRequest(features))
+        request = self.store.requests_for(
+            RawStringFeatureRequest(features), event_timestamp_column=event_timestamp_column
+        )
         target_request = self.store.requests_for(
-            RawStringFeatureRequest(target_features)
+            RawStringFeatureRequest(target_features), event_timestamp_column=event_timestamp_column
         ).without_event_timestamp(name_sufix='target')
 
         total_request = FeatureRequest(
@@ -972,7 +973,9 @@ class SupervisedModelFeatureStore:
             target_columns=targets,
         )
 
-    def predictions_for(self, entities: ConvertableToRetrivalJob | RetrivalJob) -> RetrivalJob:
+    def predictions_for(
+        self, entities: ConvertableToRetrivalJob | RetrivalJob, event_timestamp_column: str | None = None
+    ) -> RetrivalJob:
         """Loads the predictions and labels / ground truths for a model
 
         ```python
@@ -1017,7 +1020,9 @@ class SupervisedModelFeatureStore:
         labels = pred_view.labels()
         target_features = {feature.identifier for feature in target_features}
         pred_features = {f'model:{self.model.name}:{feature.name}' for feature in labels}
-        request = self.store.requests_for(RawStringFeatureRequest(pred_features))
+        request = self.store.requests_for(
+            RawStringFeatureRequest(pred_features), event_timestamp_column=event_timestamp_column
+        )
         target_request = self.store.requests_for(
             RawStringFeatureRequest(target_features)
         ).without_event_timestamp(name_sufix='target')
@@ -1134,11 +1139,16 @@ class FeatureViewStore:
         start_date = end_date - timedelta(days=days, minutes=minutes, seconds=seconds)
         return self.between_dates(start_date, end_date)
 
-    def features_for(self, entities: ConvertableToRetrivalJob | RetrivalJob) -> RetrivalJob:
+    def features_for(
+        self, entities: ConvertableToRetrivalJob | RetrivalJob, event_timestamp_column: str | None = None
+    ) -> RetrivalJob:
 
         request = self.view.request_all
         if self.feature_filter:
             request = self.view.request_for(self.feature_filter)
+
+        if not event_timestamp_column:
+            request = request.without_event_timestamp()
 
         if isinstance(entities, RetrivalJob):
             entity_job = entities
@@ -1256,7 +1266,7 @@ class FeatureViewStore:
         with feature_view_write_time.labels(self.view.name).time():
             await self.source.write(job, job.retrival_requests)
 
-    async def freshness(self) -> datetime:
+    async def freshness(self) -> datetime | None:
 
         view = self.view
         if not view.event_timestamp:

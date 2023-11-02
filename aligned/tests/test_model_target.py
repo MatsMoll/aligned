@@ -55,7 +55,7 @@ async def test_titanic_model_with_targets_and_scd(titanic_feature_store_scd: Fea
     dataset = (
         await titanic_feature_store_scd.model('titanic')
         .with_labels()
-        .features_for(entities.to_dict(as_series=False))
+        .features_for(entities.to_dict(as_series=False), event_timestamp_column='event_timestamp')
         .to_polars()
     )
 

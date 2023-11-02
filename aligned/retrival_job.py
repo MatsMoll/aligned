@@ -1189,6 +1189,7 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                 features_to_check = {feature.derived_feature for feature in request.aggregated_features}
 
             for feature in features_to_check:
+
                 if feature.dtype == FeatureType('').bool:
                     df = df.with_columns(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
                 elif feature.dtype == FeatureType('').datetime:
@@ -1213,13 +1214,14 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                 if feature.name not in df.columns:
                     continue
                 current_dtype = df.select([feature.name]).dtypes[0]
-                if isinstance(current_dtype, pl.Datetime):
-                    continue
-                df = df.with_columns(
-                    (pl.col(feature.name).cast(pl.Int64) * 1000)
-                    .cast(pl.Datetime(time_zone='UTC'))
-                    .alias(feature.name)
-                )
+
+                if not isinstance(current_dtype, pl.Datetime):
+                    df = df.with_columns(
+                        (pl.col(feature.name).cast(pl.Int64) * 1000)
+                        .cast(pl.Datetime(time_zone='UTC'))
+                        .alias(feature.name)
+                    )
+
         return df
 
     def remove_derived_features(self) -> RetrivalJob:

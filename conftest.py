@@ -803,3 +803,124 @@ def point_in_time_data_test() -> DataTest:
         ],
         expected_output=expected_output,
     )
+
+
+@pytest.fixture
+def point_in_time_data_test_wituout_event_timestamp() -> DataTest:
+    from datetime import datetime, timezone
+
+    placeholder_ds = FileSource.parquet_at('placeholder')
+
+    class CreditHistory(FeatureView):
+
+        metadata = FeatureView.metadata_with('credit_history', description='', batch_source=placeholder_ds)
+
+        dob_ssn = String().as_entity()
+        event_timestamp = EventTimestamp()
+        credit_card_due = Int64()
+        student_loan_due = Int64()
+
+        due_sum = credit_card_due + student_loan_due
+
+        bankruptcies = Int32()
+
+    class CreditHistoryAggregate(FeatureView):
+
+        metadata = FeatureView.metadata_with(
+            'credit_history_agg', description='', batch_source=placeholder_ds
+        )
+
+        dob_ssn = String().as_entity()
+        event_timestamp = EventTimestamp()
+        credit_card_due = Int64()
+
+        credit_sum = credit_card_due.aggregate().over(weeks=1).sum()
+
+    class Loan(FeatureView):
+
+        metadata = FeatureView.metadata_with('loan', description='', batch_source=placeholder_ds)
+
+        loan_id = Int32().as_entity()
+        event_timestamp = EventTimestamp()
+        loan_status = Bool().description('If the loan was granted or not')
+        personal_income = Int64()
+        loan_amount = Int64()
+
+    first_event_timestamp = datetime(2020, 4, 26, 18, 1, 4, 746575, tzinfo=timezone.utc)
+    second_event_timestamp = datetime(2020, 4, 27, 18, 1, 4, 746575, tzinfo=timezone.utc)
+
+    credit_data = pl.DataFrame(
+        {
+            'dob_ssn': [
+                '19530219_5179',
+                '19520816_8737',
+                '19860413_2537',
+                '19530219_5179',
+                '19520816_8737',
+                '19860413_2537',
+            ],
+            'event_timestamp': [
+                first_event_timestamp,
+                first_event_timestamp,
+                first_event_timestamp,
+                second_event_timestamp,
+                second_event_timestamp,
+                second_event_timestamp,
+            ],
+            'credit_card_due': [8419, 2944, 833, 5936, 1575, 6263],
+            'student_loan_due': [22328, 2515, 33000, 48955, 9501, 35510],
+            'bankruptcies': [0, 0, 0, 0, 0, 0],
+        }
+    )
+
+    loan_data = pl.DataFrame(
+        {
+            'loan_id': [10000, 10001, 10002, 10000, 10001, 10002],
+            'event_timestamp': [
+                first_event_timestamp,
+                first_event_timestamp,
+                first_event_timestamp,
+                second_event_timestamp,
+                second_event_timestamp,
+                second_event_timestamp,
+            ],
+            'loan_status': [1, 0, 1, 1, 1, 1],
+            'personal_income': [59000, 9600, 9600, 65500, 54400, 9900],
+            'loan_amount': [35000, 1000, 5500, 35000, 35000, 2500],
+        }
+    )
+
+    entities = pl.DataFrame(
+        {
+            'dob_ssn': ['19530219_5179', '19520816_8737', '19860413_2537'],
+            'loan_id': [10000, 10001, 10002],
+        }
+    )
+
+    expected_output = pl.DataFrame(
+        {
+            'dob_ssn': ['19530219_5179', '19520816_8737', '19860413_2537'],
+            'loan_id': [10000, 10001, 10002],
+            'credit_card_due': [5936, 1575, 6263],
+            # 'credit_sum': [8419 + 5936, 2944 + 1575, 833 + 6263],
+            'student_loan_due': [48955, 9501, 35510],
+            'due_sum': [5936 + 48955, 1575 + 9501, 6263 + 35510],
+            'personal_income': [65500, 54400, 9900],
+        }
+    )
+
+    return DataTest(
+        sources=[
+            FeatureData(data=credit_data, view=CreditHistory()),
+            FeatureData(data=loan_data, view=Loan()),
+            FeatureData(data=credit_data, view=CreditHistoryAggregate()),
+        ],
+        entities=entities,
+        feature_reference=[
+            'credit_history:credit_card_due',
+            'credit_history:student_loan_due',
+            'credit_history:due_sum',
+            'loan:personal_income',
+        ],
+        expected_output=expected_output,
+    )
