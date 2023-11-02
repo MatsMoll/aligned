@@ -113,8 +113,7 @@ async def test_postgresql_without_event(
 
     job = store.features_for(
         point_in_time_data_test_wituout_event_timestamp.entities,
-        point_in_time_data_test_wituout_event_timestamp.feature_reference,
-        event_timestamp_column='event_timestamp',
+        point_in_time_data_test_wituout_event_timestamp.feature_reference
     )
     data = (await job.to_polars()).collect()
 
