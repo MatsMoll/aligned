@@ -291,12 +291,14 @@ class FactPsqlJob(FactualRetrivalJob):
         sort_query = 'entities.row_id'
 
         event_timestamp_clause: str | None = None
-        if request.event_timestamp_request and entities_has_event_timestamp:
+        if request.event_timestamp_request:
             timestamp = request.event_timestamp_request.event_timestamp
-            entity_column = request.event_timestamp_request.entity_column
             event_timestamp_column = source.feature_identifier_for([timestamp.name])[0]
-            event_timestamp_clause = f'entities.{entity_column} >= ta.{event_timestamp_column}'
             sort_query += f', ta.{event_timestamp_column} DESC'
+
+            if request.event_timestamp_request.entity_column:
+                entity_column = request.event_timestamp_request.entity_column
+                event_timestamp_clause = f'entities.{entity_column} >= ta.{event_timestamp_column}'
 
         join_conditions = [
             f'ta."{entity_db_name}" = entities.{entity}'
@@ -368,7 +370,7 @@ class FactPsqlJob(FactualRetrivalJob):
         id_column = 'row_id'
         # id_column = window.group_by[0].name
         event_timestamp_clause: str | None = None
-        if request.event_timestamp_request:
+        if request.event_timestamp_request and request.event_timestamp_request.entity_column:
             timestamp = request.event_timestamp_request.event_timestamp
             entity_column = request.event_timestamp_request.entity_column
             group_by_names = {id_column}
@@ -488,7 +490,7 @@ class FactPsqlJob(FactualRetrivalJob):
                 entity_types[entity.name] = entity.dtype
                 all_entities.add(entity.name)
 
-            if request.event_timestamp_request:
+            if request.event_timestamp_request and request.event_timestamp_request.entity_column:
                 entity_column = request.event_timestamp_request.entity_column
                 has_event_timestamp = True
                 entity_types[entity_column] = FeatureType('').datetime
@@ -655,7 +657,7 @@ class FactPsqlJob(FactualRetrivalJob):
             final_select_names = final_select_names.union(
                 {f'entities.{entity}' for entity in request.entity_names}
             )
-            if request.event_timestamp_request:
+            if request.event_timestamp_request and request.event_timestamp_request.entity_column:
                 entity_column = request.event_timestamp_request.entity_column
 
                 if entity_column in sql_facts.query:

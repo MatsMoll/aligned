@@ -28,7 +28,7 @@ class FeatureSource:
 
     async def freshness_for(
         self, locations: dict[FeatureLocation, EventTimestamp]
-    ) -> dict[FeatureLocation, datetime]:
+    ) -> dict[FeatureLocation, datetime | None]:
         raise NotImplementedError()
 
 
@@ -136,7 +136,7 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
 
     async def freshness_for(
         self, locations: dict[FeatureLocation, EventTimestamp]
-    ) -> dict[FeatureLocation, datetime]:
+    ) -> dict[FeatureLocation, datetime | None]:
         locs = list(locations.keys())
         results = await asyncio.gather(
             *[self.sources[loc.identifier].freshness(locations[loc]) for loc in locs]

@@ -226,10 +226,20 @@ class FileFactualJob(FactualRetrivalJob):
 
         result = await self.facts.to_polars()
         event_timestamp_col = 'aligned_event_timestamp'
-        using_event_timestamp = False
-        if 'event_timestamp' in result.columns:
-            using_event_timestamp = True
-            result = result.rename({'event_timestamp': event_timestamp_col})
+
+        event_timestamp_entity_columns = [
+            req.event_timestamp_request.entity_column for req in self.requests if req.event_timestamp_request
+        ]
+        event_timestamp_entity_column = None
+        did_rename_event_timestamp = False
+
+        if event_timestamp_entity_columns:
+            event_timestamp_entity_column = event_timestamp_entity_columns[0]
+
+            if event_timestamp_entity_column and event_timestamp_entity_column in result:
+                result = result.rename({event_timestamp_entity_column: event_timestamp_col})
+                did_rename_event_timestamp = True
+
         row_id_name = 'row_id'
         result = result.with_row_count(row_id_name)
 
@@ -237,10 +247,17 @@ class FileFactualJob(FactualRetrivalJob):
             entity_names = request.entity_names
             all_names = request.all_required_feature_names.union(entity_names)
 
+            if request.event_timestamp_request:
+                using_event_timestamp = event_timestamp_entity_column is not None
+            else:
+                using_event_timestamp = False
+
             if request.event_timestamp:
                 all_names.add(request.event_timestamp.name)
 
-            request_features = all_names
+            all_names = list(all_names)
+
+            request_features = list(all_names)
             if isinstance(self.source, ColumnFeatureMappable):
                 request_features = self.source.feature_identifier_for(all_names)
 
@@ -259,7 +276,8 @@ class FileFactualJob(FactualRetrivalJob):
                 result = result.with_columns(pl.col(entity.name).cast(entity.dtype.polars_type))
 
             column_selects = list(entity_names.union({'row_id'}))
-            if request.event_timestamp:
+
+            if using_event_timestamp:
                 column_selects.append(event_timestamp_col)
 
             # Need to only select the relevent entities and row_id
@@ -274,7 +292,7 @@ class FileFactualJob(FactualRetrivalJob):
                 aggregated_df = await self.aggregate_over(group, features, new_result, event_timestamp_col)
                 new_result = new_result.join(aggregated_df, on='row_id', how='left')
 
-            if request.event_timestamp:
+            if request.event_timestamp and using_event_timestamp:
                 field = request.event_timestamp.name
                 ttl = request.event_timestamp.ttl
 
@@ -292,13 +310,16 @@ class FileFactualJob(FactualRetrivalJob):
                         pl.col(field).is_null() | (pl.col(field) <= pl.col(event_timestamp_col))
                     )
                 new_result = new_result.sort(field, descending=True).select(pl.exclude(field))
+            elif request.event_timestamp:
+                new_result = new_result.sort([row_id_name, request.event_timestamp.name], descending=True)
 
             unique = new_result.unique(subset=row_id_name, keep='first')
-            result = result.join(unique, on=row_id_name, how='left')
+            column_selects.remove('row_id')
+            result = result.join(unique.select(pl.exclude(column_selects)), on=row_id_name, how='left')
             result = result.select(pl.exclude('.*_right$'))
 
-        if using_event_timestamp:
-            result = result.rename({event_timestamp_col: 'event_timestamp'})
+        if did_rename_event_timestamp:
+            result = result.rename({event_timestamp_col: event_timestamp_entity_column})
 
         return result.select([pl.exclude('row_id')])
 

@@ -983,7 +983,9 @@ class EventTimestamp(DateFeature, ArithmeticFeature):
 
     def event_timestamp(self) -> EventTimestampFeature:
         return EventTimestampFeature(
-            name=self.name, ttl=self.ttl.total_seconds() if self.ttl else None, description=self._description
+            name=self.name,
+            ttl=int(self.ttl.total_seconds()) if self.ttl else None,
+            description=self._description,
         )
 
 

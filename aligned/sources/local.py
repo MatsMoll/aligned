@@ -59,9 +59,12 @@ class StorageFileReference(AsRepoDefinition):
         return RepoDefinition.from_json(file)
 
 
-async def data_file_freshness(reference: DataFileReference, column_name: str) -> datetime:
-    file = await reference.to_polars()
-    return file.select(column_name).max().collect()[0, column_name]
+async def data_file_freshness(reference: DataFileReference, column_name: str) -> datetime | None:
+    try:
+        file = await reference.to_polars()
+        return file.select(column_name).max().collect()[0, column_name]
+    except UnableToFindFileException:
+        return None
 
 
 @dataclass
@@ -192,7 +195,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
             'from aligned import FileSource\nfrom aligned.sources.local import CsvConfig',
         )
 
-    async def freshness(self, event_timestamp: EventTimestamp) -> datetime:
+    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
         return await data_file_freshness(self, event_timestamp.name)
 
 

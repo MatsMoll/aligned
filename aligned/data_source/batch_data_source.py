@@ -221,6 +221,12 @@ class BatchDataSource(ABC, Codable, SerializableType):
             .freshness()
         )
         """
+        from aligned.data_file import DataFileReference
+        from aligned.sources.local import data_file_freshness
+
+        if isinstance(self, DataFileReference):
+            return await data_file_freshness(self, event_timestamp.name)
+
         raise NotImplementedError(f'Freshness is not implemented for {type(self)}.')
 
 
