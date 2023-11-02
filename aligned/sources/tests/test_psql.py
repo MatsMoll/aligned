@@ -38,7 +38,7 @@ async def test_postgresql(point_in_time_data_test: DataTest, psql: PostgreSQLCon
         store.add_feature_view(view)
 
     job = store.features_for(
-        point_in_time_data_test.entities.to_dict(as_series=False),
+        point_in_time_data_test.entities,
         point_in_time_data_test.feature_reference,
         event_timestamp_column='event_timestamp',
     )
@@ -112,7 +112,7 @@ async def test_postgresql_without_event(
         store.add_feature_view(view)
 
     job = store.features_for(
-        point_in_time_data_test_wituout_event_timestamp.entities.to_dict(as_series=False),
+        point_in_time_data_test_wituout_event_timestamp.entities,
         point_in_time_data_test_wituout_event_timestamp.feature_reference,
         event_timestamp_column='event_timestamp',
     )
