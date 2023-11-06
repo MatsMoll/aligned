@@ -170,7 +170,7 @@ class RedisSource(FeatureSource, WritableFeatureSource):
         combined = [req for req in request.needed_requests if req.location.location == 'combined_view']
         return FactualRedisJob(self.config, needed_requests, facts).combined_features(combined)
 
-    async def write(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+    async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
 
         redis = self.config.redis()
         data = await job.to_polars()
@@ -197,14 +197,14 @@ class RedisSource(FeatureSource, WritableFeatureSource):
 
                     expr = pl.col(feature.name).cast(pl.Utf8).alias(feature.name)
 
-                    if feature.dtype == FeatureType('').bool:
+                    if feature.dtype == FeatureType.bool():
                         # Redis do not support bools
                         expr = (
                             pl.col(feature.name).cast(pl.Int8, strict=False).cast(pl.Utf8).alias(feature.name)
                         )
-                    elif feature.dtype == FeatureType('').datetime:
+                    elif feature.dtype == FeatureType.datetime():
                         expr = pl.col(feature.name).dt.timestamp('ms').cast(pl.Utf8).alias(feature.name)
-                    elif feature.dtype == FeatureType('').embedding or feature.dtype == FeatureType('').array:
+                    elif feature.dtype == FeatureType.embedding() or feature.dtype == FeatureType.array():
                         expr = pl.col(feature.name).apply(lambda x: x.to_numpy().tobytes())
 
                     request_data = request_data.with_columns(expr)
@@ -218,6 +218,9 @@ class RedisSource(FeatureSource, WritableFeatureSource):
                         if value is None:
                             pipe.hdel(record['id'], key)
                 await pipe.execute()
+
+    async def upsert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+        await self.insert(job, requests)
 
 
 @dataclass
@@ -255,12 +258,12 @@ class RedisStreamSource(StreamDataSource, SinkableDataSource, ColumnFeatureMappa
 
             expr = pl.col(feature.name)
 
-            if feature.dtype == FeatureType('').bool:
+            if feature.dtype == FeatureType.bool():
                 # Redis do not support bools
                 expr = pl.col(feature.name).cast(pl.Int8, strict=False)
-            elif feature.dtype == FeatureType('').datetime:
+            elif feature.dtype == FeatureType.datetime():
                 expr = pl.col(feature.name).dt.timestamp('ms')
-            elif feature.dtype == FeatureType('').embedding or feature.dtype == FeatureType('').array:
+            elif feature.dtype == FeatureType.embedding() or feature.dtype == FeatureType.array():
 
                 expr = pl.col(feature.name).apply(lambda x: x.to_numpy().tobytes())
 

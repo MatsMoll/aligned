@@ -34,10 +34,10 @@ def retrival_request_without_derived() -> RetrivalRequest:
     return RetrivalRequest(
         name='test',
         location=FeatureLocation.feature_view('test'),
-        entities={Feature(name='id', dtype=FeatureType('').int32)},
+        entities={Feature(name='id', dtype=FeatureType.int32())},
         features={
-            Feature(name='a', dtype=FeatureType('').int32),
-            Feature(name='b', dtype=FeatureType('').int32),
+            Feature(name='a', dtype=FeatureType.int32()),
+            Feature(name='b', dtype=FeatureType.int32()),
         },
         derived_features=set(),
         event_timestamp=None,
@@ -62,25 +62,25 @@ def retrival_request_with_derived() -> RetrivalRequest:
     return RetrivalRequest(
         name='test_with_ts',
         location=FeatureLocation.feature_view('test_with_ts'),
-        entities={Feature(name='id', dtype=FeatureType('').int32)},
+        entities={Feature(name='id', dtype=FeatureType.int32())},
         features={
-            Feature(name='c', dtype=FeatureType('').int32),
-            Feature(name='d', dtype=FeatureType('').int32),
+            Feature(name='c', dtype=FeatureType.int32()),
+            Feature(name='d', dtype=FeatureType.int32()),
         },
         derived_features={
             DerivedFeature(
                 name='c+d',
-                dtype=FeatureType('').int32,
+                dtype=FeatureType.int32(),
                 depending_on={
                     FeatureReferance(
                         name='c',
                         location=FeatureLocation.feature_view('test_with_ts'),
-                        dtype=FeatureType('').int32,
+                        dtype=FeatureType.int32(),
                     ),
                     FeatureReferance(
                         name='d',
                         location=FeatureLocation.feature_view('test_with_ts'),
-                        dtype=FeatureType('').int32,
+                        dtype=FeatureType.int32(),
                     ),
                 },
                 transformation=Addition(front='c', behind='d'),
@@ -124,20 +124,20 @@ def combined_retrival_request() -> RetrivalRequest:
     return RetrivalRequest(
         name='combined',
         location=FeatureLocation.combined_view('combined'),
-        entities={Feature(name='id', dtype=FeatureType('').int32)},
+        entities={Feature(name='id', dtype=FeatureType.int32())},
         features=set(),
         derived_features={
             DerivedFeature(
                 name='a+c+d',
-                dtype=FeatureType('').int32,
+                dtype=FeatureType.int32(),
                 depending_on={
                     FeatureReferance(
                         name='c+d',
                         location=FeatureLocation.feature_view('test_with_ts'),
-                        dtype=FeatureType('').int32,
+                        dtype=FeatureType.int32(),
                     ),
                     FeatureReferance(
-                        name='a', location=FeatureLocation.feature_view('test'), dtype=FeatureType('').int32
+                        name='a', location=FeatureLocation.feature_view('test'), dtype=FeatureType.int32()
                     ),
                 },
                 transformation=Addition(front='c+d', behind='a'),

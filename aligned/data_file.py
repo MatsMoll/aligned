@@ -2,6 +2,17 @@ import pandas as pd
 import polars as pl
 
 
+def upsert_on_column(columns: list[str], new_data: pl.LazyFrame, existing_data: pl.LazyFrame) -> pl.LazyFrame:
+
+    column_diff = set(new_data.columns).difference(existing_data.columns)
+
+    if column_diff:
+        raise ValueError(f'Mismatching columns, missing columns {column_diff}.')
+
+    combined = pl.concat([new_data, existing_data.select(new_data.columns)])
+    return combined.unique(columns, keep='first')
+
+
 class DataFileReference:
     """
     A reference to a data file.

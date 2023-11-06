@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
 
 import pandas as pd
 import polars as pl
@@ -15,6 +15,9 @@ from aligned.schemas.transformation import PsqlTransformation
 from aligned.sources.psql import PostgreSQLConfig, PostgreSQLDataSource
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
 @dataclass
@@ -119,7 +122,7 @@ class PostgreSqlJob(RetrivalJob):
     def will_load_list_feature(self) -> bool:
         for request in self.requests:
             for feature in request.all_features:
-                if feature.dtype == FeatureType('').array:
+                if feature.dtype == FeatureType.array():
                     return True
         return False
 
@@ -262,13 +265,13 @@ class FactPsqlJob(FactualRetrivalJob):
     def dtype_to_sql_type(self, dtype: object) -> str:
         if isinstance(dtype, str):
             return dtype
-        if dtype == FeatureType('').string:
+        if dtype == FeatureType.string():
             return 'text'
-        if dtype == FeatureType('').uuid:
+        if dtype == FeatureType.uuid():
             return 'uuid'
-        if dtype == FeatureType('').int32 or dtype == FeatureType('').int64:
+        if dtype == FeatureType.int32() or dtype == FeatureType.int64():
             return 'integer'
-        if dtype == FeatureType('').datetime:
+        if dtype == FeatureType.datetime():
             return 'TIMESTAMP WITH TIME ZONE'
         return 'uuid'
 
@@ -479,7 +482,7 @@ class FactPsqlJob(FactualRetrivalJob):
 
         final_select_names: set[str] = set()
         all_entities = {'row_id'}
-        entity_types: dict[str, FeatureType] = {'row_id': FeatureType('').int64}
+        entity_types: dict[str, FeatureType] = {'row_id': FeatureType.int64()}
         has_event_timestamp = False
 
         for request in self.requests:
@@ -493,7 +496,7 @@ class FactPsqlJob(FactualRetrivalJob):
             if request.event_timestamp_request and request.event_timestamp_request.entity_column:
                 entity_column = request.event_timestamp_request.entity_column
                 has_event_timestamp = True
-                entity_types[entity_column] = FeatureType('').datetime
+                entity_types[entity_column] = FeatureType.datetime()
                 all_entities.add(entity_column)
                 final_select_names.add(f'entities.{entity_column}')
 
@@ -503,7 +506,7 @@ class FactPsqlJob(FactualRetrivalJob):
         fact_df = facts.with_row_count(name='row_id', offset=1).collect()
 
         entity_type_list = {
-            entity: self.dtype_to_sql_type(entity_types.get(entity, FeatureType('').int32))
+            entity: self.dtype_to_sql_type(entity_types.get(entity, FeatureType.int32()))
             for entity in all_entities
         }
 

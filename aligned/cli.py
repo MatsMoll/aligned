@@ -2,23 +2,23 @@ import asyncio
 import logging
 import os
 import sys
-from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
-from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import click
 from pytz import utc  # type: ignore
 
 from aligned.compiler.repo_reader import RepoReader, RepoReference
-from aligned.feature_source import WritableFeatureSource
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import Feature
-from aligned.schemas.repo_definition import RepoDefinition
 from aligned.worker import StreamWorker
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from datetime import datetime
 
 
 def coro(func: Callable) -> Callable:
@@ -263,55 +263,6 @@ async def serve_worker_command(repo_path: str, worker_path: str, env_file: str) 
     worker = StreamWorker.from_object(dir, reference_file_path, obj)
 
     await worker.start()
-
-
-@cli.command('materialize')
-@coro
-@click.option(
-    '--repo-path',
-    default='.',
-    help='The path to the repo',
-)
-@click.option(
-    '--env-file',
-    default='.env',
-    help='The path to env variables',
-)
-@click.option(
-    '--days',
-    help='The number of days to materialize',
-)
-@click.option(
-    '--view',
-    help='The feature view to materialize',
-)
-async def materialize_command(repo_path: str, env_file: str, days: str, view: str) -> None:
-    """
-    Materializes the feature store
-    """
-    from aligned.feature_store import FeatureStore
-
-    dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
-    load_envs(dir / env_file)
-
-    sys.path.append(str(dir))
-    repo_def = await RepoDefinition.from_path(repo_path)
-    store = FeatureStore.from_definition(repo_def)
-    batch_store = store.offline_store()
-
-    if not isinstance(store.feature_source, WritableFeatureSource):
-        raise ValueError('Batch feature sources are not supported for materialization')
-
-    number_of_days = int(days)
-    views = [view] if view else list(store.feature_views.keys())
-
-    click.echo(f'Materializing the last {number_of_days} days')
-    for feature_view in views:
-        fv_store = batch_store.feature_view(feature_view)
-        click.echo(f'Materializing {feature_view}')
-        await store.feature_source.write(
-            fv_store.previous(days=number_of_days), fv_store.view.request_all.needed_requests
-        )
 
 
 @dataclass

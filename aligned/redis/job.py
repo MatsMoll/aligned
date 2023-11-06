@@ -68,10 +68,10 @@ class FactualRedisJob(FactualRetrivalJob):
             ).select(pl.exclude(redis_combine_id))
 
             for feature in request.returned_features:
-                if feature.dtype == FeatureType('').bool:
+                if feature.dtype == FeatureType.bool():
                     reqs = reqs.with_columns(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
                 elif reqs[feature.name].dtype == pl.Utf8 and (
-                    feature.dtype == FeatureType('').int32 or feature.dtype == FeatureType('').int64
+                    feature.dtype == FeatureType.int32() or feature.dtype == FeatureType.int64()
                 ):
                     reqs = reqs.with_columns(
                         pl.col(feature.name)
@@ -80,16 +80,16 @@ class FactualRedisJob(FactualRetrivalJob):
                         .cast(feature.dtype.polars_type)
                         .alias(feature.name)
                     )
-                elif feature.dtype == FeatureType('').embedding or feature.dtype == FeatureType('').array:
+                elif feature.dtype == FeatureType.embedding() or feature.dtype == FeatureType.array():
                     import numpy as np
 
                     reqs = reqs.with_columns(pl.col(feature.name).apply(lambda row: np.frombuffer(row)))
                 else:
                     reqs = reqs.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type))
-                # if feature.dtype == FeatureType('').datetime:
+                # if feature.dtype == FeatureType.datetime():
                 #     dates = pd.to_datetime(result_series[result_value_mask], unit='s', utc=True)
                 #     result_df.loc[set_mask, feature.name] = dates
-                # elif feature.dtype == FeatureType('').embedding:
+                # elif feature.dtype == FeatureType.embedding():
                 #     result_df.loc[set_mask, feature.name] = (
                 #         result_series[result_value_mask].str.split(',')
                 # .apply(lambda x: [float(i) for i in x])

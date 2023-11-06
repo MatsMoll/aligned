@@ -4,7 +4,7 @@ import asyncio
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 import pandas as pd
@@ -42,7 +42,7 @@ class TransformationTestDefinition:
     def output_polars(self) -> pl.Series:
         try:
             values = pl.Series(self.output).fill_nan(None)
-            if self.transformation.dtype == FeatureType('').bool:
+            if self.transformation.dtype == FeatureType.bool():
                 return values.cast(pl.Boolean)
             else:
                 return values
@@ -114,7 +114,7 @@ class Transformation(Codable, SerializableType):
             assert (set(test.input_polars.columns) - set(output_df.columns)) == set()
 
             expected = test.output_polars
-            if test.transformation.dtype == FeatureType('').bool:
+            if test.transformation.dtype == FeatureType.bool():
                 is_correct = output.series_equal(test.output_polars.alias(alias))
                 assert is_correct, (
                     f'Output for {cls.__name__} is not correct.,'
@@ -137,13 +137,13 @@ class Transformation(Codable, SerializableType):
         with suppress(NotImplementedError):
             test = cls.test_definition()
             output = await test.transformation.transform_pandas(test.input_pandas)
-            if test.transformation.dtype == FeatureType('').bool:
+            if test.transformation.dtype == FeatureType.bool():
                 is_correct = np.all(output == test.output_pandas) | output.equals(test.output_pandas)
                 assert is_correct, (
                     f'Output for {cls.__name__} is not correct.,'
                     f'\nGot: {output},\nexpected: {test.output_pandas}'
                 )
-            elif test.transformation.dtype == FeatureType('').string:
+            elif test.transformation.dtype == FeatureType.string():
                 expected = test.output_pandas
                 assert expected.equals(output), (
                     f'Output for {cls.__name__} is not correct.,'
@@ -283,7 +283,7 @@ class PandasFunctionTransformation(Transformation):
             transformation=PandasFunctionTransformation(
                 code='async def test(df):\n    return df["a"] + df["b"]',
                 function_name='test',
-                dtype=FeatureType('').int32,
+                dtype=FeatureType.int32(),
             ),
             input={
                 'a': [1, 2, 3, 4, 5],
@@ -387,7 +387,7 @@ class NotNull(Transformation):
     key: str
 
     name: str = 'not_null'
-    dtype: FeatureType = FeatureType('').bool
+    dtype: FeatureType = FeatureType.bool()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key].notnull()
@@ -411,7 +411,7 @@ class Equals(Transformation):
     value: LiteralValue
 
     name: str = 'equals'
-    dtype: FeatureType = FeatureType('').bool
+    dtype: FeatureType = FeatureType.bool()
 
     def __init__(self, key: str, value: str) -> None:
         self.key = key
@@ -439,7 +439,7 @@ class And(Transformation):
     second_key: str
 
     name: str = 'and'
-    dtype: FeatureType = FeatureType('').bool
+    dtype: FeatureType = FeatureType.bool()
 
     def __init__(self, first_key: str, second_key: str) -> None:
         self.first_key = first_key
@@ -477,7 +477,7 @@ class Or(Transformation):
     second_key: str
 
     name: str = 'or'
-    dtype: FeatureType = FeatureType('').bool
+    dtype: FeatureType = FeatureType.bool()
 
     def __init__(self, first_key: str, second_key: str) -> None:
         self.first_key = first_key
@@ -509,7 +509,7 @@ class Inverse(Transformation):
     key: str
 
     name: str = 'inverse'
-    dtype: FeatureType = FeatureType('').bool
+    dtype: FeatureType = FeatureType.bool()
 
     def __init__(self, key: str) -> None:
         self.key = key
@@ -540,11 +540,14 @@ class NotEquals(Transformation):
     value: LiteralValue
 
     name: str = 'not-equals'
-    dtype: FeatureType = FeatureType('').bool
+    dtype: FeatureType = FeatureType.bool()
 
-    def __init__(self, key: str, value: str) -> None:
+    def __init__(self, key: str, value: Any) -> None:
         self.key = key
-        self.value = value
+        if isinstance(value, LiteralValue):
+            self.value = value
+        else:
+            self.value = LiteralValue.from_value(value)
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key] != self.value.python_value
@@ -568,7 +571,7 @@ class GreaterThenValue(Transformation):
     value: float
 
     name: str = 'gt'
-    dtype: FeatureType = FeatureType('').bool
+    dtype: FeatureType = FeatureType.bool()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key] > self.value
@@ -594,7 +597,7 @@ class GreaterThen(Transformation):
     right_key: str
 
     name: str = field(default='gtf')
-    dtype: FeatureType = field(default=FeatureType('').bool)
+    dtype: FeatureType = field(default=FeatureType.bool())
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.left_key] > df[self.right_key]
@@ -620,7 +623,7 @@ class GreaterThenOrEqual(Transformation):
     value: float
 
     name: str = 'gte'
-    dtype: FeatureType = FeatureType('').bool
+    dtype: FeatureType = FeatureType.bool()
 
     def __init__(self, key: str, value: float) -> None:
         self.key = key
@@ -654,7 +657,7 @@ class LowerThen(Transformation):
     value: float
 
     name: str = 'lt'
-    dtype: FeatureType = FeatureType('').bool
+    dtype: FeatureType = FeatureType.bool()
 
     def __init__(self, key: str, value: float) -> None:
         self.key = key
@@ -686,7 +689,7 @@ class LowerThenOrEqual(Transformation):
     value: float
 
     name: str = 'lte'
-    dtype: FeatureType = FeatureType('').bool
+    dtype: FeatureType = FeatureType.bool()
 
     def __init__(self, key: str, value: float) -> None:
         self.key = key
@@ -718,7 +721,7 @@ class Subtraction(Transformation, PsqlTransformation, RedshiftTransformation):
     behind: str
 
     name: str = 'sub'
-    dtype: FeatureType = FeatureType('').float
+    dtype: FeatureType = FeatureType.float()
 
     def __init__(self, front: str, behind: str) -> None:
         self.front = front
@@ -755,7 +758,7 @@ class AdditionValue(Transformation):
     value: LiteralValue
 
     name: str = 'add_value'
-    dtype: FeatureType = FeatureType('').float
+    dtype: FeatureType = FeatureType.float()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.feature] + self.value.python_value
@@ -781,7 +784,7 @@ class Multiply(Transformation, PsqlTransformation, RedshiftTransformation):
     behind: str
 
     name: str = 'mul'
-    dtype: FeatureType = FeatureType('').float
+    dtype: FeatureType = FeatureType.float()
 
     def __init__(self, front: str, behind: str) -> None:
         self.front = front
@@ -808,7 +811,7 @@ class MultiplyValue(Transformation, PsqlTransformation, RedshiftTransformation):
     value: LiteralValue
 
     name: str = 'mul_val'
-    dtype: FeatureType = FeatureType('').float
+    dtype: FeatureType = FeatureType.float()
 
     def __init__(self, key: str, value: LiteralValue) -> None:
         self.key = key
@@ -831,7 +834,7 @@ class Addition(Transformation, PsqlTransformation, RedshiftTransformation):
     behind: str
 
     name: str = 'add'
-    dtype: FeatureType = FeatureType('').float
+    dtype: FeatureType = FeatureType.float()
 
     def __init__(self, front: str, behind: str) -> None:
         self.front = front
@@ -869,7 +872,7 @@ class TimeDifference(Transformation, PsqlTransformation, RedshiftTransformation)
     unit: str
 
     name: str = 'time-diff'
-    dtype: FeatureType = FeatureType('').float
+    dtype: FeatureType = FeatureType.float()
 
     def __init__(self, front: str, behind: str, unit: str = 's') -> None:
         self.front = front
@@ -921,7 +924,7 @@ class Logarithm(Transformation):
     key: str
 
     name: str = 'log'
-    dtype: FeatureType = FeatureType('').float
+    dtype: FeatureType = FeatureType.float()
 
     def __init__(self, key: str) -> None:
         self.key = key
@@ -953,7 +956,7 @@ class LogarithmOnePluss(Transformation):
     key: str
 
     name: str = 'log1p'
-    dtype: FeatureType = FeatureType('').float
+    dtype: FeatureType = FeatureType.float()
 
     def __init__(self, key: str) -> None:
         self.key = key
@@ -989,7 +992,7 @@ class ToNumerical(Transformation):
     key: str
 
     name: str = 'to-num'
-    dtype: FeatureType = FeatureType('').float
+    dtype: FeatureType = FeatureType.float()
 
     def __init__(self, key: str) -> None:
         self.key = key
@@ -1020,7 +1023,7 @@ class DateComponent(Transformation):
     component: str
 
     name: str = 'date-component'
-    dtype: FeatureType = FeatureType('').int32
+    dtype: FeatureType = FeatureType.int32()
 
     def __init__(self, key: str, component: str) -> None:
         self.key = key
@@ -1117,7 +1120,7 @@ class ArrayContains(Transformation):
     value: LiteralValue
 
     name: str = 'array_contains'
-    dtype: FeatureType = FeatureType('').bool
+    dtype: FeatureType = FeatureType.bool()
 
     def __init__(self, key: str, value: str) -> None:
         self.key = key
@@ -1150,7 +1153,7 @@ class Contains(Transformation):
     value: str
 
     name: str = 'contains'
-    dtype: FeatureType = FeatureType('').bool
+    dtype: FeatureType = FeatureType.bool()
 
     def __init__(self, key: str, value: str) -> None:
         self.key = key
@@ -1186,7 +1189,7 @@ class Ordinal(Transformation):
         return {key: index for index, key in enumerate(self.orders)}
 
     name: str = 'ordinal'
-    dtype: FeatureType = FeatureType('').int32
+    dtype: FeatureType = FeatureType.int32()
 
     def __init__(self, key: str, orders: list[str]) -> None:
         self.key = key
@@ -1217,7 +1220,7 @@ class ReplaceStrings(Transformation):
     values: list[tuple[str, str]]
 
     name: str = 'replace'
-    dtype: FeatureType = FeatureType('').string
+    dtype: FeatureType = FeatureType.string()
 
     def __init__(self, key: str, values: list[tuple[str, str]]) -> None:
         self.key = key
@@ -1261,7 +1264,7 @@ class Ratio(Transformation):
     denumerator: str
 
     name: str = 'ratio'
-    dtype: FeatureType = FeatureType('').float
+    dtype: FeatureType = FeatureType.float()
 
     def __init__(self, numerator: str, denumerator: str) -> None:
         self.numerator = numerator
@@ -1302,7 +1305,7 @@ class DivideDenumeratorValue(Transformation):
     denumerator: LiteralValue
 
     name: str = 'div_denum_val'
-    dtype: FeatureType = FeatureType('').float
+    dtype: FeatureType = FeatureType.float()
 
     def __init__(self, numerator: str, denumerator: LiteralValue) -> None:
         self.numerator = numerator
@@ -1337,7 +1340,7 @@ class IsIn(Transformation):
     key: str
 
     name = 'isin'
-    dtype = FeatureType('').bool
+    dtype = FeatureType.bool()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key].isin(self.values)
@@ -1367,7 +1370,7 @@ class FillNaValues(Transformation):
         return df[self.key].fillna(self.value.python_value)
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        if self.dtype == FeatureType('').float:
+        if self.dtype == FeatureType.float():
             return pl.col(self.key).fill_nan(self.value.python_value).fill_null(self.value.python_value)
 
         else:
@@ -1376,7 +1379,7 @@ class FillNaValues(Transformation):
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
-            FillNaValues('x', LiteralValue.from_value(3), dtype=FeatureType('').int32),
+            FillNaValues('x', LiteralValue.from_value(3), dtype=FeatureType.int32()),
             input={'x': [1, 1, None, None, 3, 3, None, 4, 5, None]},
             output=[1, 1, 3, 3, 3, 3, 3, 4, 5, 3],
         )
@@ -1400,7 +1403,7 @@ class CopyTransformation(Transformation):
 class Floor(Transformation):
 
     key: str
-    dtype: FeatureType = FeatureType('').int64
+    dtype: FeatureType = FeatureType.int64()
 
     name: str = 'floor'
 
@@ -1425,7 +1428,7 @@ class Floor(Transformation):
 class Ceil(Transformation):
 
     key: str
-    dtype: FeatureType = FeatureType('').int64
+    dtype: FeatureType = FeatureType.int64()
 
     name: str = 'ceil'
 
@@ -1450,7 +1453,7 @@ class Ceil(Transformation):
 class Round(Transformation):
 
     key: str
-    dtype: FeatureType = FeatureType('').int64
+    dtype: FeatureType = FeatureType.int64()
 
     name: str = 'round'
 
@@ -1475,7 +1478,7 @@ class Round(Transformation):
 class Absolute(Transformation):
 
     key: str
-    dtype: FeatureType = FeatureType('').float
+    dtype: FeatureType = FeatureType.float()
 
     name: str = 'abs'
 
@@ -1515,9 +1518,9 @@ class MapArgMax(Transformation):
 
         if len(self.column_mappings) == 1:
             key, value = list(self.column_mappings.items())[0]
-            if self.dtype == FeatureType('').bool:
+            if self.dtype == FeatureType.bool():
                 expr = pl.when(pl.col(key) > 0.5).then(value.python_value).otherwise(not value.python_value)
-            elif self.dtype == FeatureType('').string:
+            elif self.dtype == FeatureType.string():
                 expr = (
                     pl.when(pl.col(key) > 0.5).then(value.python_value).otherwise(f'not {value.python_value}')
                 )
@@ -1562,7 +1565,7 @@ class WordVectoriser(Transformation):
     model: TextVectoriserModel
 
     name = 'word_vectoriser'
-    dtype = FeatureType('').embedding
+    dtype = FeatureType.embedding()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return await self.model.vectorise_pandas(df[self.key])
@@ -1577,7 +1580,7 @@ class LoadImageUrl(Transformation):
     image_url_key: str
 
     name = 'load_image'
-    dtype = FeatureType('').array
+    dtype = FeatureType.array()
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         import asyncio
@@ -1602,7 +1605,7 @@ class GrayscaleImage(Transformation):
     image_key: str
 
     name = 'grayscale_image'
-    dtype = FeatureType('').array
+    dtype = FeatureType.array()
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         import numpy as np
@@ -1621,7 +1624,7 @@ class Power(Transformation):
     key: str
     power: LiteralValue
     name = 'power'
-    dtype = FeatureType('').float
+    dtype = FeatureType.float()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key] ** self.power.python_value
@@ -1636,7 +1639,7 @@ class PowerFeature(Transformation):
     key: str
     power_key: float
     name = 'power_feat'
-    dtype = FeatureType('').float
+    dtype = FeatureType.float()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key] ** df[self.power_key]
@@ -1652,7 +1655,7 @@ class AppendConstString(Transformation):
     string: str
 
     name = 'append_const_string'
-    dtype = FeatureType('').string
+    dtype = FeatureType.string()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key] + self.string
@@ -1669,7 +1672,7 @@ class AppendStrings(Transformation):
     sep: str
 
     name = 'append_strings'
-    dtype = FeatureType('').string
+    dtype = FeatureType.string()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.first_key] + self.sep + df[self.second_key]
@@ -1689,7 +1692,7 @@ class PrependConstString(Transformation):
     key: str
 
     name = 'prepend_const_string'
-    dtype = FeatureType('').string
+    dtype = FeatureType.string()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return self.string + df[self.key]
@@ -1706,7 +1709,7 @@ class ConcatStringAggregation(Transformation, PsqlTransformation, RedshiftTransf
     separator: str = field(default=' ')
 
     name = 'concat_string_agg'
-    dtype = FeatureType('').string
+    dtype = FeatureType.string()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return (await self.transform_polars(pl.from_pandas(df).lazy())).collect().to_pandas()[self.name]
@@ -1730,7 +1733,7 @@ class SumAggregation(Transformation, PsqlTransformation, RedshiftTransformation)
     group_keys: list[str]
 
     name = 'sum_agg'
-    dtype = FeatureType('').float
+    dtype = FeatureType.float()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -1749,7 +1752,7 @@ class MeanAggregation(Transformation, PsqlTransformation, RedshiftTransformation
     group_keys: list[str]
 
     name = 'mean_agg'
-    dtype = FeatureType('').float
+    dtype = FeatureType.float()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -1768,7 +1771,7 @@ class MinAggregation(Transformation, PsqlTransformation, RedshiftTransformation)
     group_keys: list[str]
 
     name = 'min_agg'
-    dtype = FeatureType('').float
+    dtype = FeatureType.float()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -1787,7 +1790,7 @@ class MaxAggregation(Transformation, PsqlTransformation, RedshiftTransformation)
     group_keys: list[str]
 
     name = 'max_agg'
-    dtype = FeatureType('').float
+    dtype = FeatureType.float()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -1806,7 +1809,7 @@ class CountAggregation(Transformation, PsqlTransformation, RedshiftTransformatio
     group_keys: list[str]
 
     name = 'count_agg'
-    dtype = FeatureType('').float
+    dtype = FeatureType.float()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -1825,7 +1828,7 @@ class CountDistinctAggregation(Transformation, PsqlTransformation, RedshiftTrans
     group_keys: list[str]
 
     name = 'count_distinct_agg'
-    dtype = FeatureType('').float
+    dtype = FeatureType.float()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -1844,7 +1847,7 @@ class StdAggregation(Transformation, PsqlTransformation, RedshiftTransformation)
     group_keys: list[str]
 
     name = 'std_agg'
-    dtype = FeatureType('').float
+    dtype = FeatureType.float()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -1863,7 +1866,7 @@ class VarianceAggregation(Transformation, PsqlTransformation, RedshiftTransforma
     group_keys: list[str]
 
     name = 'var_agg'
-    dtype = FeatureType('').float
+    dtype = FeatureType.float()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -1882,7 +1885,7 @@ class MedianAggregation(Transformation, PsqlTransformation, RedshiftTransformati
     group_keys: list[str]
 
     name = 'median_agg'
-    dtype = FeatureType('').float
+    dtype = FeatureType.float()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -1902,7 +1905,7 @@ class PercentileAggregation(Transformation, PsqlTransformation, RedshiftTransfor
     group_keys: list[str]
 
     name = 'percentile_agg'
-    dtype = FeatureType('').float
+    dtype = FeatureType.float()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -1922,7 +1925,7 @@ class Clip(Transformation, PsqlTransformation, RedshiftTransformation):
     upper: LiteralValue
 
     name = 'clip'
-    dtype = FeatureType('').float
+    dtype = FeatureType.float()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key].clip(lower=self.lower.python_value, upper=self.upper.python_value)
@@ -1954,7 +1957,7 @@ class PresignedAwsUrl(Transformation):
     max_age_seconds: int = field(default=30)
 
     name = 'presigned_aws_url'
-    dtype = FeatureType('').string
+    dtype = FeatureType.string()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         from aioaws.s3 import S3Client
@@ -1983,7 +1986,7 @@ class JsonPath(Transformation):
     path: str
 
     name = 'json_path'
-    dtype = FeatureType('').string
+    dtype = FeatureType.string()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return pl.Series(df[self.key]).str.json_path_match(self.path).to_pandas()

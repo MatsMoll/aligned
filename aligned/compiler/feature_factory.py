@@ -98,7 +98,7 @@ class TargetProbability:
     def compile(self) -> ClassTargetProbability:
         return ClassTargetProbability(
             outcome=LiteralValue.from_value(self.of_value),
-            feature=Feature(self._name, dtype=FeatureType('').float),
+            feature=Feature(self._name, dtype=FeatureType.float()),
         )
 
 
@@ -133,7 +133,7 @@ class RegressionLabel(FeatureReferencable):
         )
 
     def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> RegressionLabel:
-        assert when.dtype == FeatureType('').bool, 'A trigger needs a boolean condition'
+        assert when.dtype == FeatureType.bool(), 'A trigger needs a boolean condition'
 
         return RegressionLabel(
             self.feature, EventTrigger(when, sink_to), ground_truth_event=self.ground_truth_event
@@ -188,7 +188,7 @@ class ClassificationLabel(FeatureReferencable):
         )
 
     def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> ClassificationLabel:
-        assert when.dtype == FeatureType('').bool, 'A trigger needs a boolean condition'
+        assert when.dtype == FeatureType.bool(), 'A trigger needs a boolean condition'
 
         return ClassificationLabel(self.feature, EventTrigger(when, sink_to))
 
@@ -534,7 +534,7 @@ class ArithmeticFeature(ComparableFeature):
         from aligned.compiler.transformation_factory import DifferanceBetweenFactory, TimeDifferanceFactory
 
         feature = Float()
-        if self.dtype == FeatureType('').datetime:
+        if self.dtype == FeatureType.datetime():
             feature.transformation = TimeDifferanceFactory(self, other)
         else:
             feature.transformation = DifferanceBetweenFactory(self, other)
@@ -754,7 +754,7 @@ class DateFeature(FeatureFactory):
 class Bool(EquatableFeature, LogicalOperatableFeature):
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType('').bool
+        return FeatureType.bool()
 
     def copy_type(self) -> Bool:
         return Bool()
@@ -766,7 +766,7 @@ class Float(ArithmeticFeature, DecimalOperations):
 
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType('').float
+        return FeatureType.float()
 
     def aggregate(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
@@ -778,7 +778,7 @@ class Int32(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion):
 
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType('').int32
+        return FeatureType.int32()
 
     def aggregate(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
@@ -790,7 +790,7 @@ class Int64(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion):
 
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType('').int64
+        return FeatureType.int64()
 
     def aggregate(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
@@ -802,7 +802,7 @@ class UUID(FeatureFactory, CouldBeEntityFeature):
 
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType('').uuid
+        return FeatureType.uuid()
 
     def aggregate(self) -> CategoricalAggregation:
         return CategoricalAggregation(self)
@@ -851,7 +851,7 @@ class String(
 
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType('').string
+        return FeatureType.string()
 
     def aggregate(self) -> StringAggregation:
         return StringAggregation(self)
@@ -924,7 +924,7 @@ class Json(FeatureFactory):
 
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType('').string
+        return FeatureType.string()
 
     def json_path_value_at(self, path: str, as_type: T) -> T:
         from aligned.compiler.transformation_factory import JsonPathFactory
@@ -967,7 +967,7 @@ class Entity(FeatureFactory):
 class Timestamp(DateFeature, ArithmeticFeature):
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType('').datetime
+        return FeatureType.datetime()
 
 
 class EventTimestamp(DateFeature, ArithmeticFeature):
@@ -976,7 +976,7 @@ class EventTimestamp(DateFeature, ArithmeticFeature):
 
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType('').datetime
+        return FeatureType.datetime()
 
     def __init__(self, ttl: timedelta | None = None):
         self.ttl = ttl
@@ -1000,7 +1000,7 @@ class Embedding(FeatureFactory):
 
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType('').embedding
+        return FeatureType.embedding()
 
     def indexed(
         self,
@@ -1034,7 +1034,7 @@ class List(FeatureFactory):
 
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType('').array
+        return FeatureType.array()
 
     def contains(self, value: Any) -> Bool:
         from aligned.compiler.transformation_factory import ArrayContainsFactory
@@ -1047,7 +1047,7 @@ class List(FeatureFactory):
 class ImageUrl(StringValidatable):
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType('').string
+        return FeatureType.string()
 
     def copy_type(self) -> ImageUrl:
         return ImageUrl()
@@ -1063,7 +1063,7 @@ class ImageUrl(StringValidatable):
 class Image(FeatureFactory):
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType('').array
+        return FeatureType.array()
 
     def copy_type(self) -> Image:
         return Image()
