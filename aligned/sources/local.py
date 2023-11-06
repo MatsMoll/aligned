@@ -10,7 +10,7 @@ import pandas as pd
 import polars as pl
 from httpx import HTTPStatusError
 
-from aligned.data_file import DataFileReference
+from aligned.data_file import DataFileReference, upsert_on_column
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.enricher import CsvFileEnricher, Enricher, LoadedStatEnricher, StatisticEricher, TimespanSelector
 from aligned.exceptions import UnableToFindFileException
@@ -23,6 +23,7 @@ from aligned.schemas.feature import EventTimestamp, FeatureType
 from aligned.schemas.repo_definition import RepoDefinition
 from aligned.storage import Storage
 from aligned.feature_store import FeatureStore
+from aligned.feature_source import WritableFeatureSource
 
 if TYPE_CHECKING:
     from aligned.compiler.feature_factory import FeatureFactory
@@ -302,7 +303,7 @@ class DeltaFileConfig(Codable):
 
 
 @dataclass
-class DeltaFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference):
+class DeltaFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource):
     """
     A source pointing to a Parquet file
     """
@@ -346,6 +347,28 @@ class DeltaFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference)
         data_source_code = f'FileSource.parquet_at("{self.path}")'
         return FeatureView.feature_view_code_template(
             schema, data_source_code, view_name, 'from aligned import FileSource'
+        )
+
+    async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+        if len(requests) != 1:
+            raise ValueError('Delta files only support one write request as of now')
+
+        request = requests[0]
+
+        data = await job.to_polars()
+        data.select(request.all_returned_columns).collect().write_delta(self.path, mode='append')
+
+    async def upsert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+        if len(requests) != 1:
+            raise ValueError('Delta files only support one write request as of now')
+
+        request = requests[0]
+
+        new_data = await job.to_polars()
+        existing = await self.to_polars()
+
+        upsert_on_column(list(request.entity_names), new_data, existing).collect().write_delta(
+            self.path, mode='overwrite'
         )
 
 
