@@ -652,10 +652,11 @@ class FeatureStore:
         elif isinstance(source, DataFileReference):
             import polars as pl
 
-            new_df = (await values.to_polars()).select(write_request.all_returned_columns)
+            columns = write_request.all_returned_columns
+            new_df = (await values.to_polars()).select(columns)
             try:
                 existing_df = await source.to_polars()
-                write_df = pl.concat([new_df, existing_df])
+                write_df = pl.concat([new_df, existing_df.select(columns)])
             except UnableToFindFileException:
                 write_df = new_df
             await source.write_polars(write_df)
