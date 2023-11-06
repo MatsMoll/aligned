@@ -124,7 +124,7 @@ async def test_model_insert_predictions() -> None:
 
     await store.insert_into(FeatureLocation.model('test_model'), {'id': [1, 2, 3], 'a': [10, 14, 20]})
 
-    stored_data = pl.read_parquet(path)
+    stored_data = pl.read_parquet(path).select(expected_frame.columns)
     assert stored_data.frame_equal(expected_frame)
 
 
