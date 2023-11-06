@@ -97,3 +97,64 @@ async def test_model_wrapper() -> None:
 
     assert feature.location == FeatureLocation.model('test_model')
     assert feature.name == 'a'
+
+
+@pytest.mark.asyncio
+async def test_model_insert_predictions() -> None:
+    """
+    Test the insert (aka. ish append) method on the feature store.
+    """
+    from aligned import FileSource, FeatureStore
+
+    path = 'test_data/test_model.parquet'
+
+    @model_contract(name='test_model', features=[], predictions_source=FileSource.parquet_at(path))
+    class TestModel:
+        id = Int32().as_entity()
+
+        a = Int32()
+
+    store = FeatureStore.experimental()
+    initial_frame = pl.DataFrame({'id': [1, 2, 3], 'a': [1, 2, 3]})
+    initial_frame.write_parquet(path)
+
+    expected_frame = pl.DataFrame({'id': [1, 2, 3, 1, 2, 3], 'a': [10, 14, 20, 1, 2, 3]})
+
+    store.add_compiled_model(TestModel.compile())  # type: ignore
+
+    await store.insert_into(FeatureLocation.model('test_model'), {'id': [1, 2, 3], 'a': [10, 14, 20]})
+
+    stored_data = pl.read_parquet(path)
+    assert stored_data.frame_equal(expected_frame)
+
+
+@pytest.mark.asyncio
+async def test_model_upsert_predictions() -> None:
+    """
+    Test the insert (aka. ish append) method on the feature store.
+    """
+    from aligned import FileSource, FeatureStore
+
+    path = 'test_data/test_model.parquet'
+
+    @model_contract(name='test_model', features=[], predictions_source=FileSource.parquet_at(path))
+    class TestModel:
+        id = Int32().as_entity()
+
+        a = Int32()
+
+    store = FeatureStore.experimental()
+    initial_frame = pl.DataFrame({'id': [1, 2, 3, 4], 'a': [1, 2, 3, 4]})
+    initial_frame.write_parquet(path)
+
+    expected_frame = pl.DataFrame({'id': [1, 2, 3, 4], 'a': [10, 14, 20, 4]})
+
+    store.add_compiled_model(TestModel.compile())  # type: ignore
+
+    await store.upsert_into(FeatureLocation.model('test_model'), {'id': [1, 2, 3], 'a': [10, 14, 20]})
+
+    stored_data = pl.read_parquet(path).sort('id')
+
+    columns = set(stored_data.columns).difference(expected_frame.columns)
+    assert len(columns) == 0
+    assert stored_data.select(expected_frame.columns).frame_equal(expected_frame)

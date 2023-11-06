@@ -16,11 +16,11 @@ def retrival_request() -> RetrivalRequest:
         name='test',
         location=FeatureLocation.feature_view('test'),
         entities={
-            Feature(name='id_int', dtype=FeatureType('').int32),
-            Feature(name='id_str', dtype=FeatureType('').string),
+            Feature(name='id_int', dtype=FeatureType.int32()),
+            Feature(name='id_str', dtype=FeatureType.string()),
         },
         features={
-            Feature(name='x', dtype=FeatureType('').int32),
+            Feature(name='x', dtype=FeatureType.int32()),
         },
         derived_features=set(),
         event_timestamp=None,
@@ -102,9 +102,9 @@ async def test_factual_redis_job_int_entity(mocker) -> None:  # type: ignore[no-
     retrival_request = RetrivalRequest(
         name='test',
         location=FeatureLocation.feature_view('test'),
-        entities={Feature(name='id_int', dtype=FeatureType('').int32)},
+        entities={Feature(name='id_int', dtype=FeatureType.int32())},
         features={
-            Feature(name='x', dtype=FeatureType('').int32),
+            Feature(name='x', dtype=FeatureType.int32()),
         },
         derived_features=set(),
         event_timestamp=None,
@@ -146,7 +146,7 @@ async def test_write_job(mocker, retrival_request: RetrivalRequest) -> None:  # 
     config = RedisConfig.localhost()
     source = RedisSource(config)
 
-    await source.write(insert_facts, [retrival_request])
+    await source.insert(insert_facts, [retrival_request])
 
     job = FactualRedisJob(RedisConfig.localhost(), requests=[retrival_request], facts=facts)
     data = await job.to_polars()

@@ -182,48 +182,48 @@ class FeatureType(Codable):
                 return FeatureType(name=name)
         raise ValueError(f'Unable to find a value that can represent {polars_type}')
 
-    @property
-    def string(self) -> FeatureType:
+    @staticmethod
+    def string() -> FeatureType:
         return FeatureType(name='string')
 
-    @property
-    def int32(self) -> FeatureType:
+    @staticmethod
+    def int32() -> FeatureType:
         return FeatureType(name='int32')
 
-    @property
-    def bool(self) -> FeatureType:
+    @staticmethod
+    def bool() -> FeatureType:
         return FeatureType(name='bool')
 
-    @property
-    def int64(self) -> FeatureType:
+    @staticmethod
+    def int64() -> FeatureType:
         return FeatureType(name='int64')
 
-    @property
-    def float(self) -> FeatureType:
+    @staticmethod
+    def float() -> FeatureType:
         return FeatureType(name='float')
 
-    @property
-    def double(self) -> FeatureType:
+    @staticmethod
+    def double() -> FeatureType:
         return FeatureType(name='double')
 
-    @property
-    def date(self) -> FeatureType:
+    @staticmethod
+    def date() -> FeatureType:
         return FeatureType(name='date')
 
-    @property
-    def uuid(self) -> FeatureType:
+    @staticmethod
+    def uuid() -> FeatureType:
         return FeatureType(name='uuid')
 
-    @property
-    def datetime(self) -> FeatureType:
+    @staticmethod
+    def datetime() -> FeatureType:
         return FeatureType(name='datetime')
 
-    @property
-    def array(self) -> FeatureType:
+    @staticmethod
+    def array() -> FeatureType:
         return FeatureType(name='array')
 
-    @property
-    def embedding(self) -> FeatureType:
+    @staticmethod
+    def embedding() -> FeatureType:
         return FeatureType(name='embedding')
 
 
@@ -263,7 +263,7 @@ class EventTimestamp(Codable):
     ttl: int | None = None
     description: str | None = None
     tags: dict[str, str] | None = None
-    dtype: FeatureType = FeatureType('').datetime
+    dtype: FeatureType = FeatureType.datetime()
 
     def __hash__(self) -> int:
         return hash(self.name)
@@ -301,6 +301,11 @@ class FeatureLocation(Codable):
     @staticmethod
     def model(name: str) -> FeatureLocation:
         return FeatureLocation(name, 'model')
+
+    @staticmethod
+    def from_string(string: str) -> FeatureLocation:
+        splits = string.split(':')
+        return FeatureLocation(name=splits[1], location=splits[0])
 
 
 @dataclass

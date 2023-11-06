@@ -20,7 +20,6 @@ from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJo
 from aligned.s3.storage import FileStorage, HttpStorage
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import EventTimestamp, FeatureType
-from aligned.schemas.folder import Folder
 from aligned.schemas.repo_definition import RepoDefinition
 from aligned.storage import Storage
 from aligned.feature_store import FeatureStore
@@ -296,6 +295,61 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
 
 
 @dataclass
+class DeltaFileConfig(Codable):
+
+    mode: Literal['append', 'overwrite', 'error'] = field(default='append')
+    overwrite_schema: bool = field(default=False)
+
+
+@dataclass
+class DeltaFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference):
+    """
+    A source pointing to a Parquet file
+    """
+
+    path: str
+    mapping_keys: dict[str, str] = field(default_factory=dict)
+    config: DeltaFileConfig = field(default_factory=DeltaFileConfig)
+
+    type_name: str = 'delta'
+
+    def job_group_key(self) -> str:
+        return f'{self.type_name}/{self.path}'
+
+    def __hash__(self) -> int:
+        return hash(self.job_group_key())
+
+    async def read_pandas(self) -> pd.DataFrame:
+        return (await self.to_polars()).collect().to_pandas()
+
+    async def write_pandas(self, df: pd.DataFrame) -> None:
+        await self.write_polars(pl.from_pandas(df).lazy())
+
+    async def to_polars(self) -> pl.LazyFrame:
+        return pl.scan_delta(self.path)
+
+    async def write_polars(self, df: pl.LazyFrame) -> None:
+        df.collect().write_delta(
+            self.path, mode=self.config.mode, overwrite_schema=self.config.overwrite_schema
+        )
+
+    async def schema(self) -> dict[str, FeatureFactory]:
+        parquet_schema = pl.read_delta(self.path).schema
+        return {
+            name: FeatureType.from_polars(pl_type).feature_factory for name, pl_type in parquet_schema.items()
+        }
+
+    async def feature_view_code(self, view_name: str) -> str:
+        from aligned import FeatureView
+
+        schema = await self.schema()
+        data_source_code = f'FileSource.parquet_at("{self.path}")'
+        return FeatureView.feature_view_code_template(
+            schema, data_source_code, view_name, 'from aligned import FileSource'
+        )
+
+
+@dataclass
 class StorageFileSource(StorageFileReference):
 
     path: str
@@ -329,6 +383,43 @@ class DirectoryRepo(AsRepoDefinition):
         return await RepoReader.definition_from_path(self.dir, self.exclude)
 
 
+@dataclass
+class FileDirectory:
+
+    dir_path: Path
+
+    def path_string(self, path: str) -> str:
+        return (self.dir_path / path).as_posix()
+
+    def json_at(self, path: str) -> StorageFileSource:
+        return StorageFileSource(path=self.path_string(path))
+
+    def csv_at(
+        self, path: str, mapping_keys: dict[str, str] | None = None, csv_config: CsvConfig | None = None
+    ) -> CsvFileSource:
+        return CsvFileSource(
+            self.path_string(path), mapping_keys=mapping_keys or {}, csv_config=csv_config or CsvConfig()
+        )
+
+    def parquet_at(
+        self, path: str, mapping_keys: dict[str, str] | None = None, config: ParquetConfig | None = None
+    ) -> ParquetFileSource:
+        return ParquetFileSource(
+            path=self.path_string(path), mapping_keys=mapping_keys or {}, config=config or ParquetConfig()
+        )
+
+    def delta_at(
+        self, path: str, mapping_keys: dict[str, str] | None = None, config: DeltaFileConfig | None = None
+    ) -> DeltaFileSource:
+        return DeltaFileSource(self.path_string(path), mapping_keys or {}, config=config or DeltaFileConfig())
+
+    def directory(self, path: str) -> FileDirectory:
+        return FileDirectory(self.dir_path / path)
+
+    def repo_from_dir(self, dir: str, exclude: list[str] | None = None) -> AsRepoDefinition:
+        return DirectoryRepo(Path(dir), exclude)
+
+
 class FileSource:
     """
     A factory class, creating references to files.
@@ -354,23 +445,19 @@ class FileSource:
         return ParquetFileSource(path=path, mapping_keys=mapping_keys or {}, config=config or ParquetConfig())
 
     @staticmethod
-    def folder(path: str) -> Folder:
-        return LocalFolder(base_path=Path(path))
+    def delta_at(
+        path: str, mapping_keys: dict[str, str] | None = None, config: DeltaFileConfig | None = None
+    ) -> DeltaFileSource:
+        return DeltaFileSource(path, mapping_keys or {}, config=config or DeltaFileConfig())
+
+    @staticmethod
+    def directory(path: str) -> FileDirectory:
+        return FileDirectory(Path(path))
 
     @staticmethod
     def repo_from_dir(dir: str, exclude: list[str] | None = None) -> AsRepoDefinition:
 
         return DirectoryRepo(Path(dir), exclude)
-
-
-@dataclass
-class LocalFolder(Folder):
-
-    base_path: Path
-    name = 'local_folder'
-
-    def file_at(self, path: Path) -> StorageFileReference:
-        return StorageFileSource(path=str(self.base_path / path))
 
 
 class LiteralReference(DataFileReference):

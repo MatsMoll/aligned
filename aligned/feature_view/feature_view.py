@@ -95,7 +95,7 @@ class FeatureViewWrapper(Generic[T]):
         # Needs to compiile the model to set the location for the view features
         _ = self.compile()
         view = self.view()
-        view.__view_wrapper__ = self
+        setattr(view, "__view_wrapper__", self)
         return view
 
     def compile(self) -> CompiledFeatureView:

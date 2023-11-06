@@ -8,11 +8,11 @@ def test_filter_job_result_request() -> None:
         request=RetrivalRequest(
             name='test',
             location=FeatureLocation.feature_view('test'),
-            entities={Feature('id', FeatureType('').int32)},
+            entities={Feature('id', FeatureType.int32())},
             features={
-                Feature('a', FeatureType('').int32),
-                Feature('b', FeatureType('').string),
-                Feature('c', FeatureType('').int32),
+                Feature('a', FeatureType.int32()),
+                Feature('b', FeatureType.string()),
+                Feature('c', FeatureType.int32()),
             },
             derived_features=set(),
         ),
@@ -31,11 +31,11 @@ def test_filter_job_retrival_requests() -> None:
         request=RetrivalRequest(
             name='test',
             location=FeatureLocation.feature_view('test'),
-            entities={Feature('id', FeatureType('').int32)},
+            entities={Feature('id', FeatureType.int32())},
             features={
-                Feature('a', FeatureType('').int32),
-                Feature('b', FeatureType('').string),
-                Feature('c', FeatureType('').int32),
+                Feature('a', FeatureType.int32()),
+                Feature('b', FeatureType.string()),
+                Feature('c', FeatureType.int32()),
             },
             derived_features=set(),
         ),

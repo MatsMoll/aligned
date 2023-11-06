@@ -171,7 +171,7 @@ WHERE table_schema = '{schema}'
         else:
             return None
 
-    async def write(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+    async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
 
         if len(requests) != 1:
             raise ValueError(f'Only support writing for one request, got {len(requests)}.')

@@ -38,6 +38,7 @@ class PredictionsView(Codable):
     model_version_column: Feature | None = field(default=None)
     event_timestamp: EventTimestamp | None = field(default=None)
     source: BatchDataSource | None = field(default=None)
+    historical_source: BatchDataSource | None = field(default=None)
     stream_source: StreamDataSource | None = field(default=None)
 
     regression_targets: set[RegressionTarget] | None = field(default=None)

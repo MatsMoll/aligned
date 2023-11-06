@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, TypeVar, Any
 from dataclasses import dataclass
 
 from mashumaro.types import SerializableType
+from aligned.data_file import DataFileReference
 
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import DerivedFeature
@@ -24,7 +25,7 @@ class BatchDataSourceFactory:
     _shared: BatchDataSourceFactory | None = None
 
     def __init__(self) -> None:
-        from aligned.sources.local import CsvFileSource, ParquetFileSource
+        from aligned.sources.local import CsvFileSource, ParquetFileSource, DeltaFileSource
         from aligned.sources.psql import PostgreSQLDataSource
         from aligned.sources.redshift import RedshiftSQLDataSource
         from aligned.sources.s3 import AwsS3CsvDataSource, AwsS3ParquetDataSource
@@ -33,6 +34,7 @@ class BatchDataSourceFactory:
             PostgreSQLDataSource,
             ParquetFileSource,
             CsvFileSource,
+            DeltaFileSource,
             AwsS3CsvDataSource,
             AwsS3ParquetDataSource,
             RedshiftSQLDataSource,
@@ -128,6 +130,12 @@ class BatchDataSource(ABC, Codable, SerializableType):
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         if isinstance(self, BatchSourceModification):
             return self.wrap_job(self.source.all_data(request, limit))
+
+        if isinstance(self, DataFileReference):
+            from aligned.local.job import FileFullJob
+
+            return FileFullJob(self, request=request, limit=limit)
+
         raise NotImplementedError()
 
     def all_between_dates(
@@ -136,22 +144,35 @@ class BatchDataSource(ABC, Codable, SerializableType):
         start_date: datetime,
         end_date: datetime,
     ) -> RetrivalJob:
+
         if isinstance(self, BatchSourceModification):
             return self.wrap_job(self.source.all_between_dates(request, start_date, end_date))
+
+        if isinstance(self, DataFileReference):
+            from aligned.local.job import FileDateJob
+
+            return FileDateJob(self, request=request, start_date=start_date, end_date=end_date)
+
         raise NotImplementedError()
 
     @classmethod
     def multi_source_features_for(
         cls: type[T], facts: RetrivalJob, requests: list[tuple[T, RetrivalRequest]]
     ) -> RetrivalJob:
-        if len(requests) != 1:
+
+        sources = {source for source, _ in requests}
+        if len(sources) != 1:
             raise NotImplementedError()
 
         source, _ = requests[0]
-        if not isinstance(source, BatchSourceModification):
-            raise NotImplementedError()
+        if isinstance(source, BatchSourceModification):
+            return source.wrap_job(type(source.source).multi_source_features_for(facts, requests))
+        elif isinstance(source, DataFileReference):
+            from aligned.local.job import FileFactualJob
 
-        return source.wrap_job(type(source.source).multi_source_features_for(facts, requests))
+            return FileFactualJob(source, [request for _, request in requests], facts)
+        else:
+            raise NotImplementedError(f'Type: {cls} have not implemented how to load fact data')
 
     def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
         return type(self).multi_source_features_for(facts, [(self, request)])

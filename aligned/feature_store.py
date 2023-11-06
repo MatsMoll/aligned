@@ -10,9 +10,10 @@ from typing import Any, Union
 from prometheus_client import Histogram
 
 from aligned.compiler.model import ModelContract
-from aligned.data_file import DataFileReference
+from aligned.data_file import DataFileReference, upsert_on_column
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.enricher import Enricher
+from aligned.exceptions import UnableToFindFileException
 from aligned.feature_source import (
     BatchFeatureSource,
     FeatureSource,
@@ -159,7 +160,7 @@ class FeatureStore:
             )
 
     @staticmethod
-    def from_definition(repo: RepoDefinition, feature_source: FeatureSource | None = None) -> FeatureStore:
+    def from_definition(repo: RepoDefinition) -> FeatureStore:
         """Creates a feature store based on a repo definition
         A feature source can also be defined if wanted, otherwise will the batch source be used for reads
 
@@ -198,7 +199,7 @@ class FeatureStore:
 
     def repo_definition(self) -> RepoDefinition:
         return RepoDefinition(
-            metadata=RepoMetadata(datetime.utcnow(), 'feature_store_location.py'),
+            metadata=RepoMetadata(datetime.utcnow(), name='feature_store_location.py'),
             feature_views=set(self.feature_views.values()),
             combined_feature_views=set(self.combined_feature_views.values()),
             models=set(self.models.values()),
@@ -491,6 +492,13 @@ class FeatureStore:
         compiled_model = type(model).compile()
         self.models[compiled_model.name] = compiled_model
 
+    def add_compiled_model(self, model: ModelSchema) -> None:
+        self.models[model.name] = model
+        if isinstance(self.feature_source, BatchFeatureSource) and model.predictions_view.source:
+            self.feature_source.sources[
+                FeatureLocation.model(model.name).identifier
+            ] = model.predictions_view.source
+
     def with_source(self, source: FeatureSourceable = None) -> FeatureStore:
         """
         Creates a new instance of a feature store, but changes where to fetch the features from
@@ -603,6 +611,91 @@ class FeatureStore:
                     SourceRequest(FeatureLocation.feature_view(view.name), view.application_source, request)
                 )
         return views
+
+    def write_request_for(self, location: FeatureLocation) -> RetrivalRequest:
+
+        if location.location == 'feature_view':
+            return self.feature_views[location.name].request_all.needed_requests[0]
+        elif location.location == 'model':
+            return self.models[location.name].predictions_view.request('write')
+        elif location.location == 'combined_view':
+            raise NotImplementedError(
+                'Have not implemented write requests for combined views. '
+                'Please consider contributing and add a PR.'
+            )
+        else:
+            raise ValueError(f"Unable to write to location: '{location}'.")
+
+    async def insert_into(
+        self, location: FeatureLocation | str, values: ConvertableToRetrivalJob | RetrivalJob
+    ) -> None:
+
+        if isinstance(location, str):
+            used_location = FeatureLocation.from_string(location)
+        elif isinstance(location, FeatureLocation):
+            used_location = location
+        else:
+            raise ValueError(f'Location was of an unsupported type: {type(location)}')
+
+        source: FeatureSource | BatchDataSource = self.feature_source
+
+        if isinstance(source, BatchFeatureSource):
+            source = source.sources[used_location.identifier]
+
+        write_request = self.write_request_for(used_location)
+
+        if not isinstance(values, RetrivalJob):
+            values = RetrivalJob.from_convertable(values, write_request)
+
+        if isinstance(source, WritableFeatureSource):
+            await source.insert(values, [write_request])
+        elif isinstance(source, DataFileReference):
+            import polars as pl
+
+            new_df = (await values.to_polars()).select(write_request.all_returned_columns)
+            try:
+                existing_df = await source.to_polars()
+                write_df = pl.concat([new_df, existing_df])
+            except UnableToFindFileException:
+                write_df = new_df
+            await source.write_polars(write_df)
+        else:
+            raise ValueError(f'The source {type(source)} do not support writes')
+
+    async def upsert_into(
+        self, location: FeatureLocation | str, values: ConvertableToRetrivalJob | RetrivalJob
+    ) -> None:
+
+        if isinstance(location, str):
+            used_location = FeatureLocation.from_string(location)
+        elif isinstance(location, FeatureLocation):
+            used_location = location
+        else:
+            raise ValueError(f'Location was of an unsupported type: {type(location)}')
+
+        source: FeatureSource | BatchDataSource = self.feature_source
+
+        if isinstance(source, BatchFeatureSource):
+            source = source.sources[used_location.identifier]
+
+        write_request = self.write_request_for(used_location)
+
+        if not isinstance(values, RetrivalJob):
+            values = RetrivalJob.from_convertable(values, write_request)
+
+        if isinstance(source, WritableFeatureSource):
+            await source.upsert(values, [write_request])
+        elif isinstance(source, DataFileReference):
+            new_df = (await values.to_polars()).select(write_request.all_returned_columns)
+            entities = list(write_request.entity_names)
+            try:
+                existing_df = await source.to_polars()
+                write_df = upsert_on_column(entities, new_df, existing_df)
+            except UnableToFindFileException:
+                write_df = new_df
+            await source.write_polars(write_df)
+        else:
+            raise ValueError(f'The source {type(source)} do not support writes')
 
 
 @dataclass
@@ -786,16 +879,24 @@ class ModelFeatureStore:
 
     def all_predictions(self, limit: int | None = None) -> RetrivalJob:
 
-        pred_view = self.model.predictions_view
+        selected_source = self.store.feature_source
 
-        if pred_view.source is None:
+        if not isinstance(selected_source, BatchFeatureSource):
             raise ValueError(
-                'Model does not have a prediction source. '
-                'This can be set in the metadata for a model contract.'
+                f'Unable to load all predictions for selected feature source {type(selected_source)}'
             )
 
-        request = pred_view.request(self.model.name)
-        return pred_view.source.all_data(request, limit=limit)
+        location = FeatureLocation.model(self.model.name)
+        if location.identifier not in selected_source.sources:
+            raise ValueError(
+                f'Unable to find source for {location.identifier}. Either set through a `prediction_source`'
+                'in the model contract, or use the `using_source` method on the store object.'
+            )
+
+        source = selected_source.sources[location.identifier]
+        request = self.model.predictions_view.request(self.model.name)
+
+        return source.all_data(request, limit=limit)
 
     def using_source(self, source: FeatureSourceable | BatchDataSource) -> ModelFeatureStore:
 
@@ -854,7 +955,34 @@ class ModelFeatureStore:
         """
         return {req.location for req in self.request().needed_requests}
 
-    async def write_predictions(self, predictions: ConvertableToRetrivalJob | RetrivalJob) -> None:
+    async def upsert_predictions(self, predictions: ConvertableToRetrivalJob | RetrivalJob) -> None:
+        """
+        Upserts data to a source defined as a prediction source
+
+        ```python
+        @model_contract(
+            name="taxi_eta",
+            features=[...]
+            predictions_source=FileSource.parquet_at("predictions.parquet")
+        )
+        class TaxiEta:
+            trip_id = Int32().as_entity()
+
+            duration = Int32()
+
+        ...
+
+        store = FeatureStore.from_dir(".")
+
+        await store.model("taxi_eta").upsert_predictions({
+            "trip_id": [1, 2, 3, ...],
+            "duration": [20, 33, 42, ...]
+        })
+        ```
+        """
+        await self.store.upsert_into(FeatureLocation.model(self.model.name), predictions)
+
+    async def insert_predictions(self, predictions: ConvertableToRetrivalJob | RetrivalJob) -> None:
         """
         Writes data to a source defined as a prediction source
 
@@ -873,34 +1001,13 @@ class ModelFeatureStore:
 
         store = FeatureStore.from_dir(".")
 
-        await store.model("taxi_eta").write_predictions({
+        await store.model("taxi_eta").insert_predictions({
             "trip_id": [1, 2, 3, ...],
             "duration": [20, 33, 42, ...]
         })
         ```
         """
-
-        source: Any = self.store.feature_source
-
-        if isinstance(source, BatchFeatureSource):
-            location = FeatureLocation.model(self.model.name).identifier
-            source = source.sources[location]
-
-        write_job: RetrivalJob
-        request = self.model.predictions_view.request(self.model.name)
-
-        if isinstance(predictions, RetrivalJob):
-            write_job = predictions
-        else:
-            write_job = RetrivalJob.from_convertable(predictions, request)
-
-        if isinstance(source, WritableFeatureSource):
-            await source.write(write_job, [request])
-        elif isinstance(source, DataFileReference):
-            polars_df = await write_job.to_polars()
-            await source.write_polars(polars_df.select(request.all_returned_columns))
-        else:
-            raise ValueError(f'The prediction source {type(source)} needs to be writable')
+        await self.store.insert_into(FeatureLocation.model(self.model.name), predictions)
 
 
 @dataclass
@@ -1264,7 +1371,7 @@ class FeatureViewStore:
         #     job = job.filter(self.feature_filter)
 
         with feature_view_write_time.labels(self.view.name).time():
-            await self.source.write(job, job.retrival_requests)
+            await self.source.insert(job, job.retrival_requests)
 
     async def freshness(self) -> datetime | None:
 

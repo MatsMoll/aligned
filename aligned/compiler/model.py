@@ -175,6 +175,7 @@ class ModelContract(ABC):
             derived_features=set(),
             model_version_column=None,
             source=metadata.predictions_source,
+            historical_source=metadata.historical_source,
             stream_source=metadata.predictions_stream,
             classification_targets=set(),
             regression_targets=set(),
@@ -229,7 +230,7 @@ class ModelContract(ABC):
                 inference_view.features.add(
                     Feature(
                         var_name,
-                        FeatureType('').float,
+                        FeatureType.float(),
                         f"The probability of target named {feature_name} being '{feature.of_value}'.",
                     )
                 )
@@ -256,7 +257,7 @@ class ModelContract(ABC):
                 dtype=transformation.dtype,
                 transformation=transformation,
                 depending_on={
-                    FeatureReferance(feat, FeatureLocation.model(metadata.name), dtype=FeatureType('').float)
+                    FeatureReferance(feat, FeatureLocation.model(metadata.name), dtype=FeatureType.float())
                     for feat in transformation.column_mappings.keys()
                 },
                 depth=1,

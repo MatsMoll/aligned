@@ -424,7 +424,7 @@ class RetrivalJob(ABC):
         if isinstance(source, DataFileReference):
             await source.write_polars(await self.to_polars())
         else:
-            await source.write(self, self.retrival_requests)
+            await source.insert(self, self.retrival_requests)
 
 
 JobType = TypeVar('JobType')
@@ -1162,11 +1162,11 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                         ~mask, other=df.loc[mask, feature.name].str.strip('"')
                     )
 
-                if feature.dtype == FeatureType('').datetime:
+                if feature.dtype == FeatureType.datetime():
                     df[feature.name] = pd.to_datetime(df[feature.name], infer_datetime_format=True, utc=True)
-                elif feature.dtype == FeatureType('').datetime or feature.dtype == FeatureType('').string:
+                elif feature.dtype == FeatureType.datetime() or feature.dtype == FeatureType.string():
                     continue
-                elif feature.dtype != FeatureType('').array:
+                elif feature.dtype != FeatureType.array():
 
                     if feature.dtype.is_numeric:
                         df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce').astype(
@@ -1190,9 +1190,9 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
 
             for feature in features_to_check:
 
-                if feature.dtype == FeatureType('').bool:
+                if feature.dtype == FeatureType.bool():
                     df = df.with_columns(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
-                elif feature.dtype == FeatureType('').datetime:
+                elif feature.dtype == FeatureType.datetime():
                     current_dtype = df.select([feature.name]).dtypes[0]
                     if isinstance(current_dtype, pl.Datetime):
                         continue
@@ -1202,7 +1202,7 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                         .cast(pl.Datetime(time_zone='UTC'))
                         .alias(feature.name)
                     )
-                elif feature.dtype == FeatureType('').array:
+                elif feature.dtype == FeatureType.array():
                     dtype = df.select(feature.name).dtypes[0]
                     if dtype == pl.Utf8:
                         df = df.with_columns(pl.col(feature.name).str.json_extract(pl.List(pl.Utf8)))

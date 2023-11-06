@@ -66,7 +66,7 @@ async def test_postgresql_write(titanic_feature_store: FeatureStore, psql: Postg
     data: dict[str, list] = {'passenger_id': [1, 2, 3, 4], 'will_survive': [False, True, True, False]}
 
     store = titanic_feature_store.model('titanic').using_source(source)
-    await store.write_predictions(data)
+    await store.insert_predictions(data)
 
     stored_data = await psql.fetch('SELECT * FROM titanic').to_polars()
     assert_frame_equal(
@@ -113,7 +113,7 @@ async def test_postgresql_without_event(
 
     job = store.features_for(
         point_in_time_data_test_wituout_event_timestamp.entities,
-        point_in_time_data_test_wituout_event_timestamp.feature_reference
+        point_in_time_data_test_wituout_event_timestamp.feature_reference,
     )
     data = (await job.to_polars()).collect()
 

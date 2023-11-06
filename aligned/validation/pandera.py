@@ -28,10 +28,10 @@ class PanderaValidator(Validator):
     }
 
     datatype_check = {
-        # FeatureType('').bool,
-        FeatureType('').string,
-        FeatureType('').uuid,
-        FeatureType('').date,
+        # FeatureType.bool(),
+        FeatureType.string(),
+        FeatureType.uuid(),
+        FeatureType.date(),
     }
 
     def _column_for(self, feature: Feature) -> Column:

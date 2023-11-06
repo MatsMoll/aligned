@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import asyncio
-import numpy as np
-import pandas as pd
-import polars as pl
 
 from aligned.data_source.batch_data_source import BatchDataSource
-from aligned.request.retrival_request import FeatureRequest, RequestResult, RetrivalRequest
+from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import RetrivalJob
 from aligned.schemas.feature import FeatureLocation, EventTimestamp
 
@@ -33,8 +30,11 @@ class FeatureSource:
 
 
 class WritableFeatureSource:
-    async def write(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
-        raise NotImplementedError()
+    async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+        raise NotImplementedError(f'Append is not implemented for {type(self)}.')
+
+    async def upsert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+        raise NotImplementedError(f'Upsert write is not implemented for {type(self)}.')
 
 
 class RangeFeatureSource:
@@ -142,93 +142,3 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
             *[self.sources[loc.identifier].freshness(locations[loc]) for loc in locs]
         )
         return dict(zip(locs, results))
-
-
-class FactualInMemoryJob(RetrivalJob):
-    """
-    A job using a in mem storage, aka a dict.
-
-    This will store the features in the following format:
-
-    values = {
-        "feature_view:entity-id:feature-name": value,
-
-        ...
-        "titanic_passenger:20:age": 22,
-        "titanic_passenger:21:age": 50,
-        ...
-        "titanic_passenger:20:class": "Eco",
-        "titanic_passenger:21:class": "VIP",
-    }
-    """
-
-    values: dict[str, Any]
-    requests: list[RetrivalRequest]
-    facts: RetrivalJob
-
-    @property
-    def request_result(self) -> RequestResult:
-        return RequestResult.from_request_list(self.requests)
-
-    def __init__(self, values: dict[str, Any], requests: list[RetrivalRequest], facts: RetrivalJob) -> None:
-        self.values = values
-        self.requests = requests
-        self.facts = facts
-
-    def key(self, request: RetrivalRequest, entity: str, feature_name: str) -> str:
-        return f'{request.location}:{entity}:{feature_name}'
-
-    async def to_pandas(self) -> pd.DataFrame:
-
-        columns = set()
-        for request in self.requests:
-            for feature in request.all_feature_names:
-                columns.add(feature)
-
-        result_df = await self.facts.to_pandas()
-
-        for request in self.requests:
-            entity_ids = result_df[list(request.entity_names)]
-            entities = entity_ids.sum(axis=1)
-
-            for feature in request.all_feature_names:
-                # if feature.name in request.entity_names:
-                #     continue
-                # Fetch one column at a time
-                result_df[feature] = [
-                    self.values.get(self.key(request, entity, feature)) for entity in entities
-                ]
-
-        return result_df
-
-    async def to_polars(self) -> pl.LazyFrame:
-        return pl.from_pandas(await self.to_pandas()).lazy()
-
-
-@dataclass
-class InMemoryFeatureSource(FeatureSource, WritableFeatureSource):
-
-    values: dict[str, Any]
-
-    def features_for(self, facts: RetrivalJob, request: FeatureRequest) -> RetrivalJob:
-        return FactualInMemoryJob(self.values, request.needed_requests, facts)
-
-    def key(self, request: RetrivalRequest, entity: str, feature_name: str) -> str:
-        return f'{request.location}:{entity}:{feature_name}'
-
-    async def write(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
-        data = await job.to_pandas()
-
-        for _, row in data.iterrows():
-            # Run one query per row
-            for request in requests:
-                entity_ids = row[list(request.entity_names)]
-                entity_id = ':'.join([str(entity_id) for entity_id in entity_ids])
-                if not entity_id:
-                    continue
-
-                for feature in request.all_features:
-                    feature_key = self.key(request, entity_id, feature.name)
-                    value = row[feature.name]
-                    if value is not None and not np.isnan(value):
-                        self.values[feature_key] = row[feature.name]

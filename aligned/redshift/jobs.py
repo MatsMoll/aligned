@@ -80,13 +80,13 @@ class FactRedshiftJob(FactualRetrivalJob):
     def dtype_to_sql_type(self, dtype: object) -> str:
         if isinstance(dtype, str):
             return dtype
-        if dtype == FeatureType('').string:
+        if dtype == FeatureType.string():
             return 'text'
-        if dtype == FeatureType('').uuid:
+        if dtype == FeatureType.uuid():
             return 'uuid'
-        if dtype == FeatureType('').int32 or dtype == FeatureType('').int64:
+        if dtype == FeatureType.int32() or dtype == FeatureType.int64():
             return 'integer'
-        if dtype == FeatureType('').datetime:
+        if dtype == FeatureType.datetime():
             return 'TIMESTAMP WITH TIME ZONE'
         return 'uuid'
 
