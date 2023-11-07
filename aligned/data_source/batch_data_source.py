@@ -160,9 +160,11 @@ class BatchDataSource(ABC, Codable, SerializableType):
         cls: type[T], facts: RetrivalJob, requests: list[tuple[T, RetrivalRequest]]
     ) -> RetrivalJob:
 
-        sources = {source for source, _ in requests}
+        sources = {source.job_group_key() for source, _ in requests if isinstance(source, BatchDataSource)}
         if len(sources) != 1:
-            raise NotImplementedError()
+            raise NotImplementedError(
+                f'Type: {cls} have not implemented how to load fact data with multiple sources.'
+            )
 
         source, _ = requests[0]
         if isinstance(source, BatchSourceModification):

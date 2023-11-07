@@ -49,10 +49,10 @@ class StorageFileReference(AsRepoDefinition):
     """
 
     async def read(self) -> bytes:
-        raise NotImplementedError()
+        raise NotImplementedError(type(self))
 
     async def write(self, content: bytes) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError(type(self))
 
     async def as_repo_definition(self) -> RepoDefinition:
         file = await self.read()
@@ -65,6 +65,10 @@ async def data_file_freshness(reference: DataFileReference, column_name: str) ->
         return file.select(column_name).max().collect()[0, column_name]
     except UnableToFindFileException:
         return None
+
+
+def create_parent_dir(path: str):
+    Path(path).parent.mkdir(exist_ok=True)
 
 
 @dataclass
@@ -102,9 +106,9 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
                 self.path, sep=self.csv_config.seperator, compression=self.csv_config.compression
             )
         except FileNotFoundError:
-            raise UnableToFindFileException()
+            raise UnableToFindFileException(self.path)
         except HTTPStatusError:
-            raise UnableToFindFileException()
+            raise UnableToFindFileException(self.path)
 
     async def to_polars(self) -> pl.LazyFrame:
 
@@ -116,9 +120,13 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
             io_buffer.seek(0)
             return pl.read_csv(io_buffer, separator=self.csv_config.seperator, try_parse_dates=True).lazy()
 
-        return pl.scan_csv(self.path, separator=self.csv_config.seperator, try_parse_dates=True)
+        try:
+            return pl.scan_csv(self.path, separator=self.csv_config.seperator, try_parse_dates=True)
+        except OSError:
+            raise UnableToFindFileException(self.path)
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
+        create_parent_dir(self.path)
         df.to_csv(
             self.path,
             sep=self.csv_config.seperator,
@@ -127,6 +135,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
         )
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
+        create_parent_dir(self.path)
         await self.write_pandas(df.collect().to_pandas())
 
     def std(
@@ -237,6 +246,7 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
             raise UnableToFindFileException()
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
+        create_parent_dir(self.path)
         df.to_parquet(
             self.path,
             engine=self.config.engine,
@@ -245,9 +255,13 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
         )
 
     async def to_polars(self) -> pl.LazyFrame:
-        return pl.scan_parquet(self.path)
+        try:
+            return pl.scan_parquet(self.path)
+        except OSError:
+            raise UnableToFindFileException(self.path)
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
+        create_parent_dir(self.path)
         df.collect().write_parquet(self.path, compression=self.config.compression)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
@@ -327,9 +341,13 @@ class DeltaFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference,
         await self.write_polars(pl.from_pandas(df).lazy())
 
     async def to_polars(self) -> pl.LazyFrame:
-        return pl.scan_delta(self.path)
+        try:
+            return pl.scan_delta(self.path)
+        except OSError:
+            raise UnableToFindFileException(self.path)
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
+        create_parent_dir(self.path)
         df.collect().write_delta(
             self.path, mode=self.config.mode, overwrite_schema=self.config.overwrite_schema
         )
