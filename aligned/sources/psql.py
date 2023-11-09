@@ -182,3 +182,36 @@ WHERE table_schema = '{schema}'
         data.select(request.all_returned_columns).collect().write_database(
             self.table, connection_uri=self.config.url, if_exists='append'
         )
+
+    async def upsert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+        import asyncpg
+
+        if len(requests) != 1:
+            raise ValueError(f'Only support writing one request as of now, got {len(requests)}.')
+
+        request = requests[0]
+        all_columns = request.all_returned_columns
+        entities = list(request.entity_names)
+
+        all_col_sql = ', '.join(all_columns)
+        update_col_statement = ', '.join(
+            [f'{col} = EXCLUDED.{col}' for col in all_columns if col not in entities]
+        )
+        col_parameter_str = ', '.join([f'${i + 1}' for i in range(len(all_columns))])
+        entity_sql = ', '.join(entities)
+
+        df = await job.to_pandas()
+
+        if self.schema:
+            table = f'{self.schema}.{self.table}'
+        else:
+            table = self.table
+
+        query = f"""INSERT INTO {table}({all_col_sql})
+VALUES ({col_parameter_str})
+ON CONFLICT ({entity_sql})
+DO UPDATE SET {update_col_statement}
+"""
+
+        conn = await asyncpg.connect(self.config.url)
+        await conn.executemany(query, df[all_columns].to_numpy())

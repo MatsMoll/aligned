@@ -14,14 +14,12 @@ from aligned.schemas.constraints import (
     Constraint,
     EndsWith,
     InDomain,
-    LowerBound,
     LowerBoundInclusive,
     MaxLength,
     MinLength,
     Unique,
     Regex,
     StartsWith,
-    UpperBound,
     UpperBoundInclusive,
 )
 from aligned.schemas.derivied_feature import DerivedFeature
@@ -512,20 +510,12 @@ class ComparableFeature(EquatableFeature):
         instance.transformation = GreaterThenOrEqualFactory(right, self)
         return instance
 
-    def lower_bound(self: T, value: float, is_inclusive: bool | None = None) -> T:
-
-        if is_inclusive:
-            self._add_constraint(LowerBoundInclusive(value))  # type: ignore[attr-defined]
-        else:
-            self._add_constraint(LowerBound(value))  # type: ignore[attr-defined]
+    def lower_bound(self: T, value: float) -> T:
+        self._add_constraint(LowerBoundInclusive(value))  # type: ignore[attr-defined]
         return self
 
-    def upper_bound(self: T, value: float, is_inclusive: bool | None = None) -> T:
-
-        if is_inclusive:
-            self._add_constraint(UpperBoundInclusive(value))  # type: ignore[attr-defined]
-        else:
-            self._add_constraint(UpperBound(value))  # type: ignore[attr-defined]
+    def upper_bound(self: T, value: float) -> T:
+        self._add_constraint(UpperBoundInclusive(value))  # type: ignore[attr-defined]
         return self
 
 
