@@ -419,12 +419,7 @@ def titanic_feature_view(titanic_source: CsvFileSource) -> FeatureView:
         sex = String().accepted_values(['male', 'female'])
         survived = Bool().description('If the passenger survived')
 
-        sibsp = (
-            Int32()
-            .lower_bound(0, is_inclusive=True)
-            .upper_bound(20, is_inclusive=True)
-            .description('Number of siblings on titanic')
-        )
+        sibsp = Int32().lower_bound(0).upper_bound(20).description('Number of siblings on titanic')
 
         cabin = String()
 
@@ -480,12 +475,7 @@ def titanic_feature_view_parquet(titanic_source_parquet: ParquetFileSource) -> F
         sex = String().accepted_values(['male', 'female'])
         survived = Bool().description('If the passenger survived')
 
-        sibsp = (
-            Int32()
-            .lower_bound(0, is_inclusive=True)
-            .upper_bound(20, is_inclusive=True)
-            .description('Number of siblings on titanic')
-        )
+        sibsp = Int32().lower_bound(0).upper_bound(20).description('Number of siblings on titanic')
 
         cabin = String()
 
@@ -616,12 +606,7 @@ def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureView:
             embedding_size=50, storage=redis.index(name='name_embedding_index'), metadata=[age, sex]
         )
 
-        sibsp = (
-            Int32()
-            .lower_bound(0, is_inclusive=True)
-            .upper_bound(20, is_inclusive=True)
-            .description('Number of siblings on titanic')
-        )
+        sibsp = Int32().lower_bound(0).upper_bound(20).description('Number of siblings on titanic')
 
         double_sibsp = sibsp * 2
         square_sibsp = sibsp * sibsp

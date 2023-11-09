@@ -56,8 +56,7 @@ def gracefull_transformation(
     transformation: Callable[[pd.Series], pd.Series],
 ) -> pd.Series:
     result = pd.Series(np.repeat(np.nan, repeats=is_valid_mask.shape[0]))
-    result.loc[is_valid_mask] = transformation(df.loc[is_valid_mask])
-    return result
+    return result.mask(is_valid_mask, transformation(df.loc[is_valid_mask]))
 
 
 class PsqlTransformation:
