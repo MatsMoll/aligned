@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from typing import TYPE_CHECKING
+from datetime import datetime
 
 import pandas as pd
 import polars as pl
@@ -9,9 +9,6 @@ from aligned.request.retrival_request import AggregatedFeature, AggregateOver, R
 from aligned.retrival_job import RequestResult, RetrivalJob
 from aligned.schemas.feature import Feature
 from aligned.sources.local import DataFileReference
-
-if TYPE_CHECKING:
-    from datetime import datetime
 
 
 class LiteralRetrivalJob(RetrivalJob):
