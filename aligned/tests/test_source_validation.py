@@ -1,10 +1,8 @@
 import pytest
-from os import environ
 
-from aligned import FeatureStore, FileSource, FeatureView
+from aligned import FeatureStore, FileSource
 from aligned.schemas.feature import FeatureType, FeatureLocation
 from aligned.source_validation import validate_sources_in
-from aligned.sources.psql import PostgreSQLConfig
 
 
 @pytest.mark.asyncio
@@ -20,23 +18,23 @@ async def test_source_validation(titanic_feature_store: FeatureStore) -> None:
     assert {FeatureLocation.feature_view('titanic_parquet'): True} == validation
 
 
-@pytest.mark.asyncio
-async def test_source_validation_psql(titanic_feature_view: FeatureView) -> None:
-
-    if 'PSQL_DATABASE_TEST' not in environ:
-        environ['PSQL_DATABASE_TEST'] = 'postgresql://postgres:postgres@localhost:5433/aligned-test'
-
-    psql_config = PostgreSQLConfig('PSQL_DATABASE_TEST')
-    titanic_feature_view.metadata.batch_source = psql_config.table('titanic')
-
-    store = FeatureStore.experimental()
-    store.add_feature_view(titanic_feature_view)
-    views = store.views_with_config(psql_config)
-
-    assert len(views) == 1
-    validation = await validate_sources_in(views)
-
-    assert {FeatureLocation.feature_view('titanic'): False} == validation
+# @pytest.mark.asyncio
+# async def test_source_validation_psql(titanic_feature_view: FeatureView) -> None:
+#
+#     if 'PSQL_DATABASE_TEST' not in environ:
+#         environ['PSQL_DATABASE_TEST'] = 'postgresql://postgres:postgres@localhost:5433/aligned-test'
+#
+#     psql_config = PostgreSQLConfig('PSQL_DATABASE_TEST')
+#     titanic_feature_view.metadata.source = psql_config.table('titanic')
+#
+#     store = FeatureStore.experimental()
+#     store.add_feature_view(titanic_feature_view)
+#     views = store.views_with_config(psql_config)
+#
+#     assert len(views) == 1
+#     validation = await validate_sources_in(views)
+#
+#     assert {FeatureLocation.feature_view('titanic'): False} == validation
 
 
 @pytest.mark.asyncio

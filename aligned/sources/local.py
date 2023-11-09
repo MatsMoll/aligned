@@ -16,7 +16,7 @@ from aligned.enricher import CsvFileEnricher, Enricher, LoadedStatEnricher, Stat
 from aligned.exceptions import UnableToFindFileException
 from aligned.local.job import FileDateJob, FileFactualJob, FileFullJob
 from aligned.request.retrival_request import RetrivalRequest
-from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RetrivalJob
+from aligned.retrival_job import RetrivalJob
 from aligned.s3.storage import FileStorage, HttpStorage
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import EventTimestamp, FeatureType
@@ -67,7 +67,7 @@ async def data_file_freshness(reference: DataFileReference, column_name: str) ->
         return None
 
 
-def create_parent_dir(path: str):
+def create_parent_dir(path: str) -> None:
     Path(path).parent.mkdir(exist_ok=True)
 
 
@@ -161,18 +161,18 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
     def enricher(self) -> CsvFileEnricher:
         return CsvFileEnricher(file=self.path)
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         return FileFullJob(self, request, limit)
 
     def all_between_dates(
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime
-    ) -> DateRangeJob:
+    ) -> RetrivalJob:
         return FileDateJob(source=self, request=request, start_date=start_date, end_date=end_date)
 
     @classmethod
     def multi_source_features_for(
         cls, facts: RetrivalJob, requests: list[tuple[CsvFileSource, RetrivalRequest]]
-    ) -> FactualRetrivalJob:
+    ) -> RetrivalJob:
         sources = {source for source, _ in requests}
         if len(sources) != 1:
             raise ValueError(f'Only able to load one {requests} at a time')
@@ -264,18 +264,18 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
         create_parent_dir(self.path)
         df.collect().write_parquet(self.path, compression=self.config.compression)
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         return FileFullJob(self, request, limit)
 
     def all_between_dates(
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime
-    ) -> DateRangeJob:
+    ) -> RetrivalJob:
         return FileDateJob(source=self, request=request, start_date=start_date, end_date=end_date)
 
     @classmethod
     def multi_source_features_for(
         cls, facts: RetrivalJob, requests: list[tuple[ParquetFileSource, RetrivalRequest]]
-    ) -> FactualRetrivalJob:
+    ) -> RetrivalJob:
 
         source = requests[0][0]
         if not isinstance(source, cls):

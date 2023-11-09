@@ -105,6 +105,75 @@ class FeatureReferencable:
         pass
 
 
+def compile_hidden_features(
+    feature: FeatureFactory,
+    location: FeatureLocation,
+    hidden_features: int,
+    var_name: str,
+    entities: set[Feature],
+):
+    aggregations = []
+
+    features = set()
+    derived_features = set()
+
+    if feature.transformation:
+        # Adding features that is not stored in the view
+        # e.g:
+        # class SomeView(FeatureView):
+        #     ...
+        #     x, y = Bool(), Bool()
+        #     z = (x & y) | x
+        #
+        # Here will (x & y)'s result be a 'hidden' feature
+        feature_deps = [(feat.depth(), feat) for feat in feature.feature_dependencies()]
+
+        # Sorting by key in order to instanciate the "core" features first
+        # And then making it possible for other features to reference them
+        def sort_key(x: tuple[int, FeatureFactory]) -> int:
+            return x[0]
+
+        for depth, feature_dep in sorted(feature_deps, key=sort_key):
+
+            if not feature_dep._location:
+                feature_dep._location = location
+
+            if feature_dep._name:
+                feat_dep = feature_dep.feature()
+                if feat_dep in features or feat_dep in entities:
+                    continue
+
+            if depth == 0:
+                # The raw value and the transformed have the same name
+                if not feature_dep._name:
+                    feature_dep._name = var_name
+                feat_dep = feature_dep.feature()
+                features.add(feat_dep)
+                continue
+
+            if not feature_dep._name:
+                feature_dep._name = str(hidden_features)
+                hidden_features += 1
+
+            if isinstance(feature_dep.transformation, AggregationTransformationFactory):
+                aggregations.append(feature_dep)
+            else:
+                feature_graph = feature_dep.compile()  # Should decide on which payload to send
+                if feature_graph in derived_features:
+                    continue
+
+                derived_features.add(feature_dep.compile())
+
+        if not feature._name:
+            feature._name = 'ephemoral'
+        if isinstance(feature.transformation, AggregationTransformationFactory):
+            aggregations.append(feature)
+        else:
+            derived_features.add(feature.compile())  # Should decide on which payload to send
+
+    return features, derived_features
+
+
 @dataclass
 class RegressionLabel(FeatureReferencable):
     feature: FeatureFactory

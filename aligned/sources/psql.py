@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Callable, Any
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.feature_source import WritableFeatureSource
 from aligned.request.retrival_request import RetrivalRequest
-from aligned.retrival_job import FactualRetrivalJob, RetrivalJob
+from aligned.retrival_job import RetrivalJob
 from aligned.schemas.codable import Codable
 from datetime import datetime
 
@@ -70,6 +70,9 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, WritableFeatu
 
     type_name = 'psql'
 
+    def source_id(self) -> str:
+        return f'{self.config.env_var}/{self.table}'
+
     def job_group_key(self) -> str:
         return self.config.env_var
 
@@ -103,7 +106,7 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, WritableFeatu
     @classmethod
     def multi_source_features_for(
         cls, facts: RetrivalJob, requests: list[tuple[PostgreSQLDataSource, RetrivalRequest]]
-    ) -> FactualRetrivalJob:
+    ) -> RetrivalJob:
         # Group based on config
         from aligned.psql.jobs import FactPsqlJob
 

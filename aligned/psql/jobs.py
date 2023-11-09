@@ -8,9 +8,9 @@ import pandas as pd
 import polars as pl
 
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
-from aligned.retrival_job import FactualRetrivalJob, RetrivalJob
-from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver
-from aligned.schemas.feature import FeatureLocation, FeatureType
+from aligned.retrival_job import RetrivalJob
+from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, DerivedFeature
+from aligned.schemas.feature import FeatureLocation, FeatureType, Feature
 from aligned.schemas.transformation import PsqlTransformation
 from aligned.sources.psql import PostgreSQLConfig, PostgreSQLDataSource
 
@@ -141,6 +141,23 @@ class PostgreSqlJob(RetrivalJob):
     def describe(self) -> str:
         return f'PostgreSQL Job: \n{self.query}\n'
 
+    def filter(self, condition: str | Feature | DerivedFeature) -> RetrivalJob:
+
+        query = f'SELECT * FROM ({self.query}) as values WHERE '
+
+        if isinstance(condition, str):
+            query += condition
+        elif isinstance(condition, DerivedFeature) and isinstance(
+            condition.transformation, PsqlTransformation
+        ):
+            query += condition.transformation.as_psql()
+        elif isinstance(condition, Feature):
+            query += condition.name
+        else:
+            raise ValueError(f'Unable to filter on psql job with {condition}')
+
+        return PostgreSqlJob(self.config, query, self.requests)
+
 
 def build_full_select_query_psql(
     source: PostgreSQLDataSource, request: RetrivalRequest, limit: int | None
@@ -206,7 +223,7 @@ class SqlValue:
 
 
 @dataclass
-class FactPsqlJob(FactualRetrivalJob):
+class FactPsqlJob(RetrivalJob):
     """Fetches features for defined facts within a postgres DB
 
     It is supported to fetch from different tables, in one request

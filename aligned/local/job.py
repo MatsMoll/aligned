@@ -1,13 +1,17 @@
 from dataclasses import dataclass, field
-from datetime import datetime
+
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import polars as pl
 
 from aligned.request.retrival_request import AggregatedFeature, AggregateOver, RetrivalRequest
-from aligned.retrival_job import DateRangeJob, FactualRetrivalJob, FullExtractJob, RequestResult, RetrivalJob
+from aligned.retrival_job import RequestResult, RetrivalJob
 from aligned.schemas.feature import Feature
 from aligned.sources.local import DataFileReference
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
 class LiteralRetrivalJob(RetrivalJob):
@@ -38,7 +42,7 @@ class LiteralRetrivalJob(RetrivalJob):
 
 
 @dataclass
-class FileFullJob(FullExtractJob):
+class FileFullJob(RetrivalJob):
 
     source: DataFileReference
     request: RetrivalRequest
@@ -58,7 +62,7 @@ class FileFullJob(FullExtractJob):
         if isinstance(self.source, ColumnFeatureMappable):
             request_features = self.source.feature_identifier_for(all_names)
 
-        columns = {org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)}
+        columns = dict(zip(request_features, all_names))
         df = df.rename(
             columns=columns,
         )
@@ -99,7 +103,7 @@ class FileFullJob(FullExtractJob):
 
 
 @dataclass
-class FileDateJob(DateRangeJob):
+class FileDateJob(RetrivalJob):
 
     source: DataFileReference
     request: RetrivalRequest
@@ -121,9 +125,12 @@ class FileDateJob(DateRangeJob):
             request_features = self.source.feature_identifier_for(all_names)
 
         df.rename(
-            columns={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)},
+            columns=dict(zip(request_features, all_names)),
             inplace=True,
         )
+
+        if self.request.event_timestamp is None:
+            raise ValueError(f'Source {self.source} have no event timestamp to filter on')
 
         event_timestamp_column = self.request.event_timestamp.name
         # Making sure it is in the correct format
@@ -141,13 +148,14 @@ class FileDateJob(DateRangeJob):
         entity_names = self.request.entity_names
         all_names = list(self.request.all_required_feature_names.union(entity_names))
 
+        if self.request.event_timestamp is None:
+            raise ValueError(f'Source {self.source} have no event timestamp to filter on')
+
         request_features = all_names
         if isinstance(self.source, ColumnFeatureMappable):
             request_features = self.source.feature_identifier_for(all_names)
 
-        df = df.rename(
-            mapping={org_name: wanted_name for org_name, wanted_name in zip(request_features, all_names)}
-        )
+        df = df.rename(mapping=dict(zip(request_features, all_names)))
         event_timestamp_column = self.request.event_timestamp.name
 
         return df.filter(pl.col(event_timestamp_column).is_between(self.start_date, self.end_date))
@@ -162,7 +170,7 @@ class FileDateJob(DateRangeJob):
 
 
 @dataclass
-class FileFactualJob(FactualRetrivalJob):
+class FileFactualJob(RetrivalJob):
 
     source: DataFileReference
     requests: list[RetrivalRequest]

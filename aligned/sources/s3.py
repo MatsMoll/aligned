@@ -9,7 +9,7 @@ from httpx import HTTPStatusError
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.exceptions import UnableToFindFileException
 from aligned.local.job import FileDateJob, FileFullJob
-from aligned.retrival_job import DateRangeJob, FullExtractJob, RetrivalRequest
+from aligned.retrival_job import RetrivalRequest, RetrivalJob
 from aligned.s3.storage import AwsS3Storage
 from aligned.schemas.codable import Codable
 from aligned.sources.local import CsvConfig, DataFileReference, ParquetConfig, StorageFileReference
@@ -149,12 +149,12 @@ class AwsS3CsvDataSource(BatchDataSource, DataFileReference, ColumnFeatureMappab
         buffer.seek(0)
         await self.storage.write(self.path, buffer.read())
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> FullExtractJob:
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         return FileFullJob(self, request=request, limit=limit)
 
     def all_between_dates(
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime
-    ) -> DateRangeJob:
+    ) -> RetrivalJob:
         return FileDateJob(self, request, start_date, end_date)
 
 

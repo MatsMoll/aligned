@@ -255,6 +255,14 @@ class RequestResult(Codable):
     event_timestamp: str | None
 
     @property
+    def all_returned_columns(self) -> list[str]:
+        columns = [entity.name for entity in self.entities]
+        columns.extend([feat.name for feat in self.features])
+        if self.event_timestamp:
+            columns.append(self.event_timestamp)
+        return columns
+
+    @property
     def feature_columns(self) -> list[str]:
         return sorted(feature.name for feature in self.features)
 

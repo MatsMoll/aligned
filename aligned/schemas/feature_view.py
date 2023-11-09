@@ -16,7 +16,7 @@ from aligned.schemas.vector_storage import VectorIndex
 class CompiledFeatureView(Codable):
     name: str
     tags: dict[str, str]
-    batch_data_source: BatchDataSource
+    source: BatchDataSource
 
     entities: set[Feature]
     features: set[Feature]
@@ -27,7 +27,7 @@ class CompiledFeatureView(Codable):
     event_timestamp: EventTimestamp | None = field(default=None)
     stream_data_source: StreamDataSource | None = field(default=None)
     application_source: BatchDataSource | None = field(default=None)
-    staging_source: BatchDataSource | None = field(default=None)
+    materialized_source: BatchDataSource | None = field(default=None)
 
     event_triggers: set[EventTrigger] | None = field(default=None)
 
@@ -38,7 +38,7 @@ class CompiledFeatureView(Codable):
         assert isinstance(self.name, str)
         assert isinstance(self.description, str)
         assert isinstance(self.tags, dict)
-        assert isinstance(self.batch_data_source, BatchDataSource)
+        assert isinstance(self.source, BatchDataSource)
         for entity in self.entities:
             assert isinstance(entity, Feature)
         for feature in self.features:

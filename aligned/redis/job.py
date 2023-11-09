@@ -4,13 +4,13 @@ import pandas as pd
 import polars as pl
 
 from aligned.request.retrival_request import RetrivalRequest
-from aligned.retrival_job import FactualRetrivalJob, RequestResult, RetrivalJob
+from aligned.retrival_job import RequestResult, RetrivalJob
 from aligned.schemas.feature import FeatureType
 from aligned.sources.redis import RedisConfig
 
 
 @dataclass
-class FactualRedisJob(FactualRetrivalJob):
+class FactualRedisJob(RetrivalJob):
 
     config: RedisConfig
     requests: list[RetrivalRequest]

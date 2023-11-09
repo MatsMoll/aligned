@@ -75,7 +75,16 @@ class BatchDataSource(ABC, Codable, SerializableType):
 
     @abstractmethod
     def job_group_key(self) -> str:
+        """
+        A key defining which sources can be grouped together in one request.
+        """
         pass
+
+    def source_id(self) -> str:
+        """
+        An id that identifies a source from others.
+        """
+        return self.job_group_key()
 
     def _serialize(self) -> dict:
         assert (

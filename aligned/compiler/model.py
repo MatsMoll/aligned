@@ -67,9 +67,9 @@ class ModelMetadata:
     contacts: list[str] | None = field(default=None)
     tags: dict[str, str] | None = field(default=None)
     description: str | None = field(default=None)
-    predictions_source: BatchDataSource | None = field(default=None)
-    predictions_stream: StreamDataSource | None = field(default=None)
-    historical_source: BatchDataSource | None = field(default=None)
+    prediction_source: BatchDataSource | None = field(default=None)
+    prediction_stream: StreamDataSource | None = field(default=None)
+    application_source: BatchDataSource | None = field(default=None)
     dataset_folder: Folder | None = field(default=None)
 
 
@@ -94,9 +94,9 @@ def model_contract(
     contacts: list[str] | None = None,
     tags: dict[str, str] | None = None,
     description: str | None = None,
-    predictions_source: BatchDataSource | None = None,
-    predictions_stream: StreamDataSource | None = None,
-    historical_source: BatchDataSource | None = None,
+    prediction_source: BatchDataSource | None = None,
+    prediction_stream: StreamDataSource | None = None,
+    application_source: BatchDataSource | None = None,
     dataset_folder: Folder | None = None,
 ) -> Callable[[Type[T]], ModelContractWrapper[T]]:
     def decorator(cls: Type[T]) -> ModelContractWrapper[T]:
@@ -106,9 +106,9 @@ def model_contract(
             contacts=contacts,
             tags=tags,
             description=description,
-            predictions_source=predictions_source,
-            predictions_stream=predictions_stream,
-            historical_source=historical_source,
+            prediction_source=prediction_source,
+            prediction_stream=prediction_stream,
+            application_source=application_source,
             dataset_folder=dataset_folder,
         )
         return ModelContractWrapper(metadata, cls)
@@ -126,7 +126,7 @@ class ModelContract(ABC):
         tags: dict[str, str] | None = None,
         predictions_source: BatchDataSource | None = None,
         predictions_stream: StreamDataSource | None = None,
-        historical_source: BatchDataSource | None = None,
+        application_source: BatchDataSource | None = None,
         dataset_folder: Folder | None = None,
     ) -> ModelMetadata:
         return ModelMetadata(
@@ -137,7 +137,7 @@ class ModelContract(ABC):
             description,
             predictions_source,
             predictions_stream,
-            historical_source=historical_source,
+            application_source=application_source,
             dataset_folder=dataset_folder,
         )
 
@@ -174,9 +174,9 @@ class ModelContract(ABC):
             features=set(),
             derived_features=set(),
             model_version_column=None,
-            source=metadata.predictions_source,
-            historical_source=metadata.historical_source,
-            stream_source=metadata.predictions_stream,
+            source=metadata.prediction_source,
+            application_source=metadata.application_source,
+            stream_source=metadata.prediction_stream,
             classification_targets=set(),
             regression_targets=set(),
         )

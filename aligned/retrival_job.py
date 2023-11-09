@@ -1058,26 +1058,6 @@ class SplitJob:
         return self.job.remove_derived_features()
 
 
-class FullExtractJob(RetrivalJob):
-    limit: int | None
-
-
-class DateRangeJob(RetrivalJob):
-    start_date: datetime
-    end_date: datetime
-
-    """
-    ```
-    psql_config = PsqlConfig(...)
-    entites = psql_config.fetch("SELECT * FROM entities WHERE ...")
-    ```
-    """
-
-
-class FactualRetrivalJob(RetrivalJob):
-    facts: RetrivalJob
-
-
 @dataclass
 class WithRequests(RetrivalJob, ModificationJob):
 

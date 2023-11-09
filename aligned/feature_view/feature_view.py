@@ -38,11 +38,11 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FeatureViewMetadata:
     name: str
-    batch_source: BatchDataSource
+    source: BatchDataSource
     description: str | None = field(default=None)
     stream_source: StreamDataSource | None = field(default=None)
     application_source: BatchDataSource | None = field(default=None)
-    staging_source: BatchDataSource | None = field(default=None)
+    materialized_source: BatchDataSource | None = field(default=None)
     contacts: list[str] | None = field(default=None)
     tags: dict[str, str] = field(default_factory=dict)
 
@@ -52,31 +52,31 @@ class FeatureViewMetadata:
             name=view.name,
             description=view.description,
             tags=view.tags,
-            batch_source=view.batch_data_source,
+            source=view.source,
             stream_source=view.stream_data_source,
             application_source=view.application_source,
-            staging_source=view.staging_source,
+            materialized_source=view.materialized_source,
         )
 
 
 def feature_view(
     name: str,
-    batch_source: BatchDataSource,
+    source: BatchDataSource,
     description: str | None = None,
     stream_source: StreamDataSource | None = None,
     application_source: BatchDataSource | None = None,
-    staging_source: BatchDataSource | None = None,
+    materialized_source: BatchDataSource | None = None,
     contacts: list[str] | None = None,
     tags: dict[str, str] | None = None,
 ) -> Callable[[Type[T]], FeatureViewWrapper[T]]:
     def decorator(cls: Type[T]) -> FeatureViewWrapper[T]:
         metadata = FeatureViewMetadata(
             name,
-            batch_source,
+            source,
             description=description,
             stream_source=stream_source,
             application_source=application_source,
-            staging_source=staging_source,
+            materialized_source=materialized_source,
             contacts=contacts,
             tags=tags or {},
         )
@@ -95,7 +95,7 @@ class FeatureViewWrapper(Generic[T]):
         # Needs to compiile the model to set the location for the view features
         _ = self.compile()
         view = self.view()
-        setattr(view, "__view_wrapper__", self)
+        setattr(view, '__view_wrapper__', self)
         return view
 
     def compile(self) -> CompiledFeatureView:
@@ -103,7 +103,7 @@ class FeatureViewWrapper(Generic[T]):
         return FeatureView.compile_with_metadata(self.view(), self.metadata)
 
     def with_filter(
-        self, named: str, where: Callable[[T], Bool], stored_at: BatchDataSource | None = None
+        self, named: str, where: Callable[[T], Bool], materialize_source: BatchDataSource | None = None
     ) -> FeatureViewWrapper[T]:
 
         from aligned.data_source.batch_data_source import FilteredDataSource
@@ -113,14 +113,16 @@ class FeatureViewWrapper(Generic[T]):
 
         condition = where(self.__call__())
 
-        if condition.transformation:
-            meta.batch_source = FilteredDataSource(self.metadata.batch_source, condition.compile())
-        else:
-            meta.batch_source = FilteredDataSource(self.metadata.batch_source, condition.feature())
+        main_source = meta.materialized_source if meta.materialized_source else meta.source
 
-        if stored_at:
-            meta.staging_source = meta.batch_source
-            meta.batch_source = stored_at
+        if condition.transformation:
+            meta.source = FilteredDataSource(main_source, condition.compile())
+        else:
+            meta.source = FilteredDataSource(main_source, condition.feature())
+
+        if materialize_source:
+            meta.materialized_source = materialize_source
+            meta.source = main_source
 
         return FeatureViewWrapper(metadata=meta, view=self.view)
 
@@ -139,8 +141,8 @@ class FeatureViewWrapper(Generic[T]):
         request = compiled_view.request_all
 
         return JoinDataSource(
-            source=self.metadata.batch_source,
-            right_source=compiled_view.batch_data_source,
+            source=self.metadata.source,
+            right_source=compiled_view.source,
             right_request=request.needed_requests[0],
             left_on=join_on,
             right_on=join_on,
@@ -157,8 +159,8 @@ class FeatureViewWrapper(Generic[T]):
         meta.name = named
 
         all_data_sources = [
-            meta.batch_source,
-            meta.staging_source,
+            meta.source,
+            meta.materialized_source,
             meta.application_source,
             meta.stream_source,
         ]
@@ -279,7 +281,7 @@ class FeatureViewWrapper(Generic[T]):
         ```
         """
         compiled = self.compile()
-        return await FeatureView.freshness_in_source(compiled, compiled.batch_data_source)
+        return await FeatureView.freshness_in_source(compiled, compiled.source)
 
 
 class FeatureView(ABC):
@@ -312,7 +314,7 @@ class FeatureView(ABC):
             description,
             stream_source or HttpStreamSource(name),
             application_source=application_source,
-            staging_source=staging_source,
+            materialized_source=staging_source,
             contacts=contacts,
             tags=tags or {},
         )
@@ -330,7 +332,7 @@ class FeatureView(ABC):
         Returns the freshest datetime for the batch data source
         """
         compiled = cls().compile_instance()
-        return await FeatureView.freshness_in_source(compiled, compiled.batch_data_source)
+        return await FeatureView.freshness_in_source(compiled, compiled.source)
 
     @staticmethod
     async def freshness_in_source(view: CompiledFeatureView, source: BatchDataSource) -> datetime | None:
@@ -354,7 +356,7 @@ class FeatureView(ABC):
             name=metadata.name,
             description=metadata.description,
             tags=metadata.tags,
-            batch_data_source=metadata.batch_source,
+            source=metadata.source,
             entities=set(),
             features=set(),
             derived_features=set(),
@@ -362,7 +364,7 @@ class FeatureView(ABC):
             event_timestamp=None,
             stream_data_source=metadata.stream_source,
             application_source=metadata.application_source,
-            staging_source=metadata.staging_source,
+            materialized_source=metadata.materialized_source,
             indexes=[],
         )
         aggregations: list[FeatureFactory] = []

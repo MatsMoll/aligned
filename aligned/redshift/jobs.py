@@ -9,7 +9,7 @@ import polars as pl
 from aligned.psql.jobs import PostgreSqlJob
 from aligned.redshift.sql_job import SqlColumn, TableFetch
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
-from aligned.retrival_job import FactualRetrivalJob, RetrivalJob
+from aligned.retrival_job import RetrivalJob
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, DerivedFeature
 from aligned.schemas.feature import FeatureLocation, FeatureType
 from aligned.schemas.transformation import RedshiftTransformation
@@ -32,7 +32,7 @@ class SqlValue:
 
 
 @dataclass
-class FactRedshiftJob(FactualRetrivalJob):
+class FactRedshiftJob(RetrivalJob):
     """Fetches features for defined facts within a postgres DB
 
     It is supported to fetch from different tables, in one request

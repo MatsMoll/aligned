@@ -108,7 +108,7 @@ async def test_model_insert_predictions() -> None:
 
     path = 'test_data/test_model.parquet'
 
-    @model_contract(name='test_model', features=[], predictions_source=FileSource.parquet_at(path))
+    @model_contract(name='test_model', features=[], prediction_source=FileSource.parquet_at(path))
     class TestModel:
         id = Int32().as_entity()
 
@@ -137,7 +137,7 @@ async def test_model_upsert_predictions() -> None:
 
     path = 'test_data/test_model.parquet'
 
-    @model_contract(name='test_model', features=[], predictions_source=FileSource.parquet_at(path))
+    @model_contract(name='test_model', features=[], prediction_source=FileSource.parquet_at(path))
     class TestModel:
         id = Int32().as_entity()
 

@@ -182,7 +182,9 @@ class FeatureStore:
 
         FeatureStore.register_enrichers(repo.enrichers)
         sources = {
-            FeatureLocation.feature_view(view.name).identifier: view.batch_data_source
+            FeatureLocation.feature_view(view.name).identifier: view.materialized_source
+            if view.materialized_source
+            else view.source
             for view in repo.feature_views
         } | {
             FeatureLocation.model(model.name).identifier: model.predictions_view.source
@@ -468,9 +470,7 @@ class FeatureStore:
         """
         self.feature_views[view.name] = view
         if isinstance(self.feature_source, BatchFeatureSource):
-            self.feature_source.sources[
-                FeatureLocation.feature_view(view.name).identifier
-            ] = view.batch_data_source
+            self.feature_source.sources[FeatureLocation.feature_view(view.name).identifier] = view.source
 
     def add_feature_view(self, feature_view: FeatureView) -> None:
         self.add_compiled_view(feature_view.compile_instance())
@@ -519,7 +519,7 @@ class FeatureStore:
             feature_source = source.feature_source()
         elif source is None:
             sources = {
-                FeatureLocation.feature_view(view.name).identifier: view.batch_data_source
+                FeatureLocation.feature_view(view.name).identifier: view.source
                 for view in set(self.feature_views.values())
             } | {
                 FeatureLocation.model(model.name).identifier: model.predictions_view.source
@@ -560,8 +560,7 @@ class FeatureStore:
             FeatureStore: A new feature store that loads features from the application source
         """
         sources = {
-            FeatureLocation.feature_view(view.name).identifier: view.application_source
-            or view.batch_data_source
+            FeatureLocation.feature_view(view.name).identifier: view.application_source or view.source
             for view in set(self.feature_views.values())
         } | {
             FeatureLocation.model(model.name).identifier: model.predictions_view.source
@@ -601,10 +600,8 @@ class FeatureStore:
         views: list[SourceRequest] = []
         for view in self.feature_views.values():
             request = view.request_all.needed_requests[0]
-            if view.batch_data_source.contains_config(config):
-                views.append(
-                    SourceRequest(FeatureLocation.feature_view(view.name), view.batch_data_source, request)
-                )
+            if view.source.contains_config(config):
+                views.append(SourceRequest(FeatureLocation.feature_view(view.name), view.source, request))
 
             if view.application_source and view.application_source.contains_config(config):
                 views.append(

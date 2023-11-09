@@ -160,7 +160,7 @@ def breast_scan_feature_viewout_with_datetime(scan_without_datetime: CsvFileSour
             name='breast_features',
             description='Features defining a scan and diagnose of potential cancer cells',
             tags={},
-            batch_source=scan_without_datetime,
+            source=scan_without_datetime,
         )
 
         scan_id = Entity(dtype=Int32())
@@ -232,7 +232,7 @@ def breast_scan_feature_view_with_datetime(scan_with_datetime: CsvFileSource) ->
             name='breast_features',
             description='Features defining a scan and diagnose of potential cancer cells',
             tags={},
-            batch_source=scan_with_datetime,
+            source=scan_with_datetime,
         )
 
         scan_id = Entity(dtype=Int32())
@@ -293,7 +293,7 @@ def breast_scan_feature_view_with_datetime_and_aggregation(scan_with_datetime: C
             name='breast_features',
             description='Features defining a scan and diagnose of potential cancer cells',
             tags={},
-            batch_source=scan_with_datetime,
+            source=scan_with_datetime,
         )
 
         scan_id = Entity(dtype=Int32())
@@ -405,7 +405,7 @@ def titanic_feature_view(titanic_source: CsvFileSource) -> FeatureView:
     class TitanicPassenger(FeatureView):
 
         metadata = FeatureViewMetadata(
-            name='titanic', description='Some features from the titanic dataset', batch_source=titanic_source
+            name='titanic', description='Some features from the titanic dataset', source=titanic_source
         )
 
         passenger_id = Entity(dtype=Int32())
@@ -461,7 +461,7 @@ def titanic_feature_view_parquet(titanic_source_parquet: ParquetFileSource) -> F
         metadata = FeatureViewMetadata(
             name='titanic_parquet',
             description='Some features from the titanic dataset',
-            batch_source=titanic_source_parquet,
+            source=titanic_source_parquet,
         )
 
         passenger_id = Entity(dtype=Int32())
@@ -503,7 +503,7 @@ def alot_of_transforations_feature_view(titanic_source: CsvFileSource) -> Featur
     class TitanicPassenger(FeatureView):
 
         metadata = FeatureViewMetadata(
-            name='titanic', description='Some features from the titanic dataset', batch_source=titanic_source
+            name='titanic', description='Some features from the titanic dataset', source=titanic_source
         )
 
         passenger_id = Entity(dtype=Int32())
@@ -586,7 +586,7 @@ def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureView:
         metadata = FeatureViewMetadata(
             name='titanic',
             description='Some features from the titanic dataset',
-            batch_source=titanic_source_scd,
+            source=titanic_source_scd,
             stream_source=redis.stream(topic='titanic_stream').with_coder(JsonRecordCoder('json')),
         )
 

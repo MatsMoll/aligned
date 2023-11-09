@@ -14,7 +14,7 @@ async def test_repo_reader() -> None:
     view = list(definitions.feature_views)[0]
 
     assert view.name == 'test'
-    assert view.batch_data_source.type_name == 'psql'
+    assert view.source.type_name == 'psql'
     assert len(view.derived_features) == 1
     assert len(view.features) == 2
     assert len(view.entities) == 1
