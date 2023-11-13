@@ -9,7 +9,7 @@ from aligned.data_file import DataFileReference
 
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import DerivedFeature
-from aligned.schemas.feature import EventTimestamp, Feature
+from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
 
 if TYPE_CHECKING:
     from aligned.compiler.feature_factory import FeatureFactory
@@ -29,6 +29,7 @@ class BatchDataSourceFactory:
         from aligned.sources.psql import PostgreSQLDataSource
         from aligned.sources.redshift import RedshiftSQLDataSource
         from aligned.sources.s3 import AwsS3CsvDataSource, AwsS3ParquetDataSource
+        from aligned.schemas.feature_view import FeatureViewReferenceSource
 
         source_types = [
             PostgreSQLDataSource,
@@ -40,6 +41,7 @@ class BatchDataSourceFactory:
             RedshiftSQLDataSource,
             JoinDataSource,
             FilteredDataSource,
+            FeatureViewReferenceSource,
         ]
 
         self.supported_data_sources = {source.type_name: source for source in source_types}
@@ -261,6 +263,40 @@ class BatchDataSource(ABC, Codable, SerializableType):
 
         raise NotImplementedError(f'Freshness is not implemented for {type(self)}.')
 
+    def filter(self, condition: DerivedFeature | Feature) -> BatchDataSource:
+        return FilteredDataSource(self, condition)
+
+    def join(self, view: Any, on: str | FeatureFactory, how: str = 'inner') -> BatchDataSource:
+        from aligned.compiler.feature_factory import FeatureFactory
+        from aligned.data_source.batch_data_source import JoinDataSource
+        from aligned.feature_view.feature_view import FeatureViewWrapper
+
+        if not hasattr(view, '__view_wrapper__'):
+            raise ValueError(f'Unable to join {view}')
+
+        wrapper = getattr(view, '__view_wrapper__')
+        if not isinstance(wrapper, FeatureViewWrapper):
+            raise ValueError()
+
+        if isinstance(on, FeatureFactory):
+            on = on.name
+
+        compiled_view = wrapper.compile()
+
+        request = compiled_view.request_all
+
+        return JoinDataSource(
+            source=self,
+            right_source=compiled_view.materialized_source or compiled_view.source,
+            right_request=request.needed_requests[0],
+            left_on=on,
+            right_on=on,
+            method=how,
+        )
+
+    def depends_on(self) -> set[FeatureLocation]:
+        return set()
+
 
 @dataclass
 class FilteredDataSource(BatchSourceModification, BatchDataSource):
@@ -281,6 +317,7 @@ class FilteredDataSource(BatchSourceModification, BatchDataSource):
 class JoinDataSource(BatchSourceModification, BatchDataSource):
 
     source: BatchDataSource
+    left_request: RetrivalRequest
     right_source: BatchDataSource
     right_request: RetrivalRequest
     left_on: str
@@ -294,12 +331,21 @@ class JoinDataSource(BatchSourceModification, BatchDataSource):
 
     def wrap_job(self, job: RetrivalJob) -> RetrivalJob:
 
-        right_job = self.right_source.all_data(self.right_request, limit=None)
-        return job.join(right_job, self.method, (self.left_on, self.right_on))
+        right_job = self.right_source.all_data(self.right_request, limit=None).derive_features(
+            [self.right_request]
+        )
+
+        return job.derive_features([self.left_request]).join(
+            right_job, self.method, (self.left_on, self.right_on)
+        )
 
 
 class ColumnFeatureMappable:
     mapping_keys: dict[str, str]
+
+    def with_renames(self: T, mapping_keys: dict[str, str]) -> T:
+        self.mapping_keys = mapping_keys  # type: ignore
+        return self
 
     def columns_for(self, features: list[Feature]) -> list[str]:
         return [self.mapping_keys.get(feature.name, feature.name) for feature in features]

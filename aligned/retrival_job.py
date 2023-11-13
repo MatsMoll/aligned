@@ -144,7 +144,7 @@ class SupervisedJob:
 
     def validate(self, validator: Validator) -> SupervisedJob:
         return SupervisedJob(
-            self.job.validate(validator),
+            self.job.drop_invalid(validator),
             self.target_columns,
         )
 
@@ -247,21 +247,21 @@ class RetrivalJob(ABC):
     def request_result(self) -> RequestResult:
         if isinstance(self, ModificationJob):
             return self.job.request_result
-        raise NotImplementedError()
+        raise NotImplementedError(f'For {type(self)}')
 
     @property
     def retrival_requests(self) -> list[RetrivalRequest]:
         if isinstance(self, ModificationJob):
             return self.job.retrival_requests
-        raise NotImplementedError()
+        raise NotImplementedError(f'For {type(self)}')
 
     @abstractmethod
     async def to_pandas(self) -> pd.DataFrame:
-        raise NotImplementedError()
+        raise NotImplementedError(f'For {type(self)}')
 
     @abstractmethod
     async def to_polars(self) -> pl.LazyFrame:
-        raise NotImplementedError()
+        raise NotImplementedError(f'For {type(self)}')
 
     def describe(self) -> str:
         if isinstance(self, ModificationJob):
@@ -311,9 +311,9 @@ class RetrivalJob(ABC):
         if isinstance(location, str):
             from aligned.sources.local import ParquetFileSource
 
-            return FileCachedJob(ParquetFileSource(location), self)
+            return FileCachedJob(ParquetFileSource(location), self).derive_features()
         else:
-            return FileCachedJob(location, self)
+            return FileCachedJob(location, self).derive_features()
 
     def test_size(self, test_size: float, target_column: str) -> SupervisedTrainJob:
         return SupervisedJob(self, {target_column}).train_set(train_size=1 - test_size)
@@ -321,8 +321,8 @@ class RetrivalJob(ABC):
     def train_set(self, train_size: float, target_column: str) -> SupervisedTrainJob:
         return SupervisedJob(self, {target_column}).train_set(train_size=train_size)
 
-    def validate(self, validator: Validator) -> RetrivalJob:
-        return ValidationJob(self, validator)
+    def drop_invalid(self, validator: Validator) -> RetrivalJob:
+        return DropInvalidJob(self, validator)
 
     def monitor_time_used(self, time_metric: Histogram, labels: list[str] | None = None) -> RetrivalJob:
         return TimeMetricLoggerJob(self, time_metric, labels)
@@ -449,13 +449,19 @@ class JoinJobs(RetrivalJob):
     left_on: str
     right_on: str
 
+    @property
+    def request_result(self) -> RequestResult:
+        return RequestResult.from_result_list([self.left_job.request_result, self.right_job.request_result])
+
     async def to_polars(self) -> pl.LazyFrame:
         left = await self.left_job.to_polars()
         right = await self.right_job.to_polars()
         return left.join(right, left_on=self.left_on, right_on=self.right_on, how=self.method)
 
     async def to_pandas(self) -> pd.DataFrame:
-        return await super().to_pandas()
+        left = await self.left_job.to_pandas()
+        right = await self.right_job.to_pandas()
+        return left.merge(right, how=self.method, left_on=self.left_on, right_on=self.right_on)
 
 
 @dataclass
@@ -633,7 +639,7 @@ class LogJob(RetrivalJob, ModificationJob):
 
 
 @dataclass
-class ValidationJob(RetrivalJob, ModificationJob):
+class DropInvalidJob(RetrivalJob, ModificationJob):
 
     job: RetrivalJob
     validator: Validator
@@ -663,7 +669,7 @@ class ValidationJob(RetrivalJob, ModificationJob):
         )
 
     def with_subfeatures(self) -> RetrivalJob:
-        return ValidationJob(self.job.with_subfeatures(), self.validator)
+        return DropInvalidJob(self.job.with_subfeatures(), self.validator)
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         if isinstance(location, str):
@@ -849,9 +855,11 @@ class StreamAggregationJob(RetrivalJob, ModificationJob):
             window_data = (await checkpoint.to_polars()).collect()
 
             if filter_expr is not None:
-                new_data = pl.concat([window_data.filter(filter_expr), data.filter(filter_expr)])
+                new_data = pl.concat(
+                    [window_data.filter(filter_expr), data.filter(filter_expr)], how='vertical_relaxed'
+                )
             else:
-                new_data = pl.concat([window_data, data])
+                new_data = pl.concat([window_data, data], how='vertical_relaxed')
 
             await checkpoint.write_polars(new_data.lazy())
             return new_data
@@ -1374,8 +1382,8 @@ class SelectColumnsJob(RetrivalJob, ModificationJob):
         else:
             return df
 
-    def validate(self, validator: Validator) -> RetrivalJob:
-        return SelectColumnsJob(self.include_features, self.job.validate(validator))
+    def drop_invalid(self, validator: Validator) -> RetrivalJob:
+        return SelectColumnsJob(self.include_features, self.job.drop_invalid(validator))
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         return SelectColumnsJob(self.include_features, self.job.cached_at(location))

@@ -17,6 +17,7 @@ from aligned.schemas.constraints import (
     LowerBoundInclusive,
     MaxLength,
     MinLength,
+    Optional,
     Unique,
     Regex,
     StartsWith,
@@ -479,9 +480,10 @@ class FeatureFactory(FeatureReferencable):
         return dtype  # type: ignore [return-value]
 
     def is_required(self: T) -> T:
-        from aligned.schemas.constraints import Required
+        return self
 
-        self._add_constraint(Required())  # type: ignore[attr-defined]
+    def is_optional(self: T) -> T:
+        self._add_constraint(Optional())  # type: ignore[attr-defined]
         return self
 
     def _add_constraint(self, constraint: ConstraintFactory | Constraint) -> None:
@@ -589,7 +591,7 @@ class ComparableFeature(EquatableFeature):
 
 
 class ArithmeticFeature(ComparableFeature):
-    def __sub__(self, other: FeatureFactory) -> Float:
+    def __sub__(self, other: FeatureFactory | Any) -> Float:
         from aligned.compiler.transformation_factory import DifferanceBetweenFactory, TimeDifferanceFactory
 
         feature = Float()
@@ -599,7 +601,14 @@ class ArithmeticFeature(ComparableFeature):
             feature.transformation = DifferanceBetweenFactory(self, other)
         return feature
 
-    def __add__(self, other: FeatureFactory) -> Float:
+    def __radd__(self, other: FeatureFactory | Any) -> Float:
+        from aligned.compiler.transformation_factory import AdditionBetweenFactory
+
+        feature = Float()
+        feature.transformation = AdditionBetweenFactory(self, other)
+        return feature
+
+    def __add__(self, other: FeatureFactory | Any) -> Float:
         from aligned.compiler.transformation_factory import AdditionBetweenFactory
 
         feature = Float()
@@ -616,11 +625,14 @@ class ArithmeticFeature(ComparableFeature):
             feature.transformation = RatioFactory(self, LiteralValue.from_value(other))
         return feature
 
-    def __floordiv__(self, other: FeatureFactory) -> Float:
+    def __floordiv__(self, other: FeatureFactory | Any) -> Float:
         from aligned.compiler.transformation_factory import RatioFactory
 
         feature = Float()
-        feature.transformation = RatioFactory(self, other)
+        if isinstance(other, FeatureFactory):
+            feature.transformation = RatioFactory(self, other)
+        else:
+            feature.transformation = RatioFactory(self, LiteralValue.from_value(other))
         return feature
 
     def __abs__(self) -> Float:
@@ -667,8 +679,8 @@ class ArithmeticFeature(ComparableFeature):
     def clip(self: T, lower_bound: float, upper_bound: float) -> T:
         from aligned.compiler.transformation_factory import ClipFactory
 
-        feature = Float()
-        feature.transformation = ClipFactory(self, lower_bound, upper_bound)
+        feature = self.copy_type()  # type: ignore
+        feature.transformation = ClipFactory(self, lower_bound, upper_bound)  # type: ignore
         return feature
 
 

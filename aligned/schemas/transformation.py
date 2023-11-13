@@ -181,6 +181,7 @@ class SupportedTransformations:
             LowerThenOrEqual,
             DateComponent,
             Subtraction,
+            SubtractionValue,
             Multiply,
             MultiplyValue,
             Addition,
@@ -412,7 +413,7 @@ class Equals(Transformation):
     name: str = 'equals'
     dtype: FeatureType = FeatureType.bool()
 
-    def __init__(self, key: str, value: str) -> None:
+    def __init__(self, key: str, value: LiteralValue) -> None:
         self.key = key
         self.value = value
 
@@ -711,6 +712,43 @@ class LowerThenOrEqual(Transformation):
         return TransformationTestDefinition(
             LowerThenOrEqual(key='x', value=2), input={'x': [1, 2, 3, None]}, output=[True, True, False, nan]
         )
+
+
+@dataclass
+class SubtractionValue(Transformation, PsqlTransformation, RedshiftTransformation):
+
+    front: str
+    behind: LiteralValue
+
+    name: str = 'sub_val'
+    dtype: FeatureType = FeatureType.float()
+
+    def __init__(self, front: str, behind: LiteralValue) -> None:
+        self.front = front
+        self.behind = behind
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        return pl.col(self.front) - pl.lit(self.behind.python_value)
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return gracefull_transformation(
+            df,
+            is_valid_mask=~(df[self.front].isna()),
+            transformation=lambda dfv: dfv[self.front] - self.behind.python_value,
+        )
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        from numpy import nan
+
+        return TransformationTestDefinition(
+            SubtractionValue(front='x', behind=LiteralValue.from_value(1)),
+            input={'x': [1, 2, 0, None, 1]},
+            output=[0, 1, -1, nan, 0],
+        )
+
+    def as_psql(self) -> str:
+        return f'{self.front} - {self.behind.python_value}'
 
 
 @dataclass
@@ -1121,15 +1159,18 @@ class ArrayContains(Transformation):
     name: str = 'array_contains'
     dtype: FeatureType = FeatureType.bool()
 
-    def __init__(self, key: str, value: str) -> None:
+    def __init__(self, key: str, value: Any | LiteralValue) -> None:
         self.key = key
-        self.value = value
+        if isinstance(value, LiteralValue):
+            self.value = value
+        else:
+            self.value = LiteralValue.from_value(value)
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return pl.Series(df[self.key]).arr.contains(self.value.python_value).to_pandas()
+        return pl.Series(df[self.key]).list.contains(self.value.python_value).to_pandas()
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key).arr.contains(self.value.python_value)
+        return pl.col(self.key).list.contains(self.value.python_value)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -1537,7 +1578,7 @@ class MapArgMax(Transformation):
                 }
             ).with_columns(pl.col(arg_max_alias).cast(pl.UInt32))
             sub = df.with_columns(pl.concat_list(pl.col(features)).alias(array_row_alias)).with_columns(
-                pl.col(array_row_alias).arr.arg_max().alias(arg_max_alias)
+                pl.col(array_row_alias).list.arg_max().alias(arg_max_alias)
             )
             return sub.join(mapper.lazy(), on=arg_max_alias, how='left').select(
                 pl.exclude([arg_max_alias, array_row_alias])

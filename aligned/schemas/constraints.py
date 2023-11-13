@@ -40,6 +40,7 @@ class SupportedConstraints:
             UpperBound,
             UpperBoundInclusive,
             Required,
+            Optional,
             InDomain,
             MaxLength,
             MinLength,
@@ -170,6 +171,15 @@ class And(Constraint):
 class Required(Constraint):
 
     name = 'requierd'
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+@dataclass
+class Optional(Constraint):
+
+    name = 'optional'
 
     def __hash__(self) -> int:
         return hash(self.name)

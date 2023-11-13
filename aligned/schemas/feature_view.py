@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from dataclasses import dataclass, field
+
 
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
@@ -10,6 +13,9 @@ from aligned.schemas.derivied_feature import AggregatedFeature, DerivedFeature
 from aligned.schemas.event_trigger import EventTrigger
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
 from aligned.schemas.vector_storage import VectorIndex
+
+if TYPE_CHECKING:
+    from aligned.retrival_job import RetrivalJob
 
 
 @dataclass
@@ -105,7 +111,7 @@ class CompiledFeatureView(Codable):
 
         def dependent_features_for(
             feature: DerivedFeature,
-        ) -> tuple[set[Feature], set[Feature]]:
+        ) -> tuple[set[Feature], set[Feature], set[AggregatedFeature]]:
             core_features = set()
             derived_features = set()
             aggregated_features = set()
@@ -302,3 +308,35 @@ class CompiledCombinedFeatureView(Codable):
 
     def __hash__(self) -> int:
         return hash(self.name)
+
+
+@dataclass
+class FeatureViewReferenceSource(BatchDataSource):
+
+    view: CompiledFeatureView
+
+    type_name = 'view_ref'
+
+    def job_group_key(self) -> str:
+        return self.view.name
+
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+
+        sub_location = FeatureLocation.feature_view(self.view.name)
+        sub_references: set[str] = set()
+
+        for feature in request.derived_features:
+            for depends_on in feature.depending_on:
+                if depends_on.location != sub_location:
+                    continue
+                sub_references.add(depends_on.name)
+
+        sub_request = self.view.request_for(sub_references)
+        sub_source = self.view.materialized_source or self.view.source
+
+        if len(sub_request.needed_requests) != 1:
+            raise ValueError('Got mulitple requests for one view. Something odd happend.')
+
+        sub_req = sub_request.needed_requests[0]
+
+        return sub_source.all_data(sub_req, limit=limit).derive_features([sub_req]).derive_features([request])

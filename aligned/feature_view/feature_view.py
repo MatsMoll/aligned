@@ -22,9 +22,9 @@ from aligned.schemas.derivied_feature import (
 )
 from aligned.schemas.feature import FeatureLocation, FeatureReferance
 from aligned.schemas.feature_view import CompiledFeatureView
+from aligned.compiler.feature_factory import FeatureFactory
 
 if TYPE_CHECKING:
-    from aligned.compiler.feature_factory import FeatureFactory
     from aligned.feature_store import FeatureViewStore
     from datetime import datetime
 
@@ -61,7 +61,7 @@ class FeatureViewMetadata:
 
 def feature_view(
     name: str,
-    source: BatchDataSource,
+    source: BatchDataSource | FeatureViewWrapper,
     description: str | None = None,
     stream_source: StreamDataSource | None = None,
     application_source: BatchDataSource | None = None,
@@ -70,9 +70,20 @@ def feature_view(
     tags: dict[str, str] | None = None,
 ) -> Callable[[Type[T]], FeatureViewWrapper[T]]:
     def decorator(cls: Type[T]) -> FeatureViewWrapper[T]:
+
+        if isinstance(source, FeatureViewWrapper):
+            from aligned.schemas.feature_view import FeatureViewReferenceSource
+
+            compiled = source.compile()
+            used_source = FeatureViewReferenceSource(compiled)
+        elif isinstance(source, BatchDataSource):
+            used_source = source
+        else:
+            raise ValueError(f'Unable to use source: {source}')
+
         metadata = FeatureViewMetadata(
             name,
-            source,
+            used_source,
             description=description,
             stream_source=stream_source,
             application_source=application_source,
@@ -126,7 +137,7 @@ class FeatureViewWrapper(Generic[T]):
 
         return FeatureViewWrapper(metadata=meta, view=self.view)
 
-    def with_joined(self, view: Any, join_on: str, method: str = 'inner') -> BatchDataSource:
+    def join(self, view: Any, on: str | FeatureFactory, how: str = 'inner') -> BatchDataSource:
         from aligned.data_source.batch_data_source import JoinDataSource
 
         if not hasattr(view, '__view_wrapper__'):
@@ -136,17 +147,21 @@ class FeatureViewWrapper(Generic[T]):
         if not isinstance(wrapper, FeatureViewWrapper):
             raise ValueError()
 
+        if isinstance(on, FeatureFactory):
+            on = on.name
+
         compiled_view = wrapper.compile()
 
         request = compiled_view.request_all
 
         return JoinDataSource(
-            source=self.metadata.source,
-            right_source=compiled_view.source,
+            source=self.metadata.materialized_source or self.metadata.source,
+            left_request=self.compile().request_all.needed_requests[0],
+            right_source=compiled_view.materialized_source or compiled_view.source,
             right_request=request.needed_requests[0],
-            left_on=join_on,
-            right_on=join_on,
-            method=method,
+            left_on=on,
+            right_on=on,
+            method=how,
         )
 
     def with_entity_renaming(self, named: str, renames: dict[str, str] | str) -> FeatureViewWrapper[T]:
@@ -407,6 +422,8 @@ class FeatureView(ABC):
 
                     if not feature_dep._location:
                         feature_dep._location = FeatureLocation.feature_view(metadata.name)
+                    elif feature_dep._location.name != metadata.name:
+                        continue
 
                     if feature_dep._name:
                         feat_dep = feature_dep.feature()

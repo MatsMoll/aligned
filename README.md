@@ -1,5 +1,6 @@
 # Aligned
 
+n
 Aligned helps improving ML system visibility, while also reducing technical, and data debt, as described in [Sculley et al. [2015]](https://papers.nips.cc/paper/2015/file/86df7dcfd896fcaf2674f757a2463eba-Paper.pdf).
 
 ## Docs
@@ -51,8 +52,8 @@ This makes the features light weight, data source indipendent, and flexible.
 @feature_view(
     name="passenger",
     description="Some features from the titanic dataset",
-    batch_source=FileSource.csv_at("titanic.csv"),
-    stream_source=HttpStreamSource(topic_name="titanic")
+    source=FileSource.csv_at("titanic.csv"),
+    materialized_source=FileSource.parquet_at("titanic.parquet"),
 )
 class TitanicPassenger:
 
@@ -61,7 +62,6 @@ class TitanicPassenger:
     age = (
         Float()
             .description("A float as some have decimals")
-            .is_required()
             .lower_bound(0)
             .upper_bound(110)
     )
@@ -69,8 +69,8 @@ class TitanicPassenger:
     name = String()
     sex = String().accepted_values(["male", "female"])
     survived = Bool().description("If the passenger survived")
-    sibsp = Int32().lower_bound(0, is_inclusive=True).description("Number of siblings on titanic")
-    cabin = String()
+    sibsp = Int32().lower_bound(0).description("Number of siblings on titanic")
+    cabin = String().is_optional()
 
     # Creates two one hot encoded values
     is_male, is_female = sex.one_hot_encode(['male', 'female'])
@@ -81,6 +81,8 @@ class TitanicPassenger:
 Alinged makes handling data sources easy, as you do not have to think about how it is done.
 Only define where the data is, and we handle the dirty work.
 
+Furthermore, you can also add materialised sources which can be used as intermediate sources.
+
 ```python
 my_db = PostgreSQLConfig(env_var="DATABASE_URL")
 redis = RedisConfig(env_var="REDIS_URL")
@@ -88,12 +90,13 @@ redis = RedisConfig(env_var="REDIS_URL")
 @feature_view(
     name="passenger",
     description="Some features from the titanic dataset",
-    batch_source=my_db.table(
+    source=my_db.table(
         "passenger",
         mapping_keys={
             "Passenger_Id": "passenger_id"
         }
     ),
+    materialized_source=my_db.with_schema("inter").table("passenger"),
     stream_source=redis.stream(topic="titanic")
 )
 class TitanicPassenger:
@@ -114,24 +117,25 @@ my_db = PostgreSQLConfig.localhost()
 aws_bucket = AwsS3Config(...)
 
 @feature_view(
-    name="some_features",
+    name="passengers",
     description="...",
-    batch_source=my_db.table("local_features")
+    source=my_db.table("passengers")
 )
-class SomeFeatures:
+class TitanicPassenger:
+
+    passenger_id = Int32().as_entity()
 
     # Some features
     ...
 
-@feature_view(
-    name="aws",
-    description="...",
-    batch_source=aws_bucket.file_at("path/to/file.parquet")
-)
-class AwsFeatures:
+# Change data source
+passenger_view = TitanicPassenger.query()
 
-    # Some features
-    ...
+psql_passengers = await passenger_view.all().to_pandas()
+aws_passengers = await passenger_view.using_source(
+    aws_bucket.parquet_at("passengers.parquet")
+).to_pandas()
+
 ```
 
 ## Describe Models
@@ -169,7 +173,7 @@ Therefore, Aligned provides an easy way to check how fresh a source is.
 @feature_view(
     name="departures",
     description="Features related to the departure of a taxi ride",
-    batch_source=taxi_db.table("departures"),
+    source=taxi_db.table("departures"),
 )
 class TaxiDepartures:
 

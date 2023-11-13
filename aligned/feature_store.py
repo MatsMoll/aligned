@@ -653,7 +653,7 @@ class FeatureStore:
             new_df = (await values.to_polars()).select(columns)
             try:
                 existing_df = await source.to_polars()
-                write_df = pl.concat([new_df, existing_df.select(columns)])
+                write_df = pl.concat([new_df, existing_df.select(columns)], how='vertical_relaxed')
             except UnableToFindFileException:
                 write_df = new_df
             await source.write_polars(write_df)
@@ -1220,9 +1220,11 @@ class FeatureViewStore:
             .derive_features(request.needed_requests)
         )
         if self.feature_filter:
-            return SelectColumnsJob(include_features=self.feature_filter, job=job)
+            selected_columns = self.feature_filter
         else:
-            return job
+            selected_columns = set(request.needed_requests[0].all_returned_columns)
+
+        return job.select_columns(selected_columns)
 
     def between_dates(self, start_date: datetime, end_date: datetime) -> RetrivalJob:
         if not isinstance(self.source, RangeFeatureSource):

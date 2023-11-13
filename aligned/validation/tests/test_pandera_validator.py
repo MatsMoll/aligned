@@ -10,7 +10,7 @@ async def test_validate_valid_feature_view(titanic_feature_store: FeatureStore) 
     validated_df = (
         await titanic_feature_store.feature_view('titanic')
         .all(limit=5)
-        .validate(PanderaValidator())
+        .drop_invalid(PanderaValidator())
         .to_pandas()
     )
 
@@ -22,7 +22,7 @@ async def test_validate_invalid_feature_view(titanic_feature_store: FeatureStore
     validated_df = (
         await titanic_feature_store.feature_view('titanic')
         .all(limit=20)
-        .validate(PanderaValidator())
+        .drop_invalid(PanderaValidator())
         .to_pandas()
     )
 

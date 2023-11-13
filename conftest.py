@@ -411,17 +411,17 @@ def titanic_feature_view(titanic_source: CsvFileSource) -> FeatureView:
         passenger_id = Entity(dtype=Int32())
 
         # Input values
-        age = (
-            Float().is_required().lower_bound(0).upper_bound(100).description('A float as some have decimals')
-        )
+        age = Float().lower_bound(0).upper_bound(100).description('A float as some have decimals')
 
-        name = String()
-        sex = String().accepted_values(['male', 'female'])
+        name = String().is_optional()
+        sex = String().is_optional().accepted_values(['male', 'female'])
         survived = Bool().description('If the passenger survived')
 
-        sibsp = Int32().lower_bound(0).upper_bound(20).description('Number of siblings on titanic')
+        sibsp = (
+            Int32().is_optional().lower_bound(0).upper_bound(20).description('Number of siblings on titanic')
+        )
 
-        cabin = String()
+        cabin = String().is_optional()
 
         # Transformed features
         has_siblings = sibsp != 0

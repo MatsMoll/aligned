@@ -58,7 +58,10 @@ class RatioFactory(TransformationFactory):
 
     @property
     def using_features(self) -> list[FeatureFactory]:
-        return [self.numerator, self.denumerator]
+        if isinstance(self.denumerator, FeatureFactory):
+            return [self.numerator, self.denumerator]
+        else:
+            return [self.numerator]
 
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import DivideDenumeratorValue, Ratio
@@ -259,16 +262,22 @@ class DateComponentFactory(TransformationFactory):
 class DifferanceBetweenFactory(TransformationFactory):
 
     first_feature: FeatureFactory
-    second_feature: FeatureFactory
+    second_feature: FeatureFactory | LiteralValue
 
     @property
     def using_features(self) -> list[FeatureFactory]:
-        return [self.first_feature, self.second_feature]
+        if isinstance(self.second_feature, FeatureFactory):
+            return [self.first_feature, self.second_feature]
+        else:
+            return [self.first_feature]
 
     def compile(self) -> Transformation:
-        from aligned.schemas.transformation import Subtraction
+        from aligned.schemas.transformation import Subtraction, SubtractionValue
 
-        return Subtraction(self.first_feature.name, self.second_feature.name)
+        if isinstance(self.second_feature, FeatureFactory):
+            return Subtraction(self.first_feature.name, self.second_feature.name)
+        else:
+            return SubtractionValue(self.first_feature.name, self.second_feature)
 
 
 @dataclass

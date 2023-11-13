@@ -5,7 +5,7 @@ import pandas as pd
 import polars as pl
 from pandera import Check, Column, DataFrameSchema  # type: ignore[attr-defined]
 
-from aligned.schemas.constraints import Constraint, Required
+from aligned.schemas.constraints import Constraint, Optional
 from aligned.schemas.feature import Feature, FeatureType
 from aligned.validation.interface import Validator
 
@@ -32,6 +32,8 @@ class PanderaValidator(Validator):
         FeatureType.string(),
         FeatureType.uuid(),
         FeatureType.date(),
+        FeatureType.int32(),
+        FeatureType.int64(),
     }
 
     def _column_for(self, feature: Feature) -> Column:
@@ -39,10 +41,12 @@ class PanderaValidator(Validator):
 
         if feature.constraints is None:
             return Column(
-                feature.dtype.pandas_type if feature.dtype in self.datatype_check else None, nullable=True
+                feature.dtype.pandas_type if feature.dtype in self.datatype_check else None,
+                nullable=True,
+                coerce=True,
             )
 
-        is_nullable = Required() not in feature.constraints
+        is_nullable = Optional() in feature.constraints
 
         checks = [
             self.check_map[constraint.name](constraint)

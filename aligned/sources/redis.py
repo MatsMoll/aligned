@@ -185,9 +185,10 @@ class RedisSource(FeatureSource, WritableFeatureSource):
 
                 request_data = data.filter(filter_entity_query).with_columns(
                     (
-                        pl.lit(request.location.identifier)
-                        + pl.lit(':')
-                        + pl.concat_str(sorted(request.entity_names))
+                        pl.concat_str(
+                            [pl.lit(request.location.identifier), pl.lit(':')]
+                            + [pl.col(col) for col in sorted(request.entity_names)]
+                        )
                     ).alias('id')
                 )
 

@@ -205,8 +205,8 @@ WHERE table_schema = '{schema}'
 
         df = await job.to_pandas()
 
-        if self.schema:
-            table = f'{self.schema}.{self.table}'
+        if self.config.schema:
+            table = f'{self.config.schema}.{self.table}'
         else:
             table = self.table
 
