@@ -140,7 +140,7 @@ SELECT column_name, data_type, character_maximum_length, is_nullable, column_def
 FROM information_schema.columns
 WHERE table_schema = '{schema}'
   AND table_name = '{table}'"""
-        df = pl.read_database(sql_query, connection_uri=self.config.url, engine='adbc')
+        df = pl.read_database(sql_query, connection=self.config.url, engine='adbc')
         psql_types = {
             'uuid': ff.UUID(),
             'timestamp with time zone': ff.Timestamp(),
@@ -163,7 +163,7 @@ WHERE table_schema = '{schema}'
 
         value = pl.read_database(
             f'SELECT MAX({event_timestamp.name}) as freshness FROM {self.table}',
-            connection_uri=self.config.url,
+            connection=self.config.url,
         )['freshness'].max()
 
         if value:
@@ -183,7 +183,7 @@ WHERE table_schema = '{schema}'
 
         data = await job.to_polars()
         data.select(request.all_returned_columns).collect().write_database(
-            self.table, connection_uri=self.config.url, if_exists='append'
+            self.table, connection=self.config.url, if_exists='append'
         )
 
     async def upsert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
