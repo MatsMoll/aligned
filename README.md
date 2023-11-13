@@ -1,7 +1,10 @@
 # Aligned
 
-n
-Aligned helps improving ML system visibility, while also reducing technical, and data debt, as described in [Sculley et al. [2015]](https://papers.nips.cc/paper/2015/file/86df7dcfd896fcaf2674f757a2463eba-Paper.pdf).
+A data managment tool for ML applications.
+
+Similar to have DBT is a data managment tool for business analytics, will Aligned manage ML projects.
+Therefore, Aligned makes it possible to collect data lineage between models, feature transformations etc. While also making it easy to reduce data leakage with point-in-time valid data and fix other problems described in [Sculley et al. [2015]](https://papers.nips.cc/paper/2015/file/86df7dcfd896fcaf2674f757a2463eba-Paper.pdf).
+
 
 ## Docs
 
