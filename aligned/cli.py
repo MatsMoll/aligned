@@ -6,7 +6,7 @@ from contextlib import suppress
 from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 import click
 from pytz import utc  # type: ignore
@@ -15,10 +15,8 @@ from aligned.compiler.repo_reader import RepoReader, RepoReference
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import Feature
 from aligned.worker import StreamWorker
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from datetime import datetime
+from collections.abc import Callable
+from datetime import datetime
 
 
 def coro(func: Callable) -> Callable:
