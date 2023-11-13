@@ -10,10 +10,10 @@ from aligned.data_file import DataFileReference
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
+from aligned.request.retrival_request import RetrivalRequest
 
 if TYPE_CHECKING:
     from aligned.compiler.feature_factory import FeatureFactory
-    from aligned.request.retrival_request import RetrivalRequest
     from aligned.retrival_job import RetrivalJob
     from datetime import datetime
 
@@ -266,34 +266,6 @@ class BatchDataSource(ABC, Codable, SerializableType):
     def filter(self, condition: DerivedFeature | Feature) -> BatchDataSource:
         return FilteredDataSource(self, condition)
 
-    def join(self, view: Any, on: str | FeatureFactory, how: str = 'inner') -> BatchDataSource:
-        from aligned.compiler.feature_factory import FeatureFactory
-        from aligned.data_source.batch_data_source import JoinDataSource
-        from aligned.feature_view.feature_view import FeatureViewWrapper
-
-        if not hasattr(view, '__view_wrapper__'):
-            raise ValueError(f'Unable to join {view}')
-
-        wrapper = getattr(view, '__view_wrapper__')
-        if not isinstance(wrapper, FeatureViewWrapper):
-            raise ValueError()
-
-        if isinstance(on, FeatureFactory):
-            on = on.name
-
-        compiled_view = wrapper.compile()
-
-        request = compiled_view.request_all
-
-        return JoinDataSource(
-            source=self,
-            right_source=compiled_view.materialized_source or compiled_view.source,
-            right_request=request.needed_requests[0],
-            left_on=on,
-            right_on=on,
-            method=how,
-        )
-
     def depends_on(self) -> set[FeatureLocation]:
         return set()
 
@@ -338,6 +310,39 @@ class JoinDataSource(BatchSourceModification, BatchDataSource):
         return job.derive_features([self.left_request]).join(
             right_job, self.method, (self.left_on, self.right_on)
         )
+
+    def join(self, view: Any, on: str | FeatureFactory, how: str = 'inner') -> BatchDataSource:
+        from aligned.compiler.feature_factory import FeatureFactory
+        from aligned.data_source.batch_data_source import JoinDataSource
+        from aligned.feature_view.feature_view import FeatureViewWrapper
+
+        if not hasattr(view, '__view_wrapper__'):
+            raise ValueError(f'Unable to join {view}')
+
+        wrapper = getattr(view, '__view_wrapper__')
+        if not isinstance(wrapper, FeatureViewWrapper):
+            raise ValueError()
+
+        if isinstance(on, FeatureFactory):
+            on = on.name
+
+        left_request = RetrivalRequest.unsafe_combine([self.left_request, self.right_request])
+        compiled_view = wrapper.compile()
+
+        request = compiled_view.request_all
+
+        return JoinDataSource(
+            source=self,
+            left_request=left_request,
+            right_source=compiled_view.materialized_source or compiled_view.source,
+            right_request=request.needed_requests[0],
+            left_on=on,
+            right_on=on,
+            method=how,
+        )
+
+    def depends_on(self) -> set[FeatureLocation]:
+        return self.source.depends_on().intersection(self.right_source.depends_on())
 
 
 class ColumnFeatureMappable:

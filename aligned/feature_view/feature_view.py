@@ -13,7 +13,7 @@ from aligned.compiler.feature_factory import (
     EventTimestamp,
     Bool,
 )
-from aligned.data_source.batch_data_source import BatchDataSource
+from aligned.data_source.batch_data_source import BatchDataSource, JoinDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.schemas.derivied_feature import (
     AggregatedFeature,
@@ -137,7 +137,7 @@ class FeatureViewWrapper(Generic[T]):
 
         return FeatureViewWrapper(metadata=meta, view=self.view)
 
-    def join(self, view: Any, on: str | FeatureFactory, how: str = 'inner') -> BatchDataSource:
+    def join(self, view: Any, on: str | FeatureFactory, how: str = 'inner') -> JoinDataSource:
         from aligned.data_source.batch_data_source import JoinDataSource
 
         if not hasattr(view, '__view_wrapper__'):

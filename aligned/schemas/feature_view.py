@@ -340,3 +340,6 @@ class FeatureViewReferenceSource(BatchDataSource):
         sub_req = sub_request.needed_requests[0]
 
         return sub_source.all_data(sub_req, limit=limit).derive_features([sub_req]).derive_features([request])
+
+    def depends_on(self) -> set[FeatureLocation]:
+        return {FeatureLocation.feature_view(self.view.name)}
