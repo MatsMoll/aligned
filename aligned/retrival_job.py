@@ -469,7 +469,8 @@ class JoinJobs(RetrivalJob):
         return left.merge(right, how=self.method, left_on=self.left_on, right_on=self.right_on)
 
     def describe(self) -> str:
-        return (f'({self.left_job.describe()}) -> '
+        return (
+            f'({self.left_job.describe()}) -> '
             f'Joining with {self.method} {self.left_on} and '
             f'{self.right_on} ({self.right_job.describe()})'
         )
