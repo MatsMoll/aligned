@@ -1,6 +1,16 @@
 import pytest
 
-from aligned import Bool, Entity, FeatureView, FeatureViewMetadata, Float, PostgreSQLConfig, String
+from aligned import (
+    Bool,
+    Entity,
+    FeatureView,
+    FeatureViewMetadata,
+    Float,
+    PostgreSQLConfig,
+    String,
+    feature_view,
+    FileSource,
+)
 from aligned.compiler.feature_factory import compile_hidden_features
 from aligned.schemas.feature import FeatureLocation
 
@@ -65,3 +75,18 @@ def test_hidden_variable_condition() -> None:
 
     assert len(features) == 2
     assert len(derived_features) == 3
+
+
+@pytest.mark.asyncio
+async def test_core_feature_as_hidden() -> None:
+    @feature_view(name='test', source=FileSource.csv_at('test_data/titanic_dataset.csv'))
+    class Test:
+        PassengerId = String().as_entity()
+
+        Age = Float().fill_na(10)
+
+    compiled = Test.compile()
+    assert len(compiled.derived_features) == 1
+
+    df = await Test.query().all().to_pandas()
+    assert (~df['Age'].isna()).all()

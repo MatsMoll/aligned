@@ -77,10 +77,25 @@ class RetrivalRequest(Codable):
 
     @property
     def all_returned_columns(self) -> list[str]:
-        result = self.all_feature_names.union(self.entity_names)
+
+        result = self.entity_names
         if self.event_timestamp:
-            result = result.union({self.event_timestamp.name})
-        return list(result)
+            if not self.aggregated_features:
+                result = result.union({self.event_timestamp.name})
+            elif all([agg.aggregate_over.window is not None for agg in self.aggregated_features]):
+                result = result.union({self.event_timestamp.name})
+
+        if self.aggregated_features:
+            agg_names = [feat.name for feat in self.aggregated_features]
+            derived_after_aggs_name: set[str] = set()
+            for feat in self.derived_features:
+                for dep in feat.depending_on_names:
+                    if dep in agg_names:
+                        derived_after_aggs_name.add(dep)
+
+            return agg_names + list(derived_after_aggs_name) + list(result)
+
+        return list(result.union(self.all_feature_names))
 
     @property
     def returned_features(self) -> set[Feature]:

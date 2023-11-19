@@ -328,7 +328,12 @@ class RetrivalJob(ABC):
         return TimeMetricLoggerJob(self, time_metric, labels)
 
     def derive_features(self, requests: list[RetrivalRequest] | None = None) -> RetrivalJob:
-        return DerivedFeatureJob(job=self, requests=requests or self.retrival_requests)
+        requests = requests or self.retrival_requests
+
+        for request in requests:
+            if len(request.derived_features) > 0:
+                return DerivedFeatureJob(job=self, requests=requests)
+        return self
 
     def combined_features(self, requests: list[RetrivalRequest] | None = None) -> RetrivalJob:
         return CombineFactualJob([self], requests or self.retrival_requests)
@@ -463,6 +468,13 @@ class JoinJobs(RetrivalJob):
         right = await self.right_job.to_pandas()
         return left.merge(right, how=self.method, left_on=self.left_on, right_on=self.right_on)
 
+    def describe(self) -> str:
+        return (
+            f'({self.left_job.describe()}) -> '
+            f'Joining with {self.method} {self.left_on} and '
+            f'{self.right_on} ({self.right_job.describe()})'
+        )
+
 
 @dataclass
 class FilteredJob(RetrivalJob, ModificationJob):
@@ -489,7 +501,7 @@ class FilteredJob(RetrivalJob, ModificationJob):
         return df.filter(col)
 
     async def to_pandas(self) -> pd.DataFrame:
-        df = await self.to_pandas()
+        df = await self.job.to_pandas()
 
         if isinstance(self.condition, str):
             mask = df[self.condition]
@@ -501,6 +513,9 @@ class FilteredJob(RetrivalJob, ModificationJob):
             raise ValueError()
 
         return df.loc[mask]
+
+    def describe(self) -> str:
+        return f'{self.job.describe()} -> Filter based on {self.condition}'
 
 
 class JoinBuilder:
@@ -705,7 +720,7 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
                 round_expressions: list[pl.Expr] = []
 
                 for feature in feature_round:
-                    if feature.name in df.columns:
+                    if feature.transformation.should_skip(feature.name, df.columns):
                         logger.debug(f'Skipped adding feature {feature.name} to computation plan')
                         continue
 
@@ -727,9 +742,10 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
         for request in self.requests:
             for feature_round in request.derived_features_order():
                 for feature in feature_round:
-                    if feature.name in df.columns:
+                    if feature.transformation.should_skip(feature.name, list(df.columns)):
                         logger.debug(f'Skipping to compute {feature.name} as it is aleady computed')
                         continue
+
                     logger.debug(f'Computing feature with pandas: {feature.name}')
                     df[feature.name] = await feature.transformation.transform_pandas(
                         df[feature.depending_on_names]
@@ -1170,6 +1186,7 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
 
     async def to_polars(self) -> pl.LazyFrame:
         df = await self.job.to_polars()
+        org_schema = dict(df.schema)
         for request in self.requests:
             features_to_check = request.all_required_features
 
@@ -1177,6 +1194,9 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                 features_to_check = {feature.derived_feature for feature in request.aggregated_features}
 
             for feature in features_to_check:
+
+                if feature.dtype.polars_type.is_(org_schema[feature.name]):
+                    continue
 
                 if feature.dtype == FeatureType.bool():
                     df = df.with_columns(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))

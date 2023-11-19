@@ -76,13 +76,16 @@ class Transformation(Codable, SerializableType):
     dtype: FeatureType
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        pass
+        raise NotImplementedError(type(self))
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr | pl.Expr:
-        raise NotImplementedError()
+        raise NotImplementedError(type(self))
 
     def _serialize(self) -> dict:
         return self.to_dict()
+
+    def should_skip(self, output_column: str, columns: list[str]) -> bool:
+        return output_column in columns
 
     @classmethod
     def _deserialize(cls, value: dict) -> Transformation:
@@ -1416,6 +1419,9 @@ class FillNaValues(Transformation):
         else:
             return pl.col(self.key).fill_null(self.value.python_value)
 
+    def should_skip(self, output_column: str, columns: list[str]) -> bool:
+        return False
+
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
@@ -1745,19 +1751,20 @@ class PrependConstString(Transformation):
 class ConcatStringAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
-    group_keys: list[str]
     separator: str = field(default=' ')
 
     name = 'concat_string_agg'
     dtype = FeatureType.string()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return (await self.transform_polars(pl.from_pandas(df).lazy())).collect().to_pandas()[self.name]
+        return (
+            (await self.transform_polars(pl.from_pandas(df).lazy(), self.name))
+            .collect()
+            .to_pandas()[self.name]
+        )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_columns(
-            pl.concat_str(pl.col(self.key), sep=self.separator).over(self.group_keys).alias(alias)
-        )
+        return df.with_columns(pl.concat_str(pl.col(self.key), sep=self.separator).alias(alias))
 
     def as_psql(self) -> str:
         return f"array_to_string(array_agg({self.key}), '{self.separator}')"
@@ -1770,7 +1777,6 @@ class ConcatStringAggregation(Transformation, PsqlTransformation, RedshiftTransf
 class SumAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
-    group_keys: list[str]
 
     name = 'sum_agg'
     dtype = FeatureType.float()
@@ -1789,7 +1795,6 @@ class SumAggregation(Transformation, PsqlTransformation, RedshiftTransformation)
 class MeanAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
-    group_keys: list[str]
 
     name = 'mean_agg'
     dtype = FeatureType.float()
@@ -1808,7 +1813,6 @@ class MeanAggregation(Transformation, PsqlTransformation, RedshiftTransformation
 class MinAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
-    group_keys: list[str]
 
     name = 'min_agg'
     dtype = FeatureType.float()
@@ -1827,7 +1831,6 @@ class MinAggregation(Transformation, PsqlTransformation, RedshiftTransformation)
 class MaxAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
-    group_keys: list[str]
 
     name = 'max_agg'
     dtype = FeatureType.float()
@@ -1846,7 +1849,6 @@ class MaxAggregation(Transformation, PsqlTransformation, RedshiftTransformation)
 class CountAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
-    group_keys: list[str]
 
     name = 'count_agg'
     dtype = FeatureType.float()
@@ -1865,7 +1867,6 @@ class CountAggregation(Transformation, PsqlTransformation, RedshiftTransformatio
 class CountDistinctAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
-    group_keys: list[str]
 
     name = 'count_distinct_agg'
     dtype = FeatureType.float()
@@ -1884,7 +1885,6 @@ class CountDistinctAggregation(Transformation, PsqlTransformation, RedshiftTrans
 class StdAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
-    group_keys: list[str]
 
     name = 'std_agg'
     dtype = FeatureType.float()
@@ -1903,7 +1903,6 @@ class StdAggregation(Transformation, PsqlTransformation, RedshiftTransformation)
 class VarianceAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
-    group_keys: list[str]
 
     name = 'var_agg'
     dtype = FeatureType.float()
@@ -1922,7 +1921,6 @@ class VarianceAggregation(Transformation, PsqlTransformation, RedshiftTransforma
 class MedianAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
 
     key: str
-    group_keys: list[str]
 
     name = 'median_agg'
     dtype = FeatureType.float()
@@ -1942,7 +1940,6 @@ class PercentileAggregation(Transformation, PsqlTransformation, RedshiftTransfor
 
     key: str
     percentile: float
-    group_keys: list[str]
 
     name = 'percentile_agg'
     dtype = FeatureType.float()

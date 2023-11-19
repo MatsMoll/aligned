@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, Callable, TypeVar
 import pandas as pd
 import polars as pl
 
-from aligned.compiler.constraint_factory import ConstraintFactory, LiteralFactory
 from aligned.compiler.vector_index_factory import VectorIndexFactory
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.schemas.constraints import (
@@ -23,7 +22,7 @@ from aligned.schemas.constraints import (
     StartsWith,
     UpperBoundInclusive,
 )
-from aligned.schemas.derivied_feature import DerivedFeature
+from aligned.schemas.derivied_feature import DerivedFeature, AggregateOver
 from aligned.schemas.event_trigger import EventTrigger as EventTriggerSchema
 from aligned.schemas.feature import EventTimestamp as EventTimestampFeature
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
@@ -57,20 +56,18 @@ class TransformationFactory:
     """
 
     def compile(self) -> Transformation:
-        pass
+        raise NotImplementedError(type(self))
 
     @property
     def using_features(self) -> list[FeatureFactory]:
-        pass
+        raise NotImplementedError(type(self))
 
 
 class AggregationTransformationFactory:
-    @property
-    def time_window(self) -> timedelta | None:
-        pass
-
-    def with_group_by(self, entities: list[FeatureReferance]) -> TransformationFactory:
-        pass
+    def aggregate_over(
+        self, group_by: list[FeatureReferance], time_columns: FeatureReferance | None
+    ) -> AggregateOver:
+        raise NotImplementedError(type(self))
 
 
 T = TypeVar('T')
@@ -335,7 +332,7 @@ class FeatureFactory(FeatureReferencable):
     _description: str | None = None
 
     transformation: TransformationFactory | None = None
-    constraints: set[ConstraintFactory] | None = None
+    constraints: set[Constraint] | None = None
 
     def __set_name__(self, owner, name):
         self._name = name
@@ -357,6 +354,11 @@ class FeatureFactory(FeatureReferencable):
         return [feat._name for feat in self.transformation.using_features if feat._name]
 
     def feature_referance(self) -> FeatureReferance:
+        if not self._location:
+            raise ValueError(
+                f'_location is not set for {self.name}. '
+                'Therefore, making it impossible to create a referance.'
+            )
         return FeatureReferance(self.name, self._location, self.dtype)
 
     def feature(self) -> Feature:
@@ -382,7 +384,7 @@ class FeatureFactory(FeatureReferencable):
         return DerivedFeature(
             name=self.name,
             dtype=self.dtype,
-            depending_on=[feat.feature_referance() for feat in self.transformation.using_features],
+            depending_on={feat.feature_referance() for feat in self.transformation.using_features},
             transformation=self.transformation.compile(),
             depth=self.depth(),
             description=self._description,
@@ -464,7 +466,11 @@ class FeatureFactory(FeatureReferencable):
         from aligned.compiler.transformation_factory import PolarsTransformationFactory
 
         dtype: FeatureFactory = self.copy_type()  # type: ignore [assignment]
-        dtype.transformation = PolarsTransformationFactory(dtype, transformation, using_features or [self])
+        dtype.transformation = PolarsTransformationFactory(
+            dtype,
+            transformation,  # type: ignore
+            using_features or [self],  # type: ignore
+        )
         return dtype  # type: ignore [return-value]
 
     def transform_polars(
@@ -486,7 +492,7 @@ class FeatureFactory(FeatureReferencable):
         self._add_constraint(Optional())  # type: ignore[attr-defined]
         return self
 
-    def _add_constraint(self, constraint: ConstraintFactory | Constraint) -> None:
+    def _add_constraint(self, constraint: Constraint) -> None:
         # The constraint should be a lazy evaluated constraint
         # Aka, a factory, as with the features.
         # Therefore making it possible to add distribution checks
@@ -495,7 +501,7 @@ class FeatureFactory(FeatureReferencable):
         if isinstance(constraint, Constraint):
             self.constraints.add(constraint)
         else:
-            self.constraints.add(LiteralFactory(constraint))
+            raise ValueError(f'Unable to add constraint {constraint}.')
 
     def is_not_null(self) -> Bool:
         from aligned.compiler.transformation_factory import NotNullFactory
@@ -1155,7 +1161,6 @@ class Coordinate:
 
     def eucledian_distance(self, to: Coordinate) -> Float:
         sub = self.x - to.x
-        sub.hidden = True
         return (sub**2 + (self.y - to.y) ** 2) ** 0.5
 
 
@@ -1164,6 +1169,7 @@ class StringAggregation:
 
     feature: String
     time_window: timedelta | None = None
+    every_window: timedelta | None = None
 
     def over(self, time_window: timedelta) -> StringAggregation:
         self.time_window = time_window
@@ -1174,7 +1180,7 @@ class StringAggregation:
 
         feature = String()
         feature.transformation = ConcatStringsAggrigationFactory(
-            self.feature, group_by=[], separator=separator, time_window=self.time_window
+            self.feature, separator=separator, time_window=self.time_window
         )
         return feature
 
@@ -1182,7 +1188,7 @@ class StringAggregation:
         from aligned.compiler.aggregation_factory import CountAggregationFactory
 
         feat = Int32()
-        feat.transformation = CountAggregationFactory(self.feature, group_by=[], time_window=self.time_window)
+        feat.transformation = CountAggregationFactory(self.feature, time_window=self.time_window)
         return feat
 
 
@@ -1191,6 +1197,7 @@ class CategoricalAggregation:
 
     feature: FeatureFactory
     time_window: timedelta | None = None
+    every_interval: timedelta | None = None
 
     def over(
         self,
@@ -1199,8 +1206,21 @@ class CategoricalAggregation:
         hours: float | None = None,
         minutes: float | None = None,
         seconds: float | None = None,
-    ) -> ArithmeticAggregation:
+    ) -> CategoricalAggregation:
         self.time_window = timedelta(
+            weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
+        )
+        return self
+
+    def every(
+        self,
+        weeks: float | None = None,
+        days: float | None = None,
+        hours: float | None = None,
+        minutes: float | None = None,
+        seconds: float | None = None,
+    ) -> CategoricalAggregation:
+        self.every_interval = timedelta(
             weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
         )
         return self
@@ -1208,8 +1228,8 @@ class CategoricalAggregation:
     def count(self) -> Int64:
         from aligned.compiler.aggregation_factory import CountAggregationFactory
 
-        feat = Float()
-        feat.transformation = CountAggregationFactory(self.feature, group_by=[], time_window=self.time_window)
+        feat = Int64()
+        feat.transformation = CountAggregationFactory(self.feature, time_window=self.time_window)
         return feat
 
 
@@ -1218,6 +1238,7 @@ class ArithmeticAggregation:
 
     feature: ArithmeticFeature
     time_window: timedelta | None = None
+    every_interval: timedelta | None = None
 
     def over(
         self,
@@ -1232,39 +1253,62 @@ class ArithmeticAggregation:
         )
         return self
 
+    def every(
+        self,
+        weeks: float | None = None,
+        days: float | None = None,
+        hours: float | None = None,
+        minutes: float | None = None,
+        seconds: float | None = None,
+    ) -> ArithmeticAggregation:
+        self.every_interval = timedelta(
+            weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
+        )
+        return self
+
     def sum(self) -> Float:
         from aligned.compiler.aggregation_factory import SumAggregationFactory
 
         feat = Float()
-        feat.transformation = SumAggregationFactory(self.feature, group_by=[], time_window=self.time_window)
+        feat.transformation = SumAggregationFactory(
+            self.feature, time_window=self.time_window, every_interval=self.every_interval
+        )
         return feat
 
     def mean(self) -> Float:
         from aligned.compiler.aggregation_factory import MeanAggregationFactory
 
         feat = Float()
-        feat.transformation = MeanAggregationFactory(self.feature, group_by=[], time_window=self.time_window)
+        feat.transformation = MeanAggregationFactory(
+            self.feature, time_window=self.time_window, every_interval=self.every_interval
+        )
         return feat
 
     def min(self) -> Float:
         from aligned.compiler.aggregation_factory import MinAggregationFactory
 
         feat = Float()
-        feat.transformation = MinAggregationFactory(self.feature, group_by=[], time_window=self.time_window)
+        feat.transformation = MinAggregationFactory(
+            self.feature, time_window=self.time_window, every_interval=self.every_interval
+        )
         return feat
 
     def max(self) -> Float:
         from aligned.compiler.aggregation_factory import MaxAggregationFactory
 
         feat = Float()
-        feat.transformation = MaxAggregationFactory(self.feature, group_by=[], time_window=self.time_window)
+        feat.transformation = MaxAggregationFactory(
+            self.feature, time_window=self.time_window, every_interval=self.every_interval
+        )
         return feat
 
     def count(self) -> Int64:
         from aligned.compiler.aggregation_factory import CountAggregationFactory
 
         feat = Int64()
-        feat.transformation = CountAggregationFactory(self.feature, group_by=[], time_window=self.time_window)
+        feat.transformation = CountAggregationFactory(
+            self.feature, time_window=self.time_window, every_interval=self.every_interval
+        )
         return feat
 
     def count_distinct(self) -> Int64:
@@ -1272,7 +1316,7 @@ class ArithmeticAggregation:
 
         feat = Int64()
         feat.transformation = CountDistinctAggregationFactory(
-            self.feature, group_by=[], time_window=self.time_window
+            self.feature, time_window=self.time_window, every_interval=self.every_interval
         )
         return feat
 
@@ -1280,7 +1324,9 @@ class ArithmeticAggregation:
         from aligned.compiler.aggregation_factory import StdAggregationFactory
 
         feat = Float()
-        feat.transformation = StdAggregationFactory(self.feature, group_by=[], time_window=self.time_window)
+        feat.transformation = StdAggregationFactory(
+            self.feature, time_window=self.time_window, every_interval=self.every_interval
+        )
         return feat
 
     def variance(self) -> Float:
@@ -1288,7 +1334,7 @@ class ArithmeticAggregation:
 
         feat = Float()
         feat.transformation = VarianceAggregationFactory(
-            self.feature, group_by=[], time_window=self.time_window
+            self.feature, time_window=self.time_window, every_interval=self.every_interval
         )
         return feat
 
@@ -1297,7 +1343,7 @@ class ArithmeticAggregation:
 
         feat = Float()
         feat.transformation = MedianAggregationFactory(
-            self.feature, group_by=[], time_window=self.time_window
+            self.feature, time_window=self.time_window, every_interval=self.every_interval
         )
         return feat
 
@@ -1306,6 +1352,9 @@ class ArithmeticAggregation:
 
         feat = Float()
         feat.transformation = PercentileAggregationFactory(
-            self.feature, percentile=percentile, group_by=[], time_window=self.time_window
+            self.feature,
+            percentile=percentile,
+            time_window=self.time_window,
+            every_interval=self.every_interval,
         )
         return feat
