@@ -68,3 +68,32 @@ async def test_aggregations_on_all_no_window() -> None:
 
     df = await TestAgg.query().all().to_pandas()
     assert df.shape[0] == 3
+
+
+@pytest.mark.asyncio
+async def test_aggregations_on_all_no_window_materialised() -> None:
+    materialized_source = FileSource.parquet_at('test_data/credit_history_mater.parquet')
+
+    @feature_view(
+        name='test_agg',
+        source=FileSource.parquet_at('test_data/credit_history.parquet'),
+        materialized_source=materialized_source,
+    )
+    class TestAgg:
+        dob_ssn = String().as_entity()
+
+        event_timestamp = EventTimestamp()
+
+        credit_card_due = Int32()
+        student_loan_due = Int32()
+
+        credit_card_due_sum = credit_card_due.aggregate().sum()
+        student_loan_due_mean = student_loan_due.aggregate().mean()
+
+    org_values_job = TestAgg.query().using_source(TestAgg.metadata.source).all()
+    await org_values_job.write_to_source(materialized_source)
+
+    values = await org_values_job.to_polars()
+    df = await TestAgg.query().all().to_polars()
+
+    assert df.sort('dob_ssn').collect().frame_equal(values.sort('dob_ssn').select(df.columns).collect())
