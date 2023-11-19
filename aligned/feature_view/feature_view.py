@@ -5,6 +5,7 @@ import logging
 from abc import ABC, abstractproperty
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, TypeVar, Generic, Type, Callable
+from uuid import uuid4
 
 from aligned.compiler.feature_factory import (
     AggregationTransformationFactory,
@@ -17,8 +18,6 @@ from aligned.data_source.batch_data_source import BatchDataSource, JoinDataSourc
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.schemas.derivied_feature import (
     AggregatedFeature,
-    AggregateOver,
-    AggregationTimeWindow,
 )
 from aligned.schemas.feature import FeatureLocation, FeatureReferance
 from aligned.schemas.feature_view import CompiledFeatureView
@@ -113,18 +112,22 @@ class FeatureViewWrapper(Generic[T]):
 
         return FeatureView.compile_with_metadata(self.view(), self.metadata)
 
-    def with_filter(
-        self, named: str, where: Callable[[T], Bool], materialize_source: BatchDataSource | None = None
+    def filter(
+        self, name: str, where: Callable[[T], Bool], materialize_source: BatchDataSource | None = None
     ) -> FeatureViewWrapper[T]:
 
         from aligned.data_source.batch_data_source import FilteredDataSource
 
         meta = self.metadata
-        meta.name = named
+        meta.name = name
 
         condition = where(self.__call__())
 
         main_source = meta.materialized_source if meta.materialized_source else meta.source
+
+        if not condition._name:
+            condition._name = str(uuid4())
+            condition._location = FeatureLocation.feature_view(name)
 
         if condition.transformation:
             meta.source = FilteredDataSource(main_source, condition.compile())
@@ -472,31 +475,20 @@ class FeatureView(ABC):
         if not view.entities:
             raise ValueError(f'FeatureView {metadata.name} must contain at least one Entity')
 
-        aggregation_group_by = [
-            FeatureReferance(entity.name, FeatureLocation.feature_view(view.name), entity.dtype)
-            for entity in view.entities
-        ]
+        loc = FeatureLocation.feature_view(view.name)
+        aggregation_group_by = [FeatureReferance(entity.name, loc, entity.dtype) for entity in view.entities]
+        event_timestamp_ref = (
+            FeatureReferance(view.event_timestamp.name, loc, view.event_timestamp.dtype)
+            if view.event_timestamp
+            else None
+        )
 
         for aggr in aggregations:
             agg_trans = aggr.transformation
             if not isinstance(agg_trans, AggregationTransformationFactory):
                 continue
 
-            if view.event_timestamp is None and agg_trans.time_window:
-                raise ValueError(f'FeatureView {metadata.name} must contain an EventTimestamp')
-
-            time_window: AggregationTimeWindow | None = None
-            if agg_trans.time_window:
-
-                timestamp_ref = FeatureReferance(
-                    view.event_timestamp.name,
-                    FeatureLocation.feature_view(view.name),
-                    dtype=view.event_timestamp.dtype,
-                )
-                time_window = AggregationTimeWindow(agg_trans.time_window, timestamp_ref)
-
-            aggr.transformation = agg_trans.with_group_by(aggregation_group_by)
-            config = AggregateOver(aggregation_group_by, window=time_window, condition=None)
+            config = agg_trans.aggregate_over(aggregation_group_by, event_timestamp_ref)
             feature = aggr.compile()
             feat = AggregatedFeature(
                 derived_feature=feature,

@@ -8,16 +8,37 @@ from aligned.compiler.feature_factory import (
     String,
     TransformationFactory,
 )
+from aligned.schemas.derivied_feature import AggregateOver, AggregationTimeWindow, DerivedFeature
 from aligned.schemas.transformation import Transformation
+
+
+def aggregate_over(
+    group_by: list[FeatureReferance],
+    time_column: FeatureReferance | None,
+    time_window: timedelta | None,
+    every_interval: timedelta | None,
+    condition: DerivedFeature | None,
+) -> AggregateOver:
+    if not time_window:
+        return AggregateOver(group_by)
+
+    if not time_column:
+        raise ValueError(
+            f'Aggregation {group_by} over {time_column} have a time window, but no event timestamp to use'
+        )
+
+    return AggregateOver(
+        group_by, AggregationTimeWindow(time_window, time_column, every_interval), condition=condition
+    )
 
 
 @dataclass
 class ConcatStringsAggrigationFactory(TransformationFactory, AggregationTransformationFactory):
 
     feature: String
-    group_by: list[FeatureReferance]
     separator: str | None = None
     time_window: timedelta | None = None
+    every_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -28,21 +49,21 @@ class ConcatStringsAggrigationFactory(TransformationFactory, AggregationTransfor
 
         return ConcatStringAggregation(
             key=self.feature.feature_referance().name,
-            group_keys=[feature.name for feature in self.group_by],
-            separator=self.separator,
+            separator=self.separator or '',
         )
 
-    def with_group_by(self, values: list[FeatureReferance]) -> TransformationFactory:
-        self.group_by = values
-        return self
+    def aggregate_over(
+        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+    ) -> AggregateOver:
+        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
 
 
 @dataclass
 class SumAggregationFactory(TransformationFactory, AggregationTransformationFactory):
 
     feature: FeatureFactory
-    group_by: list[FeatureReferance]
     time_window: timedelta | None = None
+    every_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -53,20 +74,20 @@ class SumAggregationFactory(TransformationFactory, AggregationTransformationFact
 
         return SumAggregation(
             key=self.feature.feature_referance().name,
-            group_keys=[feature.name for feature in self.group_by],
         )
 
-    def with_group_by(self, values: list[FeatureReferance]) -> TransformationFactory:
-        self.group_by = values
-        return self
+    def aggregate_over(
+        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+    ) -> AggregateOver:
+        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
 
 
 @dataclass
 class MeanAggregationFactory(TransformationFactory, AggregationTransformationFactory):
 
     feature: FeatureFactory
-    group_by: list[FeatureReferance]
     time_window: timedelta | None = None
+    every_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -77,20 +98,20 @@ class MeanAggregationFactory(TransformationFactory, AggregationTransformationFac
 
         return MeanAggregation(
             key=self.feature.feature_referance().name,
-            group_keys=[feature.name for feature in self.group_by],
         )
 
-    def with_group_by(self, values: list[FeatureReferance]) -> TransformationFactory:
-        self.group_by = values
-        return self
+    def aggregate_over(
+        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+    ) -> AggregateOver:
+        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
 
 
 @dataclass
 class MinAggregationFactory(TransformationFactory, AggregationTransformationFactory):
 
     feature: FeatureFactory
-    group_by: list[FeatureReferance]
     time_window: timedelta | None = None
+    every_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -101,20 +122,20 @@ class MinAggregationFactory(TransformationFactory, AggregationTransformationFact
 
         return MinAggregation(
             key=self.feature.feature_referance().name,
-            group_keys=[feature.name for feature in self.group_by],
         )
 
-    def with_group_by(self, values: list[FeatureReferance]) -> TransformationFactory:
-        self.group_by = values
-        return self
+    def aggregate_over(
+        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+    ) -> AggregateOver:
+        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
 
 
 @dataclass
 class MaxAggregationFactory(TransformationFactory, AggregationTransformationFactory):
 
     feature: FeatureFactory
-    group_by: list[FeatureReferance]
     time_window: timedelta | None = None
+    every_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -125,20 +146,20 @@ class MaxAggregationFactory(TransformationFactory, AggregationTransformationFact
 
         return MaxAggregation(
             key=self.feature.feature_referance().name,
-            group_keys=[feature.name for feature in self.group_by],
         )
 
-    def with_group_by(self, values: list[FeatureReferance]) -> TransformationFactory:
-        self.group_by = values
-        return self
+    def aggregate_over(
+        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+    ) -> AggregateOver:
+        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
 
 
 @dataclass
 class CountAggregationFactory(TransformationFactory, AggregationTransformationFactory):
 
     feature: FeatureFactory
-    group_by: list[FeatureReferance]
     time_window: timedelta | None = None
+    every_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -149,20 +170,20 @@ class CountAggregationFactory(TransformationFactory, AggregationTransformationFa
 
         return CountAggregation(
             key=self.feature.feature_referance().name,
-            group_keys=[feature.name for feature in self.group_by],
         )
 
-    def with_group_by(self, values: list[FeatureReferance]) -> TransformationFactory:
-        self.group_by = values
-        return self
+    def aggregate_over(
+        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+    ) -> AggregateOver:
+        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
 
 
 @dataclass
 class CountDistinctAggregationFactory(TransformationFactory, AggregationTransformationFactory):
 
     feature: FeatureFactory
-    group_by: list[FeatureReferance]
     time_window: timedelta | None = None
+    every_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -173,20 +194,20 @@ class CountDistinctAggregationFactory(TransformationFactory, AggregationTransfor
 
         return CountDistinctAggregation(
             key=self.feature.feature_referance().name,
-            group_keys=[feature.name for feature in self.group_by],
         )
 
-    def with_group_by(self, values: list[FeatureReferance]) -> TransformationFactory:
-        self.group_by = values
-        return self
+    def aggregate_over(
+        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+    ) -> AggregateOver:
+        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
 
 
 @dataclass
 class StdAggregationFactory(TransformationFactory, AggregationTransformationFactory):
 
     feature: FeatureFactory
-    group_by: list[FeatureReferance]
     time_window: timedelta | None = None
+    every_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -197,20 +218,20 @@ class StdAggregationFactory(TransformationFactory, AggregationTransformationFact
 
         return StdAggregation(
             key=self.feature.feature_referance().name,
-            group_keys=[feature.name for feature in self.group_by],
         )
 
-    def with_group_by(self, values: list[FeatureReferance]) -> TransformationFactory:
-        self.group_by = values
-        return self
+    def aggregate_over(
+        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+    ) -> AggregateOver:
+        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
 
 
 @dataclass
 class VarianceAggregationFactory(TransformationFactory, AggregationTransformationFactory):
 
     feature: FeatureFactory
-    group_by: list[FeatureReferance]
     time_window: timedelta | None = None
+    every_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -221,20 +242,20 @@ class VarianceAggregationFactory(TransformationFactory, AggregationTransformatio
 
         return VarianceAggregation(
             key=self.feature.feature_referance().name,
-            group_keys=[feature.name for feature in self.group_by],
         )
 
-    def with_group_by(self, values: list[FeatureReferance]) -> TransformationFactory:
-        self.group_by = values
-        return self
+    def aggregate_over(
+        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+    ) -> AggregateOver:
+        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
 
 
 @dataclass
 class MedianAggregationFactory(TransformationFactory, AggregationTransformationFactory):
 
     feature: FeatureFactory
-    group_by: list[FeatureReferance]
     time_window: timedelta | None = None
+    every_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -245,12 +266,12 @@ class MedianAggregationFactory(TransformationFactory, AggregationTransformationF
 
         return MedianAggregation(
             key=self.feature.feature_referance().name,
-            group_keys=[feature.name for feature in self.group_by],
         )
 
-    def with_group_by(self, values: list[FeatureReferance]) -> TransformationFactory:
-        self.group_by = values
-        return self
+    def aggregate_over(
+        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+    ) -> AggregateOver:
+        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
 
 
 @dataclass
@@ -258,8 +279,8 @@ class PercentileAggregationFactory(TransformationFactory, AggregationTransformat
 
     feature: FeatureFactory
     percentile: float
-    group_by: list[FeatureReferance]
     time_window: timedelta | None = None
+    every_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -271,9 +292,9 @@ class PercentileAggregationFactory(TransformationFactory, AggregationTransformat
         return PercentileAggregation(
             key=self.feature.feature_referance().name,
             percentile=self.percentile,
-            group_keys=[feature.name for feature in self.group_by],
         )
 
-    def with_group_by(self, values: list[FeatureReferance]) -> TransformationFactory:
-        self.group_by = values
-        return self
+    def aggregate_over(
+        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+    ) -> AggregateOver:
+        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)

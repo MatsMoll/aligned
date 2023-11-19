@@ -69,9 +69,7 @@ class AggregationTimeWindow(Codable):
     time_window: timedelta
     time_column: FeatureReferance
 
-    @property
-    def group_by_names(self) -> list[str]:
-        return [feature.name for feature in self.group_by]
+    every_interval: timedelta | None = field(default=None)
 
     def __hash__(self) -> int:
         return self.time_window.__hash__()

@@ -38,6 +38,70 @@ class LiteralRetrivalJob(RetrivalJob):
         return self.df
 
 
+async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.LazyFrame:
+
+    aggregate_over = request.aggregate_over()
+
+    first_over = list(aggregate_over.keys())[0]
+    if len(aggregate_over) == 1 and first_over.window is None:
+
+        exprs = []
+        for feat in aggregate_over[first_over]:
+            tran = await feat.derived_feature.transformation.transform_polars(core_data, feat.name)
+
+            if not isinstance(tran, pl.Expr):
+                raise ValueError(f'Aggregation needs to be an expression, got {tran}')
+            exprs.append(tran.alias(feat.name))
+
+        return core_data.groupby(first_over.group_by_names).agg(exprs)
+
+    group_by_names = first_over.group_by_names
+
+    if not first_over.window:
+        raise ValueError('Found no time column to aggregate over.')
+
+    time_name = first_over.window.time_column.name
+
+    sorted_data = core_data.sort(time_name)
+    results = None
+
+    for over, features in aggregate_over.items():
+        exprs = []
+        for feat in features:
+            tran = await feat.derived_feature.transformation.transform_polars(core_data, feat.name)
+
+            if not isinstance(tran, pl.Expr):
+                raise ValueError(f'Aggregation needs to be an expression, got {tran}')
+            exprs.append(tran.alias(feat.name))
+
+        if not over.window:
+            raise ValueError('No time window spesificed.')
+
+        if over.window.every_interval:
+            sub = sorted_data.groupby_dynamic(
+                time_name,
+                every=over.window.every_interval,
+                period=over.window.time_window,
+                by=over.group_by_names,
+            ).agg(exprs)
+        else:
+            sub = sorted_data.groupby_rolling(
+                time_name, period=over.window.time_window, by=over.group_by_names
+            ).agg(exprs)
+
+        if results is not None:
+            results = pl.concat(
+                [results.collect(), sub.select(pl.exclude(group_by_names)).collect()], how='horizontal'
+            ).lazy()
+        else:
+            results = sub
+
+    if results is None:
+        raise ValueError(f'Generated no results for aggregate request {request.name}.')
+
+    return results
+
+
 @dataclass
 class FileFullJob(RetrivalJob):
 
@@ -69,8 +133,13 @@ class FileFullJob(RetrivalJob):
         else:
             return df
 
-    def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
+    async def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
+
+        if self.request.aggregated_features:
+            first_feature = list(self.request.aggregated_features)[0]
+            if first_feature.name in df.columns:
+                return df
 
         entity_names = self.request.entity_names
         all_names = list(self.request.all_required_feature_names.union(entity_names))
@@ -85,18 +154,20 @@ class FileFullJob(RetrivalJob):
         }
         df = df.rename(mapping=renames)
 
+        if self.request.aggregated_features:
+            df = await aggregate(self.request, df)
+
         if self.limit:
             return df.limit(self.limit)
         else:
             return df
 
     async def to_pandas(self) -> pd.DataFrame:
-        file = await self.source.read_pandas()
-        return self.file_transformations(file)
+        return (await self.to_polars()).collect().to_pandas()
 
     async def to_polars(self) -> pl.LazyFrame:
         file = await self.source.to_polars()
-        return self.file_transform_polars(file)
+        return await self.file_transform_polars(file)
 
 
 @dataclass
@@ -166,6 +237,40 @@ class FileDateJob(RetrivalJob):
         return self.file_transform_polars(file)
 
 
+async def aggregate_over(
+    group: AggregateOver,
+    features: set[AggregatedFeature],
+    df: pl.LazyFrame,
+    event_timestamp_col: str,
+    group_by: list[str] | None = None,
+) -> pl.LazyFrame:
+
+    if not group_by:
+        group_by = ['row_id']
+
+    subset = df
+    if group.condition:
+        raise NotImplementedError('Condition aggregation not implemented for file data source')
+
+    if group.window:
+        event_timestamp = group.window.time_column.name
+        end = pl.col(event_timestamp_col)
+        start = end - group.window.time_window
+        subset = subset.filter(pl.col(event_timestamp).is_between(start, end))
+
+    transformations = []
+    for feature in features:
+        expr = await feature.derived_feature.transformation.transform_polars(
+            subset, feature.derived_feature.name
+        )
+        if isinstance(expr, pl.Expr):
+            transformations.append(expr.alias(feature.name))
+        else:
+            raise NotImplementedError('Only expressions are supported for file data source')
+
+    return subset.groupby(group_by).agg(transformations)
+
+
 @dataclass
 class FileFactualJob(RetrivalJob):
 
@@ -179,36 +284,6 @@ class FileFactualJob(RetrivalJob):
 
     def describe(self) -> str:
         return f'Reading file at {self.source}'
-
-    async def aggregate_over(
-        self,
-        group: AggregateOver,
-        features: set[AggregatedFeature],
-        df: pl.LazyFrame,
-        event_timestamp_col: str,
-    ) -> pl.LazyFrame:
-
-        subset = df
-        if group.condition:
-            raise NotImplementedError('Condition aggregation not implemented for file data source')
-
-        if group.window:
-            event_timestamp = group.window.time_column.name
-            end = pl.col(event_timestamp_col)
-            start = end - group.window.time_window
-            subset = subset.filter(pl.col(event_timestamp).is_between(start, end))
-
-        transformations = []
-        for feature in features:
-            expr = await feature.derived_feature.transformation.transform_polars(
-                subset, feature.derived_feature.name
-            )
-            if isinstance(expr, pl.Expr):
-                transformations.append(expr.alias(feature.name))
-            else:
-                raise NotImplementedError('Only expressions are supported for file data source')
-
-        return subset.groupby('row_id').agg(transformations)
 
     async def file_transformations(self, df: pl.LazyFrame) -> pl.LazyFrame:
         """Selects only the wanted subset from the loaded source
@@ -294,7 +369,7 @@ class FileFactualJob(RetrivalJob):
             new_result = new_result.select(pl.exclude(list(entity_names)))
 
             for group, features in request.aggregate_over().items():
-                aggregated_df = await self.aggregate_over(group, features, new_result, event_timestamp_col)
+                aggregated_df = await aggregate_over(group, features, new_result, event_timestamp_col)
                 new_result = new_result.join(aggregated_df, on='row_id', how='left')
 
             if request.event_timestamp and using_event_timestamp:
