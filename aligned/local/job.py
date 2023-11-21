@@ -83,6 +83,7 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
                     time_name,
                     every=over.window.every_interval,
                     period=over.window.time_window,
+                    offset=over.window.offset_interval,
                     by=over.group_by_names,
                 )
                 .agg(exprs)
@@ -90,7 +91,10 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
             )
         else:
             sub = sorted_data.groupby_rolling(
-                time_name, period=over.window.time_window, by=over.group_by_names
+                time_name,
+                period=over.window.time_window,
+                offset=over.window.offset_interval,
+                by=over.group_by_names,
             ).agg(exprs)
 
         if results is not None:
