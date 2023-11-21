@@ -2,7 +2,8 @@ from os import environ
 
 import pytest
 
-from aligned import FeatureStore, FeatureView, PostgreSQLConfig
+from aligned import FeatureStore, PostgreSQLConfig
+from aligned.feature_view.feature_view import FeatureView
 from conftest import DataTest
 import platform
 

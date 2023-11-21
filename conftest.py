@@ -9,17 +9,16 @@ from aligned import (
     Bool,
     Entity,
     EventTimestamp,
-    FeatureView,
-    FeatureViewMetadata,
     FileSource,
     Float,
     Int32,
     Int64,
-    ModelContract,
     RedisConfig,
     String,
     TextVectoriserModel,
 )
+from aligned.feature_view.feature_view import FeatureView, FeatureViewMetadata
+from aligned.compiler.model import ModelContract
 from aligned.feature_store import FeatureStore
 from aligned.feature_view.combined_view import CombinedFeatureView, CombinedFeatureViewMetadata
 from aligned.retrival_job import DerivedFeatureJob, RetrivalJob, RetrivalRequest

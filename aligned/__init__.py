@@ -9,15 +9,12 @@ from aligned.compiler.feature_factory import (
     Json,
     String,
     Timestamp,
+    CustomAggregation,
 )
-from aligned.compiler.model import ModelContract, model_contract
+from aligned.compiler.model import model_contract
 from aligned.data_source.stream_data_source import HttpStreamSource
 from aligned.feature_store import FeatureStore
 from aligned.feature_view import (
-    CombinedFeatureView,
-    CombinedFeatureViewMetadata,
-    FeatureView,
-    FeatureViewMetadata,
     feature_view,
     combined_feature_view,
 )
@@ -28,14 +25,11 @@ from aligned.sources.psql import PostgreSQLConfig
 from aligned.sources.redis import RedisConfig
 from aligned.sources.redshift import RedshiftSQLConfig
 from aligned.sources.s3 import AwsS3Config
+from aligned.schemas.feature import FeatureLocation
 
 __all__ = [
     'FeatureStore',
-    'FeatureView',
-    'FeatureViewMetadata',
     'feature_view',
-    'CombinedFeatureView',
-    'CombinedFeatureViewMetadata',
     # Batch Data sources
     'PostgreSQLConfig',
     'FileSource',
@@ -59,9 +53,12 @@ __all__ = [
     'EventTimestamp',
     'Timestamp',
     'Json',
-    'ModelContract',
     'TextVectoriserModel',
     'feature_view',
     'combined_feature_view',
     'model_contract',
+    # Aggregation
+    'CustomAggregation',
+    # Schemas
+    'FeatureLocation',
 ]

@@ -1165,22 +1165,63 @@ class Coordinate:
 
 
 @dataclass
+class CustomAggregation:
+    def transform_polars(self, expression: pl.Expr, using_features: list[FeatureFactory], as_dtype: T) -> T:
+        from aligned.compiler.transformation_factory import PolarsTransformationFactory
+
+        dtype: FeatureFactory = as_dtype  # type: ignore [assignment]
+        dtype.transformation = PolarsTransformationFactory(dtype, expression, using_features)
+        return dtype  # type: ignore [return-value]
+
+
+@dataclass
 class StringAggregation:
 
     feature: String
     time_window: timedelta | None = None
     every_window: timedelta | None = None
+    offset_interval: timedelta | None = None
 
     def over(self, time_window: timedelta) -> StringAggregation:
         self.time_window = time_window
         return self
+
+    def every(
+        self,
+        weeks: float | None = None,
+        days: float | None = None,
+        hours: float | None = None,
+        minutes: float | None = None,
+        seconds: float | None = None,
+    ) -> StringAggregation:
+        every_interval = timedelta(
+            weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
+        )
+        return StringAggregation(self.feature, self.time_window, every_interval, self.offset_interval)
+
+    def offset(
+        self,
+        weeks: float | None = None,
+        days: float | None = None,
+        hours: float | None = None,
+        minutes: float | None = None,
+        seconds: float | None = None,
+    ) -> StringAggregation:
+        offset_interval = timedelta(
+            weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
+        )
+        return StringAggregation(self.feature, self.time_window, self.every_window, offset_interval)
 
     def concat(self, separator: str | None = None) -> String:
         from aligned.compiler.aggregation_factory import ConcatStringsAggrigationFactory
 
         feature = String()
         feature.transformation = ConcatStringsAggrigationFactory(
-            self.feature, separator=separator, time_window=self.time_window
+            self.feature,
+            separator=separator,
+            time_window=self.time_window,
+            every_interval=self.every_window,
+            offset_interval=self.offset_interval,
         )
         return feature
 
@@ -1188,7 +1229,12 @@ class StringAggregation:
         from aligned.compiler.aggregation_factory import CountAggregationFactory
 
         feat = Int32()
-        feat.transformation = CountAggregationFactory(self.feature, time_window=self.time_window)
+        feat.transformation = CountAggregationFactory(
+            self.feature,
+            time_window=self.time_window,
+            every_interval=self.every_window,
+            offset_interval=self.offset_interval,
+        )
         return feat
 
 
@@ -1198,6 +1244,7 @@ class CategoricalAggregation:
     feature: FeatureFactory
     time_window: timedelta | None = None
     every_interval: timedelta | None = None
+    offset_interval: timedelta | None = None
 
     def over(
         self,
@@ -1207,10 +1254,10 @@ class CategoricalAggregation:
         minutes: float | None = None,
         seconds: float | None = None,
     ) -> CategoricalAggregation:
-        self.time_window = timedelta(
+        time_window = timedelta(
             weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
         )
-        return self
+        return CategoricalAggregation(self.feature, time_window, self.every_interval, self.offset_interval)
 
     def every(
         self,
@@ -1220,16 +1267,34 @@ class CategoricalAggregation:
         minutes: float | None = None,
         seconds: float | None = None,
     ) -> CategoricalAggregation:
-        self.every_interval = timedelta(
+        every_interval = timedelta(
             weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
         )
-        return self
+        return CategoricalAggregation(self.feature, self.time_window, every_interval, self.offset_interval)
+
+    def offset(
+        self,
+        weeks: float | None = None,
+        days: float | None = None,
+        hours: float | None = None,
+        minutes: float | None = None,
+        seconds: float | None = None,
+    ) -> CategoricalAggregation:
+        offset_interval = timedelta(
+            weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
+        )
+        return CategoricalAggregation(self.feature, self.time_window, self.every_interval, offset_interval)
 
     def count(self) -> Int64:
         from aligned.compiler.aggregation_factory import CountAggregationFactory
 
         feat = Int64()
-        feat.transformation = CountAggregationFactory(self.feature, time_window=self.time_window)
+        feat.transformation = CountAggregationFactory(
+            self.feature,
+            time_window=self.time_window,
+            every_interval=self.every_interval,
+            offset_interval=self.offset_interval,
+        )
         return feat
 
 
@@ -1239,6 +1304,7 @@ class ArithmeticAggregation:
     feature: ArithmeticFeature
     time_window: timedelta | None = None
     every_interval: timedelta | None = None
+    offset_interval: timedelta | None = None
 
     def over(
         self,
@@ -1248,10 +1314,10 @@ class ArithmeticAggregation:
         minutes: float | None = None,
         seconds: float | None = None,
     ) -> ArithmeticAggregation:
-        self.time_window = timedelta(
+        time_window = timedelta(
             weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
         )
-        return self
+        return ArithmeticAggregation(self.feature, time_window, self.every_interval, self.offset_interval)
 
     def every(
         self,
@@ -1261,17 +1327,33 @@ class ArithmeticAggregation:
         minutes: float | None = None,
         seconds: float | None = None,
     ) -> ArithmeticAggregation:
-        self.every_interval = timedelta(
+        every_interval = timedelta(
             weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
         )
-        return self
+        return ArithmeticAggregation(self.feature, self.time_window, every_interval, self.offset_interval)
+
+    def offset(
+        self,
+        weeks: float | None = None,
+        days: float | None = None,
+        hours: float | None = None,
+        minutes: float | None = None,
+        seconds: float | None = None,
+    ) -> ArithmeticAggregation:
+        offset_interval = timedelta(
+            weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
+        )
+        return ArithmeticAggregation(self.feature, self.time_window, self.every_interval, offset_interval)
 
     def sum(self) -> Float:
         from aligned.compiler.aggregation_factory import SumAggregationFactory
 
         feat = Float()
         feat.transformation = SumAggregationFactory(
-            self.feature, time_window=self.time_window, every_interval=self.every_interval
+            self.feature,
+            time_window=self.time_window,
+            every_interval=self.every_interval,
+            offset_interval=self.offset_interval,
         )
         return feat
 
@@ -1280,7 +1362,10 @@ class ArithmeticAggregation:
 
         feat = Float()
         feat.transformation = MeanAggregationFactory(
-            self.feature, time_window=self.time_window, every_interval=self.every_interval
+            self.feature,
+            time_window=self.time_window,
+            every_interval=self.every_interval,
+            offset_interval=self.offset_interval,
         )
         return feat
 
@@ -1289,7 +1374,10 @@ class ArithmeticAggregation:
 
         feat = Float()
         feat.transformation = MinAggregationFactory(
-            self.feature, time_window=self.time_window, every_interval=self.every_interval
+            self.feature,
+            time_window=self.time_window,
+            every_interval=self.every_interval,
+            offset_interval=self.offset_interval,
         )
         return feat
 
@@ -1298,7 +1386,10 @@ class ArithmeticAggregation:
 
         feat = Float()
         feat.transformation = MaxAggregationFactory(
-            self.feature, time_window=self.time_window, every_interval=self.every_interval
+            self.feature,
+            time_window=self.time_window,
+            every_interval=self.every_interval,
+            offset_interval=self.offset_interval,
         )
         return feat
 
@@ -1307,7 +1398,10 @@ class ArithmeticAggregation:
 
         feat = Int64()
         feat.transformation = CountAggregationFactory(
-            self.feature, time_window=self.time_window, every_interval=self.every_interval
+            self.feature,
+            time_window=self.time_window,
+            every_interval=self.every_interval,
+            offset_interval=self.offset_interval,
         )
         return feat
 
@@ -1316,7 +1410,10 @@ class ArithmeticAggregation:
 
         feat = Int64()
         feat.transformation = CountDistinctAggregationFactory(
-            self.feature, time_window=self.time_window, every_interval=self.every_interval
+            self.feature,
+            time_window=self.time_window,
+            every_interval=self.every_interval,
+            offset_interval=self.offset_interval,
         )
         return feat
 
@@ -1325,7 +1422,10 @@ class ArithmeticAggregation:
 
         feat = Float()
         feat.transformation = StdAggregationFactory(
-            self.feature, time_window=self.time_window, every_interval=self.every_interval
+            self.feature,
+            time_window=self.time_window,
+            every_interval=self.every_interval,
+            offset_interval=self.offset_interval,
         )
         return feat
 
@@ -1334,7 +1434,10 @@ class ArithmeticAggregation:
 
         feat = Float()
         feat.transformation = VarianceAggregationFactory(
-            self.feature, time_window=self.time_window, every_interval=self.every_interval
+            self.feature,
+            time_window=self.time_window,
+            every_interval=self.every_interval,
+            offset_interval=self.offset_interval,
         )
         return feat
 
@@ -1343,7 +1446,10 @@ class ArithmeticAggregation:
 
         feat = Float()
         feat.transformation = MedianAggregationFactory(
-            self.feature, time_window=self.time_window, every_interval=self.every_interval
+            self.feature,
+            time_window=self.time_window,
+            every_interval=self.every_interval,
+            offset_interval=self.offset_interval,
         )
         return feat
 
@@ -1356,5 +1462,6 @@ class ArithmeticAggregation:
             percentile=percentile,
             time_window=self.time_window,
             every_interval=self.every_interval,
+            offset_interval=self.offset_interval,
         )
         return feat

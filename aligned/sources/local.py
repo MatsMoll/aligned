@@ -71,6 +71,10 @@ def create_parent_dir(path: str) -> None:
     Path(path).parent.mkdir(exist_ok=True)
 
 
+def do_file_exist(path: str) -> bool:
+    return Path(path).is_file()
+
+
 @dataclass
 class CsvConfig(Codable):
     """
@@ -119,6 +123,9 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
             io_buffer = BytesIO(buffer)
             io_buffer.seek(0)
             return pl.read_csv(io_buffer, separator=self.csv_config.seperator, try_parse_dates=True).lazy()
+
+        if not do_file_exist(self.path):
+            raise UnableToFindFileException(self.path)
 
         try:
             return pl.scan_csv(self.path, separator=self.csv_config.seperator, try_parse_dates=True)
@@ -193,7 +200,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
         return {name: FeatureType.from_polars(pl_type).feature_factory for name, pl_type in df.schema.items()}
 
     async def feature_view_code(self, view_name: str) -> str:
-        from aligned import FeatureView
+        from aligned.feature_view.feature_view import FeatureView
 
         schema = await self.schema()
         data_source_code = f'FileSource.csv_at("{self.path}", csv_config={self.csv_config})'
@@ -255,6 +262,10 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
         )
 
     async def to_polars(self) -> pl.LazyFrame:
+
+        if not do_file_exist(self.path):
+            raise UnableToFindFileException(self.path)
+
         try:
             return pl.scan_parquet(self.path)
         except OSError:
@@ -295,7 +306,7 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
         }
 
     async def feature_view_code(self, view_name: str) -> str:
-        from aligned import FeatureView
+        from aligned.feature_view.feature_view import FeatureView
 
         schema = await self.schema()
         data_source_code = f'FileSource.parquet_at("{self.path}")'
@@ -341,6 +352,9 @@ class DeltaFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference,
         await self.write_polars(pl.from_pandas(df).lazy())
 
     async def to_polars(self) -> pl.LazyFrame:
+        if not do_file_exist(self.path):
+            raise UnableToFindFileException(self.path)
+
         try:
             return pl.scan_delta(self.path)
         except OSError:
@@ -359,7 +373,7 @@ class DeltaFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference,
         }
 
     async def feature_view_code(self, view_name: str) -> str:
-        from aligned import FeatureView
+        from aligned.feature_view.feature_view import FeatureView
 
         schema = await self.schema()
         data_source_code = f'FileSource.parquet_at("{self.path}")'

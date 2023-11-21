@@ -615,11 +615,8 @@ class PolarsTransformationFactory(TransformationFactory):
 
 
 class AggregatableTransformation:
-
-    group_by: list[FeatureFactory] | None = field(default=None)
-
     def copy(self) -> 'AggregatableTransformation':
-        pass
+        raise NotImplementedError(type(self))
 
 
 @dataclass

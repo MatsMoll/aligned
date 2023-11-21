@@ -544,16 +544,15 @@ class FeatureView(ABC):
         schema = await source.schema()
         FeatureView.feature_view_code_template(schema, batch_source_code=f"{source}", view_name="my_view")
 
-        >>> \"\"\"from aligned import FeatureView, String, Int64, Float
+        >>> \"\"\"from aligned import feature_view, String, Int64, Float
 
-        class MyView(FeatureView):
-
-            metadata = FeatureView.metadata_with(
-                name="titanic",
-                description="some description",
-                batch_source=FileSource.parquest("my_path.parquet")
-                stream_source=None,
-            )
+        @feature_view(
+            name="titanic",
+            description="some description",
+            source=FileSource.parquest("my_path.parquet")
+            stream_source=None,
+        )
+        class MyView:
 
             Passenger_id = Int64()
             Survived = Int64()
@@ -582,17 +581,16 @@ class FeatureView(ABC):
         all_types = ', '.join(data_types)
 
         return f"""
-from aligned import FeatureView, {all_types}
+from aligned import feature_view, {all_types}
 {imports or ""}
 
-class MyView(FeatureView):
-
-    metadata = FeatureView.metadata_with(
-        name="{view_name}",
-        description="some description",
-        batch_source={batch_source_code}
-        stream_source=None,
-    )
+@feature_view(
+    name="{view_name}",
+    description="some description",
+    source={batch_source_code}
+    stream_source=None,
+)
+class MyView:
 
     {feature_code}
     """

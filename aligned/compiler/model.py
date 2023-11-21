@@ -1,14 +1,18 @@
+from __future__ import annotations
 import logging
 from abc import ABC, abstractproperty
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any, Callable, Type, TypeVar, Generic
 
+from uuid import uuid4
+
 import polars as pl
 
 from aligned.compiler.feature_factory import (
     ClassificationLabel,
     Entity,
+    Bool,
     EventTimestamp,
     FeatureFactory,
     FeatureReferencable,
@@ -86,6 +90,36 @@ class ModelContractWrapper(Generic[T]):
 
     def compile(self) -> ModelSchema:
         return ModelContract.compile_with_metadata(self.contract(), self.metadata)
+
+    def filter(
+        self, name: str, where: Callable[[T], Bool], application_source: BatchDataSource | None = None
+    ) -> ModelContractWrapper[T]:
+        from aligned.data_source.batch_data_source import FilteredDataSource
+
+        meta = self.metadata
+        meta.name = name
+
+        condition = where(self.__call__())
+
+        main_source = meta.prediction_source
+        if not main_source:
+            raise ValueError(
+                f'Model: {self.metadata.name} needs a `prediction_source` to use `filter`, got None.'
+            )
+
+        if not condition._name:
+            condition._name = str(uuid4())
+            condition._location = FeatureLocation.model(name)
+
+        if condition.transformation:
+            meta.prediction_source = FilteredDataSource(main_source, condition.compile())
+        else:
+            meta.prediction_source = FilteredDataSource(main_source, condition.feature())
+
+        if application_source:
+            meta.application_source = application_source
+
+        return ModelContractWrapper(metadata=meta, contract=self.contract)
 
 
 def model_contract(
