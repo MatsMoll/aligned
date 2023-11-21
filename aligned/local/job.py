@@ -78,21 +78,33 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
             raise ValueError('No time window spesificed.')
 
         if over.window.every_interval:
-            sub = sorted_data.groupby_dynamic(
-                time_name,
-                every=over.window.every_interval,
-                period=over.window.time_window,
-                by=over.group_by_names,
-            ).agg(exprs)
+            sub = (
+                sorted_data.groupby_dynamic(
+                    time_name,
+                    every=over.window.every_interval,
+                    period=over.window.time_window,
+                    by=over.group_by_names,
+                )
+                .agg(exprs)
+                .with_columns(pl.col(time_name) + over.window.time_window)
+            )
         else:
             sub = sorted_data.groupby_rolling(
                 time_name, period=over.window.time_window, by=over.group_by_names
             ).agg(exprs)
 
         if results is not None:
-            results = pl.concat(
-                [results.collect(), sub.select(pl.exclude(group_by_names)).collect()], how='horizontal'
-            ).lazy()
+            existing_result = results.collect()
+            new_aggregations = sub.collect()
+
+            if existing_result.shape[0] > new_aggregations.shape[0]:
+                left_df = existing_result
+                right_df = new_aggregations
+            else:
+                right_df = existing_result
+                left_df = new_aggregations
+
+            results = left_df.join_asof(right_df, on=time_name, by=group_by_names).lazy()
         else:
             results = sub
 

@@ -1,6 +1,7 @@
 import pytest
 
-from aligned import FeatureStore, FeatureView, FileSource
+from aligned import FeatureStore, FileSource
+from aligned.feature_view.feature_view import FeatureView
 from conftest import DataTest
 
 

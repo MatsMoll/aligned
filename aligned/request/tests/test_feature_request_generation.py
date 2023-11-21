@@ -1,6 +1,6 @@
 import pytest
 
-from aligned import FeatureView
+from aligned.feature_view.feature_view import FeatureView
 
 
 @pytest.mark.asyncio

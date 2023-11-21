@@ -70,6 +70,7 @@ class AggregationTimeWindow(Codable):
     time_column: FeatureReferance
 
     every_interval: timedelta | None = field(default=None)
+    offset_interval: timedelta | None = field(default=None)
 
     def __hash__(self) -> int:
         return self.time_window.__hash__()

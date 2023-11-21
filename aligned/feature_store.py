@@ -542,6 +542,25 @@ class FeatureStore:
             feature_source=feature_source,
         )
 
+    def update_source_for(self, location: FeatureLocation | str, source: BatchDataSource) -> FeatureStore:
+        if not isinstance(self.feature_source, BatchFeatureSource):
+            raise ValueError(
+                f'.update_source_for(...) needs a `BatchFeatureSource`, got {type(self.feature_source)}'
+            )
+
+        if isinstance(location, str):
+            location = FeatureLocation.from_string(location)
+
+        new_source = self.feature_source
+        new_source.sources[location.identifier] = source
+
+        return FeatureStore(
+            feature_views=self.feature_views,
+            combined_feature_views=self.combined_feature_views,
+            models=self.models,
+            feature_source=new_source,
+        )
+
     def offline_store(self) -> FeatureStore:
         """
         Will set the source to the defined batch sources.
@@ -1271,6 +1290,12 @@ class FeatureViewStore:
     def select(self, features: set[str]) -> FeatureViewStore:
         logger.info(f'Selecting features {features}')
         return FeatureViewStore(self.store, self.view, self.event_triggers, features)
+
+    async def upsert(self, values: RetrivalJob | ConvertableToRetrivalJob) -> None:
+        await self.store.upsert_into(FeatureLocation.feature_view(self.name), values)
+
+    async def insert(self, values: RetrivalJob | ConvertableToRetrivalJob) -> None:
+        await self.store.insert_into(FeatureLocation.feature_view(self.name), values)
 
     @property
     def write_input(self) -> set[str]:

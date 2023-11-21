@@ -1,4 +1,6 @@
-from aligned import Bool, FeatureStore, FeatureView, FileSource, Int32, ModelContract, String
+from aligned import Bool, FeatureStore, FileSource, Int32, String
+from aligned.feature_view.feature_view import FeatureView
+from aligned.compiler.model import ModelContract
 from aligned.schemas.feature import FeatureLocation
 
 

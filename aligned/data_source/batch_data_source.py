@@ -243,7 +243,7 @@ class BatchDataSource(ABC, Codable, SerializableType):
         Returns:
             str: The code needed to setup a basic feature view
         """
-        from aligned import FeatureView
+        from aligned.feature_view.feature_view import FeatureView
 
         schema = await self.schema()
         return FeatureView.feature_view_code_template(schema, f'{self}', view_name)

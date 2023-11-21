@@ -1,5 +1,7 @@
+import polars as pl
 from dataclasses import dataclass
 from datetime import timedelta
+from typing import Callable
 
 from aligned.compiler.feature_factory import (
     AggregationTransformationFactory,
@@ -17,6 +19,7 @@ def aggregate_over(
     time_column: FeatureReferance | None,
     time_window: timedelta | None,
     every_interval: timedelta | None,
+    offset_interval: timedelta | None,
     condition: DerivedFeature | None,
 ) -> AggregateOver:
     if not time_window:
@@ -28,7 +31,9 @@ def aggregate_over(
         )
 
     return AggregateOver(
-        group_by, AggregationTimeWindow(time_window, time_column, every_interval), condition=condition
+        group_by,
+        AggregationTimeWindow(time_window, time_column, every_interval, offset_interval=offset_interval),
+        condition=condition,
     )
 
 
@@ -39,6 +44,7 @@ class ConcatStringsAggrigationFactory(TransformationFactory, AggregationTransfor
     separator: str | None = None
     time_window: timedelta | None = None
     every_interval: timedelta | None = None
+    offset_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -55,7 +61,9 @@ class ConcatStringsAggrigationFactory(TransformationFactory, AggregationTransfor
     def aggregate_over(
         self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
     ) -> AggregateOver:
-        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
+        return aggregate_over(
+            group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
+        )
 
 
 @dataclass
@@ -64,6 +72,7 @@ class SumAggregationFactory(TransformationFactory, AggregationTransformationFact
     feature: FeatureFactory
     time_window: timedelta | None = None
     every_interval: timedelta | None = None
+    offset_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -79,7 +88,9 @@ class SumAggregationFactory(TransformationFactory, AggregationTransformationFact
     def aggregate_over(
         self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
     ) -> AggregateOver:
-        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
+        return aggregate_over(
+            group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
+        )
 
 
 @dataclass
@@ -88,6 +99,7 @@ class MeanAggregationFactory(TransformationFactory, AggregationTransformationFac
     feature: FeatureFactory
     time_window: timedelta | None = None
     every_interval: timedelta | None = None
+    offset_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -103,7 +115,9 @@ class MeanAggregationFactory(TransformationFactory, AggregationTransformationFac
     def aggregate_over(
         self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
     ) -> AggregateOver:
-        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
+        return aggregate_over(
+            group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
+        )
 
 
 @dataclass
@@ -112,6 +126,7 @@ class MinAggregationFactory(TransformationFactory, AggregationTransformationFact
     feature: FeatureFactory
     time_window: timedelta | None = None
     every_interval: timedelta | None = None
+    offset_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -127,7 +142,9 @@ class MinAggregationFactory(TransformationFactory, AggregationTransformationFact
     def aggregate_over(
         self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
     ) -> AggregateOver:
-        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
+        return aggregate_over(
+            group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
+        )
 
 
 @dataclass
@@ -136,6 +153,7 @@ class MaxAggregationFactory(TransformationFactory, AggregationTransformationFact
     feature: FeatureFactory
     time_window: timedelta | None = None
     every_interval: timedelta | None = None
+    offset_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -151,7 +169,9 @@ class MaxAggregationFactory(TransformationFactory, AggregationTransformationFact
     def aggregate_over(
         self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
     ) -> AggregateOver:
-        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
+        return aggregate_over(
+            group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
+        )
 
 
 @dataclass
@@ -160,6 +180,7 @@ class CountAggregationFactory(TransformationFactory, AggregationTransformationFa
     feature: FeatureFactory
     time_window: timedelta | None = None
     every_interval: timedelta | None = None
+    offset_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -175,7 +196,9 @@ class CountAggregationFactory(TransformationFactory, AggregationTransformationFa
     def aggregate_over(
         self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
     ) -> AggregateOver:
-        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
+        return aggregate_over(
+            group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
+        )
 
 
 @dataclass
@@ -184,6 +207,7 @@ class CountDistinctAggregationFactory(TransformationFactory, AggregationTransfor
     feature: FeatureFactory
     time_window: timedelta | None = None
     every_interval: timedelta | None = None
+    offset_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -199,7 +223,9 @@ class CountDistinctAggregationFactory(TransformationFactory, AggregationTransfor
     def aggregate_over(
         self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
     ) -> AggregateOver:
-        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
+        return aggregate_over(
+            group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
+        )
 
 
 @dataclass
@@ -208,6 +234,7 @@ class StdAggregationFactory(TransformationFactory, AggregationTransformationFact
     feature: FeatureFactory
     time_window: timedelta | None = None
     every_interval: timedelta | None = None
+    offset_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -223,7 +250,9 @@ class StdAggregationFactory(TransformationFactory, AggregationTransformationFact
     def aggregate_over(
         self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
     ) -> AggregateOver:
-        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
+        return aggregate_over(
+            group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
+        )
 
 
 @dataclass
@@ -232,6 +261,7 @@ class VarianceAggregationFactory(TransformationFactory, AggregationTransformatio
     feature: FeatureFactory
     time_window: timedelta | None = None
     every_interval: timedelta | None = None
+    offset_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -247,7 +277,9 @@ class VarianceAggregationFactory(TransformationFactory, AggregationTransformatio
     def aggregate_over(
         self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
     ) -> AggregateOver:
-        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
+        return aggregate_over(
+            group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
+        )
 
 
 @dataclass
@@ -256,6 +288,7 @@ class MedianAggregationFactory(TransformationFactory, AggregationTransformationF
     feature: FeatureFactory
     time_window: timedelta | None = None
     every_interval: timedelta | None = None
+    offset_interval: timedelta | None = None
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -271,7 +304,9 @@ class MedianAggregationFactory(TransformationFactory, AggregationTransformationF
     def aggregate_over(
         self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
     ) -> AggregateOver:
-        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
+        return aggregate_over(
+            group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
+        )
 
 
 @dataclass
@@ -280,6 +315,7 @@ class PercentileAggregationFactory(TransformationFactory, AggregationTransformat
     feature: FeatureFactory
     percentile: float
     time_window: timedelta | None = None
+    offset_interval: timedelta | None = None
     every_interval: timedelta | None = None
 
     @property
@@ -297,4 +333,45 @@ class PercentileAggregationFactory(TransformationFactory, AggregationTransformat
     def aggregate_over(
         self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
     ) -> AggregateOver:
-        return aggregate_over(group_by, time_column, self.time_window, self.every_interval, None)
+        return aggregate_over(
+            group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
+        )
+
+
+@dataclass
+class PolarsTransformationFactoryAggregation(TransformationFactory, AggregationTransformationFactory):
+
+    dtype: FeatureFactory
+    method: pl.Expr | Callable[[pl.LazyFrame, pl.Expr], pl.LazyFrame]
+    _using_features: list[FeatureFactory]
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return self._using_features
+
+    def compile(self) -> Transformation:
+        import inspect
+        import types
+
+        import dill
+
+        from aligned.schemas.transformation import PolarsFunctionTransformation, PolarsLambdaTransformation
+
+        if isinstance(self.method, pl.Expr):
+            code = str(self.method)
+            return PolarsLambdaTransformation(
+                method=dill.dumps(self.method), code=code.strip(), dtype=self.dtype.dtype
+            )
+        else:
+            code = inspect.getsource(self.method)
+
+        if isinstance(self.method, types.LambdaType) and self.method.__name__ == '<lambda>':
+            return PolarsLambdaTransformation(
+                method=dill.dumps(self.method), code=code.strip(), dtype=self.dtype.dtype
+            )
+        else:
+            return PolarsFunctionTransformation(
+                code=code,
+                function_name=dill.source.getname(self.method),
+                dtype=self.dtype.dtype,
+            )
