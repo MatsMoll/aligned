@@ -323,13 +323,21 @@ class FeatureViewReferenceSource(BatchDataSource):
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
 
         sub_location = FeatureLocation.feature_view(self.view.name)
-        sub_references: set[str] = set()
+        sub_references: set[str] = request.entity_names
 
-        for feature in request.derived_features:
+        if self.view.event_timestamp:
+            sub_references.add(self.view.event_timestamp.name)
+
+        agg_features = {feat.derived_feature for feat in request.aggregated_features}
+
+        for feature in request.derived_features.union(agg_features):
             for depends_on in feature.depending_on:
                 if depends_on.location != sub_location:
                     continue
                 sub_references.add(depends_on.name)
+
+        if request.event_timestamp:
+            sub_references.add(request.event_timestamp.name)
 
         sub_request = self.view.request_for(sub_references)
         sub_source = self.view.materialized_source or self.view.source
@@ -339,7 +347,12 @@ class FeatureViewReferenceSource(BatchDataSource):
 
         sub_req = sub_request.needed_requests[0]
 
-        return sub_source.all_data(sub_req, limit=limit).derive_features([sub_req]).derive_features([request])
+        core_job = sub_source.all_data(sub_req, limit=limit)
+        core_job = core_job.ensure_types([sub_req]).derive_features([sub_req])
+        if request.aggregated_features:
+            return core_job.aggregate(request).derive_features([request])
+        else:
+            return core_job.derive_features([request])
 
     def depends_on(self) -> set[FeatureLocation]:
         return {FeatureLocation.feature_view(self.view.name)}

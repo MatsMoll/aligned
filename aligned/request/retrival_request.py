@@ -80,18 +80,30 @@ class RetrivalRequest(Codable):
 
         result = self.entity_names
         if self.event_timestamp:
-            if not self.aggregated_features:
+            if all([agg.aggregate_over.window is not None for agg in self.aggregated_features]):
                 result = result.union({self.event_timestamp.name})
-            elif all([agg.aggregate_over.window is not None for agg in self.aggregated_features]):
+            else:
                 result = result.union({self.event_timestamp.name})
 
         if self.aggregated_features:
             agg_names = [feat.name for feat in self.aggregated_features]
             derived_after_aggs_name: set[str] = set()
-            for feat in self.derived_features:
-                for dep in feat.depending_on_names:
+            derived_features = {der.name: der for der in self.derived_features}
+
+            def is_dependent_on_agg_feature(feature: DerivedFeature) -> bool:
+                for dep in feature.depending_on_names:
                     if dep in agg_names:
-                        derived_after_aggs_name.add(dep)
+                        return True
+
+                for dep in feature.depending_on_names:
+                    if dep in derived_features and is_dependent_on_agg_feature(derived_features[dep]):
+                        return True
+
+                return False
+
+            for feat in self.derived_features:
+                if is_dependent_on_agg_feature(feat):
+                    derived_after_aggs_name.add(feat.name)
 
             return agg_names + list(derived_after_aggs_name) + list(result)
 
@@ -248,13 +260,16 @@ class RetrivalRequest(Codable):
             features=set(),
             derived_features=set(),
             aggregated_features=set(),
-            event_timestamp=None,
+            event_timestamp_request=requests[0].event_timestamp_request,
         )
         for request in requests:
             result_request.derived_features.update(request.derived_features)
             result_request.features.update(request.features)
             result_request.entities.update(request.entities)
             result_request.aggregated_features.update(request.aggregated_features)
+
+            if result_request.event_timestamp_request is None:
+                result_request.event_timestamp_request = request.event_timestamp_request
 
         return result_request
 

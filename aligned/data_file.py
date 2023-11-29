@@ -9,7 +9,7 @@ def upsert_on_column(columns: list[str], new_data: pl.LazyFrame, existing_data: 
     if column_diff:
         raise ValueError(f'Mismatching columns, missing columns {column_diff}.')
 
-    combined = pl.concat([new_data, existing_data.select(new_data.columns)])
+    combined = pl.concat([new_data, existing_data.select(new_data.columns)], how='vertical_relaxed')
     return combined.unique(columns, keep='first')
 
 

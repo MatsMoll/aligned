@@ -78,12 +78,17 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
             raise ValueError('No time window spesificed.')
 
         if over.window.every_interval:
-            sub = sorted_data.groupby_dynamic(
-                time_name,
-                every=over.window.every_interval,
-                period=over.window.time_window,
-                by=over.group_by_names,
-            ).agg(exprs)
+            sub = (
+                sorted_data.groupby_dynamic(
+                    time_name,
+                    every=over.window.every_interval,
+                    period=over.window.time_window,
+                    by=over.group_by_names,
+                    offset=-over.window.time_window,
+                )
+                .agg(exprs)
+                .with_columns(pl.col(time_name) + over.window.time_window)
+            ).filter(pl.col(time_name) <= sorted_data.select(pl.col(time_name).max()).collect()[0, 0])
         else:
             sub = sorted_data.groupby_rolling(
                 time_name,

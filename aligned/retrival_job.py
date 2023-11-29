@@ -278,16 +278,49 @@ class RetrivalJob(ABC):
             return LogJob(self.copy_with(self.job.log_each_job()))
         return LogJob(self)
 
-    def join(self, job: RetrivalJob, method: str, on_columns: str | tuple[str, str]) -> RetrivalJob:
+    def join_asof(
+        self,
+        job: RetrivalJob,
+        left_event_timestamp: str | None = None,
+        right_event_timestamp: str | None = None,
+        left_on: str | list[str] | None = None,
+        right_on: str | list[str] | None = None,
+    ) -> RetrivalJob:
 
-        if isinstance(on_columns, tuple):
-            left_on, right_on = on_columns
-            pass
-        elif isinstance(on_columns, str):
-            left_on = on_columns
-            right_on = on_columns
-        else:
-            raise ValueError(f'Unable to set join condition using {on_columns}')
+        if isinstance(left_on, str):
+            left_on = [left_on]
+
+        if isinstance(right_on, str):
+            right_on = [right_on]
+
+        if not left_event_timestamp:
+            left_event_timestamp = self.request_result.event_timestamp
+        if not right_event_timestamp:
+            right_event_timestamp = job.request_result.event_timestamp
+
+        if not left_event_timestamp:
+            raise ValueError('Missing an event_timestamp for left request.')
+        if not right_event_timestamp:
+            raise ValueError('Missing an event_timestamp for right request.')
+
+        return JoinAsofJob(
+            left_job=self,
+            right_job=job,
+            left_event_timestamp=left_event_timestamp,
+            right_event_timestamp=right_event_timestamp,
+            left_on=left_on,
+            right_on=right_on,
+        )
+
+    def join(
+        self, job: RetrivalJob, method: str, left_on: str | list[str], right_on: str | list[str]
+    ) -> RetrivalJob:
+
+        if isinstance(left_on, str):
+            left_on = [left_on]
+
+        if isinstance(right_on, str):
+            right_on = [right_on]
 
         return JoinJobs(method=method, left_job=self, right_job=job, left_on=left_on, right_on=right_on)
 
@@ -343,6 +376,9 @@ class RetrivalJob(ABC):
 
     def select_columns(self, include_features: set[str]) -> RetrivalJob:
         return SelectColumnsJob(include_features, self)
+
+    def aggregate(self, request: RetrivalRequest) -> RetrivalJob:
+        return AggregateJob(self, request)
 
     def with_request(self, requests: list[RetrivalRequest]) -> RetrivalJob:
         return WithRequests(self, requests)
@@ -445,14 +481,39 @@ class ModificationJob:
 
 
 @dataclass
-class JoinJobs(RetrivalJob):
+class AggregateJob(RetrivalJob, ModificationJob):
 
-    method: str
+    job: RetrivalJob
+    agg_request: RetrivalRequest
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.agg_request.request_result
+
+    async def to_polars(self) -> pl.LazyFrame:
+        from aligned.local.job import aggregate
+
+        core_frame = await self.job.to_polars()
+        return await aggregate(self.agg_request, core_frame)
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return (await self.to_polars()).collect().to_pandas()
+
+    def describe(self) -> str:
+        return f'Aggregating over {self.job.describe()}'
+
+
+@dataclass
+class JoinAsofJob(RetrivalJob):
+
     left_job: RetrivalJob
     right_job: RetrivalJob
 
-    left_on: str
-    right_on: str
+    left_event_timestamp: str
+    right_event_timestamp: str
+
+    left_on: list[str] | None
+    right_on: list[str] | None
 
     @property
     def request_result(self) -> RequestResult:
@@ -461,7 +522,54 @@ class JoinJobs(RetrivalJob):
     async def to_polars(self) -> pl.LazyFrame:
         left = await self.left_job.to_polars()
         right = await self.right_job.to_polars()
-        return left.join(right, left_on=self.left_on, right_on=self.right_on, how=self.method)
+
+        return left.join_asof(
+            right,
+            by_left=self.left_on,
+            by_right=self.right_on,
+            left_on=self.left_event_timestamp,
+            right_on=self.right_event_timestamp,
+        )
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return (await self.to_polars()).collect().to_pandas()
+
+    def describe(self) -> str:
+        return (
+            f'({self.left_job.describe()}) -> '
+            f'Joining on time {self.left_event_timestamp} with {self.left_on} and '
+            f'{self.right_event_timestamp} and {self.right_on} ({self.right_job.describe()})'
+        )
+
+
+@dataclass
+class JoinJobs(RetrivalJob):
+
+    method: str
+    left_job: RetrivalJob
+    right_job: RetrivalJob
+
+    left_on: list[str]
+    right_on: list[str]
+
+    @property
+    def request_result(self) -> RequestResult:
+        return RequestResult.from_result_list([self.left_job.request_result, self.right_job.request_result])
+
+    async def to_polars(self) -> pl.LazyFrame:
+        left = await self.left_job.to_polars()
+        right = await self.right_job.to_polars()
+
+        if self.left_job.request_result.event_timestamp and self.right_job.request_result.event_timestamp:
+            return left.join_asof(
+                right,
+                by_left=self.left_on,
+                by_right=self.right_on,
+                left_on=self.left_job.request_result.event_timestamp,
+                right_on=self.right_job.request_result.event_timestamp,
+            )
+        else:
+            return left.join(right, left_on=self.left_on, right_on=self.right_on, how=self.method)
 
     async def to_pandas(self) -> pd.DataFrame:
         left = await self.left_job.to_pandas()

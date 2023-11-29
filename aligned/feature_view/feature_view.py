@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import logging
 
 from abc import ABC, abstractproperty
@@ -14,7 +15,14 @@ from aligned.compiler.feature_factory import (
     EventTimestamp,
     Bool,
 )
-from aligned.data_source.batch_data_source import BatchDataSource, JoinDataSource
+from aligned.data_source.batch_data_source import (
+    BatchDataSource,
+    JoinAsofDataSource,
+    JoinDataSource,
+    join_asof_source,
+    join_source,
+    resolve_keys,
+)
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.schemas.derivied_feature import (
     AggregatedFeature,
@@ -104,8 +112,18 @@ class FeatureViewWrapper(Generic[T]):
     def __call__(self) -> T:
         # Needs to compiile the model to set the location for the view features
         _ = self.compile()
-        view = self.view()
+        view = copy.deepcopy(self.view())
         setattr(view, '__view_wrapper__', self)
+
+        for attribute in dir(view):
+            if attribute.startswith('__'):
+                continue
+
+            value = getattr(view, attribute)
+            if isinstance(value, FeatureFactory):
+                value._location = FeatureLocation.feature_view(self.metadata.name)
+                setattr(view, attribute, copy.deepcopy(value))
+
         return view
 
     def compile(self) -> CompiledFeatureView:
@@ -117,13 +135,14 @@ class FeatureViewWrapper(Generic[T]):
     ) -> FeatureViewWrapper[T]:
 
         from aligned.data_source.batch_data_source import FilteredDataSource
+        from aligned.schemas.feature_view import FeatureViewReferenceSource
 
-        meta = self.metadata
+        meta = copy.deepcopy(self.metadata)
         meta.name = name
 
         condition = where(self.__call__())
 
-        main_source = meta.materialized_source if meta.materialized_source else meta.source
+        main_source = FeatureViewReferenceSource(self.compile())
 
         if not condition._name:
             condition._name = str(uuid4())
@@ -140,31 +159,35 @@ class FeatureViewWrapper(Generic[T]):
 
         return FeatureViewWrapper(metadata=meta, view=self.view)
 
-    def join(self, view: Any, on: str | FeatureFactory, how: str = 'inner') -> JoinDataSource:
-        from aligned.data_source.batch_data_source import JoinDataSource
+    def join(
+        self, view: Any, on: str | FeatureFactory | list[str] | list[FeatureFactory], how: str = 'inner'
+    ) -> JoinDataSource:
+        from aligned.schemas.feature_view import FeatureViewReferenceSource
 
-        if not hasattr(view, '__view_wrapper__'):
-            raise ValueError(f'Unable to join {view}')
+        source = FeatureViewReferenceSource(self.compile())
 
-        wrapper = getattr(view, '__view_wrapper__')
-        if not isinstance(wrapper, FeatureViewWrapper):
-            raise ValueError()
+        return join_source(source, view, on, how)
 
-        if isinstance(on, FeatureFactory):
-            on = on.name
+    def join_asof(
+        self, view: Any, on: str | FeatureFactory | list[str] | list[FeatureFactory]
+    ) -> JoinAsofDataSource:
+        from aligned.schemas.feature_view import FeatureViewReferenceSource
 
-        compiled_view = wrapper.compile()
+        compiled_view = self.compile()
+        source = FeatureViewReferenceSource(compiled_view)
 
-        request = compiled_view.request_all
+        left_on = None
+        right_on = None
+        if on:
+            left_on = resolve_keys(on)
+            right_on = left_on
 
-        return JoinDataSource(
-            source=self.metadata.materialized_source or self.metadata.source,
-            left_request=self.compile().request_all.needed_requests[0],
-            right_source=compiled_view.materialized_source or compiled_view.source,
-            right_request=request.needed_requests[0],
-            left_on=on,
-            right_on=on,
-            method=how,
+        return join_asof_source(
+            source,
+            left_request=compiled_view.request_all.needed_requests[0],
+            view=view,
+            left_on=left_on,
+            right_on=right_on,
         )
 
     def with_entity_renaming(self, named: str, renames: dict[str, str] | str) -> FeatureViewWrapper[T]:
