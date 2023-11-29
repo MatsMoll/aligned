@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import copy
 import logging
 from abc import ABC, abstractproperty
 from dataclasses import dataclass, field
@@ -86,7 +88,20 @@ class ModelContractWrapper(Generic[T]):
     def __call__(self) -> T:
         # Needs to compiile the model to set the location for the view features
         _ = self.compile()
-        return self.contract()
+
+        # Need to copy and set location in case filters are used.
+        # As this can lead to incorrect features otherwise
+        contract = copy.deepcopy(self.contract())
+        for attribute in dir(contract):
+            if attribute.startswith('__'):
+                continue
+
+            value = getattr(contract, attribute)
+            if isinstance(value, FeatureFactory):
+                value._location = FeatureLocation.model(self.metadata.name)
+                setattr(contract, attribute, copy.deepcopy(value))
+
+        return contract
 
     def compile(self) -> ModelSchema:
         return ModelContract.compile_with_metadata(self.contract(), self.metadata)
