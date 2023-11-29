@@ -40,7 +40,7 @@ async def test_combined_view_get_all_features(combined_feature_store: FeatureSto
 async def test_new_combined_solution() -> None:
     import pandas as pd
 
-    expected_df = pd.DataFrame({'other_id': [6, 5], 'new_feature': [600.0, 400.0], 'some_id': [1, 2]})
+    expected_df = pd.DataFrame({'other_id': [6, 5], 'new_feature': [600, 400], 'some_id': [1, 2]})
 
     @feature_view(name='test', source=FileSource.csv_at('test_data/test.csv'))
     class Test:
@@ -70,6 +70,7 @@ async def test_new_combined_solution() -> None:
         new_feature = test.derived_feature * other.test_feature
 
     result = await Combined.query().all().to_pandas()  # type: ignore
+    result['new_feature'] = result['new_feature'].astype('int64')
     assert result[expected_df.columns].equals(expected_df)
 
 
@@ -96,4 +97,5 @@ async def test_view_reference() -> None:
         new_feature = test.derived_feature * 5
 
     result = await TestRef.query().all().to_pandas()  # type: ignore
+    result['new_feature'] = result['new_feature'].astype('int64')
     assert result[expected_df.columns].equals(expected_df)

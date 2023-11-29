@@ -831,11 +831,7 @@ class Multiply(Transformation, PsqlTransformation, RedshiftTransformation):
         self.behind = behind
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(df[self.front].isna() | df[self.behind].isna()),
-            transformation=lambda dfv: dfv[self.front] * dfv[self.behind],
-        )
+        return df[self.front] * df[self.behind]
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.front) * pl.col(self.behind)

@@ -164,9 +164,10 @@ class FeatureViewWrapper(Generic[T]):
     ) -> JoinDataSource:
         from aligned.schemas.feature_view import FeatureViewReferenceSource
 
-        source = FeatureViewReferenceSource(self.compile())
+        compiled_view = self.compile()
+        source = FeatureViewReferenceSource(compiled_view)
 
-        return join_source(source, view, on, how)
+        return join_source(source, view, on, how, left_request=compiled_view.request_all.needed_requests[0])
 
     def join_asof(
         self, view: Any, on: str | FeatureFactory | list[str] | list[FeatureFactory]

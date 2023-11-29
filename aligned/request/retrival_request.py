@@ -82,7 +82,7 @@ class RetrivalRequest(Codable):
         if self.event_timestamp:
             if all([agg.aggregate_over.window is not None for agg in self.aggregated_features]):
                 result = result.union({self.event_timestamp.name})
-            else:
+            elif len(self.aggregated_features) == 0:
                 result = result.union({self.event_timestamp.name})
 
         if self.aggregated_features:
