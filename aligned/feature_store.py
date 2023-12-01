@@ -470,7 +470,9 @@ class FeatureStore:
         """
         self.feature_views[view.name] = view
         if isinstance(self.feature_source, BatchFeatureSource):
-            self.feature_source.sources[FeatureLocation.feature_view(view.name).identifier] = view.source
+            self.feature_source.sources[FeatureLocation.feature_view(view.name).identifier] = (
+                view.materialized_source or view.source
+            )
 
     def add_feature_view(self, feature_view: FeatureView) -> None:
         self.add_compiled_view(feature_view.compile_instance())
