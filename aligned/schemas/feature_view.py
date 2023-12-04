@@ -124,9 +124,6 @@ class CompiledFeatureView(Codable):
                     core_features.add(dep_feature[0])
                     continue
 
-                elif len(dep_feature) == 0:
-                    continue
-
                 dep_features = [
                     feat
                     for feat in self.derived_features.union(derived_aggregated_feautres)
