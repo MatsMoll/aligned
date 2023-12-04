@@ -131,6 +131,13 @@ class FileFullJob(RetrivalJob):
     def request_result(self) -> RequestResult:
         return self.request.request_result
 
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return [self.request]
+
+    def describe(self) -> str:
+        return f'Reading everything form file {self.source}.'
+
     def file_transformations(self, df: pd.DataFrame) -> pd.DataFrame:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
 
@@ -299,6 +306,10 @@ class FileFactualJob(RetrivalJob):
     @property
     def request_result(self) -> RequestResult:
         return RequestResult.from_request_list(self.requests)
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.requests
 
     def describe(self) -> str:
         return f'Reading file at {self.source}'

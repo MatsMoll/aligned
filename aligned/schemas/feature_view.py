@@ -124,6 +124,9 @@ class CompiledFeatureView(Codable):
                     core_features.add(dep_feature[0])
                     continue
 
+                elif len(dep_feature) == 0:
+                    continue
+
                 dep_features = [
                     feat
                     for feat in self.derived_features.union(derived_aggregated_feautres)
@@ -141,6 +144,7 @@ class CompiledFeatureView(Codable):
                     aggregated_features.add(agg_feat)
                 else:
                     derived_features.add(dep_feature)
+
                 core, derived, aggregated = dependent_features_for(dep_feature)
                 features.update(core)
                 derived_features.update(derived)
@@ -322,11 +326,12 @@ class FeatureViewReferenceSource(BatchDataSource):
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
 
+        sub_source = self.view.materialized_source or self.view.source
         sub_location = FeatureLocation.feature_view(self.view.name)
-        sub_references: set[str] = request.entity_names
+        sub_references: set[str] = request.entity_names.union(request.feature_names)
 
-        if self.view.event_timestamp:
-            sub_references.add(self.view.event_timestamp.name)
+        if request.event_timestamp:
+            sub_references.add(request.event_timestamp.name)
 
         agg_features = {feat.derived_feature for feat in request.aggregated_features}
 
@@ -336,11 +341,7 @@ class FeatureViewReferenceSource(BatchDataSource):
                     continue
                 sub_references.add(depends_on.name)
 
-        if request.event_timestamp:
-            sub_references.add(request.event_timestamp.name)
-
         sub_request = self.view.request_for(sub_references)
-        sub_source = self.view.materialized_source or self.view.source
 
         if len(sub_request.needed_requests) != 1:
             raise ValueError('Got mulitple requests for one view. Something odd happend.')

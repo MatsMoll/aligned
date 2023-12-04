@@ -272,7 +272,7 @@ class BatchDataSource(ABC, Codable, SerializableType):
 
 
 @dataclass
-class FilteredDataSource(BatchSourceModification, BatchDataSource):
+class FilteredDataSource(BatchDataSource):
 
     source: BatchDataSource
     condition: DerivedFeature | Feature
@@ -282,8 +282,14 @@ class FilteredDataSource(BatchSourceModification, BatchDataSource):
     def job_group_key(self) -> str:
         return f'subset/{self.source.job_group_key()}'
 
-    def wrap_job(self, job: RetrivalJob) -> RetrivalJob:
-        return job.filter(self.condition)
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+
+        if isinstance(self.condition, Feature):
+            request.features.add(self.condition)
+        else:
+            request.derived_features.add(self.condition)
+
+        return self.source.all_data(request, limit).filter(self.condition).derive_features([request])
 
     def depends_on(self) -> set[FeatureLocation]:
         return self.source.depends_on()
@@ -407,6 +413,24 @@ class JoinAsofDataSource(BatchDataSource):
     def job_group_key(self) -> str:
         return f'join/{self.source.job_group_key()}'
 
+    def all_with_limit(self, limit: int | None) -> RetrivalJob:
+
+        right_job = self.right_source.all_data(self.right_request, limit=None).derive_features(
+            [self.right_request]
+        )
+
+        return (
+            self.source.all_data(self.left_request, limit=limit)
+            .derive_features([self.left_request])
+            .join_asof(
+                right_job,
+                left_event_timestamp=self.left_event_timestamp,
+                right_event_timestamp=self.right_event_timestamp,
+                left_on=self.left_on,
+                right_on=self.right_on,
+            )
+        )
+
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
 
         right_job = self.right_source.all_data(self.right_request, limit=None).derive_features(
@@ -469,6 +493,17 @@ class JoinDataSource(BatchDataSource):
 
     def job_group_key(self) -> str:
         return f'join/{self.source.job_group_key()}'
+
+    def all_with_limit(self, limit: int | None) -> RetrivalJob:
+        right_job = self.right_source.all_data(self.right_request, limit=None).derive_features(
+            [self.right_request]
+        )
+
+        return (
+            self.source.all_data(self.left_request, limit=limit)
+            .derive_features([self.left_request])
+            .join(right_job, method=self.method, left_on=self.left_on, right_on=self.right_on)
+        )
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
 

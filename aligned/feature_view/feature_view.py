@@ -103,6 +103,20 @@ def feature_view(
     return decorator
 
 
+def set_location_for_features_in(view: Any, location: FeatureLocation) -> Any:
+    for attribute in dir(view):
+        if attribute.startswith('__'):
+            continue
+
+        value = getattr(view, attribute)
+        if isinstance(value, FeatureFactory):
+            value._location = location
+            copied = copy.deepcopy(value)
+
+            setattr(view, attribute, copied)
+    return view
+
+
 @dataclass
 class FeatureViewWrapper(Generic[T]):
 
@@ -110,24 +124,15 @@ class FeatureViewWrapper(Generic[T]):
     view: Type[T]
 
     def __call__(self) -> T:
-        # Needs to compiile the model to set the location for the view features
-        _ = self.compile()
         view = copy.deepcopy(self.view())
+        view = set_location_for_features_in(view, FeatureLocation.feature_view(self.metadata.name))
+        _ = FeatureView.compile_with_metadata(view, self.metadata)
         setattr(view, '__view_wrapper__', self)
-
-        for attribute in dir(view):
-            if attribute.startswith('__'):
-                continue
-
-            value = getattr(view, attribute)
-            if isinstance(value, FeatureFactory):
-                value._location = FeatureLocation.feature_view(self.metadata.name)
-                setattr(view, attribute, copy.deepcopy(value))
-
         return view
 
     def compile(self) -> CompiledFeatureView:
-
+        view = copy.deepcopy(self.view())
+        view = set_location_for_features_in(view, FeatureLocation.feature_view(self.metadata.name))
         return FeatureView.compile_with_metadata(self.view(), self.metadata)
 
     def filter(
@@ -458,8 +463,9 @@ class FeatureView(ABC):
                             continue
 
                     if depth == 0:
-                        # The raw value and the transformed have the same name
-                        feature_dep._name = var_name
+                        if not feature_dep._name:
+                            feature_dep._name = var_name
+
                         feat_dep = feature_dep.feature()
                         view.features.add(feat_dep)
                         continue

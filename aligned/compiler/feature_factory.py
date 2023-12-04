@@ -393,9 +393,10 @@ class FeatureFactory(FeatureReferencable):
         )
 
     def depth(self) -> int:
-        value = 0
         if not self.transformation:
-            return value
+            return 0
+
+        value = 0
         for feature in self.transformation.using_features:
             value = max(feature.depth(), value)
         return value + 1

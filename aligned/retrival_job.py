@@ -490,11 +490,25 @@ class AggregateJob(RetrivalJob, ModificationJob):
     def request_result(self) -> RequestResult:
         return self.agg_request.request_result
 
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return [self.agg_request]
+
     async def to_polars(self) -> pl.LazyFrame:
         from aligned.local.job import aggregate
 
         core_frame = await self.job.to_polars()
-        return await aggregate(self.agg_request, core_frame)
+
+        existing_cols = set(core_frame.columns)
+        agg_features = {agg.name for agg in self.agg_request.aggregated_features}
+        missing_features = agg_features - existing_cols
+
+        if not missing_features:
+            logger.debug(f'Skipping aggregation of {agg_features}. Already existed.')
+            return core_frame
+        else:
+            logger.debug(f'Aggregating {agg_features}, missing {missing_features}.')
+            return await aggregate(self.agg_request, core_frame)
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_polars()).collect().to_pandas()
@@ -531,6 +545,17 @@ class JoinAsofJob(RetrivalJob):
             right_on=self.right_event_timestamp,
         )
 
+    def log_each_job(self) -> RetrivalJob:
+        sub_log = JoinAsofJob(
+            left_job=self.left_job.log_each_job(),
+            right_job=self.right_job.log_each_job(),
+            left_event_timestamp=self.left_event_timestamp,
+            right_event_timestamp=self.right_event_timestamp,
+            left_on=self.left_on,
+            right_on=self.right_on,
+        )
+        return LogJob(sub_log)
+
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_polars()).collect().to_pandas()
 
@@ -560,16 +585,17 @@ class JoinJobs(RetrivalJob):
         left = await self.left_job.to_polars()
         right = await self.right_job.to_polars()
 
-        if self.left_job.request_result.event_timestamp and self.right_job.request_result.event_timestamp:
-            return left.join_asof(
-                right,
-                by_left=self.left_on,
-                by_right=self.right_on,
-                left_on=self.left_job.request_result.event_timestamp,
-                right_on=self.right_job.request_result.event_timestamp,
-            )
-        else:
-            return left.join(right, left_on=self.left_on, right_on=self.right_on, how=self.method)
+        return left.join(right, left_on=self.left_on, right_on=self.right_on, how=self.method)
+
+    def log_each_job(self) -> RetrivalJob:
+        sub_log = JoinJobs(
+            method=self.method,
+            left_job=self.left_job.log_each_job(),
+            right_job=self.right_job.log_each_job(),
+            left_on=self.left_on,
+            right_on=self.right_on,
+        )
+        return LogJob(sub_log)
 
     async def to_pandas(self) -> pd.DataFrame:
         left = await self.left_job.to_pandas()
@@ -741,16 +767,31 @@ class LogJob(RetrivalJob, ModificationJob):
     async def to_pandas(self) -> pd.DataFrame:
         if logger.level == 0:
             logging.basicConfig(level=logging.INFO)
-        df = await self.job.to_pandas()
-        logger.debug(f'Results from {type(self.job).__name__}')
+
+        job_name = self.retrival_requests[0].name
+        logger.debug(f'Starting to run {type(self.job).__name__} - {job_name}')
+        try:
+            df = await self.job.to_pandas()
+        except Exception as error:
+            logger.debug(f'Failed in job: {type(self.job).__name__} - {job_name}')
+            raise error
+        logger.debug(f'Results from {type(self.job).__name__} - {job_name}')
+        logger.debug(df.columns)
         logger.debug(df)
         return df
 
     async def to_polars(self) -> pl.LazyFrame:
         if logger.level == 0:
-            logging.basicConfig(level=logging.INFO)
-        df = await self.job.to_polars()
-        logger.debug(f'Results from {type(self.job).__name__}')
+            logging.basicConfig(level=logging.DEBUG)
+        job_name = self.retrival_requests[0].name
+        logger.debug(f'Starting to run {type(self.job).__name__} - {job_name}')
+        try:
+            df = await self.job.to_polars()
+        except Exception as error:
+            logger.debug(f'Failed in job: {type(self.job).__name__} - {job_name}')
+            raise error
+        logger.debug(f'Results from {type(self.job).__name__} - {job_name}')
+        logger.debug(df.columns)
         logger.debug(df.head(10).collect())
         return df
 
