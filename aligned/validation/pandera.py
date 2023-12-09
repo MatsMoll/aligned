@@ -37,7 +37,6 @@ class PanderaValidator(Validator):
     }
 
     def _column_for(self, feature: Feature) -> Column:
-        Check.str_matches
 
         if feature.constraints is None:
             return Column(
@@ -66,10 +65,10 @@ class PanderaValidator(Validator):
             columns={feature.name: self._column_for(feature) for feature in features}, drop_invalid_rows=True
         )
 
-    async def validate_pandas(self, features: list[Feature], df: pd.DataFrame) -> pd.DataFrame:
+    def validate_pandas(self, features: list[Feature], df: pd.DataFrame) -> pd.DataFrame:
         schema = self._build_schema(features)
         return schema.validate(df, lazy=True)
 
-    async def validate_polars(self, features: list[Feature], df: pl.LazyFrame) -> pl.LazyFrame:
+    def validate_polars(self, features: list[Feature], df: pl.LazyFrame) -> pl.LazyFrame:
         input_df = df.collect().to_pandas()
-        return pl.from_pandas(await self.validate_pandas(features, input_df)).lazy()
+        return pl.from_pandas(self.validate_pandas(features, input_df)).lazy()

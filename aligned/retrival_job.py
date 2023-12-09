@@ -371,7 +371,10 @@ class RetrivalJob(ABC):
     def combined_features(self, requests: list[RetrivalRequest] | None = None) -> RetrivalJob:
         return CombineFactualJob([self], requests or self.retrival_requests)
 
-    def ensure_types(self, requests: list[RetrivalRequest]) -> RetrivalJob:
+    def ensure_types(self, requests: list[RetrivalRequest] | None = None) -> RetrivalJob:
+        if not requests:
+            requests = self.retrival_requests
+
         return EnsureTypesJob(job=self, requests=requests)
 
     def select_columns(self, include_features: set[str]) -> RetrivalJob:
@@ -391,6 +394,14 @@ class RetrivalJob(ABC):
 
     def validate_entites(self) -> RetrivalJob:
         return ValidateEntitiesJob(self)
+
+    def unique_on(self, unique_on: list[str], sort_key: str | None = None) -> RetrivalJob:
+        return UniqueRowsJob(job=self, unique_on=unique_on, sort_key=sort_key)
+
+    def unique_entities(self) -> RetrivalJob:
+        request = self.request_result
+
+        return self.unique_on(unique_on=request.entity_columns, sort_key=request.event_timestamp)
 
     def fill_missing_columns(self) -> RetrivalJob:
         return FillMissingColumnsJob(self)
@@ -584,6 +595,29 @@ class JoinJobs(RetrivalJob):
     async def to_polars(self) -> pl.LazyFrame:
         left = await self.left_job.to_polars()
         right = await self.right_job.to_polars()
+
+        return_request = self.left_job.request_result
+
+        # Need to ensure that the data types are the same. Otherwise will the join fail
+        for left_col, right_col in zip(self.left_on, self.right_on):
+            polars_type = [
+                feature
+                for feature in return_request.features.union(return_request.entities)
+                if feature.name == left_col
+            ]
+            if not polars_type:
+                raise ValueError(f'Unable to find {left_col} in left request {return_request}.')
+
+            polars_type = polars_type[0].dtype.polars_type
+
+            left_column_dtypes = dict(zip(left.columns, left.dtypes))
+            right_column_dtypes = dict(zip(right.columns, right.dtypes))
+
+            if not left_column_dtypes[left_col].is_(polars_type):
+                left = left.with_columns(pl.col(left_col).cast(polars_type))
+
+            if not right_column_dtypes[right_col].is_(polars_type):
+                right = right.with_columns(pl.col(right_col).cast(polars_type))
 
         return left.join(right, left_on=self.left_on, right_on=self.right_on, how=self.method)
 
@@ -816,20 +850,21 @@ class DropInvalidJob(RetrivalJob, ModificationJob):
     def retrival_requests(self) -> list[RetrivalRequest]:
         return self.job.retrival_requests
 
-    @property
-    def features_to_validate(self) -> set[Feature]:
-        return RequestResult.from_request_list(
-            [request for request in self.retrival_requests if not request.aggregated_features]
-        ).features
+    @staticmethod
+    def features_to_validate(retrival_requests: list[RetrivalRequest]) -> set[Feature]:
+        result = RequestResult.from_request_list(
+            [request for request in retrival_requests if not request.aggregated_features]
+        )
+        return result.features.union(result.entities)
 
     async def to_pandas(self) -> pd.DataFrame:
-        return await self.validator.validate_pandas(
-            list(self.features_to_validate), await self.job.to_pandas()
+        return self.validator.validate_pandas(
+            list(DropInvalidJob.features_to_validate(self.retrival_requests)), await self.job.to_pandas()
         )
 
     async def to_polars(self) -> pl.LazyFrame:
-        return await self.validator.validate_polars(
-            list(self.features_to_validate), await self.job.to_polars()
+        return self.validator.validate_polars(
+            list(DropInvalidJob.features_to_validate(self.retrival_requests)), await self.job.to_polars()
         )
 
     def with_subfeatures(self) -> RetrivalJob:
@@ -919,6 +954,25 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
 
 
 @dataclass
+class UniqueRowsJob(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+    unique_on: list[str]
+    sort_key: str | None = field(default=None)
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return (await self.to_polars()).collect().to_pandas()
+
+    async def to_polars(self) -> pl.LazyFrame:
+        data = await self.job.to_polars()
+
+        if self.sort_key:
+            data = data.sort(self.sort_key, descending=True)
+
+        return data.unique(self.unique_on, keep='first').lazy()
+
+
+@dataclass
 class ValidateEntitiesJob(RetrivalJob, ModificationJob):
 
     job: RetrivalJob
@@ -932,7 +986,7 @@ class ValidateEntitiesJob(RetrivalJob, ModificationJob):
 
         return data
 
-    async def to_polars(self) -> pl.DataFrame:
+    async def to_polars(self) -> pl.LazyFrame:
         data = await self.job.to_polars()
 
         for request in self.retrival_requests:

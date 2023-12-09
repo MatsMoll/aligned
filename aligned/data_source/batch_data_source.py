@@ -180,7 +180,9 @@ class BatchDataSource(ABC, Codable, SerializableType):
 
         source, _ = requests[0]
         if isinstance(source, BatchSourceModification):
-            return source.wrap_job(type(source.source).multi_source_features_for(facts, requests))
+            return source.wrap_job(
+                type(source.source).multi_source_features_for(facts, requests)  # type: ignore
+            )
         elif isinstance(source, DataFileReference):
             from aligned.local.job import FileFactualJob
 

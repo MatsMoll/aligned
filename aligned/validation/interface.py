@@ -5,8 +5,8 @@ from aligned.schemas.feature import Feature
 
 
 class Validator:
-    async def validate_pandas(self, features: list[Feature], df: pd.DataFrame) -> pd.DataFrame:
-        pass
+    def validate_pandas(self, features: list[Feature], df: pd.DataFrame) -> pd.DataFrame:
+        raise NotImplementedError(type(self))
 
-    async def validate_polars(self, features: list[Feature], df: pl.LazyFrame) -> pl.LazyFrame:
-        pass
+    def validate_polars(self, features: list[Feature], df: pl.LazyFrame) -> pl.LazyFrame:
+        raise NotImplementedError(type(self))
