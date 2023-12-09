@@ -72,6 +72,18 @@ class FeatureViewMetadata:
         )
 
 
+def resolve_source(source: BatchDataSource | FeatureViewWrapper) -> BatchDataSource:
+    if isinstance(source, FeatureViewWrapper):
+        from aligned.schemas.feature_view import FeatureViewReferenceSource
+
+        compiled = source.compile()
+        return FeatureViewReferenceSource(compiled)
+    elif isinstance(source, BatchDataSource):
+        return source
+    else:
+        raise ValueError(f'Unable to use source: {source}')
+
+
 def feature_view(
     name: str,
     source: BatchDataSource | FeatureViewWrapper,
@@ -84,19 +96,9 @@ def feature_view(
 ) -> Callable[[Type[T]], FeatureViewWrapper[T]]:
     def decorator(cls: Type[T]) -> FeatureViewWrapper[T]:
 
-        if isinstance(source, FeatureViewWrapper):
-            from aligned.schemas.feature_view import FeatureViewReferenceSource
-
-            compiled = source.compile()
-            used_source = FeatureViewReferenceSource(compiled)
-        elif isinstance(source, BatchDataSource):
-            used_source = source
-        else:
-            raise ValueError(f'Unable to use source: {source}')
-
         metadata = FeatureViewMetadata(
             name,
-            used_source,
+            resolve_source(source),
             description=description,
             stream_source=stream_source,
             application_source=application_source,
@@ -104,7 +106,7 @@ def feature_view(
             contacts=contacts,
             tags=tags or {},
         )
-        return FeatureViewWrapper(metadata, cls)
+        return FeatureViewWrapper(metadata, cls())
 
     return decorator
 
@@ -127,19 +129,19 @@ def set_location_for_features_in(view: Any, location: FeatureLocation) -> Any:
 class FeatureViewWrapper(Generic[T]):
 
     metadata: FeatureViewMetadata
-    view: Type[T]
+    view: T
 
     def __call__(self) -> T:
-        view = copy.deepcopy(self.view())
+        view = copy.deepcopy(self.view)
         view = set_location_for_features_in(view, FeatureLocation.feature_view(self.metadata.name))
         _ = FeatureView.compile_with_metadata(view, self.metadata)
         setattr(view, '__view_wrapper__', self)
         return view
 
     def compile(self) -> CompiledFeatureView:
-        view = copy.deepcopy(self.view())
+        view = copy.deepcopy(self.view)
         view = set_location_for_features_in(view, FeatureLocation.feature_view(self.metadata.name))
-        return FeatureView.compile_with_metadata(self.view(), self.metadata)
+        return FeatureView.compile_with_metadata(view, self.metadata)
 
     def filter(
         self, name: str, where: Callable[[T], Bool], materialize_source: BatchDataSource | None = None
@@ -202,9 +204,16 @@ class FeatureViewWrapper(Generic[T]):
             right_on=right_on,
         )
 
+    def with_source(self, named: str, source: BatchDataSource | FeatureViewWrapper) -> FeatureViewWrapper[T]:
+
+        meta = copy.deepcopy(self.metadata)
+        meta.name = named
+        meta.source = resolve_source(source)
+
+        return FeatureViewWrapper(meta, self.view)
+
     def with_entity_renaming(self, named: str, renames: dict[str, str] | str) -> FeatureViewWrapper[T]:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
-        import copy
 
         compiled_view = self.compile()
 

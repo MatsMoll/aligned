@@ -117,6 +117,9 @@ class CompiledFeatureView(Codable):
             aggregated_features = set()
 
             for dep_ref in feature.depending_on:
+                if dep_ref.name == feature.name:
+                    continue
+
                 dep_feature = [
                     feat for feat in self.features.union(self.entities) if feat.name == dep_ref.name
                 ]
@@ -164,6 +167,7 @@ class CompiledFeatureView(Codable):
         all_features = features.union(derived_features).union(
             {feature.derived_feature for feature in aggregated_features}
         )
+
         exclude_names = {feature.name for feature in all_features} - feature_names
 
         return FeatureRequest(
@@ -324,7 +328,6 @@ class FeatureViewReferenceSource(BatchDataSource):
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
 
         sub_source = self.view.materialized_source or self.view.source
-        sub_location = FeatureLocation.feature_view(self.view.name)
         sub_references: set[str] = request.entity_names.union(request.feature_names)
 
         if request.event_timestamp:
@@ -332,11 +335,12 @@ class FeatureViewReferenceSource(BatchDataSource):
 
         agg_features = {feat.derived_feature for feat in request.aggregated_features}
 
+        sub_features = self.view.request_all.request_result.all_returned_columns
+
         for feature in request.derived_features.union(agg_features):
             for depends_on in feature.depending_on:
-                if depends_on.location != sub_location:
-                    continue
-                sub_references.add(depends_on.name)
+                if depends_on.name in sub_features:
+                    sub_references.add(depends_on.name)
 
         sub_request = self.view.request_for(sub_references)
 

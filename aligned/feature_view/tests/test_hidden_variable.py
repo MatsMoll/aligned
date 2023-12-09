@@ -54,6 +54,8 @@ async def test_select_variables() -> None:
 
     assert len(request.needed_requests) == 1
     needed_req = request.needed_requests[0]
+
+    assert len(needed_req.features) == 2
     assert len(needed_req.derived_features) == 2
 
 
@@ -84,8 +86,8 @@ async def test_core_feature_as_hidden() -> None:
 
         Age = Float().fill_na(10)
 
-    compiled = Test.compile()
+    compiled = Test.compile()  # type: ignore
     assert len(compiled.derived_features) == 1
 
-    df = await Test.query().all().to_pandas()
+    df = await Test.query().all().to_pandas()  # type: ignore
     assert (~df['Age'].isna()).all()
