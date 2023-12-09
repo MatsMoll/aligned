@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import copy
 import logging
+import polars as pl
+import pandas as pd
 
 from abc import ABC, abstractproperty
 from dataclasses import dataclass, field
@@ -24,6 +26,7 @@ from aligned.data_source.batch_data_source import (
     resolve_keys,
 )
 from aligned.data_source.stream_data_source import StreamDataSource
+from aligned.retrival_job import ConvertableToRetrivalJob, RetrivalJob
 from aligned.schemas.derivied_feature import (
     AggregatedFeature,
 )
@@ -34,9 +37,12 @@ from aligned.compiler.feature_factory import FeatureFactory
 if TYPE_CHECKING:
     from aligned.feature_store import FeatureViewStore
     from datetime import datetime
+    from aligned.validation.interface import Validator
 
 # Enables code compleation in the select method
 T = TypeVar('T')
+
+ConvertableData = TypeVar('ConvertableData', dict, pl.DataFrame, pd.DataFrame)
 
 
 logger = logging.getLogger(__name__)
@@ -329,6 +335,35 @@ class FeatureViewWrapper(Generic[T]):
         """
         compiled = self.compile()
         return await FeatureView.freshness_in_source(compiled, compiled.source)
+
+    def from_data(self, data: ConvertableToRetrivalJob) -> RetrivalJob:
+        request = self.compile().request_all
+        return RetrivalJob.from_convertable(data, request)
+
+    def drop_invalid(self, data: ConvertableData, validator: Validator | None = None) -> ConvertableData:
+        from aligned.retrival_job import DropInvalidJob
+
+        if not validator:
+            from aligned.validation.pandera import PanderaValidator
+
+            validator = PanderaValidator()
+
+        features = list(DropInvalidJob.features_to_validate(self.compile().request_all.needed_requests))
+
+        if isinstance(data, dict):
+            validate_data = pd.DataFrame(data)
+        else:
+            validate_data = data
+
+        if isinstance(validate_data, pl.DataFrame):
+            return validator.validate_polars(features, validate_data.lazy()).collect()
+        elif isinstance(validate_data, pd.DataFrame):
+            validated = validator.validate_pandas(features, validate_data)
+            if isinstance(data, dict):
+                return validated.to_dict(orient='list')
+            return validated  # type: ignore
+        else:
+            raise ValueError(f'Invalid data type: {type(data)}')
 
 
 class FeatureView(ABC):

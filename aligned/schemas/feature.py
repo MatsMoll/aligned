@@ -96,7 +96,15 @@ class FeatureType(Codable):
 
     @property
     def is_numeric(self) -> bool:
-        return self.name in {'bool', 'int32', 'int64', 'float', 'double'}  # Can be represented as an int
+        return self.name in {
+            'bool',
+            'int8',
+            'int16',
+            'int32',
+            'int64',
+            'float',
+            'double',
+        }  # Can be represented as an int
 
     @property
     def python_type(self) -> type:
@@ -107,6 +115,8 @@ class FeatureType(Codable):
 
         return {
             'string': str,
+            'int8': int,
+            'int16': int,
             'int32': int,
             'int64': int,
             'float': float,
@@ -127,6 +137,8 @@ class FeatureType(Codable):
 
         return {
             'string': str,
+            'int8': 'Int8',
+            'int16': 'Int16',
             'int32': 'Int32',
             'int64': 'Int64',
             'float': np.float64,
@@ -149,6 +161,8 @@ class FeatureType(Codable):
     def feature_factory(self) -> ff.FeatureFactory:
         return {
             'string': ff.String(),
+            'int8': ff.Int8(),
+            'int16': ff.Int16(),
             'int32': ff.Int32(),
             'int64': ff.Int64(),
             'float': ff.Float(),
@@ -185,6 +199,14 @@ class FeatureType(Codable):
     @staticmethod
     def string() -> FeatureType:
         return FeatureType(name='string')
+
+    @staticmethod
+    def int8() -> FeatureType:
+        return FeatureType(name='int8')
+
+    @staticmethod
+    def int16() -> FeatureType:
+        return FeatureType(name='int16')
 
     @staticmethod
     def int32() -> FeatureType:

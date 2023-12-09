@@ -642,10 +642,10 @@ class ArithmeticFeature(ComparableFeature):
             feature.transformation = RatioFactory(self, LiteralValue.from_value(other))
         return feature
 
-    def __abs__(self) -> Float:
+    def __abs__(self) -> Int64:
         from aligned.compiler.transformation_factory import AbsoluteFactory
 
-        feature = Float()
+        feature = Int64()
         feature.transformation = AbsoluteFactory(self)
         return feature
 
@@ -845,6 +845,30 @@ class Float(ArithmeticFeature, DecimalOperations):
     @property
     def dtype(self) -> FeatureType:
         return FeatureType.float()
+
+    def aggregate(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
+
+
+class Int8(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion):
+    def copy_type(self) -> Int8:
+        return Int8()
+
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType.int8()
+
+    def aggregate(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
+
+
+class Int16(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion):
+    def copy_type(self) -> Int16:
+        return Int16()
+
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType.int16()
 
     def aggregate(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)

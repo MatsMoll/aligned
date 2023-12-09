@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "aligned"
-version = "0.0.49"
-description = "A scalable feature store that makes it easy to align offline and online ML systems"
+version = "0.0.50"
+description = "A data managment and lineage tool for ML applications."
 authors = ["Mats E. Mollestad <mats@mollestad.no>"]
 license = "Apache-2.0"
 readme = "README.md"
@@ -17,6 +17,9 @@ keywords = [
     'feature-store',
     'feast',
     'tecton',
+    'dbt',
+    'data',
+    'lineage'
 ]
 classifiers = [
     'Development Status :: 3 - Alpha',
