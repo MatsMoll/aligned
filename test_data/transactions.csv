@@ -1,0 +1,9 @@
+transaction_id,user_id,amount
+a,a,20
+b,b,-20
+c,a,100
+d,b,-100
+q,a,-20
+w,b,20
+e,a,-100
+r,b,89

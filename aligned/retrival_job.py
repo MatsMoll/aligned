@@ -544,6 +544,10 @@ class JoinAsofJob(RetrivalJob):
     def request_result(self) -> RequestResult:
         return RequestResult.from_result_list([self.left_job.request_result, self.right_job.request_result])
 
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return RetrivalRequest.combine(self.left_job.retrival_requests + self.right_job.retrival_requests)
+
     async def to_polars(self) -> pl.LazyFrame:
         left = await self.left_job.to_polars()
         right = await self.right_job.to_polars()

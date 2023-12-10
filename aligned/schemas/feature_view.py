@@ -133,9 +133,8 @@ class CompiledFeatureView(Codable):
                     if feat.name == dep_ref.name
                 ]
                 if not dep_features:
-                    raise ValueError(
-                        'Unable to find the referenced feature. This is most likely a bug in the systemd'
-                    )
+                    continue
+
                 dep_feature = dep_features[0]
                 if dep_feature in derived_aggregated_feautres:
                     agg_feat = [
@@ -338,6 +337,9 @@ class FeatureViewReferenceSource(BatchDataSource):
         sub_features = self.view.request_all.request_result.all_returned_columns
 
         for feature in request.derived_features.union(agg_features):
+            if feature.name in sub_features:
+                sub_references.add(feature.name)
+
             for depends_on in feature.depending_on:
                 if depends_on.name in sub_features:
                     sub_references.add(depends_on.name)

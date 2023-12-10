@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import pytest
 
+from aligned import feature_view, Float, String, FileSource
 from aligned.local.job import FileFullJob
 from aligned.retrival_job import DerivedFeatureJob, RetrivalRequest
 from aligned.sources.local import LiteralReference
@@ -60,3 +61,45 @@ async def test_derived_polars(retrival_request_with_derived: RetrivalRequest) ->
 
     assert set(data.columns) == {'id', 'c', 'd', 'created_at', 'c+d'}
     assert data.shape[0] == 5
+
+
+@feature_view(name='transactions', source=FileSource.csv_at('test_data/transactions.csv'))
+class Transaction:
+
+    transaction_id = String().as_entity()
+
+    user_id = String().fill_na('some_user_id')
+
+    amount = Float()
+    abs_amount = abs(amount)
+
+    is_expence = amount < 0
+    is_income = amount > 0
+
+
+Expences = Transaction.filter(name='expence', where=lambda view: view.is_expence)  # type: ignore
+Income = Transaction.filter(name='income', where=lambda view: view.is_income)  # type: ignore
+
+expences = Expences()
+
+
+@feature_view(name='expence_agg', source=Expences)
+class ExpenceAgg:
+    user_id = String().as_entity()
+
+    amount_agg = expences.abs_amount.aggregate()
+
+    total_amount = amount_agg.sum()
+
+
+IncomeAgg = ExpenceAgg.with_source(named='income_agg', source=Income)  # type: ignore
+
+
+@pytest.mark.asyncio
+async def test_aggregate_over_derived() -> None:
+
+    data = await IncomeAgg.query().all().to_polars()
+
+    df = data.collect()
+
+    assert df.height == 2
