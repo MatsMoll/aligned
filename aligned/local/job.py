@@ -299,7 +299,7 @@ async def aggregate_over(
 @dataclass
 class FileFactualJob(RetrivalJob):
 
-    source: DataFileReference
+    source: DataFileReference | RetrivalJob
     requests: list[RetrivalRequest]
     facts: RetrivalJob
 
@@ -351,10 +351,12 @@ class FileFactualJob(RetrivalJob):
 
         row_id_name = 'row_id'
         result = result.with_row_count(row_id_name)
-
         for request in self.requests:
+
             entity_names = request.entity_names
             all_names = request.all_required_feature_names.union(entity_names)
+
+            column_selects = list(entity_names.union({'row_id'}))
 
             if request.event_timestamp_request:
                 using_event_timestamp = event_timestamp_entity_column is not None
@@ -364,42 +366,52 @@ class FileFactualJob(RetrivalJob):
             if request.event_timestamp:
                 all_names.add(request.event_timestamp.name)
 
-            all_names = list(all_names)
-
-            request_features = list(all_names)
-            if isinstance(self.source, ColumnFeatureMappable):
-                request_features = self.source.feature_identifier_for(all_names)
-
-            feature_df = df.select(request_features)
-
-            renames = {
-                org_name: wanted_name
-                for org_name, wanted_name in zip(request_features, all_names)
-                if org_name != wanted_name
-            }
-            if renames:
-                feature_df = feature_df.rename(renames)
-
-            for entity in request.entities:
-                feature_df = feature_df.with_columns(pl.col(entity.name).cast(entity.dtype.polars_type))
-                result = result.with_columns(pl.col(entity.name).cast(entity.dtype.polars_type))
-
-            column_selects = list(entity_names.union({'row_id'}))
-
             if using_event_timestamp:
                 column_selects.append(event_timestamp_col)
 
-            # Need to only select the relevent entities and row_id
-            # Otherwise will we get a duplicate column error
-            # We also need to remove the entities after the row_id is joined
-            new_result: pl.LazyFrame = result.select(column_selects).join(
-                feature_df, on=list(entity_names), how='left'
-            )
-            new_result = new_result.select(pl.exclude(list(entity_names)))
+            missing_agg_features = [
+                feat for feat in request.aggregated_features if feat.name not in df.columns
+            ]
+            if request.aggregated_features and not missing_agg_features:
+                new_result = result.join(
+                    df.select(request.all_returned_columns), on=list(entity_names), how='left'
+                )
+            else:
+                all_names = list(all_names)
 
-            for group, features in request.aggregate_over().items():
-                aggregated_df = await aggregate_over(group, features, new_result, event_timestamp_col)
-                new_result = new_result.join(aggregated_df, on='row_id', how='left')
+                request_features = list(all_names)
+                if isinstance(self.source, ColumnFeatureMappable):
+                    request_features = self.source.feature_identifier_for(all_names)
+
+                feature_df = df.select(request_features)
+
+                renames = {
+                    org_name: wanted_name
+                    for org_name, wanted_name in zip(request_features, all_names)
+                    if org_name != wanted_name
+                }
+                if renames:
+                    feature_df = feature_df.rename(renames)
+
+                for entity in request.entities:
+                    feature_df = feature_df.with_columns(pl.col(entity.name).cast(entity.dtype.polars_type))
+                    result = result.with_columns(pl.col(entity.name).cast(entity.dtype.polars_type))
+
+                # Need to only select the relevent entities and row_id
+                # Otherwise will we get a duplicate column error
+                # We also need to remove the entities after the row_id is joined
+                new_result: pl.LazyFrame = result.select(column_selects).join(
+                    feature_df, on=list(entity_names), how='left'
+                )
+                new_result = new_result.select(pl.exclude(list(entity_names)))
+
+                for group, features in request.aggregate_over().items():
+                    missing_features = [
+                        feature.name for feature in features if feature.name not in df.columns
+                    ]
+                    if missing_features:
+                        aggregated_df = await aggregate_over(group, features, new_result, event_timestamp_col)
+                        new_result = new_result.join(aggregated_df, on='row_id', how='left')
 
             if request.event_timestamp and using_event_timestamp:
                 field = request.event_timestamp.name
@@ -409,6 +421,7 @@ class FileFactualJob(RetrivalJob):
                     new_result = new_result.with_columns(
                         pl.col(field).str.strptime(pl.Datetime, '%+').alias(field)
                     )
+
                 if ttl:
                     ttl_request = (pl.col(field) <= pl.col(event_timestamp_col)) & (
                         pl.col(field) >= pl.col(event_timestamp_col) - ttl
@@ -420,12 +433,14 @@ class FileFactualJob(RetrivalJob):
                     )
                 new_result = new_result.sort(field, descending=True).select(pl.exclude(field))
             elif request.event_timestamp:
-                new_result = new_result.sort([row_id_name, request.event_timestamp.name], descending=True)
+                new_result = new_result.sort(
+                    [row_id_name, request.event_timestamp.name], descending=True
+                ).select(pl.exclude(request.event_timestamp.name))
 
             unique = new_result.unique(subset=row_id_name, keep='first')
             column_selects.remove('row_id')
             result = result.join(unique.select(pl.exclude(column_selects)), on=row_id_name, how='left')
-            result = result.select(pl.exclude('.*_right$'))
+            result = result.select(pl.exclude('.*_right'))
 
         if did_rename_event_timestamp:
             result = result.rename({event_timestamp_col: event_timestamp_entity_column})
@@ -437,3 +452,11 @@ class FileFactualJob(RetrivalJob):
 
     async def to_polars(self) -> pl.LazyFrame:
         return await self.file_transformations(await self.source.to_polars())
+
+    def log_each_job(self) -> RetrivalJob:
+        from aligned.retrival_job import LogJob
+
+        if isinstance(self.source, RetrivalJob):
+            return FileFactualJob(LogJob(self.source), self.requests, self.facts)
+        else:
+            return self

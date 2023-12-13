@@ -324,11 +324,9 @@ class FeatureViewReferenceSource(BatchDataSource):
     def job_group_key(self) -> str:
         return self.view.name
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+    def sub_request(self, request: RetrivalRequest) -> RetrivalRequest:
 
-        sub_source = self.view.materialized_source or self.view.source
         sub_references: set[str] = request.entity_names.union(request.feature_names)
-
         if request.event_timestamp:
             sub_references.add(request.event_timestamp.name)
 
@@ -349,14 +347,46 @@ class FeatureViewReferenceSource(BatchDataSource):
         if len(sub_request.needed_requests) != 1:
             raise ValueError('Got mulitple requests for one view. Something odd happend.')
 
-        sub_req = sub_request.needed_requests[0]
+        return sub_request.needed_requests[0]
+
+    @classmethod
+    def multi_source_features_for(
+        cls: type[FeatureViewReferenceSource],
+        facts: RetrivalJob,
+        requests: list[tuple[FeatureViewReferenceSource, RetrivalRequest]],
+    ) -> RetrivalJob:
+        from aligned.local.job import FileFactualJob
+
+        sources = {source.job_group_key() for source, _ in requests if isinstance(source, BatchDataSource)}
+        if len(sources) != 1:
+            raise NotImplementedError(
+                f'Type: {cls} have not implemented how to load fact data with multiple sources.'
+            )
+
+        source, request = requests[0]
+
+        sub_source = source.view.materialized_source or source.view.source
+        sub_request = source.sub_request(request)
+
+        sub_job = sub_source.all_data(sub_request, limit=None).derive_features()
+
+        if request.aggregated_features:
+            available_features = sub_job.aggregate(request).derive_features()
+        else:
+            available_features = sub_job.derive_features([request])
+
+        return FileFactualJob(available_features, [request], facts)
+
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+        sub_source = self.view.materialized_source or self.view.source
+
+        sub_req = self.sub_request(request)
 
         core_job = sub_source.all_data(sub_req, limit=limit)
-        core_job = core_job.ensure_types([sub_req]).derive_features([sub_req])
         if request.aggregated_features:
             return core_job.aggregate(request).derive_features([request])
         else:
-            return core_job.derive_features([request])
+            return core_job.derive_features().derive_features([request])
 
     def depends_on(self) -> set[FeatureLocation]:
         return {FeatureLocation.feature_view(self.view.name)}

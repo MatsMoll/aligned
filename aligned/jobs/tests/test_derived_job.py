@@ -4,6 +4,8 @@ import pandas as pd
 import pytest
 
 from aligned import feature_view, Float, String, FileSource
+from aligned.compiler.model import model_contract
+from aligned.feature_store import FeatureStore
 from aligned.local.job import FileFullJob
 from aligned.retrival_job import DerivedFeatureJob, RetrivalRequest
 from aligned.sources.local import LiteralReference
@@ -94,6 +96,34 @@ class ExpenceAgg:
 
 IncomeAgg = ExpenceAgg.with_source(named='income_agg', source=Income)  # type: ignore
 
+income_agg = IncomeAgg()
+
+
+@model_contract(
+    name='model',
+    features=[
+        expences.abs_amount,
+        expences.is_expence,
+        income_agg.total_amount,
+    ],
+)
+class Model:
+    user_id = String().as_entity()
+
+    pred_amount = expences.amount.as_regression_label()
+
+
+def feature_store() -> FeatureStore:
+    store = FeatureStore.experimental()
+
+    views = [Transaction, Expences, Income, ExpenceAgg, IncomeAgg]
+    for view in views:
+        store.add_compiled_view(view.compile())
+
+    store.add_compiled_model(Model.compile())
+
+    return store
+
 
 @pytest.mark.asyncio
 async def test_aggregate_over_derived() -> None:
@@ -103,3 +133,47 @@ async def test_aggregate_over_derived() -> None:
     df = data.collect()
 
     assert df.height == 2
+
+
+@pytest.mark.asyncio
+async def test_aggregate_over_derived_fact() -> None:
+
+    store = feature_store()
+
+    data = await store.features_for(
+        entities={'user_id': ['a', 'b']}, features=['income_agg:total_amount']
+    ).to_polars()
+
+    df = data.collect()
+
+    assert df.height == 2
+
+
+@pytest.mark.asyncio
+async def test_model_with_label_multiple_views() -> None:
+
+    store = feature_store()
+
+    entities = await store.feature_view('expence').all().to_pandas()
+
+    data_job = store.model('model').with_labels().features_for(entities)
+    data = await data_job.to_pandas()
+
+    expected_df = pd.DataFrame(
+        {
+            'transaction_id': ['b', 'd', 'q', 'e'],
+            'user_id': ['b', 'b', 'a', 'a'],
+            'total_amount': [109.0, 109.0, 120.0, 120.0],
+            'is_expence': [True, True, True, True],
+            'abs_amount': [20, 100, 20, 100],
+            'amount': [-20.0, -100.0, -20.0, -100.0],
+        }
+    )
+
+    assert data.labels.shape[0] != 0
+    assert data.input.shape[1] == 3
+    assert data.input.shape[0] != 0
+
+    assert data.data.sort_values(['user_id', 'transaction_id'])[expected_df.columns].equals(
+        expected_df.sort_values(['user_id', 'transaction_id'])
+    )

@@ -301,10 +301,11 @@ class RequestResult(Codable):
         return [entity.name for entity in self.entities]
 
     def __add__(self, obj: 'RequestResult') -> 'RequestResult':
+
         return RequestResult(
             entities=self.entities.union(obj.entities),
             features=self.features.union(obj.features),
-            event_timestamp='event_timestamp' if self.event_timestamp or obj.event_timestamp else None,
+            event_timestamp=self.event_timestamp or obj.event_timestamp,
         )
 
     def filter_features(self, features_to_include: set[str]) -> 'RequestResult':
@@ -328,6 +329,10 @@ class RequestResult(Codable):
         if request_len == 0:
             return RequestResult(entities=set(), features=set(), event_timestamp=None)
         elif request_len > 1:
+            event_timestamp = None
+            requests_with_event = [req.event_timestamp for req in requests if req.event_timestamp]
+            if requests_with_event:
+                event_timestamp = requests_with_event[0].name
             return RequestResult(
                 entities=set().union(*[request.entities for request in requests]),
                 features=set().union(
@@ -341,9 +346,7 @@ class RequestResult(Codable):
                         for request in requests
                     ]
                 ),
-                event_timestamp='event_timestamp'
-                if any(request.event_timestamp for request in requests)
-                else None,
+                event_timestamp=event_timestamp,
             )
         else:
             return RequestResult.from_request(requests[0])
@@ -354,12 +357,14 @@ class RequestResult(Codable):
         if request_len == 0:
             return RequestResult(entities=set(), features=set(), event_timestamp=None)
         elif request_len > 1:
+            event_timestamp = None
+            requests_with_event = [req.event_timestamp for req in requests if req.event_timestamp]
+            if requests_with_event:
+                event_timestamp = requests_with_event[0]
             return RequestResult(
                 entities=set().union(*[request.entities for request in requests]),
                 features=set().union(*[request.features for request in requests]),
-                event_timestamp='event_timestamp'
-                if any(request.event_timestamp for request in requests)
-                else None,
+                event_timestamp=event_timestamp,
             )
         else:
             return requests[0]

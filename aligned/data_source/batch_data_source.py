@@ -284,6 +284,27 @@ class FilteredDataSource(BatchDataSource):
     def job_group_key(self) -> str:
         return f'subset/{self.source.job_group_key()}'
 
+    @classmethod
+    def multi_source_features_for(
+        cls: type[FilteredDataSource],
+        facts: RetrivalJob,
+        requests: list[tuple[FilteredDataSource, RetrivalRequest]],
+    ) -> RetrivalJob:
+
+        sources = {source.job_group_key() for source, _ in requests if isinstance(source, BatchDataSource)}
+        if len(sources) != 1:
+            raise NotImplementedError(
+                f'Type: {cls} have not implemented how to load fact data with multiple sources.'
+            )
+        source, request = requests[0]
+
+        if isinstance(source.condition, Feature):
+            request.features.add(source.condition)
+        else:
+            request.derived_features.add(source.condition)
+
+        return source.source.features_for(facts, request).filter(source.condition)
+
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
 
         if isinstance(self.condition, Feature):

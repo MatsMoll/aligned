@@ -804,33 +804,33 @@ class LogJob(RetrivalJob, ModificationJob):
 
     async def to_pandas(self) -> pd.DataFrame:
         if logger.level == 0:
-            logging.basicConfig(level=logging.INFO)
+            logging.basicConfig(level=logging.DEBUG)
 
         job_name = self.retrival_requests[0].name
-        logger.debug(f'Starting to run {type(self.job).__name__} - {job_name}')
+        logging.debug(f'Starting to run {type(self.job).__name__} - {job_name}')
         try:
             df = await self.job.to_pandas()
         except Exception as error:
-            logger.debug(f'Failed in job: {type(self.job).__name__} - {job_name}')
+            logging.debug(f'Failed in job: {type(self.job).__name__} - {job_name}')
             raise error
-        logger.debug(f'Results from {type(self.job).__name__} - {job_name}')
-        logger.debug(df.columns)
-        logger.debug(df)
+        logging.debug(f'Results from {type(self.job).__name__} - {job_name}')
+        logging.debug(df.columns)
+        logging.debug(df)
         return df
 
     async def to_polars(self) -> pl.LazyFrame:
         if logger.level == 0:
             logging.basicConfig(level=logging.DEBUG)
         job_name = self.retrival_requests[0].name
-        logger.debug(f'Starting to run {type(self.job).__name__} - {job_name}')
+        logging.debug(f'Starting to run {type(self.job).__name__} - {job_name}')
         try:
             df = await self.job.to_polars()
         except Exception as error:
-            logger.debug(f'Failed in job: {type(self.job).__name__} - {job_name}')
+            logging.debug(f'Failed in job: {type(self.job).__name__} - {job_name}')
             raise error
-        logger.debug(f'Results from {type(self.job).__name__} - {job_name}')
-        logger.debug(df.columns)
-        logger.debug(df.head(10).collect())
+        logging.debug(f'Results from {type(self.job).__name__} - {job_name}')
+        logging.debug(df.columns)
+        logging.debug(df.head(10).collect())
         return df
 
     def remove_derived_features(self) -> RetrivalJob:
@@ -856,9 +856,7 @@ class DropInvalidJob(RetrivalJob, ModificationJob):
 
     @staticmethod
     def features_to_validate(retrival_requests: list[RetrivalRequest]) -> set[Feature]:
-        result = RequestResult.from_request_list(
-            [request for request in retrival_requests if not request.aggregated_features]
-        )
+        result = RequestResult.from_request_list(retrival_requests)
         return result.features.union(result.entities)
 
     async def to_pandas(self) -> pd.DataFrame:
@@ -1398,9 +1396,12 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
             features_to_check = request.all_required_features
 
             if request.aggregated_features:
-                features_to_check = {feature.derived_feature for feature in request.aggregated_features}
+                features_to_check.update({feature.derived_feature for feature in request.aggregated_features})
 
             for feature in features_to_check:
+
+                if feature.name not in org_schema:
+                    continue
 
                 if feature.dtype.polars_type.is_(org_schema[feature.name]):
                     continue
@@ -1526,21 +1527,7 @@ class CombineFactualJob(RetrivalJob):
         return df
 
     async def to_pandas(self) -> pd.DataFrame:
-        job_count = len(self.jobs)
-        if job_count > 1:
-            dfs = await asyncio.gather(*[job.to_pandas() for job in self.jobs])
-            df = pd.concat(dfs, axis=1)
-            combined = await self.combine_data(df)
-            return combined.loc[:, ~df.columns.duplicated()].copy()
-        elif job_count == 1:
-            df = await self.jobs[0].to_pandas()
-            return await self.combine_data(df)
-        else:
-            raise ValueError(
-                'Have no jobs to fetch. This is probably an internal error.\n'
-                'Please submit an issue, and describe how to reproduce it.\n'
-                'Or maybe even submit a PR'
-            )
+        return (await self.to_polars()).collect().to_pandas()
 
     async def to_polars(self) -> pl.LazyFrame:
         if not self.jobs:
@@ -1551,14 +1538,27 @@ class CombineFactualJob(RetrivalJob):
             )
 
         dfs: list[pl.LazyFrame] = await asyncio.gather(*[job.to_polars() for job in self.jobs])
+        results = [job.request_result for job in self.jobs]
 
-        df = dfs[0]
+        joined_entities = set(results[0].entity_columns)
+        df = dfs[0].collect()
 
-        for other_df in dfs[1:]:
-            df = df.with_context(other_df).select(pl.all())
+        for other_df, job_result in list(zip(dfs, results))[1:]:
 
-        # df = pl.concat(dfs_to_concat, how='horizontal')
-        return await self.combine_polars_data(df)
+            other_df = other_df.collect()
+
+            join_on = job_result.entity_columns
+
+            if df.height == other_df.height:
+                df = df.lazy().with_context(other_df.lazy()).select(pl.all()).collect()
+            elif df.height > other_df.height:
+                df = df.join(other_df, on=join_on)
+            else:
+                df = other_df.join(df, on=list(joined_entities))
+
+            joined_entities.update(job_result.entity_columns)
+
+        return await self.combine_polars_data(df.lazy())
 
     def cache_raw_data(self, location: DataFileReference | str) -> RetrivalJob:
         return CombineFactualJob([job.cache_raw_data(location) for job in self.jobs], self.combined_requests)
@@ -1570,7 +1570,7 @@ class CombineFactualJob(RetrivalJob):
         return CombineFactualJob([job.remove_derived_features() for job in self.jobs], self.combined_requests)
 
     def log_each_job(self) -> RetrivalJob:
-        return CombineFactualJob([job.log_each_job() for job in self.jobs], self.combined_requests)
+        return LogJob(CombineFactualJob([job.log_each_job() for job in self.jobs], self.combined_requests))
 
     def describe(self) -> str:
         description = f'Combining {len(self.jobs)} jobs:\n'

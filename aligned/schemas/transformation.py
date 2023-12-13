@@ -169,7 +169,9 @@ class SupportedTransformations:
 
         for tran_type in [
             Equals,
+            EqualsLiteral,
             NotEquals,
+            NotEqualsLiteral,
             NotNull,
             PandasLambdaTransformation,
             PandasFunctionTransformation,
@@ -411,6 +413,33 @@ class NotNull(Transformation):
 class Equals(Transformation):
 
     key: str
+    other_key: str
+
+    name: str = 'equals_feature'
+    dtype: FeatureType = FeatureType.bool()
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return df[self.key] == df[self.other_key]
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        return pl.col(self.key) == pl.col(self.other_key)
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            Equals('x', 'y'),
+            input={
+                'x': ['Hello', 'Test', 'nah', 'test', 'Test'],
+                'y': ['hello', 'Test', 'other', 'no', 'Test'],
+            },
+            output=[False, True, False, False, True],
+        )
+
+
+@dataclass
+class EqualsLiteral(Transformation):
+
+    key: str
     value: LiteralValue
 
     name: str = 'equals'
@@ -429,7 +458,7 @@ class Equals(Transformation):
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
-            Equals('x', LiteralValue.from_value('Test')),
+            EqualsLiteral('x', LiteralValue.from_value('Test')),
             input={'x': ['Hello', 'Test', 'nah', 'test', 'Test']},
             output=[False, True, False, False, True],
         )
@@ -540,6 +569,33 @@ class Inverse(Transformation):
 class NotEquals(Transformation):
 
     key: str
+    other_key: str
+
+    name: str = 'not-equals-feature'
+    dtype: FeatureType = FeatureType.bool()
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return df[self.key] != df[self.other_key]
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        return pl.col(self.key) != pl.col(self.other_key)
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            NotEquals('x', 'y'),
+            input={
+                'x': ['Hello', 'Test', 'nah', 'test', 'Test'],
+                'y': ['hello', 'Test', 'other', 'no', 'Test'],
+            },
+            output=[True, False, True, True, False],
+        )
+
+
+@dataclass
+class NotEqualsLiteral(Transformation):
+
+    key: str
     value: LiteralValue
 
     name: str = 'not-equals'
@@ -561,7 +617,7 @@ class NotEquals(Transformation):
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
-            NotEquals('x', LiteralValue.from_value('Test')),
+            NotEqualsLiteral('x', LiteralValue.from_value('Test')),
             input={'x': ['Hello', 'Test', 'nah', 'test', 'Test']},
             output=[True, False, True, True, False],
         )

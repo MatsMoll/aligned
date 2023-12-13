@@ -27,12 +27,12 @@ class EqualsFactory(TransformationFactory):
             return [self.left]
 
     def compile(self) -> Transformation:
-        from aligned.schemas.transformation import Equals
+        from aligned.schemas.transformation import EqualsLiteral, Equals
 
         if isinstance(self.right, FeatureFactory):
-            raise NotImplementedError()
+            return Equals(self.left.name, self.right.name)
         else:
-            return Equals(self.left.name, LiteralValue.from_value(self.right))
+            return EqualsLiteral(self.left.name, LiteralValue.from_value(self.right))
 
 
 @dataclass
@@ -122,7 +122,7 @@ class ContainsFactory(TransformationFactory):
 @dataclass
 class NotEqualsFactory(TransformationFactory):
 
-    value: Any
+    value: Any | FeatureFactory
     in_feature: FeatureFactory
 
     @property
@@ -130,9 +130,12 @@ class NotEqualsFactory(TransformationFactory):
         return [self.in_feature]
 
     def compile(self) -> Transformation:
-        from aligned.schemas.transformation import NotEquals as NotEqualsTransformation
+        from aligned.schemas.transformation import NotEqualsLiteral, NotEquals as NotEqualsTransformation
 
-        return NotEqualsTransformation(self.in_feature.name, LiteralValue.from_value(self.value))
+        if isinstance(self.value, FeatureFactory):
+            return NotEqualsTransformation(self.in_feature.name, self.value.name)
+        else:
+            return NotEqualsLiteral(self.in_feature.name, LiteralValue.from_value(self.value))
 
 
 @dataclass

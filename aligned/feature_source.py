@@ -90,6 +90,11 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
             )
             if has_derived_features:
                 job = job.derive_features()
+
+            if len(requests) == 1 and requests[0][1].aggregated_features:
+                req = requests[0][1]
+                job = job.aggregate(req)
+
             jobs.append(job)
 
         if len(combined_requests) > 0 or len(jobs) > 1:
