@@ -142,7 +142,7 @@ class SupervisedJob:
             self.target_columns,
         )
 
-    def validate(self, validator: Validator) -> SupervisedJob:
+    def drop_invalid(self, validator: Validator) -> SupervisedJob:
         return SupervisedJob(
             self.job.drop_invalid(validator),
             self.target_columns,
@@ -401,6 +401,12 @@ class RetrivalJob(ABC):
     def unique_entities(self) -> RetrivalJob:
         request = self.request_result
 
+        if not request.event_timestamp:
+            logger.info(
+                'Unable to find event_timestamp for `unique_entities`. '
+                'This can lead to inconsistent features.'
+            )
+
         return self.unique_on(unique_on=request.entity_columns, sort_key=request.event_timestamp)
 
     def fill_missing_columns(self) -> RetrivalJob:
@@ -594,7 +600,21 @@ class JoinJobs(RetrivalJob):
 
     @property
     def request_result(self) -> RequestResult:
-        return RequestResult.from_result_list([self.left_job.request_result, self.right_job.request_result])
+        request = RequestResult.from_result_list(
+            [self.left_job.request_result, self.right_job.request_result]
+        )
+
+        right_entities = self.right_job.request_result.entities
+
+        for feature in right_entities:
+            if feature.name in self.right_on:
+                request.entities.remove(feature)
+
+        return request
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return RetrivalRequest.combine(self.left_job.retrival_requests + self.right_job.retrival_requests)
 
     async def to_polars(self) -> pl.LazyFrame:
         left = await self.left_job.to_polars()
@@ -1375,8 +1395,14 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                     df[feature.name] = pd.to_datetime(df[feature.name], infer_datetime_format=True, utc=True)
                 elif feature.dtype == FeatureType.datetime() or feature.dtype == FeatureType.string():
                     continue
-                elif feature.dtype != FeatureType.array():
+                elif feature.dtype == FeatureType.array():
+                    import json
 
+                    if df[feature.name].dtype == 'object':
+                        df[feature.name] = df[feature.name].apply(
+                            lambda x: json.loads(x) if isinstance(x, str) else x
+                        )
+                else:
                     if feature.dtype.is_numeric:
                         df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce').astype(
                             feature.dtype.pandas_type

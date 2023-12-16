@@ -168,19 +168,29 @@ class FeatureViewWrapper(Generic[T]):
 
         if materialize_source:
             meta.materialized_source = materialize_source
-            meta.source = main_source
 
         return FeatureViewWrapper(metadata=meta, view=self.view)
 
     def join(
-        self, view: Any, on: str | FeatureFactory | list[str] | list[FeatureFactory], how: str = 'inner'
+        self,
+        view: Any,
+        on: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
+        on_left: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
+        on_right: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
+        how: str = 'inner',
     ) -> JoinDataSource:
         from aligned.schemas.feature_view import FeatureViewReferenceSource
 
         compiled_view = self.compile()
         source = FeatureViewReferenceSource(compiled_view)
 
-        return join_source(source, view, on, how, left_request=compiled_view.request_all.needed_requests[0])
+        if on:
+            on_left = on
+            on_right = on
+
+        return join_source(
+            source, view, on_left, on_right, how, left_request=compiled_view.request_all.needed_requests[0]
+        )
 
     def join_asof(
         self, view: Any, on: str | FeatureFactory | list[str] | list[FeatureFactory]

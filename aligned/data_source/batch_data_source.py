@@ -383,7 +383,8 @@ def join_asof_source(
 def join_source(
     source: BatchDataSource,
     view: Any,
-    on: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
+    on_left: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
+    on_right: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
     how: str = 'inner',
     left_request: RetrivalRequest | None = None,
 ) -> JoinDataSource:
@@ -392,10 +393,15 @@ def join_source(
 
     right_source, right_request = view_wrapper_instance_source(view)
 
-    if on is None:
-        on_keys = list(right_request.entity_names)
+    if on_left is None:
+        left_keys = list(right_request.entity_names)
     else:
-        on_keys = resolve_keys(on)
+        left_keys = resolve_keys(on_left)
+
+    if on_right is None:
+        right_keys = list(right_request.entity_names)
+    else:
+        right_keys = resolve_keys(on_right)
 
     if left_request is None:
         if isinstance(source, JoinDataSource):
@@ -411,8 +417,8 @@ def join_source(
         left_request=left_request,
         right_source=right_source,
         right_request=right_request,
-        left_on=on_keys,
-        right_on=on_keys,
+        left_on=left_keys,
+        right_on=right_keys,
         method=how,
     )
 
@@ -545,9 +551,16 @@ class JoinDataSource(BatchDataSource):
         self,
         view: Any,
         on: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
+        on_left: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
+        on_right: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
         how: str = 'inner',
-    ) -> BatchDataSource:
-        return join_source(self, view, on, how)
+    ) -> JoinDataSource:
+
+        if on:
+            on_left = on
+            on_right = on
+
+        return join_source(self, view, on_left, on_right, how)
 
     def depends_on(self) -> set[FeatureLocation]:
         return self.source.depends_on().intersection(self.right_source.depends_on())
