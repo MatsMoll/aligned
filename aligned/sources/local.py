@@ -62,7 +62,12 @@ class StorageFileReference(AsRepoDefinition):
 async def data_file_freshness(reference: DataFileReference, column_name: str) -> datetime | None:
     try:
         file = await reference.to_polars()
-        return file.select(column_name).max().collect()[0, column_name]
+        if isinstance(reference, ColumnFeatureMappable):
+            source_column = reference.feature_identifier_for([column_name])[0]
+        else:
+            source_column = column_name
+
+        return file.select(source_column).max().collect()[0, source_column]
     except UnableToFindFileException:
         return None
 
@@ -313,11 +318,6 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
         return FeatureView.feature_view_code_template(
             schema, data_source_code, view_name, 'from aligned import FileSource'
         )
-
-    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
-        df = await self.to_polars()
-        et_name = event_timestamp.name
-        return df.select(et_name).max().collect()[0, et_name]
 
 
 @dataclass

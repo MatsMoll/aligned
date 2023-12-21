@@ -187,6 +187,18 @@ class RetrivalRequest(Codable):
             features[feature.aggregate_over].add(feature)
         return features
 
+    def with_sufix(self, sufix: str) -> 'RetrivalRequest':
+
+        return RetrivalRequest(
+            name=f'{self.name}{sufix}',
+            location=self.location,
+            entities=self.entities,
+            features=self.features,
+            derived_features=self.derived_features,
+            aggregated_features=self.aggregated_features,
+            event_timestamp_request=self.event_timestamp_request,
+        )
+
     def without_event_timestamp(self, name_sufix: str | None = None) -> 'RetrivalRequest':
 
         request = None
@@ -249,6 +261,18 @@ class RetrivalRequest(Codable):
             )
 
         return list(grouped_requests.values())
+
+    def rename_entities(self, mapping: dict[str, str]) -> 'RetrivalRequest':
+
+        return RetrivalRequest(
+            name=self.name,
+            location=self.location,
+            entities={entity.renamed(mapping.get(entity.name, entity.name)) for entity in self.entities},
+            features=self.features,
+            derived_features=self.derived_features,
+            aggregated_features=self.aggregated_features,
+            event_timestamp_request=self.event_timestamp_request,
+        )
 
     @staticmethod
     def unsafe_combine(requests: list['RetrivalRequest']) -> 'RetrivalRequest':
@@ -418,6 +442,13 @@ class FeatureRequest(Codable):
             location=self.location,
             features_to_include=self.features_to_include - {'event_timestamp'},
             needed_requests=[request.without_event_timestamp(name_sufix) for request in self.needed_requests],
+        )
+
+    def with_sufix(self, sufix: str) -> 'FeatureRequest':
+        return FeatureRequest(
+            location=self.location,
+            features_to_include=self.features_to_include,
+            needed_requests=[request.with_sufix(sufix) for request in self.needed_requests],
         )
 
     def rename_entities(self, mappings: dict[str, str]) -> 'FeatureRequest':

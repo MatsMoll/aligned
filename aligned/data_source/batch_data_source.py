@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, TypeVar, Any
 from dataclasses import dataclass
 
@@ -66,7 +65,7 @@ class BatchSourceModification:
         raise NotImplementedError()
 
 
-class BatchDataSource(ABC, Codable, SerializableType):
+class BatchDataSource(Codable, SerializableType):
     """
     A definition to where a specific pice of data can be found.
     E.g: A database table, a file, a web service, etc.
@@ -76,12 +75,11 @@ class BatchDataSource(ABC, Codable, SerializableType):
 
     type_name: str
 
-    @abstractmethod
     def job_group_key(self) -> str:
         """
         A key defining which sources can be grouped together in one request.
         """
-        pass
+        raise NotImplementedError(type(self))
 
     def source_id(self) -> str:
         """
@@ -305,6 +303,24 @@ class FilteredDataSource(BatchDataSource):
 
         return source.source.features_for(facts, request).filter(source.condition)
 
+    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+        return await self.source.freshness(event_timestamp)
+
+    def all_between_dates(
+        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrivalJob:
+
+        if isinstance(self.condition, Feature):
+            request.features.add(self.condition)
+        else:
+            request.derived_features.add(self.condition)
+
+        return (
+            self.source.all_between_dates(request, start_date, end_date)
+            .filter(self.condition)
+            .derive_features([request])
+        )
+
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
 
         if isinstance(self.condition, Feature):
@@ -479,6 +495,39 @@ class JoinAsofDataSource(BatchDataSource):
             .derive_features([request])
         )
 
+    def all_between_dates(
+        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrivalJob:
+
+        right_job = self.right_source.all_data(self.right_request, limit=None).derive_features(
+            [self.right_request]
+        )
+
+        return (
+            self.source.all_between_dates(self.left_request, start_date, end_date)
+            .derive_features([self.left_request])
+            .join_asof(
+                right_job,
+                left_event_timestamp=self.left_event_timestamp,
+                right_event_timestamp=self.right_event_timestamp,
+                left_on=self.left_on,
+                right_on=self.right_on,
+            )
+            .derive_features([request])
+        )
+
+    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+        left_freshness = await self.source.freshness(event_timestamp)
+        right_frehsness = await self.right_source.freshness(event_timestamp)
+
+        if left_freshness is None:
+            return None
+
+        if right_frehsness is None:
+            return None
+
+        return min(left_freshness, right_frehsness)
+
     def join(
         self,
         view: Any,
@@ -504,7 +553,7 @@ class JoinAsofDataSource(BatchDataSource):
         )
 
     def depends_on(self) -> set[FeatureLocation]:
-        return self.source.depends_on().intersection(self.right_source.depends_on())
+        return self.source.depends_on().union(self.right_source.depends_on())
 
 
 @dataclass
@@ -547,6 +596,39 @@ class JoinDataSource(BatchDataSource):
             .derive_features([request])
         )
 
+    def all_between_dates(
+        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrivalJob:
+
+        right_job = self.right_source.all_data(self.right_request, limit=None).derive_features(
+            [self.right_request]
+        )
+
+        return (
+            self.source.all_between_dates(self.left_request, start_date, end_date)
+            .derive_features([self.left_request])
+            .join_asof(
+                right_job,
+                left_event_timestamp=self.left_event_timestamp,
+                right_event_timestamp=self.right_event_timestamp,
+                left_on=self.left_on,
+                right_on=self.right_on,
+            )
+            .derive_features([request])
+        )
+
+    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+        left_freshness = await self.source.freshness(event_timestamp)
+        right_frehsness = await self.right_source.freshness(event_timestamp)
+
+        if left_freshness is None:
+            return None
+
+        if right_frehsness is None:
+            return None
+
+        return min(left_freshness, right_frehsness)
+
     def join(
         self,
         view: Any,
@@ -563,7 +645,7 @@ class JoinDataSource(BatchDataSource):
         return join_source(self, view, on_left, on_right, how)
 
     def depends_on(self) -> set[FeatureLocation]:
-        return self.source.depends_on().intersection(self.right_source.depends_on())
+        return self.source.depends_on().union(self.right_source.depends_on())
 
 
 class ColumnFeatureMappable:
@@ -571,7 +653,7 @@ class ColumnFeatureMappable:
 
     def with_renames(self: T, mapping_keys: dict[str, str]) -> T:
         self.mapping_keys = mapping_keys  # type: ignore
-        return self
+        return selfFileSource.parquet_at('source_data/transactions.parquet')
 
     def columns_for(self, features: list[Feature]) -> list[str]:
         return [self.mapping_keys.get(feature.name, feature.name) for feature in features]

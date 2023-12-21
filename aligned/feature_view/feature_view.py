@@ -457,6 +457,7 @@ class FeatureView(ABC):
             name=metadata.name,
             description=metadata.description,
             tags=metadata.tags,
+            contacts=metadata.contacts,
             source=metadata.source,
             entities=set(),
             features=set(),

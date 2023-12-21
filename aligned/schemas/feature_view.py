@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from datetime import datetime
 from dataclasses import dataclass, field
 
 
@@ -388,5 +389,22 @@ class FeatureViewReferenceSource(BatchDataSource):
         else:
             return core_job.derive_features().derive_features([request])
 
+    def all_between_dates(
+        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrivalJob:
+        sub_source = self.view.materialized_source or self.view.source
+
+        sub_req = self.sub_request(request)
+
+        core_job = sub_source.all_between_dates(sub_req, start_date, end_date)
+        if request.aggregated_features:
+            return core_job.aggregate(request).derive_features([request])
+        else:
+            return core_job.derive_features().derive_features([request])
+
     def depends_on(self) -> set[FeatureLocation]:
         return {FeatureLocation.feature_view(self.view.name)}
+
+    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+        source = self.view.materialized_source or self.view.source
+        return await source.freshness(event_timestamp)

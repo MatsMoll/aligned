@@ -269,6 +269,15 @@ class Feature(Codable):
 
         return self
 
+    def renamed(self, new_name: str) -> Feature:
+        return Feature(
+            name=new_name,
+            dtype=self.dtype,
+            description=self.description,
+            tags=self.tags,
+            constraints=self.constraints,
+        )
+
     def __hash__(self) -> int:
         return hash(self.name)
 
