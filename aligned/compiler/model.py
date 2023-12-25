@@ -26,6 +26,7 @@ from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, 
 from aligned.schemas.folder import DatasetStore, JsonDatasetStore
 from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.model import Model as ModelSchema
+from aligned.schemas.model import FeatureInputVersions as FeatureVersionSchema
 from aligned.schemas.model import PredictionsView
 from aligned.schemas.target import ClassificationTarget as ClassificationTargetSchema
 from aligned.schemas.target import RegressionTarget as RegressionTargetSchema
@@ -41,7 +42,7 @@ T = TypeVar('T')
 @dataclass
 class ModelMetadata:
     name: str
-    features: list[FeatureReferencable]
+    features: list[FeatureReferencable] | FeatureInputVersions
     # Will log the feature inputs to a model. Therefore, enabling log and wait etc.
     # feature_logger: WritableBatchSource | None = field(default=None)
     contacts: list[str] | None = field(default=None)
@@ -120,9 +121,25 @@ def resolve_dataset_store(dataset_store: DatasetStore | StorageFileReference) ->
     return JsonDatasetStore(dataset_store)
 
 
+@dataclass
+class FeatureInputVersions:
+
+    default_version: str
+    versions: dict[str, list[FeatureReferencable]]
+
+    def compile(self) -> FeatureVersionSchema:
+        return FeatureVersionSchema(
+            default_version=self.default_version,
+            versions={
+                version: [feature.feature_referance() for feature in features]
+                for version, features in self.versions.items()
+            },
+        )
+
+
 def model_contract(
     name: str,
-    features: list[FeatureReferencable],
+    features: list[FeatureReferencable] | FeatureInputVersions,
     contacts: list[str] | None = None,
     tags: dict[str, str] | None = None,
     description: str | None = None,
@@ -240,7 +257,10 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
             inference_view.features.add(feature.feature())
 
     # Needs to run after the feature views have compiled
-    features: set[FeatureReferance] = {feature.feature_referance() for feature in metadata.features}
+    if isinstance(metadata.features, FeatureInputVersions):
+        features = metadata.features.compile()
+    else:
+        features = {feature.feature_referance() for feature in metadata.features}
 
     for target, probabilities in probability_features.items():
         from aligned.schemas.transformation import MapArgMax

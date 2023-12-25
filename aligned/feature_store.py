@@ -10,6 +10,7 @@ from typing import Any, Union
 from prometheus_client import Histogram
 
 from aligned.compiler.model import ModelContractWrapper
+from aligned.schemas.model import FeatureInputVersions
 from aligned.data_file import DataFileReference, upsert_on_column
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.enricher import Enricher
@@ -724,17 +725,28 @@ class ModelFeatureStore:
 
     model: ModelSchema
     store: FeatureStore
+    selected_version: str | None = None
 
     @property
     def location(self) -> FeatureLocation:
         return FeatureLocation.model(self.model.name)
 
     def raw_string_features(self, except_features: set[str]) -> set[str]:
+
+        if isinstance(self.model.features, FeatureInputVersions):
+            version = self.selected_version or self.model.features.default_version
+            features = self.model.features.features_for(version)
+        else:
+            features = self.model.features
+
         return {
             f'{feature.location.identifier}:{feature.name}'
-            for feature in self.model.features
+            for feature in features
             if feature.name not in except_features
         }
+
+    def using_version(self, version: str) -> ModelFeatureStore:
+        return ModelFeatureStore(self.model, self.store, version)
 
     def request(
         self, except_features: set[str] | None = None, event_timestamp_column: str | None = None

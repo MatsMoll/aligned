@@ -11,7 +11,7 @@ from aligned.compiler.feature_factory import (
     Timestamp,
     CustomAggregation,
 )
-from aligned.compiler.model import model_contract
+from aligned.compiler.model import model_contract, FeatureInputVersions
 from aligned.data_source.stream_data_source import HttpStreamSource
 from aligned.feature_store import FeatureStore
 from aligned.feature_view import (
@@ -61,4 +61,5 @@ __all__ = [
     'CustomAggregation',
     # Schemas
     'FeatureLocation',
+    'FeatureInputVersions',
 ]

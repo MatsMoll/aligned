@@ -16,6 +16,20 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
+class FeatureInputVersions(Codable):
+
+    default_version: str
+    versions: dict[str, list[FeatureReferance]]
+
+    def features_for(self, version: str) -> list[FeatureReferance]:
+        return self.versions.get(version, [])
+
+    @property
+    def default_features(self) -> list[FeatureReferance]:
+        return self.features_for(self.default_version)
+
+
+@dataclass
 class Target(Codable):
     estimating: FeatureReferance
     feature: Feature
@@ -111,7 +125,7 @@ class PredictionsView(Codable):
 @dataclass
 class Model(Codable):
     name: str
-    features: set[FeatureReferance]
+    features: set[FeatureReferance] | FeatureInputVersions
     predictions_view: PredictionsView
     description: str | None = field(default=None)
     contacts: list[str] | None = field(default=None)
