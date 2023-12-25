@@ -447,6 +447,7 @@ def titanic_model(titanic_feature_view: FeatureView) -> ModelContractWrapper:
         ],
     )
     class Titanic:
+        passenger_id = Int32().as_entity()
 
         will_survive = features.survived.as_classification_label()  # type: ignore
 

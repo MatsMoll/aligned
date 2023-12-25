@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Any
+from typing import TYPE_CHECKING, Any
 
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.feature_source import WritableFeatureSource
@@ -13,7 +13,6 @@ from datetime import datetime
 if TYPE_CHECKING:
     from aligned.compiler.feature_factory import FeatureFactory
     from aligned.enricher import Enricher
-    from aligned.entity_data_source import EntityDataSource
     from aligned.schemas.feature import EventTimestamp
 
 
@@ -49,11 +48,6 @@ class PostgreSQLConfig(Codable):
         from aligned.enricher import SqlDatabaseEnricher
 
         return SqlDatabaseEnricher(self.env_var, sql, values)
-
-    def entity_source(self, timestamp_column: str, sql: Callable[[str], str]) -> EntityDataSource:
-        from aligned.compiler.model import SqlEntityDataSource
-
-        return SqlEntityDataSource(sql, self.env_var, timestamp_column)
 
     def fetch(self, query: str) -> RetrivalJob:
         from aligned.psql.jobs import PostgreSqlJob
