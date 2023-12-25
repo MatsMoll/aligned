@@ -1,0 +1,21 @@
+age,passenger_id,is_mr,has_siblings,is_female,sex,cabin,sibsp,is_male,name,survived
+22.0,61,True,False,False,male,,0,True,"Sirayanian, Mr. Orsen",False
+38.0,62,False,False,True,female,B28,0,False,"Icard, Miss. Amelie",True
+45.0,63,True,True,False,male,C83,1,True,"Harris, Mr. Henry Birkhardt",False
+4.0,64,False,True,False,male,,3,True,"Skoog, Master. Harald",False
+,65,True,False,False,male,,0,True,"Stewart, Mr. Albert A",False
+,66,False,True,False,male,,1,True,"Moubarek, Master. Gerios",True
+29.0,67,True,False,True,female,F33,0,False,"Nye, Mrs. (Elizabeth Ramell)",True
+19.0,68,True,False,False,male,,0,True,"Crease, Mr. Ernest James",False
+17.0,69,False,True,True,female,,4,False,"Andersson, Miss. Erna Alexandra",True
+26.0,70,True,True,False,male,,2,True,"Kink, Mr. Vincenz",False
+32.0,71,True,False,False,male,,0,True,"Jenkin, Mr. Stephen Curnow",False
+16.0,72,False,True,True,female,,5,False,"Goodwin, Miss. Lillian Amy",False
+21.0,73,True,False,False,male,,0,True,"Hood, Mr. Ambrose Jr",False
+26.0,74,True,True,False,male,,1,True,"Chronopoulos, Mr. Apostolos",False
+32.0,75,True,False,False,male,,0,True,"Bing, Mr. Lee",True
+25.0,76,True,False,False,male,F G73,0,True,"Moen, Mr. Sigurd Hansen",False
+,77,True,False,False,male,,0,True,"Staneff, Mr. Ivan",False
+,78,True,False,False,male,,0,True,"Moutal, Mr. Rahamin Haim",False
+0.83,79,False,False,False,male,,0,True,"Caldwell, Master. Alden Gates",True
+30.0,80,False,False,True,female,,0,False,"Dowdell, Miss. Elizabeth",True

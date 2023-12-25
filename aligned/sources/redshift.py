@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Callable, Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from aligned import RedisConfig
-from aligned.compiler.model import EntityDataSource, SqlEntityDataSource
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.enricher import Enricher
 from aligned.request.retrival_request import RetrivalRequest
@@ -80,9 +79,6 @@ class RedshiftSQLConfig(Codable):
 
     def with_schema(self, name: str) -> RedshiftSQLConfig:
         return RedshiftSQLConfig(env_var=self.env_var, schema=name)
-
-    def entity_source(self, timestamp_column: str, sql: Callable[[str], str]) -> EntityDataSource:
-        return SqlEntityDataSource(sql, self.url, timestamp_column)
 
     def fetch(self, query: str) -> RetrivalJob:
         from aligned.redshift.jobs import PostgreSqlJob

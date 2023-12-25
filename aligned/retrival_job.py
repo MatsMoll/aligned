@@ -8,7 +8,7 @@ from collections import defaultdict
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Union, TypeVar
+from typing import TYPE_CHECKING, Callable, Union, TypeVar, Coroutine, Any
 
 import pandas as pd
 import polars as pl
@@ -30,10 +30,11 @@ from aligned.validation.interface import Validator
 
 if TYPE_CHECKING:
     from typing import AsyncIterator
+    from aligned.schemas.folder import DatasetMetadata, DatasetStore
 
     from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver
     from aligned.schemas.model import EventTrigger
-    from aligned.sources.local import DataFileReference
+    from aligned.sources.local import DataFileReference, StorageFileReference
     from aligned.feature_source import WritableFeatureSource
 
 
@@ -59,6 +60,23 @@ def split(
     else:
         index = index.append(data.iloc[start_index:end_index].index)
     return index
+
+
+def subset_polars(
+    data: pl.DataFrame, start_ratio: float, end_ratio: float, event_timestamp_column: str | None = None
+) -> pl.DataFrame:
+
+    if event_timestamp_column:
+        data = data.sort(event_timestamp_column)
+
+    group_size = data.height
+    start_index = round(group_size * start_ratio)
+    end_index = round(group_size * end_ratio)
+
+    if end_index >= group_size:
+        return data[start_index:]
+    else:
+        return data[start_index:end_index]
 
 
 def split_polars(
@@ -88,6 +106,156 @@ def split_polars(
         return data[start_index:][row_name].to_pandas()
     else:
         return data[start_index:end_index][row_name].to_pandas()
+
+
+@dataclass
+class TrainTestJob:
+
+    train_job: RetrivalJob
+    test_job: RetrivalJob
+
+    target_columns: set[str]
+
+    @property
+    def train(self) -> SupervisedJob:
+        return SupervisedJob(self.train_job, self.target_columns)
+
+    @property
+    def test(self) -> SupervisedJob:
+        return SupervisedJob(self.test_job, self.target_columns)
+
+    def store_dataset(
+        self,
+        dataset_store: DatasetStore,
+        metadata: DatasetMetadata,
+        train_source: DataFileReference,
+        test_source: DataFileReference,
+        train_size: float | None = None,
+        test_size: float | None = None,
+    ) -> TrainTestJob:
+        from aligned.schemas.folder import TrainDatasetMetadata
+        from aligned.data_source.batch_data_source import BatchDataSource
+
+        request_result = self.train_job.request_result
+
+        if isinstance(self.train_job, SubsetJob):
+            train_size = self.train_job.fraction
+
+        if isinstance(self.test_job, SubsetJob):
+            test_size = self.test_job.fraction
+
+        if not isinstance(test_source, BatchDataSource):
+            raise ValueError('test_source should be a BatchDataSource')
+
+        if not isinstance(train_source, BatchDataSource):
+            raise ValueError('train_source should be a BatchDataSource')
+
+        test_metadata = TrainDatasetMetadata(
+            id=metadata.id,
+            name=metadata.name,
+            request_result=request_result,
+            description=metadata.description,
+            train_size_fraction=train_size,
+            test_size_fraction=test_size,
+            train_dataset=train_source,
+            test_dataset=test_source,
+            target=list(self.target_columns),
+        )
+
+        async def update_metadata() -> None:
+            await dataset_store.store_train_test(test_metadata)
+
+        return TrainTestJob(
+            train_job=self.train_job.on_load(update_metadata).cached_at(train_source),
+            test_job=self.test_job.on_load(update_metadata).cached_at(test_source),
+            target_columns=self.target_columns,
+        )
+
+
+@dataclass
+class TrainTestValidateJob:
+
+    train_job: RetrivalJob
+    test_job: RetrivalJob
+    validate_job: RetrivalJob
+
+    target_columns: set[str]
+
+    @property
+    def train(self) -> SupervisedJob:
+        return SupervisedJob(self.train_job, self.target_columns)
+
+    @property
+    def test(self) -> SupervisedJob:
+        return SupervisedJob(self.test_job, self.target_columns)
+
+    @property
+    def validate(self) -> SupervisedJob:
+        return SupervisedJob(self.validate_job, self.target_columns)
+
+    def store_dataset(
+        self,
+        dataset_store: DatasetStore | StorageFileReference,
+        metadata: DatasetMetadata,
+        train_source: DataFileReference,
+        test_source: DataFileReference,
+        validate_source: DataFileReference,
+        train_size: float | None = None,
+        test_size: float | None = None,
+        validation_size: float | None = None,
+    ) -> TrainTestValidateJob:
+        from aligned.schemas.folder import TrainDatasetMetadata, JsonDatasetStore
+        from aligned.data_source.batch_data_source import BatchDataSource
+        from aligned.sources.local import StorageFileReference
+
+        if isinstance(dataset_store, StorageFileReference):
+            data_store = JsonDatasetStore(dataset_store)
+        else:
+            data_store = dataset_store
+
+        request_result = self.train_job.request_result
+
+        if isinstance(self.train_job, SubsetJob):
+            train_size = self.train_job.fraction
+
+        if isinstance(self.test_job, SubsetJob):
+            test_size = self.test_job.fraction
+
+        if isinstance(self.validate_job, SubsetJob):
+            validation_size = self.validate_job.fraction
+
+        if not isinstance(test_source, BatchDataSource):
+            raise ValueError('test_source should be a BatchDataSource')
+
+        if not isinstance(train_source, BatchDataSource):
+            raise ValueError('train_source should be a BatchDataSource')
+
+        if not isinstance(validate_source, BatchDataSource):
+            raise ValueError('validation_source should be a BatchDataSource')
+
+        test_metadata = TrainDatasetMetadata(
+            id=metadata.id,
+            name=metadata.name,
+            request_result=request_result,
+            description=metadata.description,
+            train_size_fraction=train_size,
+            test_size_fraction=test_size,
+            validate_size_fraction=validation_size,
+            train_dataset=train_source,
+            test_dataset=test_source,
+            validation_dataset=validate_source,
+            target=list(self.target_columns),
+        )
+
+        async def update_metadata() -> None:
+            await data_store.store_train_test_validate(test_metadata)
+
+        return TrainTestValidateJob(
+            train_job=self.train_job.on_load(update_metadata).cached_at(train_source),
+            test_job=self.test_job.on_load(update_metadata).cached_at(test_source),
+            validate_job=self.validate_job.on_load(update_metadata).cached_at(validate_source),
+            target_columns=self.target_columns,
+        )
 
 
 @dataclass
@@ -126,6 +294,34 @@ class SupervisedJob:
 
     def train_set(self, train_size: float) -> SupervisedTrainJob:
         return SupervisedTrainJob(self, train_size)
+
+    def train_test(self, train_size: float) -> TrainTestJob:
+
+        cached_job = InMemoryCacheJob(self.job)
+
+        event_timestamp = self.job.request_result.event_timestamp
+
+        return TrainTestJob(
+            train_job=SubsetJob(cached_job, 0, train_size, event_timestamp),
+            test_job=SubsetJob(cached_job, train_size, 1, event_timestamp),
+            target_columns=self.target_columns,
+        )
+
+    def train_test_validate(self, train_size: float, validate_size: float) -> TrainTestValidateJob:
+
+        cached_job = InMemoryCacheJob(self.job)
+
+        event_timestamp = self.job.request_result.event_timestamp
+
+        test_ratio_start = train_size
+        validate_ratio_start = test_ratio_start + validate_size
+
+        return TrainTestValidateJob(
+            train_job=SubsetJob(cached_job, 0, train_size, event_timestamp),
+            test_job=SubsetJob(cached_job, train_size, validate_ratio_start, event_timestamp),
+            validate_job=SubsetJob(cached_job, validate_ratio_start, 1, event_timestamp),
+            target_columns=self.target_columns,
+        )
 
     def with_subfeatures(self) -> SupervisedJob:
         return SupervisedJob(self.job.with_subfeatures(), self.target_columns)
@@ -324,6 +520,9 @@ class RetrivalJob(ABC):
 
         return JoinJobs(method=method, left_job=self, right_job=job, left_on=left_on, right_on=right_on)
 
+    def on_load(self, on_load: Callable[[], Coroutine[Any, Any, None]]) -> RetrivalJob:
+        return OnLoadJob(self, on_load)
+
     def filter(self, condition: str | Feature | DerivedFeature) -> RetrivalJob:
         return FilteredJob(self, condition)
 
@@ -353,6 +552,34 @@ class RetrivalJob(ABC):
 
     def train_set(self, train_size: float, target_column: str) -> SupervisedTrainJob:
         return SupervisedJob(self, {target_column}).train_set(train_size=train_size)
+
+    def train_test(self, train_size: float, target_column: str) -> TrainTestJob:
+        cached = InMemoryCacheJob(self)
+
+        event_timestamp = self.request_result.event_timestamp
+
+        return TrainTestJob(
+            train_job=SubsetJob(cached, 0, train_size, event_timestamp),
+            test_job=SubsetJob(cached, train_size, 1, event_timestamp),
+            target_columns={target_column},
+        )
+
+    def train_test_validate(
+        self, train_size: float, validate_size: float, target_column: str
+    ) -> TrainTestValidateJob:
+
+        cached = InMemoryCacheJob(self)
+
+        event_timestamp = self.request_result.event_timestamp
+
+        validate_ratio_start = train_size + validate_size
+
+        return TrainTestValidateJob(
+            train_job=SubsetJob(cached, 0, train_size, event_timestamp),
+            test_job=SubsetJob(cached, train_size, validate_ratio_start, event_timestamp),
+            validate_job=SubsetJob(cached, validate_ratio_start, 1, event_timestamp),
+            target_columns={target_column},
+        )
 
     def drop_invalid(self, validator: Validator) -> RetrivalJob:
         return DropInvalidJob(self, validator)
@@ -495,6 +722,71 @@ class ModificationJob:
     def copy_with(self: JobType, job: RetrivalJob) -> JobType:
         self.job = job  # type: ignore
         return self
+
+
+@dataclass
+class SubsetJob(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+    start_ratio: float
+    end_ratio: float
+    sort_column: str | None = None
+
+    @property
+    def fraction(self) -> float:
+        return self.end_ratio - self.start_ratio
+
+    async def to_polars(self) -> pl.LazyFrame:
+        data = (await self.job.to_polars()).collect()
+        return subset_polars(data, self.start_ratio, self.end_ratio, self.sort_column).lazy()
+
+    async def to_pandas(self) -> pd.DataFrame:
+        data = await self.job.to_pandas()
+        selection = split(data, self.start_ratio, self.end_ratio, self.sort_column)
+        return data.iloc[selection]
+
+
+@dataclass
+class OnLoadJob(RetrivalJob, ModificationJob):  # type: ignore
+
+    job: RetrivalJob  # type
+    on_load: Callable[[], Coroutine[Any, Any, None]]  # type: ignore
+
+    async def to_pandas(self) -> pd.DataFrame:
+        data = await self.job.to_pandas()
+        await self.on_load()
+        return data
+
+    async def to_polars(self) -> pl.LazyFrame:
+        data = (await self.job.to_polars()).collect()
+        await self.on_load()
+        return data.lazy()
+
+    def describe(self) -> str:
+        return f'OnLoadJob {self.on_load} -> {self.job.describe()}'
+
+
+@dataclass
+class InMemoryCacheJob(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+    cached_data: pl.DataFrame | None = None
+
+    async def to_polars(self) -> pl.LazyFrame:
+        if self.cached_data is not None:
+            return self.cached_data.lazy()
+
+        data = (await self.job.to_polars()).collect()
+        self.cached_data = data
+        return data.lazy()
+
+    async def to_pandas(self) -> pd.DataFrame:
+        if self.cached_data is not None:
+            return self.cached_data.to_pandas()
+
+        data = await self.job.to_pandas()
+        self.cached_data = pl.from_pandas(data)
+        return data
 
 
 @dataclass
@@ -979,7 +1271,7 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
 class UniqueRowsJob(RetrivalJob, ModificationJob):
 
     job: RetrivalJob
-    unique_on: list[str]
+    unique_on: list[str]  # type: ignore
     sort_key: str | None = field(default=None)
 
     async def to_pandas(self) -> pd.DataFrame:

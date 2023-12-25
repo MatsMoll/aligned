@@ -1,0 +1,21 @@
+age,passenger_id,is_mr,has_siblings,is_female,sex,cabin,sibsp,is_male,name,survived
+22.0,81,True,False,False,male,,0,True,"Waelens, Mr. Achille",False
+29.0,82,True,False,False,male,,0,True,"Sheerlinck, Mr. Jan Baptist",True
+,83,False,False,True,female,,0,False,"McDermott, Miss. Brigdet Delia",True
+28.0,84,True,False,False,male,,0,True,"Carrau, Mr. Francisco M",False
+17.0,85,False,False,True,female,,0,False,"Ilett, Miss. Bertha",True
+33.0,86,True,True,True,female,,3,False,"Backstrom, Mrs. Karl Alfred (Maria Mathilda Gustafsson)",True
+16.0,87,True,True,False,male,,1,True,"Ford, Mr. William Neal",False
+,88,True,False,False,male,,0,True,"Slocovski, Mr. Selman Francis",False
+23.0,89,False,True,True,female,C23 C25 C27,3,False,"Fortune, Miss. Mabel Helen",True
+24.0,90,True,False,False,male,,0,True,"Celotti, Mr. Francesco",False
+29.0,91,True,False,False,male,,0,True,"Christmann, Mr. Emil",False
+20.0,92,True,False,False,male,,0,True,"Andreasson, Mr. Paul Edvin",False
+46.0,93,True,True,False,male,E31,1,True,"Chaffee, Mr. Herbert Fuller",False
+26.0,94,True,True,False,male,,1,True,"Dean, Mr. Bertram Frank",False
+59.0,95,True,False,False,male,,0,True,"Coxon, Mr. Daniel",False
+,96,True,False,False,male,,0,True,"Shorney, Mr. Charles Joseph",False
+71.0,97,True,False,False,male,A5,0,True,"Goldschmidt, Mr. George B",False
+23.0,98,True,False,False,male,D10 D12,0,True,"Greenfield, Mr. William Bertram",True
+34.0,99,True,False,True,female,,0,False,"Doling, Mrs. John T (Ada Julia Bone)",True
+34.0,100,True,True,False,male,,1,True,"Kantor, Mr. Sinai",False

@@ -1,21 +1,19 @@
 from aligned import Bool, FeatureStore, FileSource, Int32, String
-from aligned.feature_view.feature_view import FeatureView
-from aligned.compiler.model import ModelContract
+from aligned.feature_view.feature_view import feature_view
+from aligned.compiler.model import model_contract
 from aligned.schemas.feature import FeatureLocation
 
 
-class View(FeatureView):
-
-    metadata = FeatureView.metadata_with('view', 'test', FileSource.csv_at(''))
+@feature_view('view', FileSource.csv_at(''), 'test')
+class View:
 
     view_id = Int32().as_entity()
 
     feature_a = String()
 
 
-class OtherView(FeatureView):
-
-    metadata = FeatureView.metadata_with('other', 'test', FileSource.csv_at(''))
+@feature_view('other', FileSource.csv_at(''), 'test')
+class OtherView:
 
     other_id = Int32().as_entity()
 
@@ -23,25 +21,27 @@ class OtherView(FeatureView):
     is_true = Bool()
 
 
-class First(ModelContract):
+view = View()
+other = OtherView()
 
-    view = View()
-    other = OtherView()
 
-    metadata = ModelContract.metadata_with('test_model', features=[view.feature_a, other.feature_b])
+@model_contract('test_model', features=[view.feature_a, other.feature_b])
+class First:
 
     target = other.is_true.as_classification_label()
 
 
-class Second(ModelContract):
+first = First()
 
-    first = First()
 
-    metadata = ModelContract.metadata_with('second_model', features=[first.target])
+@model_contract('second_model', features=[first.target])
+class Second:
+    other_id = Int32().as_entity()
+    view_id = Int32().as_entity()
 
 
 def test_model_referenced_as_feature() -> None:
-    model = Second.compile()
+    model = Second.compile()  # type: ignore
 
     feature = list(model.features)[0]
 
@@ -52,9 +52,9 @@ def test_model_referenced_as_feature() -> None:
 
 def test_model_request() -> None:
     store = FeatureStore.experimental()
-    store.add_feature_view(View())
-    store.add_feature_view(OtherView())
-    store.add_model(First())
+    store.add_feature_view(View)  # type: ignore
+    store.add_feature_view(OtherView)  # type: ignore
+    store.add_model(First)
 
     assert len(store.feature_views) == 2
 

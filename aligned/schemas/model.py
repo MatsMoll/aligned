@@ -10,7 +10,7 @@ from aligned.schemas.event_trigger import EventTrigger
 from aligned.schemas.target import ClassificationTarget, RegressionTarget
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.data_source.batch_data_source import BatchDataSource
-from aligned.schemas.folder import Folder
+from aligned.schemas.folder import DatasetStore
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +116,7 @@ class Model(Codable):
     description: str | None = field(default=None)
     contacts: list[str] | None = field(default=None)
     tags: dict[str, str] | None = field(default=None)
-    dataset_folder: Folder | None = field(default=None)
+    dataset_store: DatasetStore | None = field(default=None)
 
     def __hash__(self) -> int:
         return self.name.__hash__()

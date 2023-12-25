@@ -439,7 +439,7 @@ class DirectoryRepo(AsRepoDefinition):
 
 
 @dataclass
-class FileDirectory:
+class FileDirectory(Codable):
 
     dir_path: Path
 

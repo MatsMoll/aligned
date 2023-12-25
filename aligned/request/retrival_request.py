@@ -79,11 +79,12 @@ class RetrivalRequest(Codable):
     def all_returned_columns(self) -> list[str]:
 
         result = self.entity_names
-        if self.event_timestamp:
-            if all([agg.aggregate_over.window is not None for agg in self.aggregated_features]):
-                result = result.union({self.event_timestamp.name})
-            elif len(self.aggregated_features) == 0:
-                result = result.union({self.event_timestamp.name})
+
+        if self.event_timestamp and (
+            all(agg.aggregate_over.window is not None for agg in self.aggregated_features)
+            or len(self.aggregated_features) == 0
+        ):
+            result = result.union({self.event_timestamp.name})
 
         if self.aggregated_features:
             agg_names = [feat.name for feat in self.aggregated_features]
@@ -392,6 +393,21 @@ class RequestResult(Codable):
             )
         else:
             return requests[0]
+
+    def as_retrival_request(self, name: str, location: FeatureLocation) -> RetrivalRequest:
+        return RetrivalRequest(
+            name=name,
+            location=location,
+            entities=self.entities,
+            features=self.features,
+            derived_features=set(),
+            aggregated_features=set(),
+            event_timestamp_request=EventTimestampRequest(
+                event_timestamp=EventTimestamp(name=self.event_timestamp), entity_column=None
+            )
+            if self.event_timestamp
+            else None,
+        )
 
 
 @dataclass

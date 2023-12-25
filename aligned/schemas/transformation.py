@@ -202,6 +202,7 @@ class SupportedTransformations:
             Inverse,
             Ordinal,
             FillNaValues,
+            FillNaValuesColumns,
             Absolute,
             Round,
             Ceil,
@@ -1449,6 +1450,37 @@ class IsIn(Transformation):
             IsIn(values=['hello', 'test'], key='x'),
             input={'x': ['No', 'Hello', 'hello', 'test', 'nah', 'nehtest']},
             output=[False, False, True, True, False, False],
+        )
+
+
+@dataclass
+class FillNaValuesColumns(Transformation):
+
+    key: str
+    fill_key: str
+    dtype: FeatureType
+
+    name: str = 'fill_missing_key'
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return df[self.key].fillna(df[self.fill_key])
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        if self.dtype == FeatureType.float():
+            return pl.col(self.key).fill_nan(pl.col(self.fill_key)).fill_null(pl.col(self.fill_key))
+
+        else:
+            return pl.col(self.key).fill_null(pl.col(self.fill_key))
+
+    def should_skip(self, output_column: str, columns: list[str]) -> bool:
+        return False
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            FillNaValuesColumns('x', 'y', dtype=FeatureType.int32()),
+            input={'x': [1, 1, None, None, 3, 3, None, 4, 5, None], 'y': [1, 2, 1, 2, 7, 2, 4, 1, 1, 9]},
+            output=[1, 1, 1, 2, 3, 3, 4, 4, 5, 9],
         )
 
 

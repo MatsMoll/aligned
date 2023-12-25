@@ -18,7 +18,7 @@ from aligned import (
     TextVectoriserModel,
 )
 from aligned.feature_view.feature_view import FeatureView, FeatureViewMetadata
-from aligned.compiler.model import ModelContract
+from aligned.compiler.model import model_contract, ModelContractWrapper
 from aligned.feature_store import FeatureStore
 from aligned.feature_view.combined_view import CombinedFeatureView, CombinedFeatureViewMetadata
 from aligned.retrival_job import DerivedFeatureJob, RetrivalJob, RetrivalRequest
@@ -431,26 +431,26 @@ def titanic_feature_view(titanic_source: CsvFileSource) -> FeatureView:
 
 
 @pytest.fixture
-def titanic_model(titanic_feature_view: FeatureView) -> ModelContract:
-    class Titanic(ModelContract):
+def titanic_model(titanic_feature_view: FeatureView) -> ModelContractWrapper:
 
-        features = titanic_feature_view
+    features = titanic_feature_view
 
-        metadata = ModelContract.metadata_with(
-            'titanic',
-            description='A model predicting if a passenger will survive',
-            features=[
-                features.age,  # type: ignore
-                features.sibsp,  # type: ignore
-                features.has_siblings,  # type: ignore
-                features.is_male,  # type: ignore
-                features.is_mr,  # type: ignore
-            ],
-        )
+    @model_contract(
+        name='titanic',
+        description='A model predicting if a passenger will survive',
+        features=[
+            features.age,  # type: ignore
+            features.sibsp,  # type: ignore
+            features.has_siblings,  # type: ignore
+            features.is_male,  # type: ignore
+            features.is_mr,  # type: ignore
+        ],
+    )
+    class Titanic:
 
         will_survive = features.survived.as_classification_label()  # type: ignore
 
-    return Titanic()
+    return Titanic
 
 
 @pytest.fixture
@@ -488,7 +488,9 @@ def titanic_feature_view_parquet(titanic_source_parquet: ParquetFileSource) -> F
 
 @pytest_asyncio.fixture
 async def titanic_feature_store(
-    titanic_feature_view: FeatureView, titanic_feature_view_parquet: FeatureView, titanic_model: ModelContract
+    titanic_feature_view: FeatureView,
+    titanic_feature_view_parquet: FeatureView,
+    titanic_model: ModelContractWrapper,
 ) -> FeatureStore:
     feature_store = FeatureStore.experimental()
     feature_store.add_feature_view(titanic_feature_view)
@@ -621,28 +623,28 @@ def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureView:
 
 
 @pytest.fixture
-def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> ModelContract:
-    class Titanic(ModelContract):
+def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> ModelContractWrapper:
 
-        features = titanic_feature_view_scd
+    features = titanic_feature_view_scd
 
-        metadata = ModelContract.metadata_with(
-            'titanic',
-            description='A model predicting if a passenger will survive',
-            features=[features.age, features.sibsp, features.has_siblings, features.is_male],  # type: ignore
-        )
+    @model_contract(
+        'titanic',
+        description='A model predicting if a passenger will survive',
+        features=[features.age, features.sibsp, features.has_siblings, features.is_male],  # type: ignore
+    )
+    class Titanic:
 
         will_survive = features.survived.as_classification_label()  # type: ignore
         probability = will_survive.probability_of(True)
 
-    return Titanic()
+    return Titanic
 
 
 @pytest_asyncio.fixture
 async def titanic_feature_store_scd(
     titanic_feature_view_scd: FeatureView,
     titanic_feature_view_parquet: FeatureView,
-    titanic_model_scd: ModelContract,
+    titanic_model_scd: ModelContractWrapper,
 ) -> FeatureStore:
     feature_store = FeatureStore.experimental()
     feature_store.add_feature_view(titanic_feature_view_scd)

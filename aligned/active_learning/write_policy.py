@@ -36,7 +36,7 @@ class ActiveLearningSampleSizePolicy(ActiveLearningWritePolicy):
 
     async def write(self, data: pl.LazyFrame, model: Model):
 
-        if not model.dataset_folder:
+        if not model.dataset_store:
             logger.info(
                 'Found no dataset folder. Therefore, no data will be written to an active learning dataset.'
             )
@@ -55,7 +55,7 @@ class ActiveLearningSampleSizePolicy(ActiveLearningWritePolicy):
             dataset_subfolder = Path(self.dataset_folder_name) / str(self.write_timestamp)
             logger.info(f'Writing active learning data to {dataset_subfolder}')
 
-            dataset = model.dataset_folder.file_at(dataset_subfolder / self.dataset_file_name)
+            dataset = model.dataset_store.file_at(dataset_subfolder / self.dataset_file_name)
             await dataset.write(self.current_frame.write_csv().encode('utf-8'))
             self.unsaved_size = 0
 

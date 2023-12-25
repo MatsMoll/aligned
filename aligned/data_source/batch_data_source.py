@@ -9,7 +9,7 @@ from aligned.data_file import DataFileReference
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
-from aligned.request.retrival_request import RetrivalRequest
+from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.compiler.feature_factory import FeatureFactory
 
 if TYPE_CHECKING:
@@ -136,6 +136,12 @@ class BatchDataSource(Codable, SerializableType):
         del value['type_name']
         data_class = BatchDataSourceFactory.shared().supported_data_sources[name_type]
         return data_class.from_dict(value)
+
+    def all(self, result: RequestResult, limit: int | None = None) -> RetrivalJob:
+        return self.all_data(
+            result.as_retrival_request('read_all', location=FeatureLocation.feature_view('read_all')),
+            limit=limit,
+        )
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         if isinstance(self, BatchSourceModification):
@@ -653,7 +659,7 @@ class ColumnFeatureMappable:
 
     def with_renames(self: T, mapping_keys: dict[str, str]) -> T:
         self.mapping_keys = mapping_keys  # type: ignore
-        return selfFileSource.parquet_at('source_data/transactions.parquet')
+        return self
 
     def columns_for(self, features: list[Feature]) -> list[str]:
         return [self.mapping_keys.get(feature.name, feature.name) for feature in features]

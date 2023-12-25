@@ -34,7 +34,6 @@ from aligned.schemas.transformation import TextVectoriserModel, Transformation
 from aligned.schemas.vector_storage import VectorStorage
 
 if TYPE_CHECKING:
-    from aligned.compiler.transformation_factory import FillNaStrategy
     from aligned.sources.s3 import AwsS3Config
 
 
@@ -426,19 +425,14 @@ class FeatureFactory(FeatureReferencable):
     def copy_type(self: T) -> T:
         raise NotImplementedError()
 
-    def fill_na(self: T, value: FillNaStrategy | Any) -> T:
-
-        from aligned.compiler.transformation_factory import (
-            ConstantFillNaStrategy,
-            FillMissingFactory,
-            FillNaStrategy,
-        )
+    def fill_na(self: T, value: FeatureFactory | Any) -> T:
+        from aligned.compiler.transformation_factory import FillMissingFactory
 
         instance: FeatureFactory = self.copy_type()  # type: ignore [attr-defined]
-        if isinstance(value, FillNaStrategy):
-            instance.transformation = FillMissingFactory(self, value)
-        else:
-            instance.transformation = FillMissingFactory(self, ConstantFillNaStrategy(value))
+        if not isinstance(value, FeatureFactory):
+            value = LiteralValue.from_value(value)
+
+        instance.transformation = FillMissingFactory(self, value)  # type: ignore [attr-defined]
         return instance  # type: ignore [return-value]
 
     def transformed_using_features_pandas(

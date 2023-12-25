@@ -9,7 +9,7 @@ from typing import Any, Union
 
 from prometheus_client import Histogram
 
-from aligned.compiler.model import ModelContract
+from aligned.compiler.model import ModelContractWrapper
 from aligned.data_file import DataFileReference, upsert_on_column
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.enricher import Enricher
@@ -22,7 +22,7 @@ from aligned.feature_source import (
     WritableFeatureSource,
 )
 from aligned.feature_view.combined_view import CombinedFeatureView, CompiledCombinedFeatureView
-from aligned.feature_view.feature_view import FeatureView
+from aligned.feature_view.feature_view import FeatureView, FeatureViewWrapper
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import (
     SelectColumnsJob,
@@ -30,6 +30,7 @@ from aligned.retrival_job import (
     StreamAggregationJob,
     SupervisedJob,
     ConvertableToRetrivalJob,
+    SupervisedTrainJob,
 )
 from aligned.schemas.feature import FeatureLocation, Feature
 from aligned.schemas.feature_view import CompiledFeatureView
@@ -472,8 +473,11 @@ class FeatureStore:
                 view.materialized_source or view.source
             )
 
-    def add_feature_view(self, feature_view: FeatureView) -> None:
-        self.add_compiled_view(feature_view.compile_instance())
+    def add_feature_view(self, feature_view: FeatureView | FeatureViewWrapper) -> None:
+        if isinstance(feature_view, FeatureViewWrapper):
+            self.add_compiled_view(feature_view.compile())
+        else:
+            self.add_compiled_view(feature_view.compile_instance())
 
     def add_combined_feature_view(self, feature_view: CombinedFeatureView) -> None:
         compiled_view = type(feature_view).compile()
@@ -482,14 +486,14 @@ class FeatureStore:
     def add_combined_view(self, compiled_view: CompiledCombinedFeatureView) -> None:
         self.combined_feature_views[compiled_view.name] = compiled_view
 
-    def add_model(self, model: ModelContract) -> None:
+    def add_model(self, model: ModelContractWrapper) -> None:
         """
         Compiles and adds the model to the store
 
         Args:
             model (Model): The model to add
         """
-        compiled_model = type(model).compile()
+        compiled_model = model.compile()
         self.models[compiled_model.name] = compiled_model
 
     def add_compiled_model(self, model: ModelSchema) -> None:
@@ -1048,6 +1052,9 @@ class ModelFeatureStore:
         ```
         """
         await self.store.insert_into(FeatureLocation.model(self.model.name), predictions)
+
+    async def store_train_test_dataset(self, job: SupervisedTrainJob) -> SupervisedTrainJob:
+        pass
 
 
 @dataclass

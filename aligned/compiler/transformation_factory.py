@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import timedelta  # noqa: TC003
 from typing import Any, Callable
 
 import pandas as pd
@@ -8,7 +8,7 @@ import polars as pl
 
 from aligned import AwsS3Config
 from aligned.compiler.feature_factory import FeatureFactory, Transformation, TransformationFactory
-from aligned.schemas.transformation import LiteralValue, TextVectoriserModel
+from aligned.schemas.transformation import FillNaValuesColumns, LiteralValue, TextVectoriserModel
 
 logger = logging.getLogger(__name__)
 
@@ -469,20 +469,24 @@ class ConstantFillNaStrategy(FillNaStrategy):
 class FillMissingFactory(TransformationFactory):
 
     feature: FeatureFactory
-    strategy: FillNaStrategy
+    value: LiteralValue | FeatureFactory
 
     @property
     def using_features(self) -> list[FeatureFactory]:
-        return [self.feature]
+        if isinstance(self.value, LiteralValue):
+            return [self.feature]
+        else:
+            return [self.feature, self.value]
 
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import FillNaValues
 
-        fill_value = self.strategy.compile()
-
-        return FillNaValues(
-            key=self.feature.name, value=LiteralValue.from_value(fill_value), dtype=self.feature.dtype
-        )
+        if isinstance(self.value, LiteralValue):
+            return FillNaValues(key=self.feature.name, value=self.value, dtype=self.feature.dtype)
+        else:
+            return FillNaValuesColumns(
+                key=self.feature.name, fill_key=self.value.name, dtype=self.feature.dtype
+            )
 
 
 @dataclass

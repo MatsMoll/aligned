@@ -489,6 +489,16 @@ class FeatureView(ABC):
                     ]
                 )
 
+            if isinstance(feature, Entity):
+                view.entities.add(compiled_feature)
+
+                if feature._dtype.transformation:
+                    feature = feature._dtype
+                    feature._name = var_name
+                    feature._location = FeatureLocation.feature_view(metadata.name)
+                else:
+                    continue
+
             if feature.transformation:
                 # Adding features that is not stored in the view
                 # e.g:
@@ -543,8 +553,6 @@ class FeatureView(ABC):
                 else:
                     view.derived_features.add(feature.compile())  # Should decide on which payload to send
 
-            elif isinstance(feature, Entity):
-                view.entities.add(compiled_feature)
             elif isinstance(feature, EventTimestamp):
                 if view.event_timestamp is not None:
                     raise Exception(
