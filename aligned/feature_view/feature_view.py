@@ -152,6 +152,7 @@ class FeatureViewWrapper(Generic[T]):
 
         meta = copy.deepcopy(self.metadata)
         meta.name = name
+        meta.materialized_source = materialize_source
 
         condition = where(self.__call__())
 
@@ -165,9 +166,6 @@ class FeatureViewWrapper(Generic[T]):
             meta.source = FilteredDataSource(main_source, condition.compile())
         else:
             meta.source = FilteredDataSource(main_source, condition.feature())
-
-        if materialize_source:
-            meta.materialized_source = materialize_source
 
         return FeatureViewWrapper(metadata=meta, view=self.view)
 

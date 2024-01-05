@@ -42,7 +42,7 @@ T = TypeVar('T')
 @dataclass
 class ModelMetadata:
     name: str
-    features: list[FeatureReferencable] | FeatureInputVersions
+    features: FeatureInputVersions
     # Will log the feature inputs to a model. Therefore, enabling log and wait etc.
     # feature_logger: WritableBatchSource | None = field(default=None)
     contacts: list[str] | None = field(default=None)
@@ -51,6 +51,8 @@ class ModelMetadata:
     prediction_source: BatchDataSource | None = field(default=None)
     prediction_stream: StreamDataSource | None = field(default=None)
     application_source: BatchDataSource | None = field(default=None)
+
+    exposed_at_url: str | None = field(default=None)
 
     dataset_store: DatasetStore | None = field(default=None)
 
@@ -146,19 +148,27 @@ def model_contract(
     prediction_source: BatchDataSource | None = None,
     prediction_stream: StreamDataSource | None = None,
     application_source: BatchDataSource | None = None,
-    dataset_folder: DatasetStore | StorageFileReference | None = None,
+    dataset_store: DatasetStore | StorageFileReference | None = None,
+    exposed_at_url: str | None = None,
 ) -> Callable[[Type[T]], ModelContractWrapper[T]]:
     def decorator(cls: Type[T]) -> ModelContractWrapper[T]:
+
+        if isinstance(features, FeatureInputVersions):
+            input_features = features
+        else:
+            input_features = FeatureInputVersions(default_version='default', versions={'default': features})
+
         metadata = ModelMetadata(
             name,
-            features,
+            input_features,
             contacts=contacts,
             tags=tags,
             description=description,
             prediction_source=prediction_source,
             prediction_stream=prediction_stream,
             application_source=application_source,
-            dataset_store=resolve_dataset_store(dataset_folder) if dataset_folder else None,
+            dataset_store=resolve_dataset_store(dataset_store) if dataset_store else None,
+            exposed_at_url=exposed_at_url,
         )
         return ModelContractWrapper(metadata, cls)
 
@@ -257,10 +267,7 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
             inference_view.features.add(feature.feature())
 
     # Needs to run after the feature views have compiled
-    if isinstance(metadata.features, FeatureInputVersions):
-        features = metadata.features.compile()
-    else:
-        features = {feature.feature_referance() for feature in metadata.features}
+    features = metadata.features.compile()
 
     for target, probabilities in probability_features.items():
         from aligned.schemas.transformation import MapArgMax

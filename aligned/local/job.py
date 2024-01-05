@@ -356,6 +356,10 @@ class FileFactualJob(RetrivalJob):
             entity_names = request.entity_names
             all_names = request.all_required_feature_names.union(entity_names)
 
+            for derived_feature in request.derived_features:
+                if derived_feature.name in df.columns:
+                    all_names.add(derived_feature.name)
+
             column_selects = list(entity_names.union({'row_id'}))
 
             if request.event_timestamp_request:

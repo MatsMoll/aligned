@@ -177,6 +177,7 @@ class SupportedTransformations:
             PandasFunctionTransformation,
             PolarsLambdaTransformation,
             Ratio,
+            StructField,
             DivideDenumeratorValue,
             Contains,
             GreaterThen,
@@ -232,6 +233,7 @@ class SupportedTransformations:
             JsonPath,
             Clip,
             ArrayContains,
+            ArrayAtIndex,
         ]:
             self.add(tran_type)
 
@@ -1202,6 +1204,35 @@ class DateComponent(Transformation):
 
 
 @dataclass
+class ArrayAtIndex(Transformation):
+    """Checks if an array contains a value
+
+    some_array = List(String())
+    contains_a_char = some_array.contains("a")
+    """
+
+    key: str
+    index: int
+
+    name: str = 'array_at_index'
+    dtype: FeatureType = FeatureType.bool()
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return pl.Series(df[self.key]).list.get(self.index).to_pandas()
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        return pl.col(self.key).list.get(self.index).alias(alias)
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            ArrayContains('x', LiteralValue.from_value('test')),
+            input={'x': [['Hello', 'test'], ['nah'], ['test', 'espania', None]]},
+            output=[True, False, True],
+        )
+
+
+@dataclass
 class ArrayContains(Transformation):
     """Checks if an array contains a value
 
@@ -2098,6 +2129,22 @@ class PresignedAwsUrl(Transformation):
             .apply(lambda x: s3.signed_download_url(x, max_age=self.max_age_seconds))
             .alias(alias)
         )
+
+
+@dataclass
+class StructField(Transformation):
+
+    key: str
+    field: str
+
+    name = 'struct_field'
+    dtype = FeatureType.string()
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return df[self.key].apply(lambda x: x[self.field])
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        return pl.col(self.key).struct.field(self.field).alias(alias)
 
 
 @dataclass

@@ -52,8 +52,7 @@ class Second:
 def test_model_referenced_as_feature() -> None:
     model = Second.compile()  # type: ignore
 
-    assert isinstance(model.features, set)
-    feature = list(model.features)[0]
+    feature = model.features.default_features[0]
 
     assert feature.location == FeatureLocation.model('test_model')
     assert feature.name == 'target'

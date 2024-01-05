@@ -145,6 +145,7 @@ class EnricherReference(Codable):
 class RepoMetadata(Codable):
     created_at: datetime
     name: str
+    repo_url: str | None = field(default=None)
     github_url: str | None = field(default=None)
 
 

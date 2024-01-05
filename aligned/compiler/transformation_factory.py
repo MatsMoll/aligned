@@ -88,6 +88,22 @@ class OrdinalFactory(TransformationFactory):
 
 
 @dataclass
+class ArrayAtIndexFactory(TransformationFactory):
+
+    feature: FeatureFactory
+    index: int
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.feature]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import ArrayAtIndex
+
+        return ArrayAtIndex(self.feature.name, self.index)
+
+
+@dataclass
 class ArrayContainsFactory(TransformationFactory):
 
     value: LiteralValue
@@ -602,10 +618,8 @@ class PolarsTransformationFactory(TransformationFactory):
         from aligned.schemas.transformation import PolarsFunctionTransformation, PolarsLambdaTransformation
 
         if isinstance(self.method, pl.Expr):
-            code = str(self.method)
-            return PolarsLambdaTransformation(
-                method=dill.dumps(self.method), code=code.strip(), dtype=self.dtype.dtype
-            )
+            method = lambda df, alias: self.method  # type: ignore
+            return PolarsLambdaTransformation(method=dill.dumps(method), code='', dtype=self.dtype.dtype)
         else:
             code = inspect.getsource(self.method)
 
@@ -718,6 +732,22 @@ class AppendStrings(TransformationFactory):
             return AppendConstString(self.first_feature.name, self.second_feature.value)
         else:
             return AppendStrings(self.first_feature.name, self.second_feature.name, self.separator)
+
+
+@dataclass
+class StructFieldFactory(TransformationFactory):
+
+    struct_feature: FeatureFactory
+    field_name: str
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.struct_feature]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import StructField
+
+        return StructField(self.struct_feature.name, self.field_name)
 
 
 @dataclass

@@ -844,7 +844,7 @@ class ModelFeatureStore:
         Returns:
             SupervisedModelFeatureStore: A new queryable feature store
         """
-        return SupervisedModelFeatureStore(self.model, self.store)
+        return SupervisedModelFeatureStore(self.model, self.store, self.selected_version)
 
     def cached_at(self, location: DataFileReference) -> RetrivalJob:
         """Loads the model features from a pre computed location
@@ -1074,6 +1074,7 @@ class SupervisedModelFeatureStore:
 
     model: ModelSchema
     store: FeatureStore
+    selected_version: str | None = None
 
     def features_for(
         self,
@@ -1109,7 +1110,7 @@ class SupervisedModelFeatureStore:
         Returns:
             SupervisedJob: A object that will load the features and lables in your desired format
         """
-        feature_refs = self.model.features
+        feature_refs = self.model.feature_references(self.selected_version)
         features = {f'{feature.location.identifier}:{feature.name}' for feature in feature_refs}
         pred_view = self.model.predictions_view
 

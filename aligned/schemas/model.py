@@ -125,15 +125,22 @@ class PredictionsView(Codable):
 @dataclass
 class Model(Codable):
     name: str
-    features: set[FeatureReferance] | FeatureInputVersions
+    features: FeatureInputVersions
     predictions_view: PredictionsView
     description: str | None = field(default=None)
     contacts: list[str] | None = field(default=None)
     tags: dict[str, str] | None = field(default=None)
     dataset_store: DatasetStore | None = field(default=None)
+    exposed_at_url: str | None = field(default=None)
 
     def __hash__(self) -> int:
         return self.name.__hash__()
+
+    def feature_references(self, version: str | None = None) -> set[FeatureReferance]:
+        if isinstance(self.features, FeatureInputVersions):
+            return set(self.features.features_for(version or self.features.default_version))
+        else:
+            return self.features
 
     @property
     def request_all_predictions(self) -> FeatureRequest:

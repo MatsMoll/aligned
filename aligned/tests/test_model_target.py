@@ -91,9 +91,9 @@ async def test_model_wrapper() -> None:
 
     model_wrapper: ModelContractWrapper = NewModel
     compiled = model_wrapper.compile()
-    assert len(compiled.features) == 1
+    assert len(compiled.features.default_features) == 1
 
-    feature = list(compiled.features)[0]
+    feature = list(compiled.features.default_features)[0]
 
     assert feature.location == FeatureLocation.model('test_model')
     assert feature.name == 'a'

@@ -129,6 +129,7 @@ class FeatureType(Codable):
             'uuid': UUID,
             'array': list,
             'embedding': list,
+            'json': str,
         }[self.name]
 
     @property
@@ -151,6 +152,7 @@ class FeatureType(Codable):
             'uuid': str,
             'array': list,
             'embedding': list,
+            'json': str,
         }[self.name]
 
     @property
@@ -175,6 +177,7 @@ class FeatureType(Codable):
             'uuid': ff.UUID(),
             'array': ff.Embedding(),
             'embedding': ff.Embedding(),
+            'json': ff.Json(),
         }[self.name]
 
     def __eq__(self, other: object) -> bool:
@@ -239,6 +242,10 @@ class FeatureType(Codable):
     @staticmethod
     def datetime() -> FeatureType:
         return FeatureType(name='datetime')
+
+    @staticmethod
+    def json() -> FeatureType:
+        return FeatureType(name='json')
 
     @staticmethod
     def array() -> FeatureType:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
 import pandas as pd
 import polars as pl
@@ -844,7 +844,7 @@ class Float(ArithmeticFeature, DecimalOperations):
         return ArithmeticAggregation(self)
 
 
-class Int8(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion):
+class Int8(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
     def copy_type(self) -> Int8:
         return Int8()
 
@@ -856,7 +856,7 @@ class Int8(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion):
         return ArithmeticAggregation(self)
 
 
-class Int16(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion):
+class Int16(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
     def copy_type(self) -> Int16:
         return Int16()
 
@@ -868,7 +868,7 @@ class Int16(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion):
         return ArithmeticAggregation(self)
 
 
-class Int32(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion):
+class Int32(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
     def copy_type(self) -> Int32:
         return Int32()
 
@@ -880,7 +880,7 @@ class Int32(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion):
         return ArithmeticAggregation(self)
 
 
-class Int64(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion):
+class Int64(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
     def copy_type(self) -> Int64:
         return Int64()
 
@@ -1020,13 +1020,20 @@ class Json(FeatureFactory):
 
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType.string()
+        return FeatureType.json()
 
     def json_path_value_at(self, path: str, as_type: T) -> T:
         from aligned.compiler.transformation_factory import JsonPathFactory
 
         feature = as_type.copy_type()
         feature.transformation = JsonPathFactory(self, path)
+        return feature
+
+    def field(self, field: str, as_type: T) -> T:
+        from aligned.compiler.transformation_factory import StructFieldFactory
+
+        feature = as_type.copy_type()
+        feature.transformation = StructFieldFactory(self, field)
         return feature
 
 
@@ -1120,10 +1127,13 @@ class Embedding(FeatureFactory):
         return self
 
 
-@dataclass
-class List(FeatureFactory):
+GenericFeature = TypeVar('GenericFeature', bound=FeatureFactory)
 
-    sub_type: FeatureFactory
+
+@dataclass
+class List(FeatureFactory, Generic[GenericFeature]):
+
+    sub_type: GenericFeature
 
     def copy_type(self) -> List:
         return List(self.sub_type.copy_type())
@@ -1137,6 +1147,13 @@ class List(FeatureFactory):
 
         feature = Bool()
         feature.transformation = ArrayContainsFactory(LiteralValue.from_value(value), self)
+        return feature
+
+    def at_index(self, index: int) -> GenericFeature:
+        from aligned.compiler.transformation_factory import ArrayAtIndexFactory
+
+        feature = self.sub_type.copy_type()
+        feature.transformation = ArrayAtIndexFactory(self, index)
         return feature
 
 
