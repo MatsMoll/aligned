@@ -2141,10 +2141,17 @@ class StructField(Transformation):
     dtype = FeatureType.string()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return df[self.key].apply(lambda x: x[self.field])
+        return (
+            (await self.transform_polars(pl.from_pandas(df).lazy(), 'feature'))
+            .collect()
+            .to_pandas()['feature']
+        )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key).struct.field(self.field).alias(alias)
+        if df.schema[self.key].is_(pl.Utf8):
+            return await JsonPath(self.key, self.field).transform_polars(df, alias)
+        else:
+            return pl.col(self.key).struct.field(self.field).alias(alias)
 
 
 @dataclass
