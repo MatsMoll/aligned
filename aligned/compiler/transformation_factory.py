@@ -387,7 +387,8 @@ class ReplaceFactory(TransformationFactory):
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import ReplaceStrings
 
-        return ReplaceStrings(self.source_feature.name, self.values)
+        values = list(self.values.items())
+        return ReplaceStrings(self.source_feature.name, values)
 
 
 @dataclass

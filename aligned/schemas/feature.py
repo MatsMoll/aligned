@@ -23,6 +23,7 @@ NAME_POLARS_MAPPING = {
     'uuid': pl.Utf8,
     'array': pl.List(pl.Utf8),
     'embedding': pl.List,
+    'json': pl.Utf8,
 }
 
 
