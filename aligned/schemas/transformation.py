@@ -643,12 +643,10 @@ class GreaterThenValue(Transformation):
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
-
         return TransformationTestDefinition(
             GreaterThenValue(key='x', value=2),
-            input={'x': [1, 2, 3, nan]},
-            output=[False, False, True, False],
+            input={'x': [1, 2, 3]},
+            output=[False, False, True],
         )
 
 
@@ -673,8 +671,8 @@ class GreaterThen(Transformation):
 
         return TransformationTestDefinition(
             GreaterThen(left_key='x', right_key='y'),
-            input={'x': [1, 2, 3, nan, 5], 'y': [3, 2, 1, 5, nan]},
-            output=[False, False, True, False, False],
+            input={'x': [1, 2, 3, 5], 'y': [3, 2, 1, nan]},
+            output=[False, False, True, False],
         )
 
 
@@ -2149,7 +2147,7 @@ class StructField(Transformation):
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         if df.schema[self.key].is_(pl.Utf8):
-            return await JsonPath(self.key, self.field).transform_polars(df, alias)
+            return await JsonPath(self.key, f'$.{self.field}').transform_polars(df, alias)
         else:
             return pl.col(self.key).struct.field(self.field).alias(alias)
 

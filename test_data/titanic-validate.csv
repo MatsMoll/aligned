@@ -1,21 +1,21 @@
-is_male,sex,is_mr,survived,has_siblings,name,age,sibsp,cabin,is_female,passenger_id
-True,male,True,False,False,"Waelens, Mr. Achille",22.0,0,,False,81
-True,male,True,True,False,"Sheerlinck, Mr. Jan Baptist",29.0,0,,False,82
-False,female,False,True,False,"McDermott, Miss. Brigdet Delia",,0,,True,83
-True,male,True,False,False,"Carrau, Mr. Francisco M",28.0,0,,False,84
-False,female,False,True,False,"Ilett, Miss. Bertha",17.0,0,,True,85
-False,female,True,True,True,"Backstrom, Mrs. Karl Alfred (Maria Mathilda Gustafsson)",33.0,3,,True,86
-True,male,True,False,True,"Ford, Mr. William Neal",16.0,1,,False,87
-True,male,True,False,False,"Slocovski, Mr. Selman Francis",,0,,False,88
-False,female,False,True,True,"Fortune, Miss. Mabel Helen",23.0,3,C23 C25 C27,True,89
-True,male,True,False,False,"Celotti, Mr. Francesco",24.0,0,,False,90
-True,male,True,False,False,"Christmann, Mr. Emil",29.0,0,,False,91
-True,male,True,False,False,"Andreasson, Mr. Paul Edvin",20.0,0,,False,92
-True,male,True,False,True,"Chaffee, Mr. Herbert Fuller",46.0,1,E31,False,93
-True,male,True,False,True,"Dean, Mr. Bertram Frank",26.0,1,,False,94
-True,male,True,False,False,"Coxon, Mr. Daniel",59.0,0,,False,95
-True,male,True,False,False,"Shorney, Mr. Charles Joseph",,0,,False,96
-True,male,True,False,False,"Goldschmidt, Mr. George B",71.0,0,A5,False,97
-True,male,True,True,False,"Greenfield, Mr. William Bertram",23.0,0,D10 D12,False,98
-False,female,True,True,False,"Doling, Mrs. John T (Ada Julia Bone)",34.0,0,,True,99
-True,male,True,False,True,"Kantor, Mr. Sinai",34.0,1,,False,100
+cabin,has_siblings,is_female,is_mr,name,survived,age,is_male,sex,sibsp,passenger_id
+,False,False,True,"Waelens, Mr. Achille",False,22.0,True,male,0,81
+,False,False,True,"Sheerlinck, Mr. Jan Baptist",True,29.0,True,male,0,82
+,False,True,False,"McDermott, Miss. Brigdet Delia",True,,False,female,0,83
+,False,False,True,"Carrau, Mr. Francisco M",False,28.0,True,male,0,84
+,False,True,False,"Ilett, Miss. Bertha",True,17.0,False,female,0,85
+,True,True,True,"Backstrom, Mrs. Karl Alfred (Maria Mathilda Gustafsson)",True,33.0,False,female,3,86
+,True,False,True,"Ford, Mr. William Neal",False,16.0,True,male,1,87
+,False,False,True,"Slocovski, Mr. Selman Francis",False,,True,male,0,88
+C23 C25 C27,True,True,False,"Fortune, Miss. Mabel Helen",True,23.0,False,female,3,89
+,False,False,True,"Celotti, Mr. Francesco",False,24.0,True,male,0,90
+,False,False,True,"Christmann, Mr. Emil",False,29.0,True,male,0,91
+,False,False,True,"Andreasson, Mr. Paul Edvin",False,20.0,True,male,0,92
+E31,True,False,True,"Chaffee, Mr. Herbert Fuller",False,46.0,True,male,1,93
+,True,False,True,"Dean, Mr. Bertram Frank",False,26.0,True,male,1,94
+,False,False,True,"Coxon, Mr. Daniel",False,59.0,True,male,0,95
+,False,False,True,"Shorney, Mr. Charles Joseph",False,,True,male,0,96
+A5,False,False,True,"Goldschmidt, Mr. George B",False,71.0,True,male,0,97
+D10 D12,False,False,True,"Greenfield, Mr. William Bertram",True,23.0,True,male,0,98
+,False,True,True,"Doling, Mrs. John T (Ada Julia Bone)",True,34.0,False,female,0,99
+,True,False,True,"Kantor, Mr. Sinai",False,34.0,True,male,1,100

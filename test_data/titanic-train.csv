@@ -1,61 +1,61 @@
-is_male,sex,is_mr,survived,has_siblings,name,age,sibsp,cabin,is_female,passenger_id
-True,male,True,False,True,"Braund, Mr. Owen Harris",22.0,1,,False,1
-False,female,True,True,True,"Cumings, Mrs. John Bradley (Florence Briggs Thayer)",38.0,1,C85,True,2
-False,female,False,True,False,"Heikkinen, Miss. Laina",26.0,0,,True,3
-False,female,True,True,True,"Futrelle, Mrs. Jacques Heath (Lily May Peel)",35.0,1,C123,True,4
-True,male,True,False,False,"Allen, Mr. William Henry",35.0,0,,False,5
-True,male,True,False,False,"Moran, Mr. James",,0,,False,6
-False,other,True,False,False,"McCarthy, Mr. Timothy J",54.0,0,E46,False,7
-True,male,False,False,True,"Palsson, Master. Gosta Leonard",2.0,3,,False,8
-False,female,True,True,False,"Johnson, Mrs. Oscar W (Elisabeth Vilhelmina Berg)",27.0,0,,True,9
-False,female,True,True,True,"Nasser, Mrs. Nicholas (Adele Achem)",14.0,1,,True,10
-False,female,False,True,True,"Sandstrom, Miss. Marguerite Rut",4.0,1,G6,True,11
-False,female,False,True,False,"Bonnell, Miss. Elizabeth",58.0,0,C103,True,12
-True,male,True,False,False,"Saundercock, Mr. William Henry",20.0,0,,False,13
-True,male,True,False,True,"Andersson, Mr. Anders Johan",39.0,1,,False,14
-False,female,False,False,False,"Vestrom, Miss. Hulda Amanda Adolfina",14.0,0,,True,15
-False,female,True,True,False,"Hewlett, Mrs. (Mary D Kingcome) ",55.0,0,,True,16
-True,male,False,False,True,"Rice, Master. Eugene",2.0,4,,False,17
-True,male,True,True,False,"Williams, Mr. Charles Eugene",,0,,False,18
-False,female,True,False,True,"Vander Planke, Mrs. Julius (Emelia Maria Vandemoortele)",31.0,1,,True,19
-False,female,True,True,False,"Masselmani, Mrs. Fatima",,0,,True,20
-True,male,True,False,False,"Fynney, Mr. Joseph J",35.0,0,,False,21
-True,male,True,True,False,"Beesley, Mr. Lawrence",34.0,0,D56,False,22
-False,female,False,True,False,"McGowan, Miss. Anna ""Annie""",15.0,0,,True,23
-True,male,True,True,False,"Sloper, Mr. William Thompson",28.0,0,A6,False,24
-False,female,False,False,True,"Palsson, Miss. Torborg Danira",8.0,3,,True,25
-False,female,True,True,True,"Asplund, Mrs. Carl Oscar (Selma Augusta Emilia Johansson)",38.0,1,,True,26
-True,male,True,False,False,"Emir, Mr. Farred Chehab",,0,,False,27
-True,male,True,False,True,"Fortune, Mr. Charles Alexander",19.0,3,C23 C25 C27,False,28
-False,female,False,True,False,"O'Dwyer, Miss. Ellen ""Nellie""",,0,,True,29
-True,male,True,False,False,"Todoroff, Mr. Lalio",,0,,False,30
-True,male,False,False,False,"Uruchurtu, Don. Manuel E",40.0,0,,False,31
-False,female,True,True,True,"Spencer, Mrs. William Augustus (Marie Eugenie)",,1,B78,True,32
-False,female,False,True,False,"Glynn, Miss. Mary Agatha",,0,,True,33
-True,male,True,False,False,"Wheadon, Mr. Edward H",66.0,0,,False,34
-True,male,True,False,True,"Meyer, Mr. Edgar Joseph",28.0,1,,False,35
-True,male,True,False,True,"Holverson, Mr. Alexander Oskar",42.0,1,,False,36
-True,male,True,True,False,"Mamee, Mr. Hanna",,0,,False,37
-True,male,True,False,False,"Cann, Mr. Ernest Charles",21.0,0,,False,38
-False,female,False,False,True,"Vander Planke, Miss. Augusta Maria",18.0,2,,True,39
-False,female,False,True,True,"Nicola-Yarred, Miss. Jamila",14.0,1,,True,40
-False,female,True,False,True,"Ahlin, Mrs. Johan (Johanna Persdotter Larsson)",40.0,1,,True,41
-False,female,True,False,True,"Turpin, Mrs. William John Robert (Dorothy Ann Wonnacott)",27.0,1,,True,42
-True,male,True,False,False,"Kraeff, Mr. Theodor",,0,,False,43
-False,female,False,True,True,"Laroche, Miss. Simonne Marie Anne Andree",3.0,1,,True,44
-False,female,False,True,False,"Devaney, Miss. Margaret Delia",19.0,0,,True,45
-True,male,True,False,False,"Rogers, Mr. William John",,0,,False,46
-True,male,True,False,True,"Lennon, Mr. Denis",,1,,False,47
-False,female,False,True,False,"O'Driscoll, Miss. Bridget",,0,,True,48
-True,male,True,False,True,"Samaan, Mr. Youssef",,2,,False,49
-False,female,True,False,True,"Arnold-Franchi, Mrs. Josef (Josefine Franchi)",18.0,1,,True,50
-True,male,False,False,True,"Panula, Master. Juha Niilo",7.0,4,,False,51
-True,male,True,False,False,"Nosworthy, Mr. Richard Cater",21.0,0,,False,52
-False,female,True,True,True,"Harper, Mrs. Henry Sleeper (Myna Haxtun)",49.0,1,D33,True,53
-False,female,True,True,True,"Faunthorpe, Mrs. Lizzie (Elizabeth Anne Wilkinson)",29.0,1,,True,54
-True,male,True,False,False,"Ostby, Mr. Engelhart Cornelius",65.0,0,B30,False,55
-True,male,True,True,False,"Woolner, Mr. Hugh",,0,C52,False,56
-False,female,False,True,False,"Rugg, Miss. Emily",21.0,0,,True,57
-True,male,True,False,False,"Novel, Mr. Mansouer",28.5,0,,False,58
-False,female,False,True,True,"West, Miss. Constance Mirium",5.0,1,,True,59
-True,male,False,False,True,"Goodwin, Master. William Frederick",11.0,5,,False,60
+cabin,has_siblings,is_female,is_mr,name,survived,age,is_male,sex,sibsp,passenger_id
+,True,False,True,"Braund, Mr. Owen Harris",False,22.0,True,male,1,1
+C85,True,True,True,"Cumings, Mrs. John Bradley (Florence Briggs Thayer)",True,38.0,False,female,1,2
+,False,True,False,"Heikkinen, Miss. Laina",True,26.0,False,female,0,3
+C123,True,True,True,"Futrelle, Mrs. Jacques Heath (Lily May Peel)",True,35.0,False,female,1,4
+,False,False,True,"Allen, Mr. William Henry",False,35.0,True,male,0,5
+,False,False,True,"Moran, Mr. James",False,,True,male,0,6
+E46,False,False,True,"McCarthy, Mr. Timothy J",False,54.0,False,other,0,7
+,True,False,False,"Palsson, Master. Gosta Leonard",False,2.0,True,male,3,8
+,False,True,True,"Johnson, Mrs. Oscar W (Elisabeth Vilhelmina Berg)",True,27.0,False,female,0,9
+,True,True,True,"Nasser, Mrs. Nicholas (Adele Achem)",True,14.0,False,female,1,10
+G6,True,True,False,"Sandstrom, Miss. Marguerite Rut",True,4.0,False,female,1,11
+C103,False,True,False,"Bonnell, Miss. Elizabeth",True,58.0,False,female,0,12
+,False,False,True,"Saundercock, Mr. William Henry",False,20.0,True,male,0,13
+,True,False,True,"Andersson, Mr. Anders Johan",False,39.0,True,male,1,14
+,False,True,False,"Vestrom, Miss. Hulda Amanda Adolfina",False,14.0,False,female,0,15
+,False,True,True,"Hewlett, Mrs. (Mary D Kingcome) ",True,55.0,False,female,0,16
+,True,False,False,"Rice, Master. Eugene",False,2.0,True,male,4,17
+,False,False,True,"Williams, Mr. Charles Eugene",True,,True,male,0,18
+,True,True,True,"Vander Planke, Mrs. Julius (Emelia Maria Vandemoortele)",False,31.0,False,female,1,19
+,False,True,True,"Masselmani, Mrs. Fatima",True,,False,female,0,20
+,False,False,True,"Fynney, Mr. Joseph J",False,35.0,True,male,0,21
+D56,False,False,True,"Beesley, Mr. Lawrence",True,34.0,True,male,0,22
+,False,True,False,"McGowan, Miss. Anna ""Annie""",True,15.0,False,female,0,23
+A6,False,False,True,"Sloper, Mr. William Thompson",True,28.0,True,male,0,24
+,True,True,False,"Palsson, Miss. Torborg Danira",False,8.0,False,female,3,25
+,True,True,True,"Asplund, Mrs. Carl Oscar (Selma Augusta Emilia Johansson)",True,38.0,False,female,1,26
+,False,False,True,"Emir, Mr. Farred Chehab",False,,True,male,0,27
+C23 C25 C27,True,False,True,"Fortune, Mr. Charles Alexander",False,19.0,True,male,3,28
+,False,True,False,"O'Dwyer, Miss. Ellen ""Nellie""",True,,False,female,0,29
+,False,False,True,"Todoroff, Mr. Lalio",False,,True,male,0,30
+,False,False,False,"Uruchurtu, Don. Manuel E",False,40.0,True,male,0,31
+B78,True,True,True,"Spencer, Mrs. William Augustus (Marie Eugenie)",True,,False,female,1,32
+,False,True,False,"Glynn, Miss. Mary Agatha",True,,False,female,0,33
+,False,False,True,"Wheadon, Mr. Edward H",False,66.0,True,male,0,34
+,True,False,True,"Meyer, Mr. Edgar Joseph",False,28.0,True,male,1,35
+,True,False,True,"Holverson, Mr. Alexander Oskar",False,42.0,True,male,1,36
+,False,False,True,"Mamee, Mr. Hanna",True,,True,male,0,37
+,False,False,True,"Cann, Mr. Ernest Charles",False,21.0,True,male,0,38
+,True,True,False,"Vander Planke, Miss. Augusta Maria",False,18.0,False,female,2,39
+,True,True,False,"Nicola-Yarred, Miss. Jamila",True,14.0,False,female,1,40
+,True,True,True,"Ahlin, Mrs. Johan (Johanna Persdotter Larsson)",False,40.0,False,female,1,41
+,True,True,True,"Turpin, Mrs. William John Robert (Dorothy Ann Wonnacott)",False,27.0,False,female,1,42
+,False,False,True,"Kraeff, Mr. Theodor",False,,True,male,0,43
+,True,True,False,"Laroche, Miss. Simonne Marie Anne Andree",True,3.0,False,female,1,44
+,False,True,False,"Devaney, Miss. Margaret Delia",True,19.0,False,female,0,45
+,False,False,True,"Rogers, Mr. William John",False,,True,male,0,46
+,True,False,True,"Lennon, Mr. Denis",False,,True,male,1,47
+,False,True,False,"O'Driscoll, Miss. Bridget",True,,False,female,0,48
+,True,False,True,"Samaan, Mr. Youssef",False,,True,male,2,49
+,True,True,True,"Arnold-Franchi, Mrs. Josef (Josefine Franchi)",False,18.0,False,female,1,50
+,True,False,False,"Panula, Master. Juha Niilo",False,7.0,True,male,4,51
+,False,False,True,"Nosworthy, Mr. Richard Cater",False,21.0,True,male,0,52
+D33,True,True,True,"Harper, Mrs. Henry Sleeper (Myna Haxtun)",True,49.0,False,female,1,53
+,True,True,True,"Faunthorpe, Mrs. Lizzie (Elizabeth Anne Wilkinson)",True,29.0,False,female,1,54
+B30,False,False,True,"Ostby, Mr. Engelhart Cornelius",False,65.0,True,male,0,55
+C52,False,False,True,"Woolner, Mr. Hugh",True,,True,male,0,56
+,False,True,False,"Rugg, Miss. Emily",True,21.0,False,female,0,57
+,False,False,True,"Novel, Mr. Mansouer",False,28.5,True,male,0,58
+,True,True,False,"West, Miss. Constance Mirium",True,5.0,False,female,1,59
+,True,False,False,"Goodwin, Master. William Frederick",False,11.0,True,male,5,60
