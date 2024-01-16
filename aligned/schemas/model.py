@@ -7,7 +7,7 @@ from aligned.schemas.feature import FeatureLocation
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureReferance
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.schemas.event_trigger import EventTrigger
-from aligned.schemas.target import ClassificationTarget, RegressionTarget
+from aligned.schemas.target import ClassificationTarget, RecommendationTarget, RegressionTarget
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.schemas.folder import DatasetStore
@@ -57,6 +57,7 @@ class PredictionsView(Codable):
 
     regression_targets: set[RegressionTarget] | None = field(default=None)
     classification_targets: set[ClassificationTarget] | None = field(default=None)
+    recommendation_targets: set[RecommendationTarget] | None = field(default=None)
 
     @property
     def full_schema(self) -> set[Feature]:
@@ -110,6 +111,8 @@ class PredictionsView(Codable):
             return {feature.estimating for feature in self.classification_targets}
         elif self.regression_targets:
             return {feature.estimating for feature in self.regression_targets}
+        elif self.recommendation_targets:
+            return {feature.estimating for feature in self.recommendation_targets}
         else:
             raise ValueError('Found no targets in the model')
 
@@ -118,6 +121,8 @@ class PredictionsView(Codable):
             return {feature.feature for feature in self.classification_targets}
         elif self.regression_targets:
             return {feature.feature for feature in self.regression_targets}
+        elif self.recommendation_targets:
+            return {feature.feature for feature in self.recommendation_targets}
         else:
             raise ValueError('Found no targets in the model')
 
@@ -137,10 +142,7 @@ class Model(Codable):
         return self.name.__hash__()
 
     def feature_references(self, version: str | None = None) -> set[FeatureReferance]:
-        if isinstance(self.features, FeatureInputVersions):
-            return set(self.features.features_for(version or self.features.default_version))
-        else:
-            return self.features
+        return set(self.features.features_for(version or self.features.default_version))
 
     @property
     def request_all_predictions(self) -> FeatureRequest:

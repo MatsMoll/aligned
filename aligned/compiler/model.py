@@ -14,6 +14,7 @@ from aligned.compiler.feature_factory import (
     EventTimestamp,
     FeatureFactory,
     FeatureReferencable,
+    RecommendationTarget,
     RegressionLabel,
     TargetProbability,
     ModelVersion,
@@ -203,6 +204,7 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
         stream_source=metadata.prediction_stream,
         classification_targets=set(),
         regression_targets=set(),
+        recommendation_targets=set(),
     )
     probability_features: dict[str, set[TargetProbability]] = {}
 
@@ -261,6 +263,8 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
             probability_features[feature_name] = probability_features.get(feature_name, set()).union(
                 {feature}
             )
+        elif isinstance(feature, RecommendationTarget):
+            inference_view.recommendation_targets.add(feature.compile())
         elif isinstance(feature, Entity):
             inference_view.entities.add(feature.feature())
         elif isinstance(feature, FeatureFactory):
@@ -299,4 +303,5 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
         tags=metadata.tags,
         description=metadata.description,
         dataset_store=metadata.dataset_store,
+        exposed_at_url=metadata.exposed_at_url,
     )

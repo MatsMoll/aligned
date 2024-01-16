@@ -286,6 +286,13 @@ class Feature(Codable):
             constraints=self.constraints,
         )
 
+    def as_reference(self, location: FeatureLocation) -> FeatureReferance:
+        return FeatureReferance(
+            name=self.name,
+            location=location,
+            dtype=self.dtype,
+        )
+
     def __hash__(self) -> int:
         return hash(self.name)
 
@@ -353,6 +360,15 @@ class FeatureReferance(Codable):
     location: FeatureLocation
     dtype: FeatureType
     # is_derived: bool
+
+    def as_feature(self) -> Feature:
+        return Feature(
+            name=self.name,
+            dtype=self.dtype,
+            description=None,
+            tags=None,
+            constraints=None,
+        )
 
     def __hash__(self) -> int:
         return hash(self.name)

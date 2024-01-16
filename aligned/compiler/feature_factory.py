@@ -30,6 +30,7 @@ from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.target import ClassificationTarget as ClassificationTargetSchemas
 from aligned.schemas.target import ClassTargetProbability
 from aligned.schemas.target import RegressionTarget as RegressionTargetSchemas
+from aligned.schemas.target import RecommendationTarget as RecommendationTargetSchemas
 from aligned.schemas.transformation import EmbeddingModel, Transformation
 from aligned.schemas.vector_storage import VectorStorage
 
@@ -169,6 +170,39 @@ def compile_hidden_features(
             derived_features.add(feature.compile())  # Should decide on which payload to send
 
     return features, derived_features
+
+
+@dataclass
+class RecommendationTarget(FeatureReferencable):
+
+    feature: FeatureFactory
+    rank_feature: FeatureFactory | None = field(default=None)
+
+    _name: str | None = field(default=None)
+    _location: FeatureLocation | None = field(default=None)
+
+    def __set_name__(self, owner, name):
+        self._name = name
+
+    def feature_referance(self) -> FeatureReferance:
+        if not self._name:
+            raise ValueError('Missing name, can not create reference')
+        if not self._location:
+            raise ValueError('Missing location, can not create reference')
+        return FeatureReferance(self._name, self._location, self.feature.dtype)
+
+    def estemating_rank(self, feature: FeatureFactory) -> RecommendationTarget:
+        self.rank_feature = feature
+        return self
+
+    def compile(self) -> RecommendationTargetSchemas:
+        self_ref = self.feature_referance()
+
+        return RecommendationTargetSchemas(
+            self.feature.feature_referance(),
+            feature=self_ref.as_feature(),
+            estimating_rank=self.rank_feature.feature_referance() if self.rank_feature else None,
+        )
 
 
 @dataclass
@@ -374,6 +408,9 @@ class FeatureFactory(FeatureReferencable):
 
     def as_regression_label(self) -> RegressionLabel:
         return RegressionLabel(self)
+
+    def as_recommendation_target(self) -> RecommendationTarget:
+        return RecommendationTarget(self)
 
     def compile(self) -> DerivedFeature:
 

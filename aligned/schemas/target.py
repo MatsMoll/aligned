@@ -47,3 +47,15 @@ class ClassificationTarget(Codable):
 
     def __hash__(self) -> int:
         return self.feature.name.__hash__()
+
+
+@dataclass
+class RecommendationTarget(Codable):
+
+    estimating: FeatureReferance
+    feature: Feature
+
+    estimating_rank: FeatureReferance | None = field(default=None)
+
+    def __hash__(self) -> int:
+        return self.feature.name.__hash__()
