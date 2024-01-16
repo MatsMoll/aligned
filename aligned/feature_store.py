@@ -821,7 +821,7 @@ class ModelFeatureStore:
 
         return await self.store.feature_source.freshness_for(locs)
 
-    def with_labels(self) -> SupervisedModelFeatureStore:
+    def with_labels(self, label_refs: set[FeatureReferance] | None = None) -> SupervisedModelFeatureStore:
         """Will also load the labels for the model
 
         ```python
@@ -847,7 +847,12 @@ class ModelFeatureStore:
         Returns:
             SupervisedModelFeatureStore: A new queryable feature store
         """
-        return SupervisedModelFeatureStore(self.model, self.store, self.selected_version)
+        return SupervisedModelFeatureStore(
+            self.model,
+            self.store,
+            label_refs or self.model.predictions_view.labels_estimates_refs(),
+            self.selected_version,
+        )
 
     def cached_at(self, location: DataFileReference) -> RetrivalJob:
         """Loads the model features from a pre computed location
