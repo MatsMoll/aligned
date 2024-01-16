@@ -289,7 +289,10 @@ class FeatureViewWrapper(Generic[T]):
         store.add_compiled_view(self.compile())
         return store.feature_view(self.metadata.name)
 
-    async def process(self, data: dict[str, list[Any]]) -> list[dict]:
+    def process_input(self, data: ConvertableToRetrivalJob) -> RetrivalJob:
+        return self.query().process_input(data)
+
+    async def process(self, data: ConvertableToRetrivalJob) -> list[dict]:
         df = await self.query().process_input(data).to_polars()
         return df.collect().to_dicts()
 
@@ -673,7 +676,7 @@ class FeatureView(ABC):
 
         return f"""
 from aligned import feature_view, {all_types}
-{imports or ""}
+{imports or ''}
 
 @feature_view(
     name="{view_name}",

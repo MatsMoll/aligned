@@ -18,7 +18,7 @@ from aligned.feature_view import (
     feature_view,
     combined_feature_view,
 )
-from aligned.schemas.text_vectoriser import TextVectoriserModel
+from aligned.schemas.text_vectoriser import EmbeddingModel
 from aligned.sources.kafka import KafkaConfig
 from aligned.sources.local import FileSource
 from aligned.sources.psql import PostgreSQLConfig
@@ -53,7 +53,7 @@ __all__ = [
     'EventTimestamp',
     'Timestamp',
     'Json',
-    'TextVectoriserModel',
+    'EmbeddingModel',
     'feature_view',
     'combined_feature_view',
     'model_contract',

@@ -30,7 +30,7 @@ from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.target import ClassificationTarget as ClassificationTargetSchemas
 from aligned.schemas.target import ClassTargetProbability
 from aligned.schemas.target import RegressionTarget as RegressionTargetSchemas
-from aligned.schemas.transformation import TextVectoriserModel, Transformation
+from aligned.schemas.transformation import EmbeddingModel, Transformation
 from aligned.schemas.vector_storage import VectorStorage
 
 if TYPE_CHECKING:
@@ -969,7 +969,7 @@ class String(
         feature.transformation = ContainsFactory(value, self)
         return feature
 
-    def sentence_vector(self, model: TextVectoriserModel) -> Embedding:
+    def sentence_vector(self, model: EmbeddingModel) -> Embedding:
         from aligned.compiler.transformation_factory import WordVectoriserFactory
 
         feature = Embedding()
@@ -977,7 +977,7 @@ class String(
         feature.embedding_size = model.embedding_size
         return feature
 
-    def embedding(self, model: TextVectoriserModel) -> Embedding:
+    def embedding(self, model: EmbeddingModel) -> Embedding:
         return self.sentence_vector(model)
 
     def append(self, other: FeatureFactory | str) -> String:

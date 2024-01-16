@@ -324,6 +324,7 @@ class FilteredDataSource(BatchDataSource):
         return (
             self.source.all_between_dates(request, start_date, end_date)
             .filter(self.condition)
+            .aggregate(request)
             .derive_features([request])
         )
 
@@ -334,7 +335,12 @@ class FilteredDataSource(BatchDataSource):
         else:
             request.derived_features.add(self.condition)
 
-        return self.source.all_data(request, limit).filter(self.condition).derive_features([request])
+        return (
+            self.source.all_data(request, limit)
+            .filter(self.condition)
+            .aggregate(request)
+            .derive_features([request])
+        )
 
     def depends_on(self) -> set[FeatureLocation]:
         return self.source.depends_on()
@@ -498,6 +504,7 @@ class JoinAsofDataSource(BatchDataSource):
                 left_on=self.left_on,
                 right_on=self.right_on,
             )
+            .aggregate(request)
             .derive_features([request])
         )
 
@@ -519,6 +526,7 @@ class JoinAsofDataSource(BatchDataSource):
                 left_on=self.left_on,
                 right_on=self.right_on,
             )
+            .aggregate(request)
             .derive_features([request])
         )
 
@@ -599,6 +607,7 @@ class JoinDataSource(BatchDataSource):
             self.source.all_data(self.left_request, limit=limit)
             .derive_features([self.left_request])
             .join(right_job, method=self.method, left_on=self.left_on, right_on=self.right_on)
+            .aggregate(request)
             .derive_features([request])
         )
 
@@ -620,6 +629,7 @@ class JoinDataSource(BatchDataSource):
                 left_on=self.left_on,
                 right_on=self.right_on,
             )
+            .aggregate(request)
             .derive_features([request])
         )
 

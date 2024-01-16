@@ -31,9 +31,8 @@ from aligned.retrival_job import (
     StreamAggregationJob,
     SupervisedJob,
     ConvertableToRetrivalJob,
-    SupervisedTrainJob,
 )
-from aligned.schemas.feature import FeatureLocation, Feature
+from aligned.schemas.feature import FeatureLocation, Feature, FeatureReferance
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.model import EventTrigger
 from aligned.schemas.model import Model as ModelSchema
@@ -602,7 +601,11 @@ class FeatureStore:
         all_model_features: set[str] = set()
         for model in self.models.values():
             all_model_features.update(
-                {feature.name for feature in model.features if feature.location.name == view_name}
+                {
+                    feature.name
+                    for feature in model.features.default_features
+                    if feature.location.name == view_name
+                }
             )
         return all_model_features
 
@@ -880,7 +883,8 @@ class ModelFeatureStore:
         """
         from aligned.local.job import FileFullJob
 
-        features = {f'{feature.location.identifier}:{feature.name}' for feature in self.model.features}
+        references = self.model.feature_references(self.selected_version)
+        features = {f'{feature.location.identifier}:{feature.name}' for feature in references}
         request = self.store.requests_for(RawStringFeatureRequest(features))
 
         return FileFullJob(location, RetrivalRequest.unsafe_combine(request.needed_requests)).select_columns(
@@ -1065,15 +1069,14 @@ class ModelFeatureStore:
         """
         await self.store.insert_into(FeatureLocation.model(self.model.name), predictions)
 
-    async def store_train_test_dataset(self, job: SupervisedTrainJob) -> SupervisedTrainJob:
-        pass
-
 
 @dataclass
 class SupervisedModelFeatureStore:
 
     model: ModelSchema
     store: FeatureStore
+    labels_estimates_refs: set[FeatureReferance]
+
     selected_version: str | None = None
 
     def features_for(
@@ -1114,7 +1117,7 @@ class SupervisedModelFeatureStore:
         features = {f'{feature.location.identifier}:{feature.name}' for feature in feature_refs}
         pred_view = self.model.predictions_view
 
-        target_feature_refs = pred_view.labels_estimates_refs()
+        target_feature_refs = self.labels_estimates_refs
         target_features = {feature.identifier for feature in target_feature_refs}
 
         targets = set()
@@ -1201,8 +1204,9 @@ class SupervisedModelFeatureStore:
         request = pred_view.request(self.model.name)
 
         target_features = pred_view.labels_estimates_refs()
-        labels = pred_view.labels()
         target_features = {feature.identifier for feature in target_features}
+
+        labels = pred_view.labels()
         pred_features = {f'model:{self.model.name}:{feature.name}' for feature in labels}
         request = self.store.requests_for(
             RawStringFeatureRequest(pred_features), event_timestamp_column=event_timestamp_column
@@ -1411,7 +1415,9 @@ class FeatureViewStore:
 
         job = RetrivalJob.from_convertable(values, request)
 
-        return job.fill_missing_columns().ensure_types([request]).derive_features([request])
+        return (
+            job.fill_missing_columns().ensure_types([request]).aggregate(request).derive_features([request])
+        )
 
     async def batch_write(self, values: ConvertableToRetrivalJob | RetrivalJob) -> None:
         """Takes a set of features, computes the derived features, and store them in the source

@@ -263,9 +263,14 @@ class SupervisedJob:
 
     job: RetrivalJob
     target_columns: set[str]
+    should_filter_out_null_targets: bool = True
 
     async def to_pandas(self) -> SupervisedDataSet[pd.DataFrame]:
         data = await self.job.to_pandas()
+
+        if self.should_filter_out_null_targets:
+            data = data.dropna(subset=list(self.target_columns))
+
         features = {
             feature.name
             for feature in self.job.request_result.features
@@ -278,6 +283,9 @@ class SupervisedJob:
 
     async def to_polars(self) -> SupervisedDataSet[pl.LazyFrame]:
         data = await self.job.to_polars()
+        if self.should_filter_out_null_targets:
+            data = data.drop_nulls([column for column in self.target_columns])
+
         features = [
             feature.name
             for feature in self.job.request_result.features
@@ -287,6 +295,10 @@ class SupervisedJob:
         return SupervisedDataSet(
             data, set(entities), set(features), self.target_columns, self.job.request_result.event_timestamp
         )
+
+    def should_filter_null_targets(self, should_filter: bool) -> SupervisedJob:
+        self.should_filter_out_null_targets = should_filter
+        return self
 
     @property
     def request_result(self) -> RequestResult:
@@ -608,6 +620,8 @@ class RetrivalJob(ABC):
         return SelectColumnsJob(include_features, self)
 
     def aggregate(self, request: RetrivalRequest) -> RetrivalJob:
+        if not request.aggregated_features:
+            return self
         return AggregateJob(self, request)
 
     def with_request(self, requests: list[RetrivalRequest]) -> RetrivalJob:
@@ -649,6 +663,9 @@ class RetrivalJob(ABC):
         if isinstance(self, ModificationJob):
             return self.copy_with(self.job.ignore_event_timestamp())
         raise NotImplementedError('Not implemented ignore_event_timestamp')
+
+    def polars_method(self, polars_method: Callable[[pl.LazyFrame], pl.LazyFrame]) -> RetrivalJob:
+        return CustomPolarsJob(self, polars_method)
 
     @staticmethod
     def from_dict(data: dict[str, list], request: list[RetrivalRequest] | RetrivalRequest) -> RetrivalJob:
@@ -722,6 +739,21 @@ class ModificationJob:
     def copy_with(self: JobType, job: RetrivalJob) -> JobType:
         self.job = job  # type: ignore
         return self
+
+
+@dataclass
+class CustomPolarsJob(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+    polars_method: Callable[[pl.LazyFrame], pl.LazyFrame]
+
+    async def to_polars(self) -> pl.LazyFrame:
+        df = await self.job.to_polars()
+        return self.polars_method(df)
+
+    async def to_pandas(self) -> pd.DataFrame:
+        df = await self.job.to_polars()
+        return df.collect().to_pandas()
 
 
 @dataclass
@@ -1213,6 +1245,13 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
     async def compute_derived_features_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
 
         for request in self.requests:
+
+            missing_features = request.features_to_include - set(df.columns)
+
+            if len(missing_features) == 0:
+                logger.debug('Skipping to compute derived features as they are already computed')
+                continue
+
             for feature_round in request.derived_features_order():
 
                 round_expressions: list[pl.Expr] = []
@@ -1687,7 +1726,7 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                     df[feature.name] = pd.to_datetime(df[feature.name], infer_datetime_format=True, utc=True)
                 elif feature.dtype == FeatureType.datetime() or feature.dtype == FeatureType.string():
                     continue
-                elif feature.dtype == FeatureType.array():
+                elif (feature.dtype == FeatureType.array()) or (feature.dtype == FeatureType.embedding()):
                     import json
 
                     if df[feature.name].dtype == 'object':
@@ -1738,7 +1777,7 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                         .cast(pl.Datetime(time_zone='UTC'))
                         .alias(feature.name)
                     )
-                elif feature.dtype == FeatureType.array():
+                elif (feature.dtype == FeatureType.array()) or (feature.dtype == FeatureType.embedding()):
                     dtype = df.select(feature.name).dtypes[0]
                     if dtype == pl.Utf8:
                         df = df.with_columns(pl.col(feature.name).str.json_extract(pl.List(pl.Utf8)))

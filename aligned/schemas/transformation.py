@@ -14,7 +14,7 @@ from mashumaro.types import SerializableType
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import FeatureType
 from aligned.schemas.literal_value import LiteralValue
-from aligned.schemas.text_vectoriser import TextVectoriserModel
+from aligned.schemas.text_vectoriser import EmbeddingModel
 
 if TYPE_CHECKING:
     from aligned.sources.s3 import AwsS3Config
@@ -1361,9 +1361,10 @@ class ReplaceStrings(Transformation):
         return temp_df
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        pandas_column = df.select(self.key).collect().to_pandas()
+        collected = df.collect()
+        pandas_column = collected.select(self.key).to_pandas()
         transformed = await self.transform_pandas(pandas_column)
-        return df.with_columns(pl.Series(transformed).alias(alias))
+        return collected.with_columns(pl.Series(transformed).alias(alias)).lazy()
 
     # @staticmethod
     # def test_definition() -> TransformationTestDefinition:
@@ -1721,7 +1722,7 @@ class MapArgMax(Transformation):
 @dataclass
 class WordVectoriser(Transformation):
     key: str
-    model: TextVectoriserModel
+    model: EmbeddingModel
 
     name = 'word_vectoriser'
     dtype = FeatureType.embedding()
@@ -1820,7 +1821,7 @@ class AppendConstString(Transformation):
         return df[self.key] + self.string
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return pl.concat_str([pl.col(self.key).fill_null(''), pl.lit(self.string)], sep='').alias(alias)
+        return pl.concat_str([pl.col(self.key).fill_null(''), pl.lit(self.string)], separator='').alias(alias)
 
 
 @dataclass
@@ -1839,7 +1840,8 @@ class AppendStrings(Transformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_columns(
             pl.concat_str(
-                [pl.col(self.first_key).fill_null(''), pl.col(self.second_key).fill_null('')], sep=self.sep
+                [pl.col(self.first_key).fill_null(''), pl.col(self.second_key).fill_null('')],
+                separator=self.sep,
             ).alias(alias)
         )
 
@@ -1857,7 +1859,7 @@ class PrependConstString(Transformation):
         return self.string + df[self.key]
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return pl.concat_str([pl.lit(self.string), pl.col(self.key).fill_null('')], sep='').alias(alias)
+        return pl.concat_str([pl.lit(self.string), pl.col(self.key).fill_null('')], separator='').alias(alias)
 
 
 @dataclass
@@ -2139,11 +2141,13 @@ class StructField(Transformation):
     dtype = FeatureType.string()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return (
-            (await self.transform_polars(pl.from_pandas(df).lazy(), 'feature'))
-            .collect()
-            .to_pandas()['feature']
-        )
+        data = pl.from_pandas(df).lazy()
+        tran = await self.transform_polars(data, 'feature')
+
+        if isinstance(tran, pl.LazyFrame):
+            return tran.collect().to_pandas()['feature']
+
+        return data.select(tran).collect().to_pandas()['feature']
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         if df.schema[self.key].is_(pl.Utf8):

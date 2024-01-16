@@ -8,7 +8,7 @@ import polars as pl
 
 from aligned import AwsS3Config
 from aligned.compiler.feature_factory import FeatureFactory, Transformation, TransformationFactory
-from aligned.schemas.transformation import FillNaValuesColumns, LiteralValue, TextVectoriserModel
+from aligned.schemas.transformation import FillNaValuesColumns, LiteralValue, EmbeddingModel
 
 logger = logging.getLogger(__name__)
 
@@ -670,7 +670,7 @@ class MeanTransfomrationFactory(TransformationFactory, AggregatableTransformatio
 class WordVectoriserFactory(TransformationFactory):
 
     feature: FeatureFactory
-    model: TextVectoriserModel
+    model: EmbeddingModel
 
     @property
     def using_features(self) -> list[FeatureFactory]:

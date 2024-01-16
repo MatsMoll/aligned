@@ -15,7 +15,7 @@ from aligned import (
     Int64,
     RedisConfig,
     String,
-    TextVectoriserModel,
+    EmbeddingModel,
 )
 from aligned.feature_view.feature_view import FeatureView, FeatureViewMetadata
 from aligned.compiler.model import model_contract, ModelContractWrapper
@@ -604,7 +604,7 @@ def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureView:
         survived = Bool().description('If the passenger survived')
 
         name = String()
-        name_embedding = name.embedding(TextVectoriserModel.gensim('glove-wiki-gigaword-50')).indexed(
+        name_embedding = name.embedding(EmbeddingModel.gensim('glove-wiki-gigaword-50')).indexed(
             embedding_size=50, storage=redis.index(name='name_embedding_index'), metadata=[age, sex]
         )
 

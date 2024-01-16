@@ -43,9 +43,9 @@ class CompiledFeatureView(Codable):
 
     def __pre_serialize__(self) -> CompiledFeatureView:
         assert isinstance(self.name, str)
-        assert isinstance(self.description, str)
         assert isinstance(self.tags, dict)
         assert isinstance(self.source, BatchDataSource)
+
         for entity in self.entities:
             assert isinstance(entity, Feature)
         for feature in self.features:
@@ -54,6 +54,9 @@ class CompiledFeatureView(Codable):
             assert isinstance(derived_feature, DerivedFeature)
         for aggregated_feature in self.aggregated_features:
             assert isinstance(aggregated_feature, AggregatedFeature)
+
+        if self.description is not None:
+            assert isinstance(self.description, str)
         if self.event_timestamp is not None:
             assert isinstance(self.event_timestamp, EventTimestamp)
         if self.stream_data_source is not None:
@@ -164,12 +167,6 @@ class CompiledFeatureView(Codable):
             derived_features.update(intermediate)
             aggregated_features.update(aggregated)
 
-        all_features = features.union(derived_features).union(
-            {feature.derived_feature for feature in aggregated_features}
-        )
-
-        exclude_names = {feature.name for feature in all_features} - feature_names
-
         return FeatureRequest(
             FeatureLocation.feature_view(self.name),
             feature_names,
@@ -182,7 +179,7 @@ class CompiledFeatureView(Codable):
                     derived_features=derived_features,
                     aggregated_features=aggregated_features,
                     event_timestamp=self.event_timestamp,
-                    features_to_include=exclude_names,
+                    features_to_include=feature_names,
                 )
             ],
         )

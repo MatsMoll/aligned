@@ -16,11 +16,11 @@ from aligned.schemas.codable import Codable
 logger = logging.getLogger(__name__)
 
 
-class SupportedTextModels:
+class SupportedEmbeddingModels:
 
-    types: dict[str, type[TextVectoriserModel]]
+    types: dict[str, type[EmbeddingModel]]
 
-    _shared: SupportedTextModels | None = None
+    _shared: SupportedEmbeddingModels | None = None
 
     def __init__(self) -> None:
         self.types = {}
@@ -28,18 +28,18 @@ class SupportedTextModels:
         for tran_type in [GensimModel, OpenAiEmbeddingModel, HuggingFaceTransformer]:
             self.add(tran_type)
 
-    def add(self, transformation: type[TextVectoriserModel]) -> None:
+    def add(self, transformation: type[EmbeddingModel]) -> None:
         self.types[transformation.name] = transformation
 
     @classmethod
-    def shared(cls) -> SupportedTextModels:
+    def shared(cls) -> SupportedEmbeddingModels:
         if cls._shared:
             return cls._shared
-        cls._shared = SupportedTextModels()
+        cls._shared = SupportedEmbeddingModels()
         return cls._shared
 
 
-class TextVectoriserModel(Codable, SerializableType):
+class EmbeddingModel(Codable, SerializableType):
     name: str
 
     @property
@@ -50,10 +50,10 @@ class TextVectoriserModel(Codable, SerializableType):
         return self.to_dict()
 
     @classmethod
-    def _deserialize(cls, value: dict) -> TextVectoriserModel:
+    def _deserialize(cls, value: dict) -> EmbeddingModel:
         name_type = value['name']
         del value['name']
-        data_class = SupportedTextModels.shared().types[name_type]
+        data_class = SupportedEmbeddingModels.shared().types[name_type]
         with suppress(AttributeError):
             if data_class.dtype:
                 del value['dtype']
@@ -64,10 +64,10 @@ class TextVectoriserModel(Codable, SerializableType):
         pass
 
     async def vectorise_pandas(self, texts: pd.Series) -> pd.Series:
-        pass
+        raise NotImplementedError(type(self))
 
     async def vectorise_polars(self, texts: pl.LazyFrame, text_key: str, output_key: str) -> pl.LazyFrame:
-        pass
+        raise NotImplementedError(type(self))
 
     @staticmethod
     def gensim(model_name: str, config: GensimConfig | None = None) -> GensimModel:
@@ -93,7 +93,7 @@ class GensimConfig(Codable):
 
 
 @dataclass
-class GensimModel(TextVectoriserModel):
+class GensimModel(EmbeddingModel):
 
     model_name: str
     config: GensimConfig = field(default_factory=GensimConfig)
@@ -187,7 +187,7 @@ class OpenAiResponse(BaseModel):
 
 
 @dataclass
-class OpenAiEmbeddingModel(TextVectoriserModel):
+class OpenAiEmbeddingModel(EmbeddingModel):
 
     api_token_env_key: str = field(default='OPENAI_API_KEY')
     model: str = field(default='text-embedding-ada-002')
@@ -247,17 +247,25 @@ class OpenAiEmbeddingModel(TextVectoriserModel):
 
     async def vectorise_polars(self, texts: pl.LazyFrame, text_key: str, output_key: str) -> pl.LazyFrame:
         data = await self.embeddings(texts.select(text_key).collect().to_series().to_list())
-        return texts.with_column(
+        return texts.with_columns(
             pl.Series(values=[embedding.embedding for embedding in data.data], name=output_key)
         )
 
 
 @dataclass
-class HuggingFaceTransformer(TextVectoriserModel):
+class HuggingFaceTransformer(EmbeddingModel):
 
     model: str
     name: str = 'huggingface'
     loaded_model: Any = field(default=None)
+
+    @property
+    def embedding_size(self) -> int | None:
+        from sentence_transformers import SentenceTransformer
+
+        model = SentenceTransformer(self.model)
+
+        return len(model.encode(['test'])[0])
 
     async def load_model(self):
         from sentence_transformers import SentenceTransformer
@@ -267,12 +275,11 @@ class HuggingFaceTransformer(TextVectoriserModel):
     async def vectorise_polars(self, texts: pl.LazyFrame, text_key: str, output_key: str) -> pl.LazyFrame:
         if self.loaded_model is None:
             await self.load_model()
-        return texts.with_column(
+        return texts.with_columns(
             pl.Series(
                 self.loaded_model.encode(texts.select(pl.col(text_key)).collect().to_series().to_list())
             ).alias(output_key)
         )
-        pass
 
     async def vectorise_pandas(self, texts: pd.Series) -> pd.Series:
         if self.loaded_model is None:

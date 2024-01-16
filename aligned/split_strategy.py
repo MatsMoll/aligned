@@ -3,9 +3,8 @@ from typing import Generic, TypeVar
 
 import polars as pl
 from pandas import DataFrame, Index, concat
-from pandas.core.generic import NDFrame
 
-DatasetType = TypeVar('DatasetType', bound=NDFrame)
+DatasetType = TypeVar('DatasetType')
 
 
 class TrainTestSet(Generic[DatasetType]):
