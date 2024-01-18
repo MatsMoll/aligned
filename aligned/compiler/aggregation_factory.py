@@ -349,6 +349,11 @@ class PolarsTransformationFactoryAggregation(TransformationFactory, AggregationT
     def using_features(self) -> list[FeatureFactory]:
         return self._using_features
 
+    def aggregate_over(
+        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+    ) -> AggregateOver:
+        return aggregate_over(group_by, time_column, None, None, None, None)
+
     def compile(self) -> Transformation:
         import inspect
         import types
@@ -358,10 +363,9 @@ class PolarsTransformationFactoryAggregation(TransformationFactory, AggregationT
         from aligned.schemas.transformation import PolarsFunctionTransformation, PolarsLambdaTransformation
 
         if isinstance(self.method, pl.Expr):
-            code = str(self.method)
-            return PolarsLambdaTransformation(
-                method=dill.dumps(self.method), code=code.strip(), dtype=self.dtype.dtype
-            )
+            method = lambda df, alias: self.method  # type: ignore
+            code = ''
+            return PolarsLambdaTransformation(method=dill.dumps(method), code=code, dtype=self.dtype.dtype)
         else:
             code = inspect.getsource(self.method)
 

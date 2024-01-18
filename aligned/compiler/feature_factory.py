@@ -517,6 +517,26 @@ class FeatureFactory(FeatureReferencable):
         dtype.transformation = PolarsTransformationFactory(dtype, expression, using_features or [self])
         return dtype  # type: ignore [return-value]
 
+    def polars_aggregation(self, aggregation: pl.Expr, as_type: T) -> T:
+        from aligned.compiler.aggregation_factory import PolarsTransformationFactoryAggregation
+
+        value = as_type.copy_type()  # type: ignore [assignment]
+        value.transformation = PolarsTransformationFactoryAggregation(as_type, aggregation, [self])
+
+        return value
+
+    def polars_aggregation_using_features(
+        self: T,
+        using_features: list[FeatureFactory],
+        aggregation: pl.Expr,
+    ) -> T:
+        from aligned.compiler.aggregation_factory import PolarsTransformationFactoryAggregation
+
+        value = self.copy_type()  # type: ignore [assignment]
+        value.transformation = PolarsTransformationFactoryAggregation(self, aggregation, using_features)
+
+        return value
+
     def is_required(self: T) -> T:
         return self
 

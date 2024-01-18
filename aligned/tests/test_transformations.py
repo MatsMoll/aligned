@@ -1,5 +1,5 @@
 import pytest
-from aligned.compiler.feature_factory import EventTimestamp, Int32, String
+from aligned.compiler.feature_factory import EventTimestamp, Int32, String, Float
 
 from aligned.feature_store import FeatureStore
 from aligned.feature_view.feature_view import feature_view
@@ -54,6 +54,8 @@ async def test_aggregations_on_all() -> None:
 
 @pytest.mark.asyncio
 async def test_aggregations_on_all_no_window() -> None:
+    import polars as pl
+
     @feature_view(name='test_agg', source=FileSource.parquet_at('test_data/credit_history.parquet'))
     class TestAgg:
         dob_ssn = String().as_entity()
@@ -66,8 +68,25 @@ async def test_aggregations_on_all_no_window() -> None:
         credit_card_due_sum = credit_card_due.aggregate().sum()
         student_loan_due_mean = student_loan_due.aggregate().mean()
 
+        custom_mean_aggregation = student_loan_due.polars_aggregation(
+            pl.col('student_loan_due').mean(),
+            as_type=Float(),
+        )
+        custom_mean_aggregation_using_features = Float().polars_aggregation_using_features(
+            using_features=[student_loan_due],
+            aggregation=pl.col('student_loan_due').mean(),
+        )
+        custom_sum_aggregation = credit_card_due.polars_aggregation(
+            pl.col('credit_card_due').sum(),
+            as_type=Float(),
+        )
+
     df = await TestAgg.query().all().to_pandas()  # type: ignore
     assert df.shape[0] == 3
+
+    assert df['custom_mean_aggregation'].equals(df['student_loan_due_mean'])
+    assert df['custom_mean_aggregation'].equals(df['custom_mean_aggregation_using_features'])
+    assert df['custom_sum_aggregation'].equals(df['credit_card_due_sum'])
 
 
 @pytest.mark.asyncio
