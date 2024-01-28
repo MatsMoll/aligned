@@ -360,18 +360,38 @@ def resolve_keys(keys: str | FeatureFactory | list[str] | list[FeatureFactory]) 
     return keys  # type: ignore
 
 
-def view_wrapper_instance_source(view: Any) -> tuple[BatchDataSource, RetrivalRequest]:
+def model_prediction_instance_source(model: Any) -> tuple[BatchDataSource, RetrivalRequest] | Exception:
+    from aligned.schemas.feature_view import FeatureViewReferenceSource
+    from aligned.compiler.model import ModelContractWrapper
+
+    if not hasattr(model, '__model_wrapper__'):
+        return ValueError(
+            f'Unable to join {model} as a __view_wrapper__ is needed. Make sure you have used @feature_view'
+        )
+
+    wrapper = getattr(model, '__model_wrapper__')
+    if not isinstance(wrapper, ModelContractWrapper):
+        return ValueError()
+
+    compiled_view = wrapper.as_view()
+    if compiled_view is None:
+        return ValueError()
+
+    return (FeatureViewReferenceSource(compiled_view), compiled_view.request_all.needed_requests[0])
+
+
+def view_wrapper_instance_source(view: Any) -> tuple[BatchDataSource, RetrivalRequest] | Exception:
     from aligned.feature_view.feature_view import FeatureViewWrapper
     from aligned.schemas.feature_view import FeatureViewReferenceSource
 
     if not hasattr(view, '__view_wrapper__'):
-        raise ValueError(
+        return ValueError(
             f'Unable to join {view} as a __view_wrapper__ is needed. Make sure you have used @feature_view'
         )
 
     wrapper = getattr(view, '__view_wrapper__')
     if not isinstance(wrapper, FeatureViewWrapper):
-        raise ValueError()
+        return ValueError()
 
     compiled_view = wrapper.compile()
 
@@ -386,7 +406,14 @@ def join_asof_source(
     right_on: list[str] | None = None,
 ) -> JoinAsofDataSource:
 
-    right_source, right_request = view_wrapper_instance_source(view)
+    wrapped_source = view_wrapper_instance_source(view)
+    if isinstance(wrapped_source, Exception):
+        wrapped_source = model_prediction_instance_source(view)
+
+    if isinstance(wrapped_source, Exception):
+        raise wrapped_source
+
+    right_source, right_request = wrapped_source
 
     left_event_timestamp = left_request.event_timestamp
     right_event_timestamp = right_request.event_timestamp
@@ -419,7 +446,14 @@ def join_source(
     from aligned.data_source.batch_data_source import JoinDataSource
     from aligned.feature_view.feature_view import FeatureViewWrapper
 
-    right_source, right_request = view_wrapper_instance_source(view)
+    wrapped_source = view_wrapper_instance_source(view)
+    if isinstance(wrapped_source, Exception):
+        wrapped_source = model_prediction_instance_source(view)
+
+    if isinstance(wrapped_source, Exception):
+        raise wrapped_source
+
+    right_source, right_request = wrapped_source
 
     if on_left is None:
         left_keys = list(right_request.entity_names)

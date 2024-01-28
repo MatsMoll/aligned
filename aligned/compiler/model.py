@@ -24,6 +24,7 @@ from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.feature_view.feature_view import FeatureView
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
+from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.folder import DatasetStore, JsonDatasetStore
 from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.model import Model as ModelSchema
@@ -80,10 +81,28 @@ class ModelContractWrapper(Generic[T]):
                 value._location = FeatureLocation.model(self.metadata.name)
                 setattr(contract, attribute, copy.deepcopy(value))
 
+        setattr(contract, '__model_wrapper__', self)
         return contract
 
     def compile(self) -> ModelSchema:
         return compile_with_metadata(self.contract(), self.metadata)
+
+    def as_view(self) -> CompiledFeatureView | None:
+
+        compiled = self.compile()
+        view = compiled.predictions_view
+
+        if not view.source:
+            return None
+
+        return CompiledFeatureView(
+            name=self.metadata.name,
+            tags={},
+            source=view.source,
+            entities=view.entities,
+            features=view.features,
+            derived_features=view.derived_features,
+        )
 
     def filter(
         self, name: str, where: Callable[[T], Bool], application_source: BatchDataSource | None = None

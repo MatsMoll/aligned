@@ -1,21 +1,21 @@
-has_siblings,is_female,is_male,name,sibsp,sex,cabin,survived,is_mr,passenger_id,age
-False,False,True,"Sirayanian, Mr. Orsen",0,male,,False,True,61,22.0
-False,True,False,"Icard, Miss. Amelie",0,female,B28,True,False,62,38.0
-True,False,True,"Harris, Mr. Henry Birkhardt",1,male,C83,False,True,63,45.0
-True,False,True,"Skoog, Master. Harald",3,male,,False,False,64,4.0
-False,False,True,"Stewart, Mr. Albert A",0,male,,False,True,65,
-True,False,True,"Moubarek, Master. Gerios",1,male,,True,False,66,
-False,True,False,"Nye, Mrs. (Elizabeth Ramell)",0,female,F33,True,True,67,29.0
-False,False,True,"Crease, Mr. Ernest James",0,male,,False,True,68,19.0
-True,True,False,"Andersson, Miss. Erna Alexandra",4,female,,True,False,69,17.0
-True,False,True,"Kink, Mr. Vincenz",2,male,,False,True,70,26.0
-False,False,True,"Jenkin, Mr. Stephen Curnow",0,male,,False,True,71,32.0
-True,True,False,"Goodwin, Miss. Lillian Amy",5,female,,False,False,72,16.0
-False,False,True,"Hood, Mr. Ambrose Jr",0,male,,False,True,73,21.0
-True,False,True,"Chronopoulos, Mr. Apostolos",1,male,,False,True,74,26.0
-False,False,True,"Bing, Mr. Lee",0,male,,True,True,75,32.0
-False,False,True,"Moen, Mr. Sigurd Hansen",0,male,F G73,False,True,76,25.0
-False,False,True,"Staneff, Mr. Ivan",0,male,,False,True,77,
-False,False,True,"Moutal, Mr. Rahamin Haim",0,male,,False,True,78,
-False,False,True,"Caldwell, Master. Alden Gates",0,male,,True,False,79,0.83
-False,True,False,"Dowdell, Miss. Elizabeth",0,female,,True,False,80,30.0
+passenger_id,cabin,sex,sibsp,is_mr,has_siblings,is_male,name,is_female,age,survived
+61,,male,0,True,False,True,"Sirayanian, Mr. Orsen",False,22.0,False
+62,B28,female,0,False,False,False,"Icard, Miss. Amelie",True,38.0,True
+63,C83,male,1,True,True,True,"Harris, Mr. Henry Birkhardt",False,45.0,False
+64,,male,3,False,True,True,"Skoog, Master. Harald",False,4.0,False
+65,,male,0,True,False,True,"Stewart, Mr. Albert A",False,,False
+66,,male,1,False,True,True,"Moubarek, Master. Gerios",False,,True
+67,F33,female,0,True,False,False,"Nye, Mrs. (Elizabeth Ramell)",True,29.0,True
+68,,male,0,True,False,True,"Crease, Mr. Ernest James",False,19.0,False
+69,,female,4,False,True,False,"Andersson, Miss. Erna Alexandra",True,17.0,True
+70,,male,2,True,True,True,"Kink, Mr. Vincenz",False,26.0,False
+71,,male,0,True,False,True,"Jenkin, Mr. Stephen Curnow",False,32.0,False
+72,,female,5,False,True,False,"Goodwin, Miss. Lillian Amy",True,16.0,False
+73,,male,0,True,False,True,"Hood, Mr. Ambrose Jr",False,21.0,False
+74,,male,1,True,True,True,"Chronopoulos, Mr. Apostolos",False,26.0,False
+75,,male,0,True,False,True,"Bing, Mr. Lee",False,32.0,True
+76,F G73,male,0,True,False,True,"Moen, Mr. Sigurd Hansen",False,25.0,False
+77,,male,0,True,False,True,"Staneff, Mr. Ivan",False,,False
+78,,male,0,True,False,True,"Moutal, Mr. Rahamin Haim",False,,False
+79,,male,0,False,False,True,"Caldwell, Master. Alden Gates",False,0.83,True
+80,,female,0,False,False,False,"Dowdell, Miss. Elizabeth",True,30.0,True

@@ -66,7 +66,7 @@ class EmbeddingModel(Codable, SerializableType):
     async def vectorise_pandas(self, texts: pd.Series) -> pd.Series:
         raise NotImplementedError(type(self))
 
-    async def vectorise_polars(self, texts: pl.LazyFrame, text_key: str, output_key: str) -> pl.LazyFrame:
+    async def vectorise_polars(self, texts: pl.LazyFrame, text_key: str, output_key: str) -> pl.Expr:
         raise NotImplementedError(type(self))
 
     @staticmethod
@@ -245,11 +245,12 @@ class OpenAiEmbeddingModel(EmbeddingModel):
         data = await self.embeddings(texts.tolist())
         return pd.Series([embedding.embedding for embedding in data.data])
 
-    async def vectorise_polars(self, texts: pl.LazyFrame, text_key: str, output_key: str) -> pl.LazyFrame:
-        data = await self.embeddings(texts.select(text_key).collect().to_series().to_list())
-        return texts.with_columns(
-            pl.Series(values=[embedding.embedding for embedding in data.data], name=output_key)
-        )
+    async def vectorise_polars(self, texts: pl.LazyFrame, text_key: str, output_key: str) -> pl.Expr:
+        async def embed(text: pl.Series) -> pl.Series:
+            data = await self.embeddings(text.to_list())
+            return pl.Series([embedding.embedding for embedding in data.data])
+
+        return pl.col(text_key).map_batches(lambda text: embed(text)).alias(output_key)
 
 
 @dataclass
@@ -272,12 +273,15 @@ class HuggingFaceTransformer(EmbeddingModel):
 
         self.loaded_model = SentenceTransformer(self.model)
 
-    async def vectorise_polars(self, texts: pl.LazyFrame, text_key: str, output_key: str) -> pl.LazyFrame:
+    async def vectorise_polars(self, texts: pl.LazyFrame, text_key: str, output_key: str) -> pl.Expr:
         if self.loaded_model is None:
             await self.load_model()
-        return pl.Series(
-            self.loaded_model.encode(texts.select(pl.col(text_key)).collect().to_series().to_list())
-        ).alias(output_key)
+
+        return (
+            pl.col(text_key)
+            .map_batches(lambda text: pl.Series(self.loaded_model.encode(text.to_list())))
+            .alias(output_key)
+        )
 
     async def vectorise_pandas(self, texts: pd.Series) -> pd.Series:
         if self.loaded_model is None:

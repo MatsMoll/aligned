@@ -1,9 +1,9 @@
 import pytest
-from aligned import feature_view, Int32, FileSource
+from aligned import feature_view, Int32, FileSource, model_contract
 import polars as pl
 
 
-@feature_view(name='left', source=FileSource.csv_at('some_file.csv'))
+@feature_view(name='left', source=FileSource.csv_at('test_data/test.csv'))
 class LeftData:
 
     some_id = Int32().as_entity()
@@ -11,7 +11,7 @@ class LeftData:
     feature = Int32()
 
 
-@feature_view(name='right', source=FileSource.csv_at('some_file.csv'))
+@feature_view(name='right', source=FileSource.csv_at('test_data/other.csv'))
 class RightData:
 
     some_id = Int32().as_entity()
@@ -19,10 +19,35 @@ class RightData:
     other_feature = Int32()
 
 
-@feature_view(name='right', source=FileSource.csv_at('some_file.csv'))
+@feature_view(name='right', source=FileSource.csv_at('test_data/other.csv'))
 class RightOtherIdData:
 
     other_id = Int32().as_entity()
+
+    other_feature = Int32()
+
+
+@model_contract(
+    name='some_model',
+    features=[],
+    prediction_source=FileSource.csv_at('test_data/other.csv'),
+)
+class ModelData:
+
+    some_id = Int32().as_entity()
+
+    other_feature = Int32()
+
+
+model_data = ModelData()
+
+
+@feature_view(name='joined', source=LeftData.join(model_data, model_data.some_id))
+class JoinedData:
+
+    some_id = Int32().as_entity()
+
+    feature = Int32()
 
     other_feature = Int32()
 
@@ -115,3 +140,9 @@ async def test_unique_entities() -> None:
     sorted = result.sort('some_id').select(['some_id', 'feature']).collect()
 
     assert sorted.frame_equal(expected_df)
+
+
+@pytest.mark.asyncio
+async def test_load_model_join() -> None:
+    df = await JoinedData.query().all().to_pandas()
+    assert df.shape == (2, 3)
