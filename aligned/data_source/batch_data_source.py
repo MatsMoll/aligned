@@ -377,7 +377,10 @@ def model_prediction_instance_source(model: Any) -> tuple[BatchDataSource, Retri
     if compiled_view is None:
         return ValueError()
 
-    return (FeatureViewReferenceSource(compiled_view), compiled_view.request_all.needed_requests[0])
+    return (
+        FeatureViewReferenceSource(compiled_view, FeatureLocation.model(compiled_view.name)),
+        compiled_view.request_all.needed_requests[0],
+    )
 
 
 def view_wrapper_instance_source(view: Any) -> tuple[BatchDataSource, RetrivalRequest] | Exception:
@@ -395,7 +398,10 @@ def view_wrapper_instance_source(view: Any) -> tuple[BatchDataSource, RetrivalRe
 
     compiled_view = wrapper.compile()
 
-    return (FeatureViewReferenceSource(compiled_view), compiled_view.request_all.needed_requests[0])
+    return (
+        FeatureViewReferenceSource(compiled_view, FeatureLocation.feature_view(compiled_view.name)),
+        compiled_view.request_all.needed_requests[0],
+    )
 
 
 def join_asof_source(

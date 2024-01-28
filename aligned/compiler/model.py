@@ -102,6 +102,7 @@ class ModelContractWrapper(Generic[T]):
             entities=view.entities,
             features=view.features,
             derived_features=view.derived_features,
+            event_timestamp=view.event_timestamp,
         )
 
     def filter(

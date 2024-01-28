@@ -316,6 +316,7 @@ class CompiledCombinedFeatureView(Codable):
 class FeatureViewReferenceSource(BatchDataSource):
 
     view: CompiledFeatureView
+    location: FeatureLocation
     renames: dict[str, str] = field(default_factory=dict)
 
     type_name = 'view_ref'
@@ -404,7 +405,7 @@ class FeatureViewReferenceSource(BatchDataSource):
         return job.derive_features([request]).rename(self.renames)
 
     def depends_on(self) -> set[FeatureLocation]:
-        return {FeatureLocation.feature_view(self.view.name)}
+        return {self.location}
 
     async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
         source = self.view.materialized_source or self.view.source

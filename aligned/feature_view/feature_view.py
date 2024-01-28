@@ -77,7 +77,8 @@ def resolve_source(source: BatchDataSource | FeatureViewWrapper) -> BatchDataSou
         from aligned.schemas.feature_view import FeatureViewReferenceSource
 
         compiled = source.compile()
-        return FeatureViewReferenceSource(compiled)
+        return FeatureViewReferenceSource(compiled, FeatureLocation.feature_view(compiled.name))
+
     elif isinstance(source, BatchDataSource):
         return source
     else:
@@ -156,7 +157,9 @@ class FeatureViewWrapper(Generic[T]):
 
         condition = where(self.__call__())
 
-        main_source = FeatureViewReferenceSource(self.compile())
+        main_source = FeatureViewReferenceSource(
+            self.compile(), FeatureLocation.feature_view(self.metadata.name)
+        )
 
         if not condition._name:
             condition._name = str(uuid4())
@@ -180,7 +183,7 @@ class FeatureViewWrapper(Generic[T]):
         from aligned.schemas.feature_view import FeatureViewReferenceSource
 
         compiled_view = self.compile()
-        source = FeatureViewReferenceSource(compiled_view)
+        source = FeatureViewReferenceSource(compiled_view, FeatureLocation.feature_view(compiled_view.name))
 
         if on:
             on_left = on
@@ -196,7 +199,7 @@ class FeatureViewWrapper(Generic[T]):
         from aligned.schemas.feature_view import FeatureViewReferenceSource
 
         compiled_view = self.compile()
-        source = FeatureViewReferenceSource(compiled_view)
+        source = FeatureViewReferenceSource(compiled_view, FeatureLocation.feature_view(compiled_view.name))
 
         left_on = None
         right_on = None
