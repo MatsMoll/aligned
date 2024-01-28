@@ -654,6 +654,8 @@ class RetrivalJob(ABC):
         return FillMissingColumnsJob(self)
 
     def rename(self, mappings: dict[str, str]) -> RetrivalJob:
+        if not mappings:
+            return self
         return RenameJob(self, mappings)
 
     def drop_duplicate_entities(self) -> RetrivalJob:

@@ -316,6 +316,7 @@ class CompiledCombinedFeatureView(Codable):
 class FeatureViewReferenceSource(BatchDataSource):
 
     view: CompiledFeatureView
+    renames: dict[str, str] = field(default_factory=dict)
 
     type_name = 'view_ref'
 
@@ -373,7 +374,7 @@ class FeatureViewReferenceSource(BatchDataSource):
         else:
             available_features = sub_job.derive_features([request])
 
-        return FileFactualJob(available_features, [request], facts)
+        return FileFactualJob(available_features, [request], facts).rename(source.renames)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         sub_source = self.view.materialized_source or self.view.source
@@ -382,9 +383,11 @@ class FeatureViewReferenceSource(BatchDataSource):
 
         core_job = sub_source.all_data(sub_req, limit=limit)
         if request.aggregated_features:
-            return core_job.aggregate(request).derive_features([request])
+            job = core_job.aggregate(request)
         else:
-            return core_job.derive_features().derive_features([request])
+            job = core_job.derive_features()
+
+        return job.derive_features([request]).rename(self.renames)
 
     def all_between_dates(
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime
@@ -395,9 +398,10 @@ class FeatureViewReferenceSource(BatchDataSource):
 
         core_job = sub_source.all_between_dates(sub_req, start_date, end_date)
         if request.aggregated_features:
-            return core_job.aggregate(request).derive_features([request])
+            job = core_job.aggregate(request)
         else:
-            return core_job.derive_features().derive_features([request])
+            job = core_job.derive_features()
+        return job.derive_features([request]).rename(self.renames)
 
     def depends_on(self) -> set[FeatureLocation]:
         return {FeatureLocation.feature_view(self.view.name)}

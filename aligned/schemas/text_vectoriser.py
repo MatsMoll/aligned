@@ -275,11 +275,9 @@ class HuggingFaceTransformer(EmbeddingModel):
     async def vectorise_polars(self, texts: pl.LazyFrame, text_key: str, output_key: str) -> pl.LazyFrame:
         if self.loaded_model is None:
             await self.load_model()
-        return texts.with_columns(
-            pl.Series(
-                self.loaded_model.encode(texts.select(pl.col(text_key)).collect().to_series().to_list())
-            ).alias(output_key)
-        )
+        return pl.Series(
+            self.loaded_model.encode(texts.select(pl.col(text_key)).collect().to_series().to_list())
+        ).alias(output_key)
 
     async def vectorise_pandas(self, texts: pd.Series) -> pd.Series:
         if self.loaded_model is None:
