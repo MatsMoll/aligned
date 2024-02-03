@@ -153,7 +153,7 @@ class FileFullJob(RetrivalJob):
     source: DataFileReference
     request: RetrivalRequest
     limit: int | None = field(default=None)
-    date_formatter: DateFormatter = field(default=DateFormatter.iso_8601())
+    date_formatter: DateFormatter = field(default_factory=DateFormatter.iso_8601)
 
     @property
     def request_result(self) -> RequestResult:
@@ -231,7 +231,7 @@ class FileDateJob(RetrivalJob):
     request: RetrivalRequest
     start_date: datetime
     end_date: datetime
-    date_formatter: DateFormatter = field(default=DateFormatter.iso_8601())
+    date_formatter: DateFormatter = field(default_factory=DateFormatter.iso_8601)
 
     @property
     def request_result(self) -> RequestResult:
@@ -333,7 +333,7 @@ class FileFactualJob(RetrivalJob):
     source: DataFileReference | RetrivalJob
     requests: list[RetrivalRequest]
     facts: RetrivalJob
-    date_formatter: DateFormatter = field(default=DateFormatter.iso_8601())
+    date_formatter: DateFormatter = field(default_factory=DateFormatter.iso_8601)
 
     @property
     def request_result(self) -> RequestResult:
