@@ -24,6 +24,7 @@ from aligned.schemas.repo_definition import RepoDefinition
 from aligned.storage import Storage
 from aligned.feature_store import FeatureStore
 from aligned.feature_source import WritableFeatureSource
+from aligned.schemas.date_formatter import DateFormatter
 
 if TYPE_CHECKING:
     from aligned.compiler.feature_factory import FeatureFactory
@@ -100,6 +101,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
     path: str
     mapping_keys: dict[str, str] = field(default_factory=dict)
     csv_config: CsvConfig = field(default_factory=CsvConfig)
+    formatter: DateFormatter = field(default_factory=DateFormatter.iso_8601)
 
     type_name: str = 'csv'
 
@@ -489,9 +491,17 @@ class FileSource:
 
     @staticmethod
     def csv_at(
-        path: str, mapping_keys: dict[str, str] | None = None, csv_config: CsvConfig | None = None
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        csv_config: CsvConfig | None = None,
+        date_formatter: DateFormatter | None = None,
     ) -> CsvFileSource:
-        return CsvFileSource(path, mapping_keys=mapping_keys or {}, csv_config=csv_config or CsvConfig())
+        return CsvFileSource(
+            path,
+            mapping_keys=mapping_keys or {},
+            csv_config=csv_config or CsvConfig(),
+            formatter=date_formatter or DateFormatter.iso_8601(),
+        )
 
     @staticmethod
     def parquet_at(

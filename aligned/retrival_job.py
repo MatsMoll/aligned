@@ -1,4 +1,5 @@
 from __future__ import annotations
+from aligned.schemas.date_formatter import DateFormatter
 
 import asyncio
 import logging
@@ -12,6 +13,7 @@ from typing import TYPE_CHECKING, Callable, Union, TypeVar, Coroutine, Any
 
 import pandas as pd
 import polars as pl
+from polars.type_aliases import TimeUnit
 from prometheus_client import Histogram
 
 from aligned.exceptions import UnableToFindFileException
@@ -493,6 +495,7 @@ class RetrivalJob(ABC):
         right_event_timestamp: str | None = None,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
+        timestamp_unit: TimeUnit = 'us',
     ) -> RetrivalJob:
 
         if isinstance(left_on, str):
@@ -518,6 +521,7 @@ class RetrivalJob(ABC):
             right_event_timestamp=right_event_timestamp,
             left_on=left_on,
             right_on=right_on,
+            timestamp_unit=timestamp_unit,
         )
 
     def join(
@@ -610,11 +614,15 @@ class RetrivalJob(ABC):
     def combined_features(self, requests: list[RetrivalRequest] | None = None) -> RetrivalJob:
         return CombineFactualJob([self], requests or self.retrival_requests)
 
-    def ensure_types(self, requests: list[RetrivalRequest] | None = None) -> RetrivalJob:
+    def ensure_types(
+        self, requests: list[RetrivalRequest] | None = None, date_formatter: DateFormatter | None = None
+    ) -> RetrivalJob:
         if not requests:
             requests = self.retrival_requests
 
-        return EnsureTypesJob(job=self, requests=requests)
+        return EnsureTypesJob(
+            job=self, requests=requests, date_formatter=date_formatter or DateFormatter.iso_8601()
+        )
 
     def select_columns(self, include_features: set[str]) -> RetrivalJob:
         return SelectColumnsJob(include_features, self)
@@ -801,6 +809,21 @@ class OnLoadJob(RetrivalJob, ModificationJob):  # type: ignore
 
 
 @dataclass
+class EncodeDatesJob(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+    formatter: DateFormatter
+    columns: list[str]
+
+    async def to_polars(self) -> pl.LazyFrame:
+        data = await self.job.to_polars()
+        return data.with_columns([self.formatter.encode_polars(column) for column in self.columns])
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return (await self.to_polars()).collect().to_pandas()
+
+
+@dataclass
 class InMemoryCacheJob(RetrivalJob, ModificationJob):
 
     job: RetrivalJob
@@ -872,6 +895,8 @@ class JoinAsofJob(RetrivalJob):
     left_on: list[str] | None
     right_on: list[str] | None
 
+    timestamp_unit: TimeUnit = field(default='us')
+
     @property
     def request_result(self) -> RequestResult:
         return RequestResult.from_result_list([self.left_job.request_result, self.right_job.request_result])
@@ -884,8 +909,10 @@ class JoinAsofJob(RetrivalJob):
         left = await self.left_job.to_polars()
         right = await self.right_job.to_polars()
 
-        return left.join_asof(
-            right,
+        return left.with_columns(
+            pl.col(self.left_event_timestamp).dt.cast_time_unit(self.timestamp_unit),
+        ).join_asof(
+            right.with_columns(pl.col(self.right_event_timestamp).dt.cast_time_unit(self.timestamp_unit)),
             by_left=self.left_on,
             by_right=self.right_on,
             left_on=self.left_event_timestamp,
@@ -1698,6 +1725,7 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
 
     job: RetrivalJob
     requests: list[RetrivalRequest]
+    date_formatter: DateFormatter = field(default_factory=DateFormatter.iso_8601)
 
     @property
     def request_result(self) -> RequestResult:
@@ -1771,14 +1799,11 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                     df = df.with_columns(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
                 elif feature.dtype == FeatureType.datetime():
                     current_dtype = df.select([feature.name]).dtypes[0]
+
                     if isinstance(current_dtype, pl.Datetime):
                         continue
-                    # Convert from ms to us
-                    df = df.with_columns(
-                        (pl.col(feature.name).cast(pl.Int64) * 1000)
-                        .cast(pl.Datetime(time_zone='UTC'))
-                        .alias(feature.name)
-                    )
+
+                    df = df.with_columns(self.date_formatter.decode_polars(feature.name))
                 elif (feature.dtype == FeatureType.array()) or (feature.dtype == FeatureType.embedding()):
                     dtype = df.select(feature.name).dtypes[0]
                     if dtype == pl.Utf8:

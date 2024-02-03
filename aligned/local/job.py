@@ -7,7 +7,8 @@ import polars as pl
 
 from aligned.request.retrival_request import AggregatedFeature, AggregateOver, RetrivalRequest
 from aligned.retrival_job import RequestResult, RetrivalJob
-from aligned.schemas.feature import Feature
+from aligned.schemas.date_formatter import DateFormatter
+from aligned.schemas.feature import Feature, FeatureType
 from aligned.sources.local import DataFileReference
 
 
@@ -120,12 +121,39 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
     return results
 
 
+def decode_timestamps(df: pl.LazyFrame, request: RetrivalRequest, formatter: DateFormatter) -> pl.LazyFrame:
+
+    columns: set[str] = set()
+    dtypes = dict(zip(df.columns, df.dtypes))
+
+    for feature in request.all_features:
+        if (
+            feature.dtype == FeatureType.datetime
+            and feature.name in df.columns
+            and not isinstance(dtypes[feature.name], pl.Datetime)
+        ):
+            columns.add(feature.name)
+
+    if (
+        request.event_timestamp
+        and request.event_timestamp.name in df.columns
+        and not isinstance(dtypes[request.event_timestamp.name], pl.Datetime)
+    ):
+        columns.add(request.event_timestamp.name)
+
+    if not columns:
+        return df
+
+    return df.with_columns([formatter.decode_polars(column).alias(column) for column in columns])
+
+
 @dataclass
 class FileFullJob(RetrivalJob):
 
     source: DataFileReference
     request: RetrivalRequest
     limit: int | None = field(default=None)
+    date_formatter: DateFormatter = field(default=DateFormatter.iso_8601())
 
     @property
     def request_result(self) -> RequestResult:
@@ -178,6 +206,7 @@ class FileFullJob(RetrivalJob):
             if org_name != wanted_name
         }
         df = df.rename(mapping=renames)
+        df = decode_timestamps(df, self.request, self.date_formatter)
 
         if self.request.aggregated_features:
             df = await aggregate(self.request, df)
@@ -202,6 +231,7 @@ class FileDateJob(RetrivalJob):
     request: RetrivalRequest
     start_date: datetime
     end_date: datetime
+    date_formatter: DateFormatter = field(default=DateFormatter.iso_8601())
 
     @property
     def request_result(self) -> RequestResult:
@@ -250,6 +280,7 @@ class FileDateJob(RetrivalJob):
 
         df = df.rename(mapping=dict(zip(request_features, all_names)))
         event_timestamp_column = self.request.event_timestamp.name
+        df = decode_timestamps(df, self.request, self.date_formatter)
 
         return df.filter(pl.col(event_timestamp_column).is_between(self.start_date, self.end_date))
 
@@ -302,6 +333,7 @@ class FileFactualJob(RetrivalJob):
     source: DataFileReference | RetrivalJob
     requests: list[RetrivalRequest]
     facts: RetrivalJob
+    date_formatter: DateFormatter = field(default=DateFormatter.iso_8601())
 
     @property
     def request_result(self) -> RequestResult:
@@ -387,6 +419,7 @@ class FileFactualJob(RetrivalJob):
                 if isinstance(self.source, ColumnFeatureMappable):
                     request_features = self.source.feature_identifier_for(all_names)
 
+                df = decode_timestamps(df, request, self.date_formatter)
                 feature_df = df.select(request_features)
 
                 renames = {

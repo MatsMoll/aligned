@@ -11,6 +11,7 @@ from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.compiler.feature_factory import FeatureFactory
+from polars.type_aliases import TimeUnit
 
 if TYPE_CHECKING:
     from aligned.retrival_job import RetrivalJob
@@ -505,6 +506,8 @@ class JoinAsofDataSource(BatchDataSource):
     left_on: list[str] | None = None
     right_on: list[str] | None = None
 
+    timestamp_unit: TimeUnit = 'us'
+
     type_name: str = 'join_asof'
 
     def job_group_key(self) -> str:
@@ -525,6 +528,7 @@ class JoinAsofDataSource(BatchDataSource):
                 right_event_timestamp=self.right_event_timestamp,
                 left_on=self.left_on,
                 right_on=self.right_on,
+                timestamp_unit=self.timestamp_unit,
             )
         )
 
@@ -543,6 +547,7 @@ class JoinAsofDataSource(BatchDataSource):
                 right_event_timestamp=self.right_event_timestamp,
                 left_on=self.left_on,
                 right_on=self.right_on,
+                timestamp_unit=self.timestamp_unit,
             )
             .aggregate(request)
             .derive_features([request])
