@@ -237,6 +237,10 @@ class FileDateJob(RetrivalJob):
     def request_result(self) -> RequestResult:
         return self.request.request_result
 
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return [self.request]
+
     def file_transformations(self, df: pd.DataFrame) -> pd.DataFrame:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
 
