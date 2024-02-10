@@ -149,6 +149,6 @@ async def test_write_job(mocker, retrival_request: RetrivalRequest) -> None:  # 
     await source.insert(insert_facts, [retrival_request])
 
     job = FactualRedisJob(RedisConfig.localhost(), requests=[retrival_request], facts=facts)
-    data = await job.to_polars()
+    data = await job.to_lazy_polars()
 
-    assert data.collect().select('x').to_series().series_equal(pl.Series('x', [1, 2, 3, None]))
+    assert data.collect().select('x').to_series().equals(pl.Series('x', [1, 2, 3, None]))

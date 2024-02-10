@@ -128,7 +128,7 @@ def feature_store() -> FeatureStore:
 @pytest.mark.asyncio
 async def test_aggregate_over_derived() -> None:
 
-    data = await IncomeAgg.query().all().to_polars()
+    data = await IncomeAgg.query().all().to_lazy_polars()
 
     df = data.collect()
 
@@ -142,7 +142,7 @@ async def test_aggregate_over_derived_fact() -> None:
 
     data = await store.features_for(
         entities={'user_id': ['a', 'b']}, features=['income_agg:total_amount']
-    ).to_polars()
+    ).to_lazy_polars()
 
     df = data.collect()
 

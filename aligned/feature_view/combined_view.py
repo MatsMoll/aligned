@@ -67,7 +67,7 @@ class CombinedFeatureViewWrapper(Generic[T]):
         return store.feature_view(self.metadata.name)
 
     async def process(self, data: dict[str, list[Any]]) -> list[dict]:
-        df = await self.query().process_input(data).to_polars()
+        df = await self.query().process_input(data).to_lazy_polars()
         return df.collect().to_dicts()
 
 

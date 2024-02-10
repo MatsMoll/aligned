@@ -5,6 +5,7 @@ import logging
 import polars as pl
 import pandas as pd
 
+from datetime import timedelta
 from abc import ABC, abstractproperty
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, TypeVar, Generic, Type, Callable
@@ -58,6 +59,8 @@ class FeatureViewMetadata:
     materialized_source: BatchDataSource | None = field(default=None)
     contacts: list[str] | None = field(default=None)
     tags: dict[str, str] = field(default_factory=dict)
+    acceptable_freshness: timedelta | None = field(default=None)
+    unacceptable_freshness: timedelta | None = field(default=None)
 
     @staticmethod
     def from_compiled(view: CompiledFeatureView) -> FeatureViewMetadata:
@@ -69,6 +72,8 @@ class FeatureViewMetadata:
             stream_source=view.stream_data_source,
             application_source=view.application_source,
             materialized_source=view.materialized_source,
+            acceptable_freshness=view.acceptable_freshness,
+            unacceptable_freshness=view.unacceptable_freshness,
         )
 
 
@@ -94,6 +99,8 @@ def feature_view(
     materialized_source: BatchDataSource | None = None,
     contacts: list[str] | None = None,
     tags: dict[str, str] | None = None,
+    acceptable_freshness: timedelta | None = None,
+    unacceptable_freshness: timedelta | None = None,
 ) -> Callable[[Type[T]], FeatureViewWrapper[T]]:
     def decorator(cls: Type[T]) -> FeatureViewWrapper[T]:
 
@@ -106,6 +113,8 @@ def feature_view(
             materialized_source=materialized_source,
             contacts=contacts,
             tags=tags or {},
+            acceptable_freshness=acceptable_freshness,
+            unacceptable_freshness=unacceptable_freshness,
         )
         return FeatureViewWrapper(metadata, cls())
 
@@ -296,7 +305,7 @@ class FeatureViewWrapper(Generic[T]):
         return self.query().process_input(data)
 
     async def process(self, data: ConvertableToRetrivalJob) -> list[dict]:
-        df = await self.query().process_input(data).to_polars()
+        df = await self.query().process_input(data).to_lazy_polars()
         return df.collect().to_dicts()
 
     async def freshness_in_source(self, source: BatchDataSource) -> datetime | None:
@@ -471,6 +480,8 @@ class FeatureView(ABC):
             stream_data_source=metadata.stream_source,
             application_source=metadata.application_source,
             materialized_source=metadata.materialized_source,
+            acceptable_freshness=metadata.acceptable_freshness,
+            unacceptable_freshness=metadata.unacceptable_freshness,
             indexes=[],
         )
         aggregations: list[FeatureFactory] = []
@@ -626,7 +637,7 @@ class FeatureView(ABC):
 
     @classmethod
     async def process(cls, data: dict[str, list[Any]]) -> list[dict]:
-        df = await cls.query().process_input(data).to_polars()
+        df = await cls.query().process_input(data).to_lazy_polars()
         return df.collect().to_dicts()
 
     @staticmethod
@@ -684,7 +695,7 @@ from aligned import feature_view, {all_types}
 @feature_view(
     name="{view_name}",
     description="some description",
-    source={batch_source_code}
+    source={batch_source_code},
     stream_source=None,
 )
 class MyView:

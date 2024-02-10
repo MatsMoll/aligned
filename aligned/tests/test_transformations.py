@@ -112,10 +112,12 @@ async def test_aggregations_on_all_no_window_materialised() -> None:
     org_values_job = TestAgg.query().using_source(TestAgg.metadata.source).all()  # type: ignore
     await org_values_job.write_to_source(materialized_source)
 
-    values = await org_values_job.to_polars()
-    df = await TestAgg.query().all().to_polars()  # type: ignore
+    values = await org_values_job.to_lazy_polars()
+    descrete_values = await org_values_job.to_polars()
+    df = await TestAgg.query().all().to_lazy_polars()  # type: ignore
 
-    assert df.sort('dob_ssn').collect().frame_equal(values.sort('dob_ssn').select(df.columns).collect())
+    assert df.sort('dob_ssn').collect().equals(values.sort('dob_ssn').select(df.columns).collect())
+    assert descrete_values.sort('dob_ssn').equals(values.sort('dob_ssn').select(descrete_values.columns).collect())
 
 
 @pytest.mark.asyncio

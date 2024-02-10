@@ -27,7 +27,7 @@ async def test_combined_polars(
     job = CombineFactualJob(
         jobs=[retrival_job, retrival_job_with_timestamp], combined_requests=[combined_retrival_request]
     )
-    data = (await job.to_polars()).collect()
+    data = (await job.to_lazy_polars()).collect()
 
     assert set(data.columns) == {'id', 'a', 'b', 'c', 'd', 'created_at', 'c+d', 'a+c+d'}
     assert data.shape[0] == 5

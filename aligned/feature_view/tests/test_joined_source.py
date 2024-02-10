@@ -78,10 +78,10 @@ async def test_join_different_types_polars() -> None:
     )
 
     new_data = left_data.join(right_data, 'inner', left_on='some_id', right_on='some_id')
-    result = await new_data.to_polars()
+    result = await new_data.to_lazy_polars()
 
     joined = result.collect().sort('some_id', descending=False)
-    assert joined.frame_equal(expected_df.select(joined.columns))
+    assert joined.equals(expected_df.select(joined.columns))
 
 
 @pytest.mark.asyncio
@@ -111,13 +111,13 @@ async def test_join_different_join_keys() -> None:
 
     new_data = left_data.join(right_data, 'inner', left_on='some_id', right_on='other_id')
 
-    result = await new_data.to_polars()
+    result = await new_data.to_lazy_polars()
     req_result = new_data.request_result
 
     joined = result.collect().sort('some_id', descending=False)
 
-    assert joined.frame_equal(expected_df.select(joined.columns))
-    assert joined.select(req_result.entity_columns).frame_equal(expected_df.select(['some_id']))
+    assert joined.equals(expected_df.select(joined.columns))
+    assert joined.select(req_result.entity_columns).equals(expected_df.select(['some_id']))
 
 
 @pytest.mark.asyncio
@@ -136,10 +136,10 @@ async def test_unique_entities() -> None:
         },
     )
 
-    result = await data.unique_on(['some_id'], sort_key='feature').to_polars()
+    result = await data.unique_on(['some_id'], sort_key='feature').to_lazy_polars()
     sorted = result.sort('some_id').select(['some_id', 'feature']).collect()
 
-    assert sorted.frame_equal(expected_df)
+    assert sorted.equals(expected_df)
 
 
 @pytest.mark.asyncio

@@ -189,7 +189,7 @@ class AwsS3ParquetDataSource(BatchDataSource, DataFileReference, ColumnFeatureMa
         except HTTPStatusError:
             raise UnableToFindFileException()
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         try:
             data = await self.storage.read(self.path)
             buffer = BytesIO(data)

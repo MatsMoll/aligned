@@ -62,7 +62,7 @@ class StorageFileReference(AsRepoDefinition):
 
 async def data_file_freshness(reference: DataFileReference, column_name: str) -> datetime | None:
     try:
-        file = await reference.to_polars()
+        file = await reference.to_lazy_polars()
         if isinstance(reference, ColumnFeatureMappable):
             source_column = reference.feature_identifier_for([column_name])[0]
         else:
@@ -121,7 +121,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
         except HTTPStatusError:
             raise UnableToFindFileException(self.path)
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
 
         if self.path.startswith('http'):
             from io import BytesIO
@@ -203,7 +203,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
         )
 
     async def schema(self) -> dict[str, FeatureFactory]:
-        df = await self.to_polars()
+        df = await self.to_lazy_polars()
         return {name: FeatureType.from_polars(pl_type).feature_factory for name, pl_type in df.schema.items()}
 
     async def feature_view_code(self, view_name: str) -> str:
@@ -268,7 +268,7 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
             index=self.config.should_write_index,
         )
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
 
         if not do_file_exist(self.path):
             raise UnableToFindFileException(self.path)
@@ -348,12 +348,12 @@ class DeltaFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference,
         return hash(self.job_group_key())
 
     async def read_pandas(self) -> pd.DataFrame:
-        return (await self.to_polars()).collect().to_pandas()
+        return (await self.to_lazy_polars()).collect().to_pandas()
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
         await self.write_polars(pl.from_pandas(df).lazy())
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         if not do_file_exist(self.path):
             raise UnableToFindFileException(self.path)
 
@@ -389,7 +389,7 @@ class DeltaFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference,
 
         request = requests[0]
 
-        data = await job.to_polars()
+        data = await job.to_lazy_polars()
         data.select(request.all_returned_columns).collect().write_delta(self.path, mode='append')
 
     async def upsert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
@@ -398,8 +398,8 @@ class DeltaFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference,
 
         request = requests[0]
 
-        new_data = await job.to_polars()
-        existing = await self.to_polars()
+        new_data = await job.to_lazy_polars()
+        existing = await self.to_lazy_polars()
 
         upsert_on_column(list(request.entity_names), new_data, existing).collect().write_delta(
             self.path, mode='overwrite'
@@ -546,5 +546,5 @@ class LiteralReference(DataFileReference):
     async def read_pandas(self) -> pd.DataFrame:
         return self.file.collect().to_pandas()
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         return self.file

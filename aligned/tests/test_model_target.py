@@ -56,15 +56,15 @@ async def test_titanic_model_with_targets_and_scd(titanic_feature_store_scd: Fea
         await titanic_feature_store_scd.model('titanic')
         .with_labels()
         .features_for(entities.to_dict(as_series=False), event_timestamp_column='event_timestamp')
-        .to_polars()
+        .to_lazy_polars()
     )
 
     input_df = dataset.input.collect()
     target_df = dataset.labels.collect()
 
-    assert target_df['survived'].series_equal(expected_data['survived'])
-    assert input_df['is_male'].series_equal(expected_data['is_male'])
-    assert input_df['age'].series_equal(expected_data['age'])
+    assert target_df['survived'].equals(expected_data['survived'])
+    assert input_df['is_male'].equals(expected_data['is_male'])
+    assert input_df['age'].equals(expected_data['age'])
 
 
 @pytest.mark.asyncio
@@ -125,7 +125,7 @@ async def test_model_insert_predictions() -> None:
     await store.insert_into(FeatureLocation.model('test_model'), {'id': [1, 2, 3], 'a': [10, 14, 20]})
 
     stored_data = pl.read_parquet(path).select(expected_frame.columns)
-    assert stored_data.frame_equal(expected_frame)
+    assert stored_data.equals(expected_frame)
 
 
 @pytest.mark.asyncio
@@ -157,4 +157,4 @@ async def test_model_upsert_predictions() -> None:
 
     columns = set(stored_data.columns).difference(expected_frame.columns)
     assert len(columns) == 0
-    assert stored_data.select(expected_frame.columns).frame_equal(expected_frame)
+    assert stored_data.select(expected_frame.columns).equals(expected_frame)

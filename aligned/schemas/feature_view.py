@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 
 
@@ -17,7 +17,6 @@ from aligned.schemas.vector_storage import VectorIndex
 
 if TYPE_CHECKING:
     from aligned.retrival_job import RetrivalJob
-
 
 @dataclass
 class CompiledFeatureView(Codable):
@@ -35,6 +34,9 @@ class CompiledFeatureView(Codable):
     stream_data_source: StreamDataSource | None = field(default=None)
     application_source: BatchDataSource | None = field(default=None)
     materialized_source: BatchDataSource | None = field(default=None)
+
+    acceptable_freshness: timedelta | None = field(default=None)
+    unacceptable_freshness: timedelta | None = field(default=None)
 
     event_triggers: set[EventTrigger] | None = field(default=None)
 

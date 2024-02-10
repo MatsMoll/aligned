@@ -248,7 +248,7 @@ async def process_predictions(
             active_learning_config.selection,
             active_learning_config.write_policy,
         )
-        _ = await job.to_polars()
+        _ = await job.to_lazy_polars()
 
         logger.debug(
             f'Processing {len(records)} predictions in {timeit.default_timer() - start_time} seconds'

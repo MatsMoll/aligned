@@ -35,7 +35,7 @@ class LiteralRetrivalJob(RetrivalJob):
     async def to_pandas(self) -> pd.DataFrame:
         return self.df.collect().to_pandas()
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         return self.df
 
 
@@ -217,10 +217,10 @@ class FileFullJob(RetrivalJob):
             return df
 
     async def to_pandas(self) -> pd.DataFrame:
-        return (await self.to_polars()).collect().to_pandas()
+        return (await self.to_lazy_polars()).collect().to_pandas()
 
-    async def to_polars(self) -> pl.LazyFrame:
-        file = await self.source.to_polars()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        file = await self.source.to_lazy_polars()
         return await self.file_transform_polars(file)
 
 
@@ -292,8 +292,8 @@ class FileDateJob(RetrivalJob):
         file = await self.source.read_pandas()
         return self.file_transformations(file)
 
-    async def to_polars(self) -> pl.LazyFrame:
-        file = await self.source.to_polars()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        file = await self.source.to_lazy_polars()
         return self.file_transform_polars(file)
 
 
@@ -369,7 +369,7 @@ class FileFactualJob(RetrivalJob):
         for request in self.requests:
             all_features.update(request.all_required_features)
 
-        result = await self.facts.to_polars()
+        result = await self.facts.to_lazy_polars()
         event_timestamp_col = 'aligned_event_timestamp'
 
         event_timestamp_entity_columns = [
@@ -489,10 +489,10 @@ class FileFactualJob(RetrivalJob):
         return result.select([pl.exclude('row_id')])
 
     async def to_pandas(self) -> pd.DataFrame:
-        return (await self.to_polars()).collect().to_pandas()
+        return (await self.to_lazy_polars()).collect().to_pandas()
 
-    async def to_polars(self) -> pl.LazyFrame:
-        return await self.file_transformations(await self.source.to_polars())
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        return await self.file_transformations(await self.source.to_lazy_polars())
 
     def log_each_job(self) -> RetrivalJob:
         from aligned.retrival_job import LogJob

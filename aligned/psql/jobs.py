@@ -127,10 +127,10 @@ class PostgreSqlJob(RetrivalJob):
         return False
 
     async def to_pandas(self) -> pd.DataFrame:
-        df = await self.to_polars()
+        df = await self.to_lazy_polars()
         return df.collect().to_pandas()
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         try:
             return pl.read_database(self.query, self.config.url).lazy()
         except Exception as e:
@@ -264,9 +264,9 @@ class FactPsqlJob(RetrivalJob):
         job = await self.psql_job()
         return await job.to_pandas()
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         job = await self.psql_job()
-        return await job.to_polars()
+        return await job.to_lazy_polars()
 
     async def psql_job(self) -> PostgreSqlJob:
         if isinstance(self.facts, PostgreSqlJob):
@@ -492,7 +492,7 @@ class FactPsqlJob(RetrivalJob):
         return fetches
 
     async def build_request(self) -> str:
-        facts = await self.facts.to_polars()
+        facts = await self.facts.to_lazy_polars()
         return self.build_request_from_facts(facts)
 
     def build_request_from_facts(self, facts: pl.LazyFrame) -> str:

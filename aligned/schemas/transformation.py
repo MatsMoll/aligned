@@ -117,7 +117,7 @@ class Transformation(Codable, SerializableType):
 
             expected = test.output_polars
             if test.transformation.dtype == FeatureType.bool():
-                is_correct = output.series_equal(test.output_polars.alias(alias))
+                is_correct = output.equals(test.output_polars.alias(alias))
                 assert is_correct, (
                     f'Output for {cls.__name__} is not correct.,'
                     f'\nGot: {output},\nexpected: {test.output_polars}'

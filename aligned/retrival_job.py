@@ -253,9 +253,11 @@ class TrainTestValidateJob:
             await data_store.store_train_test_validate(test_metadata)
 
         return TrainTestValidateJob(
-            train_job=self.train_job.on_load(update_metadata).cached_at(train_source),
-            test_job=self.test_job.on_load(update_metadata).cached_at(test_source),
-            validate_job=self.validate_job.on_load(update_metadata).cached_at(validate_source),
+            train_job=self.train_job.cached_at(train_source).on_load(update_metadata).cached_at(train_source),
+            test_job=self.test_job.cached_at(test_source).on_load(update_metadata).cached_at(test_source),
+            validate_job=self.validate_job.cached_at(validate_source)
+            .on_load(update_metadata)
+            .cached_at(validate_source),
             target_columns=self.target_columns,
         )
 
@@ -283,8 +285,8 @@ class SupervisedJob:
             data, entities, features, self.target_columns, self.job.request_result.event_timestamp
         )
 
-    async def to_polars(self) -> SupervisedDataSet[pl.LazyFrame]:
-        data = await self.job.to_polars()
+    async def to_lazy_polars(self) -> SupervisedDataSet[pl.LazyFrame]:
+        data = await self.job.to_lazy_polars()
         if self.should_filter_out_null_targets:
             data = data.drop_nulls([column for column in self.target_columns])
 
@@ -375,7 +377,7 @@ class SupervisedTrainJob:
     train_size: float
 
     async def to_pandas(self) -> TrainTestSet[pd.DataFrame]:
-        core_data = await self.job.to_polars()
+        core_data = await self.job.to_lazy_polars()
         data = core_data.data.collect()
         data = data.to_pandas()
 
@@ -393,7 +395,7 @@ class SupervisedTrainJob:
     async def to_polars(self) -> TrainTestSet[pl.DataFrame]:
         # Use the pandas method, as the split is not created for polars yet
         # A but unsure if I should use the same index concept for polars
-        core_data = await self.job.to_polars()
+        core_data = await self.job.to_lazy_polars()
 
         data = core_data.data.collect()
 
@@ -470,8 +472,11 @@ class RetrivalJob(ABC):
         raise NotImplementedError(f'For {type(self)}')
 
     @abstractmethod
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         raise NotImplementedError(f'For {type(self)}')
+
+    async def to_polars(self) -> pl.DataFrame:
+        return await (await self.to_lazy_polars()).collect_async()
 
     def describe(self) -> str:
         if isinstance(self, ModificationJob):
@@ -734,7 +739,7 @@ class RetrivalJob(ABC):
         from aligned.sources.local import DataFileReference
 
         if isinstance(source, DataFileReference):
-            await source.write_polars(await self.to_polars())
+            await source.write_polars(await self.to_lazy_polars())
         else:
             await source.insert(self, self.retrival_requests)
 
@@ -757,12 +762,12 @@ class CustomPolarsJob(RetrivalJob, ModificationJob):
     job: RetrivalJob
     polars_method: Callable[[pl.LazyFrame], pl.LazyFrame]
 
-    async def to_polars(self) -> pl.LazyFrame:
-        df = await self.job.to_polars()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        df = await self.job.to_lazy_polars()
         return self.polars_method(df)
 
     async def to_pandas(self) -> pd.DataFrame:
-        df = await self.job.to_polars()
+        df = await self.job.to_lazy_polars()
         return df.collect().to_pandas()
 
 
@@ -778,8 +783,8 @@ class SubsetJob(RetrivalJob, ModificationJob):
     def fraction(self) -> float:
         return self.end_ratio - self.start_ratio
 
-    async def to_polars(self) -> pl.LazyFrame:
-        data = (await self.job.to_polars()).collect()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        data = (await self.job.to_lazy_polars()).collect()
         return subset_polars(data, self.start_ratio, self.end_ratio, self.sort_column).lazy()
 
     async def to_pandas(self) -> pd.DataFrame:
@@ -799,8 +804,8 @@ class OnLoadJob(RetrivalJob, ModificationJob):  # type: ignore
         await self.on_load()
         return data
 
-    async def to_polars(self) -> pl.LazyFrame:
-        data = (await self.job.to_polars()).collect()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        data = (await self.job.to_lazy_polars()).collect()
         await self.on_load()
         return data.lazy()
 
@@ -815,12 +820,12 @@ class EncodeDatesJob(RetrivalJob, ModificationJob):
     formatter: DateFormatter
     columns: list[str]
 
-    async def to_polars(self) -> pl.LazyFrame:
-        data = await self.job.to_polars()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        data = await self.job.to_lazy_polars()
         return data.with_columns([self.formatter.encode_polars(column) for column in self.columns])
 
     async def to_pandas(self) -> pd.DataFrame:
-        return (await self.to_polars()).collect().to_pandas()
+        return (await self.to_lazy_polars()).collect().to_pandas()
 
 
 @dataclass
@@ -829,11 +834,11 @@ class InMemoryCacheJob(RetrivalJob, ModificationJob):
     job: RetrivalJob
     cached_data: pl.DataFrame | None = None
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         if self.cached_data is not None:
             return self.cached_data.lazy()
 
-        data = (await self.job.to_polars()).collect()
+        data = (await self.job.to_lazy_polars()).collect()
         self.cached_data = data
         return data.lazy()
 
@@ -860,10 +865,10 @@ class AggregateJob(RetrivalJob, ModificationJob):
     def retrival_requests(self) -> list[RetrivalRequest]:
         return [self.agg_request]
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         from aligned.local.job import aggregate
 
-        core_frame = await self.job.to_polars()
+        core_frame = await self.job.to_lazy_polars()
 
         existing_cols = set(core_frame.columns)
         agg_features = {agg.name for agg in self.agg_request.aggregated_features}
@@ -877,7 +882,7 @@ class AggregateJob(RetrivalJob, ModificationJob):
             return await aggregate(self.agg_request, core_frame)
 
     async def to_pandas(self) -> pd.DataFrame:
-        return (await self.to_polars()).collect().to_pandas()
+        return (await self.to_lazy_polars()).collect().to_pandas()
 
     def describe(self) -> str:
         return f'Aggregating over {self.job.describe()}'
@@ -905,9 +910,9 @@ class JoinAsofJob(RetrivalJob):
     def retrival_requests(self) -> list[RetrivalRequest]:
         return RetrivalRequest.combine(self.left_job.retrival_requests + self.right_job.retrival_requests)
 
-    async def to_polars(self) -> pl.LazyFrame:
-        left = await self.left_job.to_polars()
-        right = await self.right_job.to_polars()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        left = await self.left_job.to_lazy_polars()
+        right = await self.right_job.to_lazy_polars()
 
         return left.with_columns(
             pl.col(self.left_event_timestamp).dt.cast_time_unit(self.timestamp_unit),
@@ -931,7 +936,7 @@ class JoinAsofJob(RetrivalJob):
         return LogJob(sub_log)
 
     async def to_pandas(self) -> pd.DataFrame:
-        return (await self.to_polars()).collect().to_pandas()
+        return (await self.to_lazy_polars()).collect().to_pandas()
 
     def describe(self) -> str:
         return (
@@ -969,9 +974,9 @@ class JoinJobs(RetrivalJob):
     def retrival_requests(self) -> list[RetrivalRequest]:
         return RetrivalRequest.combine(self.left_job.retrival_requests + self.right_job.retrival_requests)
 
-    async def to_polars(self) -> pl.LazyFrame:
-        left = await self.left_job.to_polars()
-        right = await self.right_job.to_polars()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        left = await self.left_job.to_lazy_polars()
+        right = await self.right_job.to_lazy_polars()
 
         return_request = self.left_job.request_result
 
@@ -1027,8 +1032,8 @@ class FilteredJob(RetrivalJob, ModificationJob):
     job: RetrivalJob
     condition: DerivedFeature | Feature | str
 
-    async def to_polars(self) -> pl.LazyFrame:
-        df = await self.job.to_polars()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        df = await self.job.to_lazy_polars()
 
         if isinstance(self.condition, str):
             col = pl.col(self.condition)
@@ -1078,8 +1083,8 @@ class RenameJob(RetrivalJob, ModificationJob):
         df = await self.job.to_pandas()
         return df.rename(self.mappings)
 
-    async def to_polars(self) -> pl.LazyFrame:
-        df = await self.job.to_polars()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        df = await self.job.to_lazy_polars()
         return df.rename(self.mappings)
 
 
@@ -1092,8 +1097,8 @@ class DropDuplicateEntities(RetrivalJob, ModificationJob):
     def entity_columns(self) -> list[str]:
         return self.job.request_result.entity_columns
 
-    async def to_polars(self) -> pl.LazyFrame:
-        df = await self.job.to_polars()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        df = await self.job.to_lazy_polars()
         return df.unique(subset=self.entity_columns)
 
     async def to_pandas(self) -> pd.DataFrame:
@@ -1118,8 +1123,8 @@ class UpdateVectorIndexJob(RetrivalJob, ModificationJob):
     async def to_pandas(self) -> pd.DataFrame:
         raise NotImplementedError()
 
-    async def to_polars(self) -> pl.LazyFrame:
-        data = await self.job.to_polars()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        data = await self.job.to_lazy_polars()
 
         update_jobs = []
         for index in self.indexes:
@@ -1155,7 +1160,7 @@ class LiteralDictJob(RetrivalJob):
     async def to_pandas(self) -> pd.DataFrame:
         return pd.DataFrame(self.data)
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         return pl.DataFrame(self.data).lazy()
 
     def describe(self) -> str:
@@ -1191,13 +1196,13 @@ class LogJob(RetrivalJob, ModificationJob):
         logging.debug(df)
         return df
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         if logger.level == 0:
             logging.basicConfig(level=logging.DEBUG)
         job_name = self.retrival_requests[0].name
         logging.debug(f'Starting to run {type(self.job).__name__} - {job_name}')
         try:
-            df = await self.job.to_polars()
+            df = await self.job.to_lazy_polars()
         except Exception as error:
             logging.debug(f'Failed in job: {type(self.job).__name__} - {job_name}')
             raise error
@@ -1237,9 +1242,9 @@ class DropInvalidJob(RetrivalJob, ModificationJob):
             list(DropInvalidJob.features_to_validate(self.retrival_requests)), await self.job.to_pandas()
         )
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         return self.validator.validate_polars(
-            list(DropInvalidJob.features_to_validate(self.retrival_requests)), await self.job.to_polars()
+            list(DropInvalidJob.features_to_validate(self.retrival_requests)), await self.job.to_lazy_polars()
         )
 
     def with_subfeatures(self) -> RetrivalJob:
@@ -1328,8 +1333,8 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
     async def to_pandas(self) -> pd.DataFrame:
         return await self.compute_derived_features_pandas(await self.job.to_pandas())
 
-    async def to_polars(self) -> pl.LazyFrame:
-        return await self.compute_derived_features_polars(await self.job.to_polars())
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        return await self.compute_derived_features_polars(await self.job.to_lazy_polars())
 
     def remove_derived_features(self) -> RetrivalJob:
         return self.job.remove_derived_features()
@@ -1343,10 +1348,10 @@ class UniqueRowsJob(RetrivalJob, ModificationJob):
     sort_key: str | None = field(default=None)
 
     async def to_pandas(self) -> pd.DataFrame:
-        return (await self.to_polars()).collect().to_pandas()
+        return (await self.to_lazy_polars()).collect().to_pandas()
 
-    async def to_polars(self) -> pl.LazyFrame:
-        data = await self.job.to_polars()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        data = await self.job.to_lazy_polars()
 
         if self.sort_key:
             data = data.sort(self.sort_key, descending=True)
@@ -1368,8 +1373,8 @@ class ValidateEntitiesJob(RetrivalJob, ModificationJob):
 
         return data
 
-    async def to_polars(self) -> pl.LazyFrame:
-        data = await self.job.to_polars()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        data = await self.job.to_lazy_polars()
 
         for request in self.retrival_requests:
             if request.entity_names - set(data.columns):
@@ -1401,8 +1406,8 @@ Will fill values with None, but it could be a potential problem: {missing}
                 data[feature] = None
         return data
 
-    async def to_polars(self) -> pl.LazyFrame:
-        data = await self.job.to_polars()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        data = await self.job.to_lazy_polars()
         for request in self.retrival_requests:
 
             missing = request.all_required_feature_names - set(data.columns)
@@ -1453,7 +1458,7 @@ class StreamAggregationJob(RetrivalJob, ModificationJob):
             raise ValueError('Condition is not supported for stream aggregation, yet')
 
         try:
-            window_data = (await checkpoint.to_polars()).collect()
+            window_data = (await checkpoint.to_lazy_polars()).collect()
 
             if filter_expr is not None:
                 new_data = pl.concat(
@@ -1477,8 +1482,8 @@ class StreamAggregationJob(RetrivalJob, ModificationJob):
     async def to_pandas(self) -> pd.DataFrame:
         raise NotImplementedError()
 
-    async def to_polars(self) -> pl.LazyFrame:
-        data = (await self.job.to_polars()).collect()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        data = (await self.job.to_lazy_polars()).collect()
 
         # This is used as a dummy frame, as the pl abstraction is not good enough
         lazy_df = pl.DataFrame({}).lazy()
@@ -1530,7 +1535,7 @@ class DataLoaderJob:
 
         needed_requests = self.job.retrival_requests
         without_derived = self.job.remove_derived_features()
-        raw_files = (await without_derived.to_polars()).collect()
+        raw_files = (await without_derived.to_lazy_polars()).collect()
         features_to_include = self.job.request_result.features.union(self.job.request_result.entities)
         features_to_include_names = {feature.name for feature in features_to_include}
 
@@ -1546,7 +1551,7 @@ class DataLoaderJob:
                 .select_columns(features_to_include_names)
             )
 
-            chunked_df = await chunked_job.to_polars()
+            chunked_df = await chunked_job.to_lazy_polars()
             yield chunked_df
 
     async def to_pandas(self) -> AsyncIterator[pd.DataFrame]:
@@ -1586,8 +1591,8 @@ class RawFileCachedJob(RetrivalJob, ModificationJob):
             .to_pandas()
         )
 
-    async def to_polars(self) -> pl.LazyFrame:
-        return await self.job.to_polars()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        return await self.job.to_lazy_polars()
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         return self
@@ -1621,18 +1626,18 @@ class FileCachedJob(RetrivalJob, ModificationJob):
             await self.location.write_pandas(df)
         return df
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         try:
             logger.debug('Trying to read cache file')
-            df = await self.location.to_polars()
+            df = await self.location.to_lazy_polars()
         except UnableToFindFileException:
             logger.debug('Unable to load file, so fetching from source')
-            df = await self.job.to_polars()
+            df = await self.job.to_lazy_polars()
             logger.debug('Writing result to cache')
             await self.location.write_polars(df)
         except FileNotFoundError:
             logger.debug('Unable to load file, so fetching from source')
-            df = await self.job.to_polars()
+            df = await self.job.to_lazy_polars()
             logger.debug('Writing result to cache')
             await self.location.write_polars(df)
         return df
@@ -1684,8 +1689,8 @@ class WithRequests(RetrivalJob, ModificationJob):
     async def to_pandas(self) -> pd.DataFrame:
         return await self.job.to_pandas()
 
-    async def to_polars(self) -> pl.LazyFrame:
-        return await self.job.to_polars()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        return await self.job.to_lazy_polars()
 
 
 @dataclass
@@ -1707,9 +1712,9 @@ class TimeMetricLoggerJob(RetrivalJob, ModificationJob):
             self.time_metric.observe(elapsed)
         return df
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         start_time = timeit.default_timer()
-        df = await self.job.to_polars()
+        df = await self.job.to_lazy_polars()
         concrete = df.collect()
         elapsed = timeit.default_timer() - start_time
         logger.debug(f'Computed records in {elapsed} seconds')
@@ -1778,8 +1783,8 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                 df[feature.name] = pd.to_datetime(df[feature.name], infer_datetime_format=True, utc=True)
         return df
 
-    async def to_polars(self) -> pl.LazyFrame:
-        df = await self.job.to_polars()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        df = await self.job.to_lazy_polars()
         org_schema = dict(df.schema)
         for request in self.requests:
             features_to_check = request.all_required_features
@@ -1915,9 +1920,9 @@ class CombineFactualJob(RetrivalJob):
         return df
 
     async def to_pandas(self) -> pd.DataFrame:
-        return (await self.to_polars()).collect().to_pandas()
+        return (await self.to_lazy_polars()).collect().to_pandas()
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         if not self.jobs:
             raise ValueError(
                 'Have no jobs to fetch. This is probably an internal error.\n'
@@ -1925,7 +1930,7 @@ class CombineFactualJob(RetrivalJob):
                 'Or maybe even submit a PR'
             )
 
-        dfs: list[pl.LazyFrame] = await asyncio.gather(*[job.to_polars() for job in self.jobs])
+        dfs: list[pl.LazyFrame] = await asyncio.gather(*[job.to_lazy_polars() for job in self.jobs])
         results = [job.request_result for job in self.jobs]
 
         joined_entities = set(results[0].entity_columns)
@@ -1989,8 +1994,8 @@ class SelectColumnsJob(RetrivalJob, ModificationJob):
         else:
             return df
 
-    async def to_polars(self) -> pl.LazyFrame:
-        df = await self.job.to_polars()
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        df = await self.job.to_lazy_polars()
         if self.include_features:
             total_list = list({ent.name for ent in self.request_result.entities}.union(self.include_features))
             return df.select(total_list)
@@ -2037,10 +2042,10 @@ class ListenForTriggers(RetrivalJob, ModificationJob):
         await asyncio.gather(*[trigger.check_pandas(df, self.request_result) for trigger in self.triggers])
         return df
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         import asyncio
 
-        df = await self.job.to_polars()
+        df = await self.job.to_lazy_polars()
         await asyncio.gather(*[trigger.check_polars(df, self.request_result) for trigger in self.triggers])
         return df
 

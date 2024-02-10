@@ -25,16 +25,16 @@ class FactualRedisJob(RetrivalJob):
         return self.requests
 
     async def to_pandas(self) -> pd.DataFrame:
-        return (await self.to_polars()).collect().to_pandas()
+        return (await self.to_lazy_polars()).collect().to_pandas()
 
     def describe(self) -> str:
         features_to_load = [list(request.all_feature_names) for request in self.requests]
         return f'Loading features from Redis using HMGET {features_to_load}'
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         redis = self.config.redis()
 
-        result_df = (await self.facts.to_polars()).collect()
+        result_df = (await self.facts.to_lazy_polars()).collect()
 
         for request in self.requests:
             redis_combine_id = 'redis_combine_entity_id'

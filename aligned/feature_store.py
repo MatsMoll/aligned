@@ -676,9 +676,9 @@ class FeatureStore:
             import polars as pl
 
             columns = write_request.all_returned_columns
-            new_df = (await values.to_polars()).select(columns)
+            new_df = (await values.to_lazy_polars()).select(columns)
             try:
-                existing_df = await source.to_polars()
+                existing_df = await source.to_lazy_polars()
                 write_df = pl.concat([new_df, existing_df.select(columns)], how='vertical_relaxed')
             except UnableToFindFileException:
                 write_df = new_df
@@ -710,10 +710,10 @@ class FeatureStore:
         if isinstance(source, WritableFeatureSource):
             await source.upsert(values, [write_request])
         elif isinstance(source, DataFileReference):
-            new_df = (await values.to_polars()).select(write_request.all_returned_columns)
+            new_df = (await values.to_lazy_polars()).select(write_request.all_returned_columns)
             entities = list(write_request.entity_names)
             try:
-                existing_df = await source.to_polars()
+                existing_df = await source.to_lazy_polars()
                 write_df = upsert_on_column(entities, new_df, existing_df)
             except UnableToFindFileException:
                 write_df = new_df

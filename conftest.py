@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import timedelta
 from math import ceil, floor
 
 import polars as pl
@@ -632,6 +633,8 @@ def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> ModelContractWra
         'titanic',
         description='A model predicting if a passenger will survive',
         features=[features.age, features.sibsp, features.has_siblings, features.is_male],  # type: ignore
+        acceptable_freshness=timedelta(days=1),
+        unacceptable_freshness=timedelta(days=2),
     )
     class Titanic:
 

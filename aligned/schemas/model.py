@@ -1,5 +1,6 @@
 import logging
 from dataclasses import dataclass, field
+from datetime import timedelta
 
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.schemas.codable import Codable
@@ -58,6 +59,9 @@ class PredictionsView(Codable):
     regression_targets: set[RegressionTarget] | None = field(default=None)
     classification_targets: set[ClassificationTarget] | None = field(default=None)
     recommendation_targets: set[RecommendationTarget] | None = field(default=None)
+
+    acceptable_freshness: timedelta | None = field(default=None)
+    unacceptable_freshness: timedelta | None = field(default=None)
 
     @property
     def full_schema(self) -> set[Feature]:

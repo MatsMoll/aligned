@@ -72,7 +72,7 @@ def select_table(table: TableFetch) -> str:
     from_table = 'FROM '
 
     columns = [col.sql_select for col in table.columns]
-    select = f'SELECT {",".join(columns)}'
+    select = f'SELECT {', '.join(columns)}'
 
     if table.conditions:
         wheres = 'WHERE ' + ' AND '.join(table.conditions)
@@ -169,10 +169,10 @@ class RedshiftSqlJob(RetrivalJob):
         return self.requests
 
     async def to_pandas(self) -> pd.DataFrame:
-        df = await self.to_polars()
+        df = await self.to_lazy_polars()
         return df.collect().to_pandas()
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         try:
             return pl.read_sql(self.query, self.config.url).lazy()
         except Exception as e:

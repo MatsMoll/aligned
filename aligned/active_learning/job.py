@@ -21,12 +21,12 @@ class ActiveLearningJob(RetrivalJob):
     selection: ActiveLearningSelection
     write_policy: ActiveLearningWritePolicy
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         if not self.model.predictions_view.classification_targets:
             logger.info('Found no target. Therefore, no data will be written to an active learning dataset.')
-            return await self.job.to_polars()
+            return await self.job.to_lazy_polars()
 
-        data = await self.job.to_polars()
+        data = await self.job.to_lazy_polars()
         active_learning_set = self.selection.select(self.model, data, self.metric)
         await self.write_policy.write(active_learning_set, self.model)
         return data

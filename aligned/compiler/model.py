@@ -4,6 +4,7 @@ import copy
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable, Type, TypeVar, Generic, TYPE_CHECKING
+from datetime import timedelta
 
 from uuid import uuid4
 
@@ -53,6 +54,9 @@ class ModelMetadata:
     prediction_source: BatchDataSource | None = field(default=None)
     prediction_stream: StreamDataSource | None = field(default=None)
     application_source: BatchDataSource | None = field(default=None)
+
+    acceptable_freshness: timedelta | None = field(default=None)
+    unacceptable_freshness: timedelta | None = field(default=None)
 
     exposed_at_url: str | None = field(default=None)
 
@@ -171,6 +175,8 @@ def model_contract(
     application_source: BatchDataSource | None = None,
     dataset_store: DatasetStore | StorageFileReference | None = None,
     exposed_at_url: str | None = None,
+    acceptable_freshness: timedelta | None = None,
+    unacceptable_freshness: timedelta | None = None,
 ) -> Callable[[Type[T]], ModelContractWrapper[T]]:
     def decorator(cls: Type[T]) -> ModelContractWrapper[T]:
 
@@ -190,6 +196,8 @@ def model_contract(
             application_source=application_source,
             dataset_store=resolve_dataset_store(dataset_store) if dataset_store else None,
             exposed_at_url=exposed_at_url,
+            acceptable_freshness=acceptable_freshness,
+            unacceptable_freshness=unacceptable_freshness,
         )
         return ModelContractWrapper(metadata, cls)
 
@@ -225,6 +233,8 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
         classification_targets=set(),
         regression_targets=set(),
         recommendation_targets=set(),
+        acceptable_freshness=metadata.acceptable_freshness,
+        unacceptable_freshness=metadata.unacceptable_freshness,
     )
     probability_features: dict[str, set[TargetProbability]] = {}
 

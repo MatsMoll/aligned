@@ -26,9 +26,9 @@ async def test_read_parquet(point_in_time_data_test: DataTest) -> None:
         )
         store.add_feature_view(view)
 
-        stored = await store.feature_view(view.metadata.name).all().to_polars()
+        stored = await store.feature_view(view.metadata.name).all().to_lazy_polars()
         df = stored.select(source.data.columns).collect()
-        assert df.frame_equal(source.data)
+        assert df.equals(source.data)
 
 
 @pytest.mark.asyncio
@@ -55,7 +55,7 @@ async def test_parquest(point_in_time_data_test: DataTest) -> None:
         point_in_time_data_test.feature_reference,
         event_timestamp_column='event_timestamp',
     )
-    data = (await job.to_polars()).collect()
+    data = (await job.to_lazy_polars()).collect()
 
     expected = point_in_time_data_test.expected_output
 
@@ -63,7 +63,7 @@ async def test_parquest(point_in_time_data_test: DataTest) -> None:
     assert set(expected.columns) == set(data.columns), f'Expected: {expected.columns}\nGot: {data.columns}'
 
     ordered_columns = data.select(expected.columns)
-    assert ordered_columns.frame_equal(expected), f'Expected: {expected}\nGot: {ordered_columns}'
+    assert ordered_columns.equals(expected), f'Expected: {expected}\nGot: {ordered_columns}'
 
 
 @pytest.mark.asyncio
@@ -91,7 +91,7 @@ async def test_parquet_without_event_timestamp(
         point_in_time_data_test_wituout_event_timestamp.entities,
         point_in_time_data_test_wituout_event_timestamp.feature_reference,
     )
-    data = (await job.to_polars()).collect()
+    data = (await job.to_lazy_polars()).collect()
 
     expected = point_in_time_data_test_wituout_event_timestamp.expected_output
 
@@ -99,4 +99,4 @@ async def test_parquet_without_event_timestamp(
     assert set(expected.columns) == set(data.columns), f'Expected: {expected.columns}\nGot: {data.columns}'
 
     ordered_columns = data.select(expected.columns)
-    assert ordered_columns.frame_equal(expected), f'Expected: {expected}\nGot: {ordered_columns}'
+    assert ordered_columns.equals(expected), f'Expected: {expected}\nGot: {ordered_columns}'

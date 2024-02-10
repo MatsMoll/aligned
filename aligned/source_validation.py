@@ -25,7 +25,7 @@ async def validate_sources_in(views: list[SourceRequest]) -> dict[FeatureLocatio
 
     for view in views:
         try:
-            _ = (await view.source.all_data(view.request, limit=1).to_polars()).collect()
+            _ = (await view.source.all_data(view.request, limit=1).to_lazy_polars()).collect()
             results[view.location] = True
         except Exception:
             results[view.location] = False

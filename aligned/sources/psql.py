@@ -175,7 +175,7 @@ WHERE table_schema = '{schema}'
 
         request = requests[0]
 
-        data = await job.to_polars()
+        data = await job.to_lazy_polars()
         data.select(request.all_returned_columns).collect().write_database(
             self.table, connection=self.config.url, if_exists='append'
         )

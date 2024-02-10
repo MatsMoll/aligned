@@ -159,7 +159,7 @@ class FastAPIServer:
                     for value in entity_values['event_timestamp']
                 ]
 
-            df = await feature_store.model(name).features_for(entity_values).to_polars()
+            df = await feature_store.model(name).features_for(entity_values).to_lazy_polars()
             pandas_df = df.collect().to_pandas()
             orient = 'values'
             body = ','.join(
@@ -233,7 +233,9 @@ class FastAPIServer:
         async def features(payload: APIFeatureRequest) -> dict:
             import json
 
-            df = await feature_store.features_for(payload.entities, features=payload.features).to_polars()
+            df = await feature_store.features_for(
+                payload.entities, features=payload.features
+            ).to_lazy_polars()
             json_data = json.dumps(df.collect().to_dict(as_series=False))
             return Response(content=json_data, media_type='application/json')
 

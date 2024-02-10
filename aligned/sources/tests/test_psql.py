@@ -43,7 +43,7 @@ async def test_postgresql(point_in_time_data_test: DataTest, psql: PostgreSQLCon
         point_in_time_data_test.feature_reference,
         event_timestamp_column='event_timestamp',
     )
-    data = (await job.to_polars()).collect()
+    data = (await job.to_lazy_polars()).collect()
 
     expected = point_in_time_data_test.expected_output
 
@@ -51,7 +51,7 @@ async def test_postgresql(point_in_time_data_test: DataTest, psql: PostgreSQLCon
     assert set(expected.columns) == set(data.columns), f'Expected: {expected.columns}\nGot: {data.columns}'
 
     ordered_columns = data.select(expected.columns)
-    assert ordered_columns.frame_equal(expected), f'Expected: {expected}\nGot: {ordered_columns}'
+    assert ordered_columns.equals(expected), f'Expected: {expected}\nGot: {ordered_columns}'
 
 
 @pytest.mark.skipif(
@@ -69,7 +69,7 @@ async def test_postgresql_write(titanic_feature_store: FeatureStore, psql: Postg
     store = titanic_feature_store.model('titanic').using_source(source)
     await store.insert_predictions(data)
 
-    stored_data = await psql.fetch('SELECT * FROM titanic').to_polars()
+    stored_data = await psql.fetch('SELECT * FROM titanic').to_lazy_polars()
     assert_frame_equal(
         pl.DataFrame(data),
         stored_data.collect(),
@@ -78,7 +78,7 @@ async def test_postgresql_write(titanic_feature_store: FeatureStore, psql: Postg
         check_dtype=False,
     )
 
-    preds = await store.predictions_for({'passenger_id': [1, 3, 2, 4]}).to_polars()
+    preds = await store.predictions_for({'passenger_id': [1, 3, 2, 4]}).to_lazy_polars()
     assert_frame_equal(
         pl.DataFrame(data),
         preds.collect(),
@@ -116,7 +116,7 @@ async def test_postgresql_without_event(
         point_in_time_data_test_wituout_event_timestamp.entities,
         point_in_time_data_test_wituout_event_timestamp.feature_reference,
     )
-    data = (await job.to_polars()).collect()
+    data = (await job.to_lazy_polars()).collect()
 
     expected = point_in_time_data_test_wituout_event_timestamp.expected_output
 
@@ -124,4 +124,4 @@ async def test_postgresql_without_event(
     assert set(expected.columns) == set(data.columns), f'Expected: {expected.columns}\nGot: {data.columns}'
 
     ordered_columns = data.select(expected.columns)
-    assert ordered_columns.frame_equal(expected), f'Expected: {expected}\nGot: {ordered_columns}'
+    assert ordered_columns.equals(expected), f'Expected: {expected}\nGot: {ordered_columns}'

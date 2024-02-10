@@ -63,9 +63,9 @@ class FactRedshiftJob(RetrivalJob):
         job = await self.psql_job()
         return await job.to_pandas()
 
-    async def to_polars(self) -> pl.LazyFrame:
+    async def to_lazy_polars(self) -> pl.LazyFrame:
         job = await self.psql_job()
-        return await job.to_polars()
+        return await job.to_lazy_polars()
 
     async def psql_job(self) -> PostgreSqlJob:
         if isinstance(self.facts, PostgreSqlJob):

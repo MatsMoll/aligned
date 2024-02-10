@@ -47,29 +47,29 @@ class TrainTestSet(Generic[DatasetType]):
     def train(self) -> DatasetType:
         if isinstance(self.data, pl.DataFrame):
             return self.data[self.train_index.to_list(), :]
-        return self.data.iloc[self.train_index]
+        return self.data.iloc[self.train_index]  # type: ignore
 
     @property
     def train_input(self) -> DatasetType:
-        return self.train[self.sorted_features]
+        return self.train[self.sorted_features]  # type: ignore
 
     @property
     def train_target(self) -> DatasetType:
-        return self.train[list(self.target_columns)]
+        return self.train[list(self.target_columns)]  # type: ignore
 
     @property
     def test(self) -> DatasetType:
         if isinstance(self.data, pl.DataFrame):
             return self.data[self.test_index.to_list(), :]
-        return self.data.iloc[self.test_index]
+        return self.data.iloc[self.test_index]  # type: ignore
 
     @property
     def test_input(self) -> DatasetType:
-        return self.test[self.sorted_features]
+        return self.test[self.sorted_features]  # type: ignore
 
     @property
     def test_target(self) -> DatasetType:
-        return self.test[list(self.target_columns)]
+        return self.test[list(self.target_columns)]  # type: ignore
 
 
 class SupervisedDataSet(Generic[DatasetType]):
@@ -102,19 +102,19 @@ class SupervisedDataSet(Generic[DatasetType]):
     def entities(self) -> DatasetType:
         if isinstance(self.data, (pl.LazyFrame, pl.DataFrame)):
             return self.data.select(list(self.entity_columns))
-        return self.data[list(self.entity_columns)]
+        return self.data[list(self.entity_columns)]  # type: ignore
 
     @property
     def input(self) -> DatasetType:
         if isinstance(self.data, (pl.LazyFrame, pl.DataFrame)):
             return self.data.select(self.sorted_features)
-        return self.data[self.sorted_features]
+        return self.data[self.sorted_features]  # type: ignore
 
     @property
     def labels(self) -> DatasetType:
         if isinstance(self.data, (pl.LazyFrame, pl.DataFrame)):
             return self.data.select(list(self.target_columns))
-        return self.data[list(self.target_columns)]
+        return self.data[list(self.target_columns)]  # type: ignore
 
 
 class TrainTestValidateSet(Generic[DatasetType]):
@@ -158,22 +158,22 @@ class TrainTestValidateSet(Generic[DatasetType]):
     def input(self) -> DatasetType:
         if isinstance(self.data, pl.LazyFrame):
             return self.data.select(self.sorted_features)
-        return self.data[self.sorted_features]
+        return self.data[self.sorted_features]  # type: ignore
 
     @property
     def labels(self) -> DatasetType:
         if isinstance(self.data, pl.LazyFrame):
             return self.data.select(sorted(self.target_columns))
-        return self.data[sorted(self.target_columns)]
+        return self.data[sorted(self.target_columns)]  # type: ignore
 
     @property
     def train(self) -> SupervisedDataSet[DatasetType]:
         if isinstance(self.data, pl.DataFrame):
             data = self.data[self.train_index.to_list(), :]
         else:
-            data = self.data.iloc[self.train_index]
+            data = self.data.iloc[self.train_index]  # type: ignore
 
-        return SupervisedDataSet(
+        return SupervisedDataSet(  # type: ignore
             data,
             self.entity_columns,
             self.feature_columns,
@@ -195,9 +195,9 @@ class TrainTestValidateSet(Generic[DatasetType]):
         if isinstance(self.data, pl.DataFrame):
             data = self.data[self.test_index.to_list(), :]
         else:
-            data = self.data.iloc[self.test_index]
+            data = self.data.iloc[self.test_index]  # type: ignore
 
-        return SupervisedDataSet(
+        return SupervisedDataSet(  # type: ignore
             data,
             set(self.entity_columns),
             set(self.feature_columns),
@@ -218,8 +218,8 @@ class TrainTestValidateSet(Generic[DatasetType]):
         if isinstance(self.data, pl.DataFrame):
             data = self.data[self.validate_index.to_list(), :]
         else:
-            data = self.data.iloc[self.validate_index]
-        return SupervisedDataSet(
+            data = self.data.iloc[self.validate_index]  # type: ignore
+        return SupervisedDataSet(  # type: ignore
             data,
             self.entity_columns,
             set(self.feature_columns),
@@ -311,7 +311,7 @@ class StrategicSplitStrategy(SplitStrategy):
                 [develop, split(sub_group, self.train_size_percentage + self.test_size_percentage, 1)], axis=0
             )
 
-        return SplitDataSet(
+        return SplitDataSet(  # type: ignore
             train_input=train.drop(columns=[target_column]),
             train_target=train[target_column],
             develop_input=develop.drop(columns=[target_column]),

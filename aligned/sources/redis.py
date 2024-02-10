@@ -173,7 +173,7 @@ class RedisSource(FeatureSource, WritableFeatureSource):
     async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
 
         redis = self.config.redis()
-        data = await job.to_polars()
+        data = await job.to_lazy_polars()
 
         async with redis.pipeline(transaction=True) as pipe:
 
@@ -274,7 +274,7 @@ class RedisStreamSource(StreamDataSource, SinkableDataSource, ColumnFeatureMappa
 
     async def write_to_stream(self, job: RetrivalJob) -> None:
         redis = self.config.redis()
-        df = await job.to_polars()
+        df = await job.to_lazy_polars()
 
         df = self.make_redis_friendly(df, job.request_result.features.union(job.request_result.entities))
         values = df.collect()
