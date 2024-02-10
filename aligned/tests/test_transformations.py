@@ -117,7 +117,9 @@ async def test_aggregations_on_all_no_window_materialised() -> None:
     df = await TestAgg.query().all().to_lazy_polars()  # type: ignore
 
     assert df.sort('dob_ssn').collect().equals(values.sort('dob_ssn').select(df.columns).collect())
-    assert descrete_values.sort('dob_ssn').equals(values.sort('dob_ssn').select(descrete_values.columns).collect())
+    assert descrete_values.sort('dob_ssn').equals(
+        values.sort('dob_ssn').select(descrete_values.columns).collect()
+    )
 
 
 @pytest.mark.asyncio

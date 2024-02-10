@@ -18,6 +18,7 @@ from aligned.schemas.vector_storage import VectorIndex
 if TYPE_CHECKING:
     from aligned.retrival_job import RetrivalJob
 
+
 @dataclass
 class CompiledFeatureView(Codable):
     name: str
