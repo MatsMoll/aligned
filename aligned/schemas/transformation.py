@@ -2170,3 +2170,16 @@ class JsonPath(Transformation):
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).str.json_path_match(self.path).alias(alias)
+
+
+@dataclass
+class Split(Transformation):
+
+    key: str
+    separator: str
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return df[self.key].str.split(self.separator)
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr | pl.Expr:
+        return pl.col(self.key).str.split(self.separator)

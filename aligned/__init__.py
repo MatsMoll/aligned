@@ -10,9 +10,12 @@ from aligned.compiler.feature_factory import (
     String,
     Timestamp,
     CustomAggregation,
+    List,
+    Embedding,
 )
 from aligned.compiler.model import model_contract, FeatureInputVersions
 from aligned.data_source.stream_data_source import HttpStreamSource
+from aligned.data_source.batch_data_source import CustomMethodDataSource
 from aligned.feature_store import FeatureStore
 from aligned.feature_view import (
     feature_view,
@@ -35,6 +38,7 @@ __all__ = [
     'FileSource',
     'AwsS3Config',
     'RedshiftSQLConfig',
+    'CustomMethodDataSource',
     # Stream Data Source
     'HttpStreamSource',
     # Online Source
@@ -52,6 +56,8 @@ __all__ = [
     'Float',
     'EventTimestamp',
     'Timestamp',
+    'List',
+    'Embedding',
     'Json',
     'EmbeddingModel',
     'feature_view',

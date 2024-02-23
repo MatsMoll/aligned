@@ -224,6 +224,22 @@ class LowerThenOrEqualFactory(TransformationFactory):
         return LTETransformation(self.in_feature.name, self.value)
 
 
+@dataclass
+class Split(TransformationFactory):
+
+    pattern: str
+    from_feature: FeatureFactory
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.from_feature]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import Split as SplitTransformation
+
+        return SplitTransformation(self.from_feature.name, self.pattern)
+
+
 # @dataclass
 # class Split(TransformationFactory):
 

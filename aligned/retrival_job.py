@@ -2051,3 +2051,24 @@ class ListenForTriggers(RetrivalJob, ModificationJob):
 
     def remove_derived_features(self) -> RetrivalJob:
         return self.job.remove_derived_features()
+
+
+@dataclass
+class CustomLazyPolarsJob(RetrivalJob):
+
+    request: RetrivalRequest
+    method: Callable[[], Coroutine[None, None, pl.LazyFrame]]
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return [self.request]
+
+    @property
+    def request_result(self) -> RequestResult:
+        return RequestResult.from_request(self.request)
+
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        return await self.method()
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return (await self.to_polars()).to_pandas()

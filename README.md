@@ -199,46 +199,6 @@ if freshness < datetime.now() - timedelta(days=2):
     raise ValueError("To old data to create an ML model")
 ```
 
-
-## Data Enrichers
-
-In many cases will extra data be needed in order to generate some features.
-We therefore need some way of enriching the data.
-This can easily be done with Alinged's `DataEnricher`s.
-
-```python
-my_db = PostgreSQLConfig.localhost()
-redis = RedisConfig.localhost()
-
-user_location = my_db.data_enricher( # Fetch all user locations
-    sql="SELECT * FROM user_location"
-).cache( # Cache them for one day
-    ttl=timedelta(days=1),
-    cache_key="user_location_cache"
-).lock( # Make sure only one processer fetches the data at a time
-    lock_name="user_location_lock",
-    redis_config=redis
-)
-
-
-async def distance_to_users(df: DataFrame) -> Series:
-    user_location_df = await user_location.load()
-    ...
-    return distances
-
-@feature_view(...)
-class SomeFeatures:
-
-    latitude = Float()
-    longitude = Float()
-
-    distance_to_users = Float().transformed_using_features_pandas(
-        [latitude, longitude],
-        distance_to_users
-    )
-```
-
-
 ## Access Data
 
 You can easily create a feature store that contains all your feature definitions.

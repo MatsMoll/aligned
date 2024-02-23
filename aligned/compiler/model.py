@@ -22,7 +22,7 @@ from aligned.compiler.feature_factory import (
 )
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
-from aligned.feature_view.feature_view import FeatureView
+from aligned.feature_view.feature_view import FeatureView, FeatureViewWrapper
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
 from aligned.schemas.feature_view import CompiledFeatureView
@@ -138,6 +138,64 @@ class ModelContractWrapper(Generic[T]):
             meta.application_source = application_source
 
         return ModelContractWrapper(metadata=meta, contract=self.contract)
+
+    def as_source(self) -> BatchDataSource:
+        from aligned.schemas.model import ModelSource
+
+        compiled_model = self.compile()
+        compiled_view = self.as_view()
+
+        if compiled_view is None:
+            raise ValueError(f"Model {compiled_model.name} is not compiled as a view")
+
+        return ModelSource(compiled_model, compiled_view)
+
+    def join(
+        self,
+        view: FeatureViewWrapper,
+        on_left: str | FeatureFactory | list[str] | list[FeatureFactory],
+        on_right: str | FeatureFactory | list[str] | list[FeatureFactory],
+        how: str = 'inner',
+    ) -> BatchDataSource:
+        from aligned.data_source.batch_data_source import join_source
+        from aligned.schemas.model import ModelSource
+
+        compiled_model = self.compile()
+        compiled_view = self.as_view()
+
+        if compiled_view is None:
+            raise ValueError(f"Model {compiled_model.name} is not compiled as a view")
+
+        source = ModelSource(compiled_model, compiled_view)
+
+        return join_source(
+            source,
+            view=view,
+            on_left=on_left,
+            on_right=on_right,
+            left_request=compiled_view.request_all.needed_requests[0],
+            how=how,
+        )
+
+    def join_asof(self, view: FeatureViewWrapper, on_left: list[str], on_right: list[str]) -> BatchDataSource:
+        from aligned.data_source.batch_data_source import join_asof_source
+        from aligned.schemas.model import ModelSource
+
+        compiled_model = self.compile()
+        compiled_view = self.as_view()
+
+        if compiled_view is None:
+            raise ValueError(f"Model {compiled_model.name} is not compiled as a view")
+
+        source = ModelSource(compiled_model, compiled_view)
+
+        return join_asof_source(
+            source,
+            view=view,
+            left_on=on_left,
+            right_on=on_right,
+            left_request=compiled_view.request_all.needed_requests[0],
+        )
 
 
 def resolve_dataset_store(dataset_store: DatasetStore | StorageFileReference) -> DatasetStore:

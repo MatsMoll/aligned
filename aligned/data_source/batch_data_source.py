@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar, Any
+from typing import TYPE_CHECKING, TypeVar, Any, Callable, Coroutine
 from dataclasses import dataclass
 
 from mashumaro.types import SerializableType
@@ -16,6 +16,7 @@ from polars.type_aliases import TimeUnit
 if TYPE_CHECKING:
     from aligned.retrival_job import RetrivalJob
     from datetime import datetime
+    import polars as pl
 
 
 class BatchDataSourceFactory:
@@ -30,6 +31,7 @@ class BatchDataSourceFactory:
         from aligned.sources.redshift import RedshiftSQLDataSource
         from aligned.sources.s3 import AwsS3CsvDataSource, AwsS3ParquetDataSource
         from aligned.schemas.feature_view import FeatureViewReferenceSource
+        from aligned.schemas.model import ModelSource
 
         source_types = [
             PostgreSQLDataSource,
@@ -43,6 +45,8 @@ class BatchDataSourceFactory:
             JoinAsofDataSource,
             FilteredDataSource,
             FeatureViewReferenceSource,
+            CustomMethodDataSource,
+            ModelSource,
         ]
 
         self.supported_data_sources = {source.type_name: source for source in source_types}
@@ -276,6 +280,77 @@ class BatchDataSource(Codable, SerializableType):
 
     def depends_on(self) -> set[FeatureLocation]:
         return set()
+
+
+@dataclass
+class CustomMethodDataSource(BatchDataSource):
+
+    all_data_method: bytes
+    all_between_dates_method: bytes
+    features_for_method: bytes
+
+    type_name: str = 'custom_method'
+
+    def job_group_key(self) -> str:
+        return 'custom_method'
+
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+        from aligned.retrival_job import CustomLazyPolarsJob
+        import dill
+
+        return CustomLazyPolarsJob(
+            request=request, method=lambda: dill.loads(self.all_data_method)(request, limit)
+        )
+
+    def all_between_dates(
+        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrivalJob:
+        from aligned.retrival_job import CustomLazyPolarsJob
+        import dill
+
+        return CustomLazyPolarsJob(
+            request=request,
+            method=lambda: dill.loads(self.all_between_dates_method)(request, start_date, end_date),
+        )
+
+    def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
+        from aligned.retrival_job import CustomLazyPolarsJob
+        import dill
+
+        return CustomLazyPolarsJob(
+            request=request, method=lambda: dill.loads(self.features_for_method)(facts, request)
+        )
+
+    @staticmethod
+    def from_methods(
+        all_data: Callable[[RetrivalRequest, int | None], Coroutine[None, None, pl.LazyFrame]] | None = None,
+        all_between_dates: Callable[
+            [RetrivalRequest, datetime, datetime], Coroutine[None, None, pl.LazyFrame]
+        ]
+        | None = None,
+        features_for: Callable[[RetrivalJob, RetrivalRequest], Coroutine[None, None, pl.LazyFrame]]
+        | None = None,
+    ) -> 'CustomMethodDataSource':
+        import dill
+
+        if not all_data:
+            all_data = CustomMethodDataSource.default_throw  # type: ignore
+
+        if not all_between_dates:
+            all_between_dates = CustomMethodDataSource.default_throw  # type: ignore
+
+        if not features_for:
+            features_for = CustomMethodDataSource.default_throw  # type: ignore
+
+        return CustomMethodDataSource(
+            all_data_method=dill.dumps(all_data),
+            all_between_dates_method=dill.dumps(all_between_dates),
+            features_for_method=dill.dumps(features_for),
+        )
+
+    @staticmethod
+    def default_throw(**kwargs: Any) -> pl.LazyFrame:
+        raise NotImplementedError('No method is defined for this data source.')
 
 
 @dataclass

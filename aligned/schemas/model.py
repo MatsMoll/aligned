@@ -1,17 +1,19 @@
 import logging
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import FeatureLocation
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureReferance
-from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.schemas.event_trigger import EventTrigger
 from aligned.schemas.target import ClassificationTarget, RecommendationTarget, RegressionTarget
+from aligned.schemas.feature_view import CompiledFeatureView, FeatureViewReferenceSource
 from aligned.schemas.derivied_feature import DerivedFeature
-from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.schemas.folder import DatasetStore
+from aligned.data_source.stream_data_source import StreamDataSource
+from aligned.data_source.batch_data_source import BatchDataSource
+from aligned.retrival_job import RetrivalJob
 
 logger = logging.getLogger(__name__)
 
@@ -164,3 +166,45 @@ class Model(Codable):
                 )
             ],
         )
+
+
+@dataclass
+class ModelSource(BatchDataSource):
+
+    model: Model
+    pred_view: CompiledFeatureView
+
+    type_name: str = 'model_source'
+
+    def source(self) -> FeatureViewReferenceSource:
+        return FeatureViewReferenceSource(self.pred_view, FeatureLocation.model(self.pred_view.name))
+
+    def all_data(self, request: RetrivalRequest, limit: int | None = None) -> RetrivalJob:
+        job = self.source().all_data(request, limit)
+
+        model_version = self.model.predictions_view.model_version_column
+
+        if model_version:
+            unique_on = [feat.name for feat in self.pred_view.entities]
+            return job.unique_on(unique_on)
+
+        return job
+
+    def all_between_dates(
+        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrivalJob:
+        job = self.source().all_between_dates(request, start_date, end_date)
+
+        model_version = self.model.predictions_view.model_version_column
+
+        if model_version:
+            unique_on = [feat.name for feat in self.pred_view.entities]
+            return job.unique_on(unique_on)
+
+        return job
+
+    def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
+        return self.source().features_for(facts, request)
+
+    def depends_on(self) -> set[FeatureLocation]:
+        return {FeatureLocation.model(self.pred_view.name)}
