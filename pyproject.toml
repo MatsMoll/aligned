@@ -59,7 +59,7 @@ prometheus_client = "^0.16.0"
 asgi-correlation-id = { version = "^3.0.0", optional = true }
 pandera = { version = "^0.17.0", optional = true}
 httpx = "^0.23.0"
-polars = { version = "^0.20.0" }
+polars = { version = "^0.20.0", extras = ["pyarrow"] }
 pillow = { version = "^9.4.0", optional = true }
 prometheus-fastapi-instrumentator = { version="^5.9.1", optional = true }
 # gensim = { version = "4.3.0", optional = true }

@@ -15,19 +15,19 @@ Check out the [Aligned Docs](https://www.aligned.codes), but keep in mind that t
 Want to look at examples of how to use `aligned`?
 View the [`MatsMoll/aligned-example` repo](https://github.com/MatsMoll/aligned-example).
 
-This is done by providing an new innovative way of describing feature transformations, and data flow in ML systems. While also collecting dependency metadata that would otherwise be too inconvenient and error prone to manually type out.
+This is done by providing an new innovative way to describe how data flow in ML systems, and what our ML products produce. While also collecting dependency metadata that would otherwise be too inconvenient and error prone to manually type out.
 
 Therefore, you get the following:
 - [Data Freshness](#data-freshness)
+- [Data Quality Assurance](#data-quality)
+- [Easy Data Loading](#access-data)
+- [Load Form Multiple Sources](#fast-development)
 - [Feature Store](https://matsmoll.github.io/posts/understanding-the-chaotic-landscape-of-mlops#feature-store)
 - [Feature Server](#feature-server)
 - [Stream Processing](#stream-worker)
 - Model Performance Monitoring - Documentation coming soon
 - Data Catalog - Documentation coming soon
 - Data Lineage - Documentation coming soon
-- [Data Quality Assurance](#data-quality)
-- [Easy Data Loading](#access-data)
-- [Load Form Multiple Sources](#fast-development)
 
 
 All from the simple API of defining
