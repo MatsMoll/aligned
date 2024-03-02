@@ -17,10 +17,7 @@ from aligned.compiler.model import model_contract, FeatureInputVersions
 from aligned.data_source.stream_data_source import HttpStreamSource
 from aligned.data_source.batch_data_source import CustomMethodDataSource
 from aligned.feature_store import FeatureStore
-from aligned.feature_view import (
-    feature_view,
-    combined_feature_view,
-)
+from aligned.feature_view import feature_view, combined_feature_view, check_schema
 from aligned.schemas.text_vectoriser import EmbeddingModel
 from aligned.sources.kafka import KafkaConfig
 from aligned.sources.local import FileSource
@@ -68,4 +65,5 @@ __all__ = [
     # Schemas
     'FeatureLocation',
     'FeatureInputVersions',
+    'check_schema',
 ]

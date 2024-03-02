@@ -11,6 +11,8 @@ from aligned.schemas.constraints import Constraint
 
 NAME_POLARS_MAPPING = {
     'string': pl.Utf8,
+    'int8': pl.Int8,
+    'int16': pl.Int16,
     'int32': pl.Int32,
     'int64': pl.Int64,
     'float': pl.Float64,
@@ -25,68 +27,6 @@ NAME_POLARS_MAPPING = {
     'embedding': pl.List,
     'json': pl.Utf8,
 }
-
-
-# @dataclass
-# class SupportedTypes(Codable):
-
-#     string: String | None = field(default=None)
-
-#     def dtype(self) -> DataTypeInterface:
-#         values = [self.string]
-#         for value in values:
-#             if value:
-#                 return value
-#         raise ValueError("Found no data type, the config could be corrupt.")
-
-
-# @dataclass
-# class DataTypeInterface(Codable):
-
-#     @property
-#     def python_type(self) -> type:
-#         raise NotImplementedError()
-
-#     @property
-#     def pandas_type(self) -> str | type:
-#         raise NotImplementedError()
-
-#     @property
-#     def polars_type(self) -> pl.DataType:
-#         raise NotImplementedError()
-
-# @dataclass
-# class String(DataTypeInterface):
-
-#     @property
-#     def python_type(self) -> type:
-#         return str
-
-#     @property
-#     def pandas_type(self) -> str | type:
-#         return str
-
-#     @property
-#     def polars_type(self) -> pl.DataType:
-#         return pl.Utf8()
-
-
-# @dataclass
-# class List(DataTypeInterface):
-
-#     inner_type: DataTypeInterface
-
-#     @property
-#     def python_type(self) -> type:
-#         return list
-
-#     @property
-#     def pandas_type(self) -> str | type:
-#         return str
-
-#     @property
-#     def polars_type(self) -> pl.DataType:
-#         return pl.List(self.inner_type.polars_type)
 
 
 @dataclass

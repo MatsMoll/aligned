@@ -702,3 +702,83 @@ class MyView:
 
     {feature_code}
     """
+
+
+def check_schema() -> Callable:
+    """
+    A wrapper that checks the schema of data frames given a feature view or model contract.
+
+
+    ```python
+    @feature_view(...)
+    class MyView:
+        id = Int32().as_entity()
+        name = String()
+
+    @check_schema()
+    def my_function(data: Annotated[pd.DataFrame, MyView]):
+        ...
+
+
+    # Will raise an error since the name column is missing
+    my_function(pd.DataFrame({
+        "id": [1, 2, 3],
+    })
+    ```
+    """
+
+    def decorator(func: Callable) -> Callable:
+        def func_wrapper(*args, **kwargs) -> Any:
+            from typing import _AnnotatedAlias  # type: ignore
+
+            params_to_check = {
+                name: value for name, value in func.__annotations__.items() if type(value) == _AnnotatedAlias
+            }
+
+            function_args = func.__code__.co_varnames
+
+            # Naming args variables
+            all_args = kwargs.copy()
+            for index in range(len(args)):
+                all_args[function_args[index]] = args[index]
+
+            def wrapper_metadata(value: Any) -> FeatureViewWrapper | None:
+                for val in value.__metadata__:
+                    if isinstance(val, FeatureViewWrapper):
+                        return val
+                return None
+
+            for key, value in params_to_check.items():
+                missing_columns = set()
+
+                value = wrapper_metadata(value)
+                if value is None:
+                    continue
+
+                if key not in all_args:
+                    raise ValueError(f"Unable to find {key}")
+
+                view = value.compile()
+                df = all_args[key]
+
+                if isinstance(df, (pl.LazyFrame, pl.DataFrame, pd.DataFrame)):
+                    columns = df.columns
+                elif isinstance(df, dict):
+                    columns = list(df.keys())
+                else:
+                    raise ValueError(f'Invalid data type: {type(df)}')
+
+                for feature in view.request_all.needed_requests[0].all_features:
+                    if feature.name not in columns:
+                        missing_columns.add(feature.name)
+
+                if missing_columns:
+                    raise ValueError(
+                        f"Missing columns: {list(missing_columns)} in the dataframe '{key}'\n{df}."
+                    )
+
+            return func(*args, **kwargs)
+
+        return func_wrapper
+
+    return decorator

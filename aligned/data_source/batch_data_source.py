@@ -321,6 +321,19 @@ class CustomMethodDataSource(BatchDataSource):
             request=request, method=lambda: dill.loads(self.features_for_method)(facts, request)
         )
 
+    @classmethod
+    def multi_source_features_for(
+        cls: type[T], facts: RetrivalJob, requests: list[tuple[T, RetrivalRequest]]
+    ) -> RetrivalJob:
+
+        if len(requests) != 1:
+            raise NotImplementedError(
+                f'Type: {cls} have not implemented how to load fact data with multiple sources.'
+            )
+
+        source, request = requests[0]
+        return source.features_for(facts, request)  # type: ignore
+
     @staticmethod
     def from_methods(
         all_data: Callable[[RetrivalRequest, int | None], Coroutine[None, None, pl.LazyFrame]] | None = None,
