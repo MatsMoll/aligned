@@ -98,7 +98,10 @@ async def test_train_test_validate_set_new(titanic_feature_store: FeatureStore) 
     test = await dataset.test.to_pandas()
     validate = await dataset.validate.to_pandas()
 
-    datasets = await JsonDatasetStore(dataset_store).list_datasets()
+    store = JsonDatasetStore(dataset_store)
+    datasets = await store.list_datasets()
+
+    assert store.to_json() != None
 
     assert len(datasets.train_test_validation) == 1
     train_dataset = datasets.train_test_validation[0]

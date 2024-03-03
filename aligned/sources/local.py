@@ -20,15 +20,15 @@ from aligned.retrival_job import RetrivalJob
 from aligned.s3.storage import FileStorage, HttpStorage
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import EventTimestamp, FeatureType
-from aligned.schemas.repo_definition import RepoDefinition
 from aligned.storage import Storage
-from aligned.feature_store import FeatureStore
 from aligned.feature_source import WritableFeatureSource
 from aligned.schemas.date_formatter import DateFormatter
 
 if TYPE_CHECKING:
     from aligned.compiler.feature_factory import FeatureFactory
     from datetime import datetime
+    from aligned.schemas.repo_definition import RepoDefinition
+    from aligned.feature_store import FeatureStore
 
 
 logger = logging.getLogger(__name__)
@@ -39,6 +39,8 @@ class AsRepoDefinition:
         raise NotImplementedError()
 
     async def feature_store(self) -> FeatureStore:
+        from aligned.feature_store import FeatureStore
+
         return FeatureStore.from_definition(await self.as_repo_definition())
 
 
@@ -56,6 +58,8 @@ class StorageFileReference(AsRepoDefinition):
         raise NotImplementedError(type(self))
 
     async def as_repo_definition(self) -> RepoDefinition:
+        from aligned.schemas.repo_definition import RepoDefinition
+
         file = await self.read()
         return RepoDefinition.from_json(file)
 
@@ -270,7 +274,7 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
 
-        if not do_file_exist(self.path):
+        if (not self.path.startswith('http')) and (not do_file_exist(self.path)):
             raise UnableToFindFileException(self.path)
 
         try:
@@ -307,7 +311,11 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
         )
 
     async def schema(self) -> dict[str, FeatureFactory]:
-        parquet_schema = pl.read_parquet_schema(self.path)
+        if self.path.startswith('http'):
+            parquet_schema = pl.scan_parquet(self.path).schema
+        else:
+            parquet_schema = pl.read_parquet_schema(self.path)
+
         return {
             name: FeatureType.from_polars(pl_type).feature_factory for name, pl_type in parquet_schema.items()
         }
@@ -407,7 +415,7 @@ class DeltaFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference,
 
 
 @dataclass
-class StorageFileSource(StorageFileReference):
+class StorageFileSource(StorageFileReference, Codable):
 
     path: str
 

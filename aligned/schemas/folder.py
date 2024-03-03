@@ -1,22 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from dataclasses import dataclass, field
 
 from mashumaro.types import SerializableType
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.request.retrival_request import RequestResult
 
+from aligned.sources.local import StorageFileSource
 from aligned.schemas.codable import Codable
-
-if TYPE_CHECKING:
-    from aligned.sources.local import StorageFileReference
 
 
 class DatasetStorageFactory:
 
-    supported_stores: dict[str, type[DatasetStore]]
+    supported_stores: dict[str, type[DatasetStore]] = dict()
 
     _shared: DatasetStorageFactory | None = None
 
@@ -130,7 +126,7 @@ class DatasetStore(Codable, SerializableType):
 @dataclass
 class JsonDatasetStore(DatasetStore):
 
-    source: StorageFileReference
+    source: StorageFileSource
     name = 'json'
 
     async def list_datasets(self) -> GroupedDatasetList:

@@ -26,7 +26,6 @@ from aligned.feature_view.feature_view import FeatureView, FeatureViewWrapper
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
 from aligned.schemas.feature_view import CompiledFeatureView
-from aligned.schemas.folder import DatasetStore, JsonDatasetStore
 from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.model import Model as ModelSchema
 from aligned.schemas.model import FeatureInputVersions as FeatureVersionSchema
@@ -36,6 +35,7 @@ from aligned.schemas.target import RegressionTarget as RegressionTargetSchema
 
 if TYPE_CHECKING:
     from aligned.sources.local import StorageFileReference
+    from aligned.schemas.folder import DatasetStore
 
 logger = logging.getLogger(__name__)
 
@@ -199,6 +199,7 @@ class ModelContractWrapper(Generic[T]):
 
 
 def resolve_dataset_store(dataset_store: DatasetStore | StorageFileReference) -> DatasetStore:
+    from aligned.schemas.folder import DatasetStore, JsonDatasetStore
 
     if isinstance(dataset_store, DatasetStore):
         return dataset_store
