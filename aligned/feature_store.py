@@ -11,7 +11,7 @@ from prometheus_client import Histogram
 
 from aligned.compiler.model import ModelContractWrapper
 from aligned.data_file import DataFileReference, upsert_on_column
-from aligned.data_source.batch_data_source import BatchDataSource
+from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
 from aligned.enricher import Enricher
 from aligned.exceptions import UnableToFindFileException
 from aligned.feature_source import (
@@ -676,9 +676,19 @@ class FeatureStore:
             import polars as pl
 
             columns = write_request.all_returned_columns
+
+            if isinstance(source, ColumnFeatureMappable):
+                new_cols = source.feature_identifier_for(columns)
+
+                mappings = dict(zip(columns, new_cols))
+                values = values.rename(mappings)
+                columns = new_cols
+                existing_df = (await source.to_lazy_polars()).rename(mappings)
+            else:
+                existing_df = await source.to_lazy_polars()
+
             new_df = (await values.to_lazy_polars()).select(columns)
             try:
-                existing_df = await source.to_lazy_polars()
                 write_df = pl.concat([new_df, existing_df.select(columns)], how='vertical_relaxed')
             except UnableToFindFileException:
                 write_df = new_df

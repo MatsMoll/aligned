@@ -140,7 +140,7 @@ class Model(Codable):
     predictions_view: PredictionsView
     description: str | None = field(default=None)
     contacts: list[str] | None = field(default=None)
-    tags: dict[str, str] | None = field(default=None)
+    tags: list[str] | None = field(default=None)
     dataset_store: DatasetStore | None = field(default=None)
     exposed_at_url: str | None = field(default=None)
 

@@ -22,12 +22,13 @@ if TYPE_CHECKING:
 @dataclass
 class CompiledFeatureView(Codable):
     name: str
-    tags: dict[str, str]
     source: BatchDataSource
 
     entities: set[Feature]
     features: set[Feature]
     derived_features: set[DerivedFeature]
+
+    tags: list[str] | None = field(default=None)
     description: str | None = field(default=None)
     aggregated_features: set[AggregatedFeature] = field(default_factory=set)
 
@@ -46,7 +47,6 @@ class CompiledFeatureView(Codable):
 
     def __pre_serialize__(self) -> CompiledFeatureView:
         assert isinstance(self.name, str)
-        assert isinstance(self.tags, dict)
         assert isinstance(self.source, BatchDataSource)
 
         for entity in self.entities:
@@ -58,6 +58,8 @@ class CompiledFeatureView(Codable):
         for aggregated_feature in self.aggregated_features:
             assert isinstance(aggregated_feature, AggregatedFeature)
 
+        if self.tags is not None:
+            assert isinstance(self.tags, list)
         if self.description is not None:
             assert isinstance(self.description, str)
         if self.event_timestamp is not None:

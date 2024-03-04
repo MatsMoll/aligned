@@ -58,7 +58,7 @@ class FeatureViewMetadata:
     application_source: BatchDataSource | None = field(default=None)
     materialized_source: BatchDataSource | None = field(default=None)
     contacts: list[str] | None = field(default=None)
-    tags: dict[str, str] = field(default_factory=dict)
+    tags: list[str] | None = field(default=None)
     acceptable_freshness: timedelta | None = field(default=None)
     unacceptable_freshness: timedelta | None = field(default=None)
 
@@ -98,7 +98,7 @@ def feature_view(
     application_source: BatchDataSource | None = None,
     materialized_source: BatchDataSource | None = None,
     contacts: list[str] | None = None,
-    tags: dict[str, str] | None = None,
+    tags: list[str] | None = None,
     acceptable_freshness: timedelta | None = None,
     unacceptable_freshness: timedelta | None = None,
 ) -> Callable[[Type[T]], FeatureViewWrapper[T]]:
@@ -112,7 +112,7 @@ def feature_view(
             application_source=application_source,
             materialized_source=materialized_source,
             contacts=contacts,
-            tags=tags or {},
+            tags=tags,
             acceptable_freshness=acceptable_freshness,
             unacceptable_freshness=unacceptable_freshness,
         )
@@ -418,7 +418,7 @@ class FeatureView(ABC):
         application_source: BatchDataSource | None = None,
         staging_source: BatchDataSource | None = None,
         contacts: list[str] | None = None,
-        tags: dict[str, str] | None = None,
+        tags: list[str] | None = None,
     ) -> FeatureViewMetadata:
         from aligned import HttpStreamSource
 
@@ -430,7 +430,7 @@ class FeatureView(ABC):
             application_source=application_source,
             materialized_source=staging_source,
             contacts=contacts,
-            tags=tags or {},
+            tags=tags,
         )
 
     @classmethod

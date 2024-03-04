@@ -49,7 +49,7 @@ class ModelMetadata:
     # Will log the feature inputs to a model. Therefore, enabling log and wait etc.
     # feature_logger: WritableBatchSource | None = field(default=None)
     contacts: list[str] | None = field(default=None)
-    tags: dict[str, str] | None = field(default=None)
+    tags: list[str] | None = field(default=None)
     description: str | None = field(default=None)
     prediction_source: BatchDataSource | None = field(default=None)
     prediction_stream: StreamDataSource | None = field(default=None)
@@ -101,7 +101,6 @@ class ModelContractWrapper(Generic[T]):
 
         return CompiledFeatureView(
             name=self.metadata.name,
-            tags={},
             source=view.source,
             entities=view.entities,
             features=view.features,
@@ -227,7 +226,7 @@ def model_contract(
     name: str,
     features: list[FeatureReferencable] | FeatureInputVersions,
     contacts: list[str] | None = None,
-    tags: dict[str, str] | None = None,
+    tags: list[str] | None = None,
     description: str | None = None,
     prediction_source: BatchDataSource | None = None,
     prediction_stream: StreamDataSource | None = None,

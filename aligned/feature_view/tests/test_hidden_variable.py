@@ -18,7 +18,9 @@ source = PostgreSQLConfig.localhost('test')
 
 class TestView(FeatureView):
 
-    metadata = FeatureViewMetadata(name='test', description='test', tags={}, source=source.table('test'))
+    metadata = FeatureViewMetadata(
+        name='test', description='test', tags=['Test'], source=source.table('test')
+    )
 
     test_id = Entity(String())
 
