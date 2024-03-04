@@ -1,4 +1,5 @@
 from __future__ import annotations
+from copy import copy
 
 from typing import TYPE_CHECKING, TypeVar, Any, Callable, Coroutine
 from dataclasses import dataclass
@@ -801,8 +802,9 @@ class ColumnFeatureMappable:
     mapping_keys: dict[str, str]
 
     def with_renames(self: T, mapping_keys: dict[str, str]) -> T:
-        self.mapping_keys = mapping_keys  # type: ignore
-        return self
+        new = copy(self)
+        new.mapping_keys = mapping_keys  # type: ignore
+        return new
 
     def columns_for(self, features: list[Feature]) -> list[str]:
         return [self.mapping_keys.get(feature.name, feature.name) for feature in features]
