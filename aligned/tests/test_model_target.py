@@ -166,7 +166,8 @@ async def test_model_insert_predictions_csv() -> None:
         a = Int32()
 
     store = FeatureStore.experimental()
-    initial_frame = pl.DataFrame({'id': [1, 2, 3], 'a': [1, 2, 3]})
+
+    initial_frame = pl.DataFrame({'some_id': [1, 2, 3], 'a': [1, 2, 3]})
     initial_frame.write_csv(path)
 
     expected_frame = pl.DataFrame({'id': [1, 2, 3, 1, 2, 3], 'a': [10, 14, 20, 1, 2, 3]})
@@ -175,7 +176,7 @@ async def test_model_insert_predictions_csv() -> None:
 
     await store.insert_into(FeatureLocation.model('test_model'), {'id': [1, 2, 3], 'a': [10, 14, 20]})
 
-    preds = await store.model('test_model').all_predictions().to_polars()
+    preds = await store.model('test_model').all_predictions().log_each_job().to_polars()
 
     stored_data = pl.read_csv(path).select(id=pl.col('some_id'), a=pl.col('a'))
     assert stored_data.equals(expected_frame)

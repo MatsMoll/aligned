@@ -149,7 +149,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
 
         request = requests[0]
 
-        data = await job.to_lazy_polars()
+        data = (await job.to_lazy_polars()).select(request.all_returned_columns)
         potential_timestamps = request.all_features
 
         if request.event_timestamp:
@@ -160,8 +160,8 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
                 data = data.with_columns(self.formatter.encode_polars(feature.name))
 
         if self.mapping_keys:
-            mapping = {self.mapping_keys.get(name, name): name for name in data.columns}
-            data = data.rename(mapping)
+            columns = self.feature_identifier_for(data.columns)
+            data = data.rename(dict(zip(data.columns, columns)))
 
         new_df = data.select(request.all_returned_columns)
         entities = list(request.entity_names)
@@ -179,23 +179,22 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
 
         request = requests[0]
 
-        data = await job.to_lazy_polars()
+        data = (await job.to_lazy_polars()).select(request.all_returned_columns)
         for feature in request.features:
             if feature.dtype.name == 'datetime':
                 data = data.with_columns(self.formatter.encode_polars(feature.name))
 
         if self.mapping_keys:
-            mapping = {self.mapping_keys.get(name, name): name for name in data.columns}
-            data = data.rename(mapping)
+            columns = self.feature_identifier_for(data.columns)
+            data = data.rename(dict(zip(data.columns, columns)))
 
         try:
             existing_df = await self.to_lazy_polars()
-
             write_df = pl.concat([data, existing_df.select(data.columns)], how='vertical_relaxed')
         except UnableToFindFileException:
             write_df = data
 
-        await self.write_polars(write_df.select(request.all_returned_columns))
+        await self.write_polars(write_df)
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
         create_parent_dir(self.path)
