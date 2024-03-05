@@ -1770,6 +1770,8 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                         )
                 elif feature.dtype == FeatureType.json():
                     pass
+                elif feature.dtype == FeatureType.datetime():
+                    pass
                 else:
                     if feature.dtype.is_numeric:
                         df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce').astype(
@@ -1814,6 +1816,8 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                     if dtype == pl.Utf8:
                         df = df.with_columns(pl.col(feature.name).str.json_extract(pl.List(pl.Utf8)))
                 elif feature.dtype == FeatureType.json():
+                    pass
+                elif feature.dtype == FeatureType.datetime():
                     pass
                 else:
                     df = df.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type, strict=False))

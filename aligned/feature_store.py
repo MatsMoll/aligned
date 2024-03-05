@@ -677,18 +677,18 @@ class FeatureStore:
 
             columns = write_request.all_returned_columns
 
-            if isinstance(source, ColumnFeatureMappable):
-                new_cols = source.feature_identifier_for(columns)
-
-                mappings = dict(zip(columns, new_cols))
-                values = values.rename(mappings)
-                columns = new_cols
-                existing_df = (await source.to_lazy_polars()).rename(mappings)
-            else:
-                existing_df = await source.to_lazy_polars()
-
             new_df = (await values.to_lazy_polars()).select(columns)
             try:
+                if isinstance(source, ColumnFeatureMappable):
+                    new_cols = source.feature_identifier_for(columns)
+
+                    mappings = dict(zip(columns, new_cols))
+                    values = values.rename(mappings)
+                    columns = new_cols
+                    existing_df = (await source.to_lazy_polars()).rename(mappings)
+                else:
+                    existing_df = await source.to_lazy_polars()
+
                 write_df = pl.concat([new_df, existing_df.select(columns)], how='vertical_relaxed')
             except UnableToFindFileException:
                 write_df = new_df

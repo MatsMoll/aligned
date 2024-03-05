@@ -61,20 +61,23 @@ class DateFormatter(Codable, SerializableType):
         return StringDateFormatter('yyyy-MM-ddTHH:mm:ssZ')
 
     @staticmethod
-    def unix_timestamp(time_unit: TimeUnit = 'us') -> Timestamp:
-        return Timestamp(time_unit)
+    def unix_timestamp(time_unit: TimeUnit = 'us', time_zone: str | None = 'UTC') -> Timestamp:
+        return Timestamp(time_unit, time_zone)
 
 
 @dataclass
 class Timestamp(DateFormatter):
 
     time_unit: TimeUnit = field(default='us')
+    time_zone: str | None = field(default='UTC')
 
     @classmethod
     def name(cls) -> str:
         return 'timestamp'
 
     def decode_polars(self, column: str) -> pl.Expr:
+        if self.time_zone:
+            return pl.from_epoch(column, self.time_unit).dt.replace_time_zone(self.time_zone)
         return pl.from_epoch(column, self.time_unit)
 
     def encode_polars(self, column: str) -> pl.Expr:

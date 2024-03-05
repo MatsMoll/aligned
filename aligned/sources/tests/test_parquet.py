@@ -1,7 +1,10 @@
 import pytest
+import polars as pl
+from pathlib import Path
 
 from aligned import FeatureStore, FileSource
 from aligned.feature_view.feature_view import FeatureView
+from aligned.schemas.date_formatter import DateFormatter
 from conftest import DataTest
 
 
@@ -100,3 +103,47 @@ async def test_parquet_without_event_timestamp(
 
     ordered_columns = data.select(expected.columns)
     assert ordered_columns.equals(expected), f'Expected: {expected}\nGot: {ordered_columns}'
+
+
+@pytest.mark.asyncio
+async def test_read_csv(point_in_time_data_test: DataTest) -> None:
+
+    store = FeatureStore.experimental()
+
+    for source in point_in_time_data_test.sources:
+        view = source.view
+        view_name = view.metadata.name
+        if '_agg' in view_name:
+            continue
+
+        file_source = FileSource.csv_at(
+            f'test_data/{view_name}.csv', date_formatter=DateFormatter.unix_timestamp()
+        )
+
+        view.metadata = FeatureView.metadata_with(  # type: ignore
+            name=view.metadata.name,
+            description=view.metadata.description,
+            batch_source=file_source,
+        )
+        compiled = view.compile_instance()
+        assert compiled.source.path == file_source.path  # type: ignore
+
+        store.add_compiled_view(compiled)
+
+        Path(file_source.path).unlink(missing_ok=True)
+
+        await store.feature_view(compiled.name).insert(
+            store.feature_view(compiled.name).process_input(source.data)
+        )
+
+        csv = pl.read_csv(file_source.path)
+        schemas = dict(csv.schema)
+
+        for feature in view.compile().request_all.request_result.features:
+            if feature.dtype.name == 'datetime':
+                assert schemas[feature.name].is_numeric()
+
+        # Polars
+        stored = await store.feature_view(compiled.name).all().to_polars()
+        df = stored.select(source.data.columns)
+        assert df.equals(source.data)

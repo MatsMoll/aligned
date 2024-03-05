@@ -12,7 +12,7 @@ from httpx import HTTPStatusError
 
 from aligned.data_file import DataFileReference, upsert_on_column
 from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
-from aligned.enricher import CsvFileEnricher, Enricher, LoadedStatEnricher, StatisticEricher, TimespanSelector
+from aligned.enricher import CsvFileEnricher, Enricher, LoadedStatEnricher, TimespanSelector
 from aligned.exceptions import UnableToFindFileException
 from aligned.local.job import FileDateJob, FileFactualJob, FileFullJob
 from aligned.request.retrival_request import RetrivalRequest
@@ -97,7 +97,7 @@ class CsvConfig(Codable):
 
 
 @dataclass
-class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, DataFileReference):
+class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource):
     """
     A source pointing to a CSV file
     """
@@ -143,6 +143,60 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
         except OSError:
             raise UnableToFindFileException(self.path)
 
+    async def upsert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+        if len(requests) != 1:
+            raise ValueError('Csv files only support one write request as of now')
+
+        request = requests[0]
+
+        data = await job.to_lazy_polars()
+        potential_timestamps = request.all_features
+
+        if request.event_timestamp:
+            potential_timestamps.add(request.event_timestamp)
+
+        for feature in potential_timestamps:
+            if feature.dtype.name == 'datetime':
+                data = data.with_columns(self.formatter.encode_polars(feature.name))
+
+        if self.mapping_keys:
+            mapping = {self.mapping_keys.get(name, name): name for name in data.columns}
+            data = data.rename(mapping)
+
+        new_df = data.select(request.all_returned_columns)
+        entities = list(request.entity_names)
+        try:
+            existing_df = await self.to_lazy_polars()
+            write_df = upsert_on_column(entities, new_df, existing_df)
+        except UnableToFindFileException:
+            write_df = new_df
+
+        await self.write_polars(write_df)
+
+    async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+        if len(requests) != 1:
+            raise ValueError('Csv files only support one write request as of now')
+
+        request = requests[0]
+
+        data = await job.to_lazy_polars()
+        for feature in request.features:
+            if feature.dtype.name == 'datetime':
+                data = data.with_columns(self.formatter.encode_polars(feature.name))
+
+        if self.mapping_keys:
+            mapping = {self.mapping_keys.get(name, name): name for name in data.columns}
+            data = data.rename(mapping)
+
+        try:
+            existing_df = await self.to_lazy_polars()
+
+            write_df = pl.concat([data, existing_df.select(data.columns)], how='vertical_relaxed')
+        except UnableToFindFileException:
+            write_df = data
+
+        await self.write_polars(write_df.select(request.all_returned_columns))
+
     async def write_pandas(self, df: pd.DataFrame) -> None:
         create_parent_dir(self.path)
         df.to_csv(
@@ -180,12 +234,18 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
         return CsvFileEnricher(file=self.path)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
-        return FileFullJob(self, request, limit)
+        return FileFullJob(self, request, limit, date_formatter=self.formatter)
 
     def all_between_dates(
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime
     ) -> RetrivalJob:
-        return FileDateJob(source=self, request=request, start_date=start_date, end_date=end_date)
+        return FileDateJob(
+            source=self,
+            request=request,
+            start_date=start_date,
+            end_date=end_date,
+            date_formatter=self.formatter,
+        )
 
     @classmethod
     def multi_source_features_for(
@@ -204,6 +264,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, StatisticEricher, Da
             source=source,
             requests=[request for _, request in requests],
             facts=facts,
+            date_formatter=source.formatter,
         )
 
     async def schema(self) -> dict[str, FeatureFactory]:
