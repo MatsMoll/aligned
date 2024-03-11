@@ -2,7 +2,7 @@ import pytest
 import polars as pl
 from pathlib import Path
 
-from aligned import FeatureStore, FileSource
+from aligned import FeatureStore, FileSource, feature_view, Int32
 from aligned.feature_view.feature_view import FeatureView
 from aligned.schemas.date_formatter import DateFormatter
 from conftest import DataTest
@@ -147,3 +147,32 @@ async def test_read_csv(point_in_time_data_test: DataTest) -> None:
         stored = await store.feature_view(compiled.name).all().to_polars()
         df = stored.select(source.data.columns)
         assert df.equals(source.data)
+
+
+@pytest.mark.asyncio
+async def test_read_optional_csv() -> None:
+
+    source = FileSource.csv_at('test_data/optional_test.csv')
+    df = pl.DataFrame(
+        {
+            'a': [1, 2, 3],
+            'c': [1, 2, 3],
+        }
+    )
+    await source.write_polars(df.lazy())
+
+    @feature_view(name='test', source=source)
+    class Test:
+        a = Int32().as_entity()
+        b = Int32().is_optional()
+        c = Int32()
+
+        filled = b.fill_na(0)
+
+    expected_df = df.with_columns(pl.lit(None).alias('b'), pl.lit(0).alias('filled'))
+    loaded = await Test.query().all().to_polars()
+
+    assert loaded.equals(expected_df.select(loaded.columns))
+
+    facts = await Test.query().features_for({'a': [2]}).to_polars()
+    assert expected_df.filter(pl.col('a') == 2).equals(facts.select(expected_df.columns))

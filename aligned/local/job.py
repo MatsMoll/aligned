@@ -10,6 +10,7 @@ from aligned.retrival_job import RequestResult, RetrivalJob
 from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.feature import Feature, FeatureType
 from aligned.sources.local import DataFileReference
+from aligned.schemas.constraints import Optional
 
 
 class LiteralRetrivalJob(RetrivalJob):
@@ -166,26 +167,6 @@ class FileFullJob(RetrivalJob):
     def describe(self) -> str:
         return f'Reading everything form file {self.source}.'
 
-    def file_transformations(self, df: pd.DataFrame) -> pd.DataFrame:
-        from aligned.data_source.batch_data_source import ColumnFeatureMappable
-
-        entity_names = self.request.entity_names
-        all_names = list(self.request.all_required_feature_names.union(entity_names))
-
-        request_features = all_names
-        if isinstance(self.source, ColumnFeatureMappable):
-            request_features = self.source.feature_identifier_for(all_names)
-
-        columns = dict(zip(request_features, all_names))
-        df = df.rename(
-            columns=columns,
-        )
-
-        if self.limit and df.shape[0] > self.limit:
-            return df.iloc[: self.limit]
-        else:
-            return df
-
     async def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
 
@@ -198,13 +179,31 @@ class FileFullJob(RetrivalJob):
         all_names = list(self.request.all_required_feature_names.union(entity_names))
 
         request_features = all_names
+
+        feature_column_map = {}
         if isinstance(self.source, ColumnFeatureMappable):
             request_features = self.source.feature_identifier_for(all_names)
+            feature_column_map = dict(zip(all_names, request_features))
+
         renames = {
             org_name: wanted_name
             for org_name, wanted_name in zip(request_features, all_names)
             if org_name != wanted_name
         }
+
+        optional_constraint = Optional()
+        optional_features = [
+            feature
+            for feature in self.request.features
+            if (
+                feature.constraints
+                and optional_constraint in feature.constraints
+                and feature_column_map.get(feature.name, feature.name) not in df.columns
+            )
+        ]
+        if optional_features:
+            df = df.with_columns([pl.lit(None).alias(feature.name) for feature in optional_features])
+
         df = df.rename(mapping=renames)
         df = decode_timestamps(df, self.request, self.date_formatter)
 
@@ -279,8 +278,23 @@ class FileDateJob(RetrivalJob):
             raise ValueError(f'Source {self.source} have no event timestamp to filter on')
 
         request_features = all_names
+        feature_column_map = {}
         if isinstance(self.source, ColumnFeatureMappable):
             request_features = self.source.feature_identifier_for(all_names)
+            feature_column_map = dict(zip(all_names, request_features))
+
+        optional_constraint = Optional()
+        optional_features = [
+            feature
+            for feature in self.request.features
+            if (
+                feature.constraints
+                and optional_constraint in feature.constraints
+                and feature_column_map.get(feature.name, feature.name) not in df.columns
+            )
+        ]
+        if optional_features:
+            df = df.with_columns([pl.lit(None).alias(feature.name) for feature in optional_features])
 
         df = df.rename(mapping=dict(zip(request_features, all_names)))
         event_timestamp_column = self.request.event_timestamp.name
@@ -289,8 +303,7 @@ class FileDateJob(RetrivalJob):
         return df.filter(pl.col(event_timestamp_column).is_between(self.start_date, self.end_date))
 
     async def to_pandas(self) -> pd.DataFrame:
-        file = await self.source.read_pandas()
-        return self.file_transformations(file)
+        return (await self.to_lazy_polars()).collect().to_pandas()
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         file = await self.source.to_lazy_polars()
@@ -391,6 +404,23 @@ class FileFactualJob(RetrivalJob):
 
             entity_names = request.entity_names
             all_names = request.all_required_feature_names.union(entity_names)
+
+            request_features = list(all_names)
+            feature_column_map = {}
+            if isinstance(self.source, ColumnFeatureMappable):
+                request_features = self.source.feature_identifier_for(list(all_names))
+                feature_column_map = dict(zip(all_names, request_features))
+
+            optional_constraint = Optional()
+            optional_features = [
+                feature
+                for feature in request.features
+                if feature.constraints is not None
+                and optional_constraint in feature.constraints
+                and feature_column_map.get(feature.name, feature.name) not in df.columns
+            ]
+            if optional_features:
+                df = df.with_columns([pl.lit(None).alias(feature.name) for feature in optional_features])
 
             for derived_feature in request.derived_features:
                 if derived_feature.name in df.columns:
