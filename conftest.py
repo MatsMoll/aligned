@@ -159,7 +159,6 @@ def breast_scan_feature_viewout_with_datetime(scan_without_datetime: CsvFileSour
         metadata = FeatureViewMetadata(
             name='breast_features',
             description='Features defining a scan and diagnose of potential cancer cells',
-            tags={},
             source=scan_without_datetime,
         )
 
@@ -231,7 +230,6 @@ def breast_scan_feature_view_with_datetime(scan_with_datetime: CsvFileSource) ->
         metadata = FeatureViewMetadata(
             name='breast_features',
             description='Features defining a scan and diagnose of potential cancer cells',
-            tags={},
             source=scan_with_datetime,
         )
 
@@ -292,7 +290,6 @@ def breast_scan_feature_view_with_datetime_and_aggregation(scan_with_datetime: C
         metadata = FeatureViewMetadata(
             name='breast_features',
             description='Features defining a scan and diagnose of potential cancer cells',
-            tags={},
             source=scan_with_datetime,
         )
 

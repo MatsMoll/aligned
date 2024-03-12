@@ -240,34 +240,6 @@ class FileDateJob(RetrivalJob):
     def retrival_requests(self) -> list[RetrivalRequest]:
         return [self.request]
 
-    def file_transformations(self, df: pd.DataFrame) -> pd.DataFrame:
-        from aligned.data_source.batch_data_source import ColumnFeatureMappable
-
-        entity_names = self.request.entity_names
-        all_names = list(self.request.all_required_feature_names.union(entity_names))
-
-        request_features = all_names
-        if isinstance(self.source, ColumnFeatureMappable):
-            request_features = self.source.feature_identifier_for(all_names)
-
-        df.rename(
-            columns=dict(zip(request_features, all_names)),
-            inplace=True,
-        )
-
-        if self.request.event_timestamp is None:
-            raise ValueError(f'Source {self.source} have no event timestamp to filter on')
-
-        event_timestamp_column = self.request.event_timestamp.name
-        # Making sure it is in the correct format
-        df[event_timestamp_column] = pd.to_datetime(
-            df[event_timestamp_column], infer_datetime_format=True, utc=True
-        )
-
-        start_date_ts = pd.to_datetime(self.start_date, utc=True)
-        end_date_ts = pd.to_datetime(self.end_date, utc=True)
-        return df.loc[df[event_timestamp_column].between(start_date_ts, end_date_ts)]
-
     def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
 

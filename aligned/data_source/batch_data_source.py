@@ -301,7 +301,7 @@ class CustomMethodDataSource(BatchDataSource):
 
         return CustomLazyPolarsJob(
             request=request, method=lambda: dill.loads(self.all_data_method)(request, limit)
-        )
+        ).fill_missing_columns()
 
     def all_between_dates(
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime
@@ -312,7 +312,7 @@ class CustomMethodDataSource(BatchDataSource):
         return CustomLazyPolarsJob(
             request=request,
             method=lambda: dill.loads(self.all_between_dates_method)(request, start_date, end_date),
-        )
+        ).fill_missing_columns()
 
     def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
         from aligned.retrival_job import CustomLazyPolarsJob
@@ -320,7 +320,7 @@ class CustomMethodDataSource(BatchDataSource):
 
         return CustomLazyPolarsJob(
             request=request, method=lambda: dill.loads(self.features_for_method)(facts, request)
-        )
+        ).fill_missing_columns()
 
     @classmethod
     def multi_source_features_for(
@@ -619,6 +619,7 @@ class JoinAsofDataSource(BatchDataSource):
                 right_on=self.right_on,
                 timestamp_unit=self.timestamp_unit,
             )
+            .fill_missing_columns()
         )
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
@@ -639,6 +640,7 @@ class JoinAsofDataSource(BatchDataSource):
                 timestamp_unit=self.timestamp_unit,
             )
             .aggregate(request)
+            .fill_missing_columns()
             .derive_features([request])
         )
 
@@ -661,6 +663,7 @@ class JoinAsofDataSource(BatchDataSource):
                 right_on=self.right_on,
             )
             .aggregate(request)
+            .fill_missing_columns()
             .derive_features([request])
         )
 
@@ -729,6 +732,7 @@ class JoinDataSource(BatchDataSource):
             self.source.all_data(self.left_request, limit=limit)
             .derive_features([self.left_request])
             .join(right_job, method=self.method, left_on=self.left_on, right_on=self.right_on)
+            .fill_missing_columns()
         )
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
@@ -741,6 +745,7 @@ class JoinDataSource(BatchDataSource):
             self.source.all_data(self.left_request, limit=limit)
             .derive_features([self.left_request])
             .join(right_job, method=self.method, left_on=self.left_on, right_on=self.right_on)
+            .fill_missing_columns()
             .aggregate(request)
             .derive_features([request])
         )
@@ -763,6 +768,7 @@ class JoinDataSource(BatchDataSource):
                 left_on=self.left_on,
                 right_on=self.right_on,
             )
+            .fill_missing_columns()
             .aggregate(request)
             .derive_features([request])
         )

@@ -126,7 +126,7 @@ async def test_read_csv(point_in_time_data_test: DataTest) -> None:
             batch_source=file_source,
         )
         compiled = view.compile_instance()
-        assert compiled.source.path == file_source.path  # type: ignore
+        assert compiled.source.path == file_source.path
 
         store.add_compiled_view(compiled)
 
@@ -170,9 +170,43 @@ async def test_read_optional_csv() -> None:
         filled = b.fill_na(0)
 
     expected_df = df.with_columns(pl.lit(None).alias('b'), pl.lit(0).alias('filled'))
-    loaded = await Test.query().all().to_polars()
+    loaded = await Test.query().all().to_polars()  # type: ignore
 
     assert loaded.equals(expected_df.select(loaded.columns))
 
-    facts = await Test.query().features_for({'a': [2]}).to_polars()
+    facts = await Test.query().features_for({'a': [2]}).to_polars()  # type: ignore
+    assert expected_df.filter(pl.col('a') == 2).equals(facts.select(expected_df.columns))
+
+
+@pytest.mark.asyncio
+async def test_read_optional_view() -> None:
+
+    source = FileSource.csv_at('test_data/optional_test.csv')
+    df = pl.DataFrame(
+        {
+            'a': [1, 2, 3],
+            'c': [1, 2, 3],
+        }
+    )
+    await source.write_polars(df.lazy())
+
+    @feature_view(name='test_a', source=source)
+    class TestA:
+        a = Int32().as_entity()
+        c = Int32()
+
+    @feature_view(name='test', source=TestA)  # type: ignore
+    class Test:
+        a = Int32().as_entity()
+        b = Int32().is_optional()
+        c = Int32()
+
+        filled = b.fill_na(0)
+
+    expected_df = df.with_columns(pl.lit(None).alias('b'), pl.lit(0).alias('filled'))
+    loaded = await Test.query().all().to_polars()  # type: ignore
+
+    assert loaded.equals(expected_df.select(loaded.columns))
+
+    facts = await Test.query().features_for({'a': [2]}).to_polars()  # type: ignore
     assert expected_df.filter(pl.col('a') == 2).equals(facts.select(expected_df.columns))

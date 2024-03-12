@@ -285,6 +285,17 @@ class SupervisedJob:
             data, entities, features, self.target_columns, self.job.request_result.event_timestamp
         )
 
+    async def to_polars(self) -> SupervisedDataSet[pl.DataFrame]:
+        dataset = await self.to_lazy_polars()
+
+        return SupervisedDataSet(
+            data=dataset.data.collect(),
+            entity_columns=dataset.entity_columns,
+            features=dataset.feature_columns,
+            target=dataset.target_columns,
+            event_timestamp_column=dataset.event_timestamp_column,
+        )
+
     async def to_lazy_polars(self) -> SupervisedDataSet[pl.LazyFrame]:
         data = await self.job.to_lazy_polars()
         if self.should_filter_out_null_targets:
@@ -760,7 +771,7 @@ class ModificationJob:
 class CustomPolarsJob(RetrivalJob, ModificationJob):
 
     job: RetrivalJob
-    polars_method: Callable[[pl.LazyFrame], pl.LazyFrame]
+    polars_method: Callable[[pl.LazyFrame], pl.LazyFrame]  # type: ignore
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         df = await self.job.to_lazy_polars()
@@ -1389,38 +1400,41 @@ class FillMissingColumnsJob(RetrivalJob, ModificationJob):
     job: RetrivalJob
 
     async def to_pandas(self) -> pd.DataFrame:
+        from aligned.schemas.constraints import Optional
+
         data = await self.job.to_pandas()
         for request in self.retrival_requests:
 
-            missing = request.all_required_feature_names - set(data.columns)
-            if not missing:
-                continue
+            optional_constraint = Optional()
+            for feature in request.features:
+                if (
+                    feature.constraints
+                    and optional_constraint in feature.constraints
+                    and feature.name not in data.columns
+                ):
+                    data[feature] = None
 
-            logger.warn(
-                f"""
-Some features is missing.
-Will fill values with None, but it could be a potential problem: {missing}
-"""
-            )
-            for feature in missing:
-                data[feature] = None
         return data
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
+        from aligned.schemas.constraints import Optional
+
         data = await self.job.to_lazy_polars()
+        optional_constraint = Optional()
+
         for request in self.retrival_requests:
 
-            missing = request.all_required_feature_names - set(data.columns)
-            if not missing:
-                continue
+            missing_columns = [
+                feature.name
+                for feature in request.features
+                if feature.constraints
+                and optional_constraint in feature.constraints
+                and feature.name not in data.columns
+            ]
 
-            logger.warn(
-                f"""
-Some features is missing.
-Will fill values with None, but it could be a potential problem: {missing}
-"""
-            )
-            data = data.with_columns([pl.lit(None).alias(feature) for feature in missing])
+            if missing_columns:
+                data = data.with_columns([pl.lit(None).alias(feature) for feature in missing_columns])
+
         return data
 
 

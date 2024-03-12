@@ -373,7 +373,12 @@ class FeatureViewReferenceSource(BatchDataSource):
         sub_source = source.view.materialized_source or source.view.source
         sub_request = source.sub_request(request)
 
-        sub_job = sub_source.all_data(sub_request, limit=None).derive_features()
+        sub_job = (
+            sub_source.all_data(sub_request, limit=None)
+            .derive_features()
+            .with_request([request])
+            .fill_missing_columns()
+        )
 
         if request.aggregated_features:
             available_features = sub_job.aggregate(request).derive_features()
@@ -388,10 +393,11 @@ class FeatureViewReferenceSource(BatchDataSource):
         sub_req = self.sub_request(request)
 
         core_job = sub_source.all_data(sub_req, limit=limit)
+
         if request.aggregated_features:
             job = core_job.aggregate(request)
         else:
-            job = core_job.derive_features()
+            job = core_job.derive_features().with_request([request]).fill_missing_columns()
 
         return job.derive_features([request]).rename(self.renames)
 
@@ -402,11 +408,12 @@ class FeatureViewReferenceSource(BatchDataSource):
 
         sub_req = self.sub_request(request)
 
-        core_job = sub_source.all_between_dates(sub_req, start_date, end_date)
+        core_job = sub_source.all_between_dates(sub_req, start_date, end_date).fill_missing_columns()
+
         if request.aggregated_features:
             job = core_job.aggregate(request)
         else:
-            job = core_job.derive_features()
+            job = core_job.derive_features().with_request([request]).fill_missing_columns()
         return job.derive_features([request]).rename(self.renames)
 
     def depends_on(self) -> set[FeatureLocation]:
