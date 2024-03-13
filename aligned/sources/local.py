@@ -25,7 +25,6 @@ from aligned.feature_source import WritableFeatureSource
 from aligned.schemas.date_formatter import DateFormatter
 
 if TYPE_CHECKING:
-    from aligned.compiler.feature_factory import FeatureFactory
     from datetime import datetime
     from aligned.schemas.repo_definition import RepoDefinition
     from aligned.feature_store import FeatureStore
@@ -266,14 +265,15 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
             date_formatter=source.formatter,
         )
 
-    async def schema(self) -> dict[str, FeatureFactory]:
+    async def schema(self) -> dict[str, FeatureType]:
         df = await self.to_lazy_polars()
-        return {name: FeatureType.from_polars(pl_type).feature_factory for name, pl_type in df.schema.items()}
+        return {name: FeatureType.from_polars(pl_type) for name, pl_type in df.schema.items()}
 
     async def feature_view_code(self, view_name: str) -> str:
         from aligned.feature_view.feature_view import FeatureView
 
-        schema = await self.schema()
+        raw_schema = await self.schema()
+        schema = {name: feat.feature_factory for name, feat in raw_schema.items()}
         data_source_code = f'FileSource.csv_at("{self.path}", csv_config={self.csv_config})'
         return FeatureView.feature_view_code_template(
             schema,
@@ -370,20 +370,19 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
             facts=facts,
         )
 
-    async def schema(self) -> dict[str, FeatureFactory]:
+    async def schema(self) -> dict[str, FeatureType]:
         if self.path.startswith('http'):
             parquet_schema = pl.scan_parquet(self.path).schema
         else:
             parquet_schema = pl.read_parquet_schema(self.path)
 
-        return {
-            name: FeatureType.from_polars(pl_type).feature_factory for name, pl_type in parquet_schema.items()
-        }
+        return {name: FeatureType.from_polars(pl_type) for name, pl_type in parquet_schema.items()}
 
     async def feature_view_code(self, view_name: str) -> str:
         from aligned.feature_view.feature_view import FeatureView
 
-        schema = await self.schema()
+        raw_schema = await self.schema()
+        schema = {name: feat.feature_factory for name, feat in raw_schema.items()}
         data_source_code = f'FileSource.parquet_at("{self.path}")'
         return FeatureView.feature_view_code_template(
             schema, data_source_code, view_name, 'from aligned import FileSource'
@@ -436,16 +435,15 @@ class DeltaFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference,
             self.path, mode=self.config.mode, overwrite_schema=self.config.overwrite_schema
         )
 
-    async def schema(self) -> dict[str, FeatureFactory]:
+    async def schema(self) -> dict[str, FeatureType]:
         parquet_schema = pl.read_delta(self.path).schema
-        return {
-            name: FeatureType.from_polars(pl_type).feature_factory for name, pl_type in parquet_schema.items()
-        }
+        return {name: FeatureType.from_polars(pl_type) for name, pl_type in parquet_schema.items()}
 
     async def feature_view_code(self, view_name: str) -> str:
         from aligned.feature_view.feature_view import FeatureView
 
-        schema = await self.schema()
+        raw_schema = await self.schema()
+        schema = {name: feat.feature_factory for name, feat in raw_schema.items()}
         data_source_code = f'FileSource.parquet_at("{self.path}")'
         return FeatureView.feature_view_code_template(
             schema, data_source_code, view_name, 'from aligned import FileSource'

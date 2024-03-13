@@ -12,7 +12,7 @@ from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import AggregatedFeature, DerivedFeature
 from aligned.schemas.event_trigger import EventTrigger
-from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
+from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation, FeatureType
 from aligned.schemas.vector_storage import VectorIndex
 
 if TYPE_CHECKING:
@@ -328,6 +328,12 @@ class FeatureViewReferenceSource(BatchDataSource):
 
     def job_group_key(self) -> str:
         return self.view.name
+
+    async def schema(self) -> dict[str, FeatureType]:
+        if self.view.materialized_source:
+            return await self.view.materialized_source.schema()
+
+        return await self.view.source.schema()
 
     def sub_request(self, request: RetrivalRequest) -> RetrivalRequest:
 

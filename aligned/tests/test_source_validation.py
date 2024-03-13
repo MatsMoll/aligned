@@ -18,30 +18,11 @@ async def test_source_validation(titanic_feature_store: FeatureStore) -> None:
     assert {FeatureLocation.feature_view('titanic_parquet'): True} == validation
 
 
-# @pytest.mark.asyncio
-# async def test_source_validation_psql(titanic_feature_view: FeatureView) -> None:
-#
-#     if 'PSQL_DATABASE_TEST' not in environ:
-#         environ['PSQL_DATABASE_TEST'] = 'postgresql://postgres:postgres@localhost:5433/aligned-test'
-#
-#     psql_config = PostgreSQLConfig('PSQL_DATABASE_TEST')
-#     titanic_feature_view.metadata.source = psql_config.table('titanic')
-#
-#     store = FeatureStore.experimental()
-#     store.add_feature_view(titanic_feature_view)
-#     views = store.views_with_config(psql_config)
-#
-#     assert len(views) == 1
-#     validation = await validate_sources_in(views)
-#
-#     assert {FeatureLocation.feature_view('titanic'): False} == validation
-
-
 @pytest.mark.asyncio
 async def test_schema_loading() -> None:
     source = FileSource.parquet_at('test_data/titanic.parquet')
     schema = await source.schema()
-    dtype_schema = {key: feature.dtype for key, feature in schema.items()}
+    dtype_schema = {key: feature for key, feature in schema.items()}
     assert dtype_schema == {
         'passenger_id': FeatureType(name='int64'),
         'survived': FeatureType(name='int64'),

@@ -10,8 +10,9 @@ from aligned.retrival_job import RetrivalJob
 from aligned.schemas.codable import Codable
 from datetime import datetime
 
+from aligned.schemas.feature import FeatureType
+
 if TYPE_CHECKING:
-    from aligned.compiler.feature_factory import FeatureFactory
     from aligned.enricher import Enricher
     from aligned.schemas.feature import EventTimestamp
 
@@ -110,10 +111,8 @@ class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, WritableFeatu
             facts=facts,
         )
 
-    async def schema(self) -> dict[str, FeatureFactory]:
+    async def schema(self) -> dict[str, FeatureType]:
         import polars as pl
-
-        import aligned.compiler.feature_factory as ff
 
         config = self.config
         schema = config.schema or 'public'
@@ -136,18 +135,18 @@ WHERE table_schema = '{schema}'
   AND table_name = '{table}'"""
         df = pl.read_database(sql_query, connection=self.config.url, engine='adbc')
         psql_types = {
-            'uuid': ff.UUID(),
-            'timestamp with time zone': ff.Timestamp(),
-            'timestamp without time zone': ff.Timestamp(),
-            'character varying': ff.String(),
-            'text': ff.String(),
-            'integer': ff.Int64(),
-            'float': ff.Float(),
-            'date': ff.Timestamp(),
-            'boolean': ff.Bool(),
-            'jsonb': ff.Json(),
-            'smallint': ff.Int32(),
-            'numeric': ff.Float(),
+            'uuid': FeatureType.uuid(),
+            'timestamp with time zone': FeatureType.datetime(),
+            'timestamp without time zone': FeatureType.datetime(None),
+            'character varying': FeatureType.string(),
+            'text': FeatureType.string(),
+            'integer': FeatureType.int32(),
+            'float': FeatureType.float(),
+            'date': FeatureType.date(),
+            'boolean': FeatureType.bool(),
+            'jsonb': FeatureType.json(),
+            'smallint': FeatureType.int16(),
+            'numeric': FeatureType.float(),
         }
         values = df.select(['column_name', 'data_type']).to_dicts()
         return {value['column_name']: psql_types[value['data_type']] for value in values}

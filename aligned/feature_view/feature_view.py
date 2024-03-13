@@ -728,7 +728,7 @@ def check_schema() -> Callable:
     """
 
     def decorator(func: Callable) -> Callable:
-        def func_wrapper(*args, **kwargs) -> Any:
+        def func_wrapper(*args, **kwargs) -> Any:  # type: ignore
             from typing import _AnnotatedAlias  # type: ignore
 
             params_to_check = {

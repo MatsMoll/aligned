@@ -9,7 +9,7 @@ from aligned.data_file import DataFileReference
 
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import DerivedFeature
-from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
+from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation, FeatureType
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.compiler.feature_factory import FeatureFactory
 from polars.type_aliases import TimeUnit
@@ -203,7 +203,7 @@ class BatchDataSource(Codable, SerializableType):
     def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
         return type(self).multi_source_features_for(facts, [(self, request)])
 
-    async def schema(self) -> dict[str, FeatureFactory]:
+    async def schema(self) -> dict[str, FeatureType]:
         """Returns the schema for the data source
 
         ```python
@@ -259,7 +259,8 @@ class BatchDataSource(Codable, SerializableType):
         from aligned.feature_view.feature_view import FeatureView
 
         schema = await self.schema()
-        return FeatureView.feature_view_code_template(schema, f'{self}', view_name)
+        feature_types = {name: feature_type.feature_factory for name, feature_type in schema.items()}
+        return FeatureView.feature_view_code_template(feature_types, f'{self}', view_name)
 
     async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
         """
@@ -377,6 +378,9 @@ class FilteredDataSource(BatchDataSource):
 
     def job_group_key(self) -> str:
         return f'subset/{self.source.job_group_key()}'
+
+    async def schema(self) -> dict[str, FeatureType]:
+        return await self.source.schema()
 
     @classmethod
     def multi_source_features_for(
@@ -599,6 +603,12 @@ class JoinAsofDataSource(BatchDataSource):
 
     type_name: str = 'join_asof'
 
+    async def schema(self) -> dict[str, FeatureType]:
+        left_schema = await self.source.schema()
+        right_schema = await self.right_source.schema()
+
+        return {**left_schema, **right_schema}
+
     def job_group_key(self) -> str:
         return f'join/{self.source.job_group_key()}'
 
@@ -719,6 +729,12 @@ class JoinDataSource(BatchDataSource):
     method: str
 
     type_name: str = 'join'
+
+    async def schema(self) -> dict[str, FeatureType]:
+        left_schema = await self.source.schema()
+        right_schema = await self.right_source.schema()
+
+        return {**left_schema, **right_schema}
 
     def job_group_key(self) -> str:
         return f'join/{self.source.job_group_key()}'

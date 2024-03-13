@@ -299,7 +299,7 @@ class SupervisedJob:
     async def to_lazy_polars(self) -> SupervisedDataSet[pl.LazyFrame]:
         data = await self.job.to_lazy_polars()
         if self.should_filter_out_null_targets:
-            data = data.drop_nulls([column for column in self.target_columns])
+            data = data.drop_nulls(list(self.target_columns))
 
         features = [
             feature.name
@@ -1782,9 +1782,7 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                         df[feature.name] = df[feature.name].apply(
                             lambda x: json.loads(x) if isinstance(x, str) else x
                         )
-                elif feature.dtype == FeatureType.json():
-                    pass
-                elif feature.dtype == FeatureType.datetime():
+                elif (feature.dtype == FeatureType.json()) or feature.dtype.is_datetime:
                     pass
                 else:
                     if feature.dtype.is_numeric:
@@ -1829,9 +1827,7 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                     dtype = df.select(feature.name).dtypes[0]
                     if dtype == pl.Utf8:
                         df = df.with_columns(pl.col(feature.name).str.json_extract(pl.List(pl.Utf8)))
-                elif feature.dtype == FeatureType.json():
-                    pass
-                elif feature.dtype == FeatureType.datetime():
+                elif (feature.dtype == FeatureType.json()) or feature.dtype.is_datetime:
                     pass
                 else:
                     df = df.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type, strict=False))

@@ -4,7 +4,7 @@ from datetime import timedelta, datetime
 
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.schemas.codable import Codable
-from aligned.schemas.feature import FeatureLocation
+from aligned.schemas.feature import FeatureLocation, FeatureType
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureReferance
 from aligned.schemas.event_trigger import EventTrigger
 from aligned.schemas.target import ClassificationTarget, RecommendationTarget, RegressionTarget
@@ -175,6 +175,11 @@ class ModelSource(BatchDataSource):
     pred_view: CompiledFeatureView
 
     type_name: str = 'model_source'
+
+    async def schema(self) -> dict[str, FeatureType]:
+        if self.model.predictions_view.source:
+            return await self.model.predictions_view.source.schema()
+        return {}
 
     def source(self) -> FeatureViewReferenceSource:
         return FeatureViewReferenceSource(self.pred_view, FeatureLocation.model(self.pred_view.name))

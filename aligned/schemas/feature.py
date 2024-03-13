@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal
+from zoneinfo import ZoneInfo
 
 import polars as pl
 
@@ -9,24 +10,25 @@ import aligned.compiler.feature_factory as ff
 from aligned.schemas.codable import Codable
 from aligned.schemas.constraints import Constraint
 
-NAME_POLARS_MAPPING = {
-    'string': pl.Utf8,
-    'int8': pl.Int8,
-    'int16': pl.Int16,
-    'int32': pl.Int32,
-    'int64': pl.Int64,
-    'float': pl.Float64,
-    'double': pl.Float64,
-    'bool': pl.Boolean,
-    'date': pl.Date,
-    'datetime': pl.Datetime,
-    'time': pl.Time,
-    'timedelta': pl.Duration,
-    'uuid': pl.Utf8,
-    'array': pl.List(pl.Utf8),
-    'embedding': pl.List,
-    'json': pl.Utf8,
-}
+NAME_POLARS_MAPPING = [
+    ('string', pl.Utf8),
+    ('int8', pl.Int8),
+    ('int16', pl.Int16),
+    ('int32', pl.Int32),
+    ('int64', pl.Int64),
+    ('float', pl.Float64),
+    ('float', pl.Float32),
+    ('double', pl.Float64),
+    ('bool', pl.Boolean),
+    ('date', pl.Date),
+    ('datetime', pl.Datetime),
+    ('time', pl.Time),
+    ('timedelta', pl.Duration),
+    ('uuid', pl.Utf8),
+    ('array', pl.List(pl.Utf8)),
+    ('embedding', pl.List),
+    ('json', pl.Utf8),
+]
 
 
 @dataclass
@@ -46,6 +48,10 @@ class FeatureType(Codable):
             'float',
             'double',
         }  # Can be represented as an int
+
+    @property
+    def is_datetime(self) -> bool:
+        return self.name.startswith('datetime')
 
     @property
     def python_type(self) -> type:
@@ -98,10 +104,27 @@ class FeatureType(Codable):
 
     @property
     def polars_type(self) -> type:
-        return NAME_POLARS_MAPPING[self.name]
+        if self.name.startswith('datetime-'):
+            time_zone = self.name.split('-')[1]
+            return pl.Datetime(time_zone=time_zone)  # type: ignore
+
+        for name, dtype in NAME_POLARS_MAPPING:
+            if name == self.name:
+                return dtype
+
+        raise ValueError(f'Unable to find a value that can represent {self.name}')
 
     @property
     def feature_factory(self) -> ff.FeatureFactory:
+
+        if self.name.startswith('datetime-'):
+            time_zone = self.name.split('-')[1]
+            return ff.Timestamp(time_zone=time_zone)
+
+        if self.name.startswith('array-'):
+            sub_type = '-'.join(self.name.split('-')[1:])
+            return ff.List(FeatureType(name=sub_type).feature_factory)
+
         return {
             'string': ff.String(),
             'int8': ff.Int8(),
@@ -135,9 +158,25 @@ class FeatureType(Codable):
 
     @staticmethod
     def from_polars(polars_type: pl.DataType) -> FeatureType:
-        for name, dtype in NAME_POLARS_MAPPING.items():
+        if isinstance(polars_type, pl.Datetime):
+            if polars_type.time_zone:
+                return FeatureType(name=f'datetime-{polars_type.time_zone}')
+            return FeatureType(name='datetime')
+
+        if isinstance(polars_type, pl.List):
+            if polars_type.inner:
+                sub_type = FeatureType.from_polars(polars_type.inner)  # type: ignore
+                return FeatureType(name=f'array-{sub_type.name}')
+
+            return FeatureType(name='array')
+
+        if isinstance(polars_type, pl.Struct):
+            return FeatureType(name='json')
+
+        for name, dtype in NAME_POLARS_MAPPING:
             if polars_type.is_(dtype):
                 return FeatureType(name=name)
+
         raise ValueError(f'Unable to find a value that can represent {polars_type}')
 
     @staticmethod
@@ -181,8 +220,10 @@ class FeatureType(Codable):
         return FeatureType(name='uuid')
 
     @staticmethod
-    def datetime() -> FeatureType:
-        return FeatureType(name='datetime')
+    def datetime(tz: ZoneInfo | None = ZoneInfo('UTC')) -> FeatureType:
+        if not tz:
+            return FeatureType(name='datetime')
+        return FeatureType(name=f'datetime-{tz.key}')
 
     @staticmethod
     def json() -> FeatureType:

@@ -1125,21 +1125,33 @@ class Entity(FeatureFactory):
 
 
 class Timestamp(DateFeature, ArithmeticFeature):
+
+    time_zone: str | None
+
+    def __init__(self, time_zone: str | None = 'UTC') -> None:
+        self.time_zone = time_zone
+
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType.datetime()
+        from zoneinfo import ZoneInfo
+
+        return FeatureType.datetime(ZoneInfo(self.time_zone) if self.time_zone else None)
 
 
 class EventTimestamp(DateFeature, ArithmeticFeature):
 
     ttl: timedelta | None
+    time_zone: str | None
 
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType.datetime()
+        from zoneinfo import ZoneInfo
 
-    def __init__(self, ttl: timedelta | None = None):
+        return FeatureType.datetime(ZoneInfo(self.time_zone) if self.time_zone else None)
+
+    def __init__(self, ttl: timedelta | None = None, time_zone: str | None = 'UTC') -> None:
         self.ttl = ttl
+        self.time_zone = time_zone
 
     def event_timestamp(self) -> EventTimestampFeature:
         return EventTimestampFeature(

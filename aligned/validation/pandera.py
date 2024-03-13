@@ -41,7 +41,7 @@ class PanderaValidator(Validator):
         if feature.constraints is None:
             return Column(
                 feature.dtype.pandas_type if feature.dtype in self.datatype_check else None,
-                nullable=True,
+                nullable=False,
                 coerce=True,
             )
 
