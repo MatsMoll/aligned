@@ -309,6 +309,15 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
 
     type_name: str = 'parquet'
 
+    @property
+    def to_markdown(self) -> str:
+        return f'''#### Parquet File
+*Renames*: {self.mapping_keys}
+
+*File*: {self.path}
+
+[Go to file]({self.path})'''
+
     def job_group_key(self) -> str:
         return f'{self.type_name}/{self.path}'
 
@@ -512,7 +521,14 @@ class FileDirectory(Codable):
     dir_path: Path
 
     def path_string(self, path: str) -> str:
-        return (self.dir_path / path).as_posix()
+        string_value = (self.dir_path / path).as_posix()
+        if string_value.startswith('http:/') and not string_value.startswith('http://'):
+            return string_value.replace('http:/', 'http://')
+
+        if string_value.startswith('https:/') and not string_value.startswith('https://'):
+            return string_value.replace('https:/', 'https://')
+
+        return string_value
 
     def json_at(self, path: str) -> StorageFileSource:
         return StorageFileSource(path=self.path_string(path))
