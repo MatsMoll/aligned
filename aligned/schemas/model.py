@@ -65,6 +65,19 @@ class PredictionsView(Codable):
     acceptable_freshness: timedelta | None = field(default=None)
     unacceptable_freshness: timedelta | None = field(default=None)
 
+    def as_view(self, name: str) -> CompiledFeatureView | None:
+        if not self.source:
+            return None
+
+        return CompiledFeatureView(
+            name=name,
+            source=self.source,
+            entities=self.entities,
+            features=self.features,
+            derived_features=self.derived_features,
+            event_timestamp=self.event_timestamp,
+        )
+
     @property
     def full_schema(self) -> set[Feature]:
 

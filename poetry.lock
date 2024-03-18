@@ -1600,6 +1600,21 @@ pymysql = ["pymysql"]
 sqlcipher = ["sqlcipher3_binary"]
 
 [[package]]
+name = "sqlglot"
+version = "22.5.0"
+description = "An easily customizable SQL parser and transpiler"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "sqlglot-22.5.0-py3-none-any.whl", hash = "sha256:ef11f7e56e93732aca3caab3c74a6c11489e383a43c2ac5b5f86cc85517ef9f3"},
+    {file = "sqlglot-22.5.0.tar.gz", hash = "sha256:27c7850298b62741d78f99f17904014cc6fa9bebb2fd29fb2e9a0a195ec2a523"},
+]
+
+[package.extras]
+dev = ["duckdb (>=0.6)", "maturin (>=1.4,<2.0)", "mypy", "pandas", "pandas-stubs", "pdoc", "pre-commit", "pyspark", "python-dateutil", "ruff", "types-python-dateutil", "typing-extensions"]
+rs = ["sqlglotrs (==0.1.2)"]
+
+[[package]]
 name = "starlette"
 version = "0.27.0"
 description = "The little ASGI library that shines."
@@ -1821,4 +1836,4 @@ server = ["asgi-correlation-id", "fastapi", "prometheus-fastapi-instrumentator",
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "ced16e2f5ace0753f9d9817c17c990322ee40c386e6255c26cd25cdd755f4c0d"
+content-hash = "c221da4b6f89a40e5914fff5320a7cf2039379a7b929518504597bc26af91622"

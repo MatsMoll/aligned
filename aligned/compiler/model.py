@@ -96,17 +96,7 @@ class ModelContractWrapper(Generic[T]):
         compiled = self.compile()
         view = compiled.predictions_view
 
-        if not view.source:
-            return None
-
-        return CompiledFeatureView(
-            name=self.metadata.name,
-            source=view.source,
-            entities=view.entities,
-            features=view.features,
-            derived_features=view.derived_features,
-            event_timestamp=view.event_timestamp,
-        )
+        return view.as_view(self.metadata.name)
 
     def filter(
         self, name: str, where: Callable[[T], Bool], application_source: BatchDataSource | None = None

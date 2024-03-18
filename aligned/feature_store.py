@@ -30,6 +30,7 @@ from aligned.retrival_job import (
     StreamAggregationJob,
     SupervisedJob,
     ConvertableToRetrivalJob,
+    CustomLazyPolarsJob,
 )
 from aligned.schemas.feature import FeatureLocation, Feature, FeatureReferance
 from aligned.schemas.feature_view import CompiledFeatureView
@@ -249,6 +250,94 @@ class FeatureStore:
         definition = await RepoDefinition.from_path(path)
         return FeatureStore.from_definition(definition)
 
+    def execute_sql(self, query: str) -> RetrivalJob:
+        import polars as pl
+        import sqlglot
+
+        expr = sqlglot.parse_one(query)
+        select_expr = expr.find_all(sqlglot.exp.Select)
+
+        tables = set()
+        table_alias: dict[str, str] = {}
+        table_columns: dict[str, set[str]] = defaultdict(set)
+        unique_column_table_lookup: dict[str, str] = {}
+
+        all_table_columns = {
+            table_name: set(view.request_all.needed_requests[0].all_returned_columns)
+            for table_name, view in self.feature_views.items()
+        }
+        all_model_columns = {
+            table_name: set(model.predictions_view.request(table_name).all_returned_columns)
+            for table_name, model in self.models.items()
+        }
+
+        for expr in select_expr:
+
+            for table in expr.find_all(sqlglot.exp.Table):
+                tables.add(table.name)
+                table_alias[table.alias_or_name] = table.name
+
+                for column in all_table_columns.get(table.name, set()).union(
+                    all_model_columns.get(table.name, set())
+                ):
+
+                    if column in unique_column_table_lookup:
+                        del unique_column_table_lookup[column]
+                    else:
+                        unique_column_table_lookup[column] = table.name
+
+            if expr.find(sqlglot.exp.Star):
+                for table in tables:
+                    table_columns[table].update(
+                        all_table_columns.get(table, set()).union(all_model_columns.get(table, set()))
+                    )
+            else:
+                for column in expr.find_all(sqlglot.exp.Column):
+                    source_table = table_alias.get(column.table)
+
+                    if source_table:
+                        table_columns[source_table].add(column.name)
+                        continue
+
+                    if column.table == '' and column.name in unique_column_table_lookup:
+                        table_columns[unique_column_table_lookup[column.name]].add(column.name)
+                        continue
+
+                    raise ValueError(f"Unable to find table `{column.table}` for query `{query}`")
+
+        all_features = set()
+
+        for table, columns in table_columns.items():
+            all_features.update(f'{table}:{column}' for column in columns)
+
+        raw_request = RawStringFeatureRequest(features=all_features)
+        feature_request = self.requests_for(raw_request, None)
+
+        request = RetrivalRequest.unsafe_combine(feature_request.needed_requests)
+
+        async def run_query() -> pl.LazyFrame:
+            dfs = {}
+
+            for req in feature_request.needed_requests:
+
+                if req.location.location == 'feature_view':
+                    view = self.feature_view(req.location.name).select(req.all_feature_names).all()
+                    dfs[req.location.name] = await view.to_lazy_polars()
+                elif req.location.location == 'model':
+                    model = (
+                        self.model(req.location.name).all_predictions().select_columns(req.all_feature_names)
+                    )
+                    dfs[req.location.name] = await model.to_lazy_polars()
+                else:
+                    raise ValueError(f"Unsupported location: {req.location}")
+
+            return pl.SQLContext(dfs).execute(query)
+
+        return CustomLazyPolarsJob(
+            request=request,
+            method=run_query,
+        )
+
     def features_for_request(
         self,
         requests: FeatureRequest,
@@ -339,6 +428,7 @@ class FeatureStore:
         models: dict[str, ModelSchema],
         event_timestamp_column: str | None = None,
     ) -> FeatureRequest:
+
         features = feature_request.grouped_features
         requests: list[RetrivalRequest] = []
         entity_names = set()
@@ -367,6 +457,7 @@ class FeatureStore:
 
             elif location_name in feature_views:
                 feature_view = feature_views[location_name]
+
                 if len(features[location]) == 1 and list(features[location])[0] == '*':
                     sub_requests = feature_view.request_all
                 else:
@@ -374,6 +465,20 @@ class FeatureStore:
                 requests.extend(sub_requests.needed_requests)
                 for request in sub_requests.needed_requests:
                     entity_names.update(request.entity_names)
+            elif location_name in models:
+                model = models[location_name]
+                feature_view = model.predictions_view
+
+                if feature_view is None:
+                    raise ValueError(f'Unable to find: {location_name}')
+
+                if len(features[location]) == 1 and list(features[location])[0] == '*':
+                    sub_request = feature_view.request(location_name)
+                else:
+                    sub_request = feature_view.request_for(features[location], location_name)
+
+                requests.append(sub_request)
+                entity_names.update(sub_request.entity_names)
             else:
                 raise ValueError(
                     f'Unable to find: {location_name}, '
@@ -386,6 +491,9 @@ class FeatureStore:
 
         else:
             requests = [request.without_event_timestamp() for request in requests]
+
+        if not requests:
+            raise ValueError(f'Unable to find any requests for: {feature_request}')
 
         return FeatureRequest(
             FeatureLocation.model('custom features'),
