@@ -466,6 +466,10 @@ class FeatureFactory(FeatureReferencable):
         from aligned.compiler.transformation_factory import FillMissingFactory
 
         instance: FeatureFactory = self.copy_type()  # type: ignore [attr-defined]
+
+        if instance.constraints:
+            instance.constraints.remove(Optional())
+
         if not isinstance(value, FeatureFactory):
             value = LiteralValue.from_value(value)
 
@@ -886,11 +890,15 @@ class Bool(EquatableFeature, LogicalOperatableFeature):
         return FeatureType.bool()
 
     def copy_type(self) -> Bool:
+        if self.constraints and Optional() in self.constraints:
+            return Bool().is_optional()
         return Bool()
 
 
 class Float(ArithmeticFeature, DecimalOperations):
     def copy_type(self) -> Float:
+        if self.constraints and Optional() in self.constraints:
+            return Float().is_optional()
         return Float()
 
     @property
@@ -903,6 +911,8 @@ class Float(ArithmeticFeature, DecimalOperations):
 
 class Int8(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
     def copy_type(self) -> Int8:
+        if self.constraints and Optional() in self.constraints:
+            return Int8().is_optional()
         return Int8()
 
     @property
@@ -915,6 +925,8 @@ class Int8(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, Categor
 
 class Int16(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
     def copy_type(self) -> Int16:
+        if self.constraints and Optional() in self.constraints:
+            return Int16().is_optional()
         return Int16()
 
     @property
@@ -927,6 +939,8 @@ class Int16(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, Catego
 
 class Int32(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
     def copy_type(self) -> Int32:
+        if self.constraints and Optional() in self.constraints:
+            return Int32().is_optional()
         return Int32()
 
     @property
@@ -939,6 +953,8 @@ class Int32(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, Catego
 
 class Int64(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
     def copy_type(self) -> Int64:
+        if self.constraints and Optional() in self.constraints:
+            return Int64().is_optional()
         return Int64()
 
     @property
@@ -951,6 +967,8 @@ class Int64(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, Catego
 
 class UUID(FeatureFactory, CouldBeEntityFeature):
     def copy_type(self) -> UUID:
+        if self.constraints and Optional() in self.constraints:
+            return UUID().is_optional()
         return UUID()
 
     @property
@@ -1000,6 +1018,8 @@ class String(
     StringValidatable,
 ):
     def copy_type(self) -> String:
+        if self.constraints and Optional() in self.constraints:
+            return String().is_optional()
         return String()
 
     @property
@@ -1073,7 +1093,9 @@ class String(
 
 class Json(FeatureFactory):
     def copy_type(self: Json) -> Json:
-        return super().copy_type()
+        if self.constraints and Optional() in self.constraints:
+            return Json().is_optional()
+        return Json()
 
     @property
     def dtype(self) -> FeatureType:
@@ -1168,6 +1190,8 @@ class Embedding(FeatureFactory):
     indexes: list[VectorIndexFactory] | None = None
 
     def copy_type(self) -> Embedding:
+        if self.constraints and Optional() in self.constraints:
+            return Embedding().is_optional()
         return Embedding()
 
     @property
@@ -1205,6 +1229,8 @@ class List(FeatureFactory, Generic[GenericFeature]):
     sub_type: GenericFeature
 
     def copy_type(self) -> List:
+        if self.constraints and Optional() in self.constraints:
+            return List(self.sub_type.copy_type()).is_optional()
         return List(self.sub_type.copy_type())
 
     @property
@@ -1232,6 +1258,8 @@ class ImageUrl(StringValidatable):
         return FeatureType.string()
 
     def copy_type(self) -> ImageUrl:
+        if self.constraints and Optional() in self.constraints:
+            return ImageUrl().is_optional()
         return ImageUrl()
 
     def load_image(self) -> Image:
@@ -1248,6 +1276,8 @@ class Image(FeatureFactory):
         return FeatureType.array()
 
     def copy_type(self) -> Image:
+        if self.constraints and Optional() in self.constraints:
+            return Image().is_optional()
         return Image()
 
     def to_grayscale(self) -> Image:

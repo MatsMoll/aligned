@@ -305,7 +305,7 @@ class FeatureStore:
 
                     raise ValueError(f"Unable to find table `{column.table}` for query `{query}`")
 
-        all_features = set()
+        all_features: set[str] = set()
 
         for table, columns in table_columns.items():
             all_features.update(f'{table}:{column}' for column in columns)

@@ -27,3 +27,22 @@ async def test_validate_invalid_feature_view(titanic_feature_store: FeatureStore
     )
 
     assert validated_df.shape[0] == 16
+
+
+@pytest.mark.asyncio
+async def test_return_invalid_rows(titanic_feature_store: FeatureStore) -> None:
+    validated_job = titanic_feature_store.feature_view('titanic').all(limit=20).return_invalid()
+
+    validated_df = await validated_job.to_pandas()
+
+    assert validated_df.shape[0] == 4
+    assert validated_df.shape[1] == 11
+
+    with_validation = await (
+        titanic_feature_store.feature_view('titanic')
+        .all(limit=20)
+        .return_invalid(should_return_validation=True)
+        .to_polars()
+    )
+    assert with_validation.shape[0] == 4
+    assert with_validation.shape[1] == 20

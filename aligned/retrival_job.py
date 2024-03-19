@@ -540,6 +540,11 @@ class RetrivalJob(ABC):
             timestamp_unit=timestamp_unit,
         )
 
+    def return_invalid(self, should_return_validation: bool | None = None) -> RetrivalJob:
+        if should_return_validation is None:
+            should_return_validation = False
+        return ReturnInvalidJob(self, should_return_validation)
+
     def join(
         self, job: RetrivalJob, method: str, left_on: str | list[str], right_on: str | list[str]
     ) -> RetrivalJob:
@@ -765,6 +770,135 @@ class ModificationJob:
     def copy_with(self: JobType, job: RetrivalJob) -> JobType:
         self.job = job  # type: ignore
         return self
+
+
+def polars_filter_expressions_from(features: list[Feature]) -> list[tuple[pl.Expr, str]]:
+    from aligned.schemas.constraints import (
+        Optional,
+        LowerBound,
+        UpperBound,
+        InDomain,
+        MinLength,
+        MaxLength,
+        EndsWith,
+        StartsWith,
+        LowerBoundInclusive,
+        UpperBoundInclusive,
+        Regex,
+    )
+
+    optional_constraint = Optional()
+
+    exprs: list[tuple[pl.Expr, str]] = []
+
+    for feature in features:
+        if not feature.constraints:
+            exprs.append((pl.col(feature.name).is_not_null(), f"Required {feature.name}"))
+            continue
+
+        if optional_constraint not in feature.constraints:
+            exprs.append((pl.col(feature.name).is_not_null(), f"Required {feature.name}"))
+            continue
+
+        for constraint in feature.constraints:
+            if isinstance(constraint, LowerBound):
+                exprs.append(
+                    (pl.col(feature.name) > constraint.value, f"LowerBound {feature.name} {constraint.value}")
+                )
+            elif isinstance(constraint, LowerBoundInclusive):
+                exprs.append(
+                    (
+                        pl.col(feature.name) >= constraint.value,
+                        f"LowerBoundInclusive {feature.name} {constraint.value}",
+                    )
+                )
+            elif isinstance(constraint, UpperBound):
+                exprs.append(
+                    (pl.col(feature.name) < constraint.value, f"UpperBound {feature.name} {constraint.value}")
+                )
+            elif isinstance(constraint, UpperBoundInclusive):
+                exprs.append(
+                    (
+                        pl.col(feature.name) <= constraint.value,
+                        f"UpperBoundInclusive {feature.name} {constraint.value}",
+                    )
+                )
+            elif isinstance(constraint, InDomain):
+                exprs.append(
+                    (
+                        pl.col(feature.name).is_in(constraint.values),
+                        f"InDomain {feature.name} {constraint.values}",
+                    )
+                )
+            elif isinstance(constraint, MinLength):
+                exprs.append(
+                    (
+                        pl.col(feature.name).str.lengths() > constraint.value,
+                        f"MinLength {feature.name} {constraint.value}",
+                    )
+                )
+            elif isinstance(constraint, MaxLength):
+                exprs.append(
+                    (
+                        pl.col(feature.name).str.lengths() < constraint.value,
+                        f"MaxLength {feature.name} {constraint.value}",
+                    )
+                )
+            elif isinstance(constraint, EndsWith):
+                exprs.append(
+                    (
+                        pl.col(feature.name).str.ends_with(constraint.value),
+                        f"EndsWith {feature.name} {constraint.value}",
+                    )
+                )
+            elif isinstance(constraint, StartsWith):
+                exprs.append(
+                    (
+                        pl.col(feature.name).str.starts_with(constraint.value),
+                        f"StartsWith {feature.name} {constraint.value}",
+                    )
+                )
+            elif isinstance(constraint, Regex):
+                exprs.append(
+                    (
+                        pl.col(feature.name).str.contains(constraint.value),
+                        f"Regex {feature.name} {constraint.value}",
+                    )
+                )
+
+    return exprs
+
+
+@dataclass
+class ReturnInvalidJob(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+    should_return_validation: bool
+
+    def describe(self) -> str:
+        expressions = [
+            expr.is_not().alias(f"not {name}")
+            for expr, name in polars_filter_expressions_from(list(self.request_result.features))
+        ]
+
+        return 'ReturnInvalidJob ' + self.job.describe() + ' with filter expressions ' + str(expressions)
+
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        raw_exprs = polars_filter_expressions_from(list(self.request_result.features))
+        expressions = [expr.is_not().alias(f"not {name}") for expr, name in raw_exprs]
+
+        if self.should_return_validation:
+            condition_cols = [f"not {name}" for _, name in raw_exprs]
+            return (
+                (await self.job.to_lazy_polars())
+                .with_columns(expressions)
+                .filter(pl.any_horizontal(*condition_cols))
+            )
+        else:
+            return (await self.job.to_lazy_polars()).filter(pl.any_horizontal(expressions))
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return (await self.to_lazy_polars()).collect().to_pandas()
 
 
 @dataclass
