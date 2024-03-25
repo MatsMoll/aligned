@@ -505,7 +505,12 @@ class AzureBlobDeltaDataSource(
         schemas = {}
 
         for request in requests:
-            for feature in request.all_features.union(request.entities):
+
+            features = request.all_features.union(request.entities)
+            if request.event_timestamp:
+                features.add(request.event_timestamp.as_feature())
+
+            for feature in features:
                 schemas[feature.name] = pa_field(feature)
 
                 if dtypes[feature.name] == pl.Null:

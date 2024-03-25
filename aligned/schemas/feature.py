@@ -326,6 +326,14 @@ class EventTimestamp(Codable):
             value += f' - {self.description}'
         return value
 
+    def as_feature(self) -> Feature:
+        return Feature(
+            name=self.name,
+            dtype=self.dtype,
+            description=self.description,
+            tags=self.tags,
+        )
+
 
 @dataclass
 class FeatureLocation(Codable):
