@@ -14,6 +14,7 @@ from aligned.exceptions import UnableToFindFileException
 from aligned.feature_source import WritableFeatureSource
 from aligned.local.job import FileDateJob, FileFactualJob, FileFullJob
 from aligned.retrival_job import RetrivalJob, RetrivalRequest
+from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.feature import FeatureType, EventTimestamp
 from aligned.sources.local import (
     CsvConfig,
@@ -382,6 +383,7 @@ class AzureBlobDeltaDataSource(
     config: AzureBlobConfig
     path: str
     mapping_keys: dict[str, str] = field(default_factory=dict)
+    date_formatter: DateFormatter = field(default_factory=lambda: DateFormatter.unix_timestamp('ms'))
     type_name: str = 'azure_blob_delta'
 
     def job_group_key(self) -> str:
@@ -420,7 +422,7 @@ class AzureBlobDeltaDataSource(
             return None
 
     def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
-        return FileFactualJob(self, [request], facts)
+        return FileFactualJob(self, [request], facts, date_formatter=self.date_formatter)
 
     async def schema(self) -> dict[str, FeatureType]:
         try:
@@ -433,7 +435,7 @@ class AzureBlobDeltaDataSource(
             raise UnableToFindFileException() from error
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
-        return FileFullJob(self, request, limit)
+        return FileFullJob(self, request, limit, date_formatter=self.date_formatter)
 
     def all_between_dates(
         self,
@@ -441,7 +443,13 @@ class AzureBlobDeltaDataSource(
         start_date: datetime,
         end_date: datetime,
     ) -> RetrivalJob:
-        return FileDateJob(source=self, request=request, start_date=start_date, end_date=end_date)
+        return FileDateJob(
+            source=self,
+            request=request,
+            start_date=start_date,
+            end_date=end_date,
+            date_formatter=self.date_formatter,
+        )
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
         await self.write_polars(pl.from_pandas(df).lazy())
@@ -516,7 +524,7 @@ class AzureBlobDeltaDataSource(
                 if dtypes[feature.name] == pl.Null:
                     df = df.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type))
                 elif feature.dtype.is_datetime:
-                    df = df.with_columns(pl.col(feature.name).dt.timestamp('ms').cast(pl.Float64()))
+                    df = df.with_columns(self.date_formatter.encode_polars(feature.name))
                 else:
                     df = df.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type))
 
