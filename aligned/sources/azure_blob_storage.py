@@ -78,18 +78,41 @@ You can choose between two ways of authenticating with Azure Blob Storage.
     def json_at(self, path: str) -> StorageFileReference:
         raise NotImplementedError(type(self))
 
-    def parquet_at(self, path: str) -> AzureBlobParquetDataSource:
-        return AzureBlobParquetDataSource(self, path)
+    def parquet_at(
+        self,
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        date_formatter: DateFormatter | None = None,
+    ) -> AzureBlobParquetDataSource:
+        return AzureBlobParquetDataSource(
+            self, path, mapping_keys=mapping_keys or {}, date_formatter=date_formatter or DateFormatter.noop()
+        )
 
-    def csv_at(self, path: str) -> AzureBlobCsvDataSource:
-        return AzureBlobCsvDataSource(self, path)
+    def csv_at(
+        self,
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        date_formatter: DateFormatter | None = None,
+    ) -> AzureBlobCsvDataSource:
+        return AzureBlobCsvDataSource(
+            self,
+            path,
+            mapping_keys=mapping_keys or {},
+            date_formatter=date_formatter or DateFormatter.unix_timestamp(),
+        )
 
     def delta_at(
         self,
         path: str,
         mapping_keys: dict[str, str] | None = None,
+        date_formatter: DateFormatter | None = None,
     ) -> AzureBlobDeltaDataSource:
-        return AzureBlobDeltaDataSource(self, path, mapping_keys=mapping_keys or {})
+        return AzureBlobDeltaDataSource(
+            self,
+            path,
+            mapping_keys=mapping_keys or {},
+            date_formatter=date_formatter or DateFormatter.unix_timestamp(),
+        )
 
     def directory(self, path: str) -> AzureBlobDirectory:
         return AzureBlobDirectory(self, Path(path))
@@ -149,21 +172,36 @@ class AzureBlobDirectory(Directory):
     def json_at(self, path: str) -> StorageFileReference:
         return AzureBlobDataSource(self.config, (self.sub_path / path).as_posix())
 
-    def parquet_at(self, path: str) -> AzureBlobParquetDataSource:
+    def parquet_at(
+        self,
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        date_formatter: DateFormatter | None = None,
+    ) -> AzureBlobParquetDataSource:
         sub_path = self.sub_path / path
-        return self.config.parquet_at(sub_path.as_posix())
+        return self.config.parquet_at(
+            sub_path.as_posix(), date_formatter=date_formatter or DateFormatter.noop()
+        )
 
-    def csv_at(self, path: str) -> AzureBlobCsvDataSource:
+    def csv_at(
+        self,
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        date_formatter: DateFormatter | None = None,
+    ) -> AzureBlobCsvDataSource:
         sub_path = self.sub_path / path
-        return self.config.csv_at(sub_path.as_posix())
+        return self.config.csv_at(
+            sub_path.as_posix(), date_formatter=date_formatter or DateFormatter.unix_timestamp()
+        )
 
     def delta_at(
         self,
         path: str,
         mapping_keys: dict[str, str] | None = None,
+        date_formatter: DateFormatter | None = None,
     ) -> AzureBlobDeltaDataSource:
         sub_path = self.sub_path / path
-        return self.config.delta_at(sub_path.as_posix(), mapping_keys)
+        return self.config.delta_at(sub_path.as_posix(), mapping_keys, date_formatter=date_formatter)
 
     def sub_directory(self, path: str) -> AzureBlobDirectory:
         return AzureBlobDirectory(self.config, self.sub_path / path)
@@ -224,6 +262,7 @@ class AzureBlobCsvDataSource(
     path: str
     mapping_keys: dict[str, str] = field(default_factory=dict)
     csv_config: CsvConfig = field(default_factory=CsvConfig)
+    date_formatter: DateFormatter = field(default_factory=lambda: DateFormatter.unix_timestamp())
 
     type_name: str = 'azure_blob_csv'
 
@@ -294,6 +333,26 @@ class AzureBlobCsvDataSource(
         df = await job.to_polars()
         await self.write_polars(df.select(features))
 
+    def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
+        return FileFactualJob(self, [request], facts, date_formatter=self.date_formatter)
+
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+        return FileFullJob(self, request, limit, date_formatter=self.date_formatter)
+
+    def all_between_dates(
+        self,
+        request: RetrivalRequest,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> RetrivalJob:
+        return FileDateJob(
+            source=self,
+            request=request,
+            start_date=start_date,
+            end_date=end_date,
+            date_formatter=self.date_formatter,
+        )
+
 
 @dataclass
 class AzureBlobParquetDataSource(
@@ -305,6 +364,7 @@ class AzureBlobParquetDataSource(
     path: str
     mapping_keys: dict[str, str] = field(default_factory=dict)
     parquet_config: ParquetConfig = field(default_factory=ParquetConfig)
+    date_formatter: DateFormatter = field(default_factory=lambda: DateFormatter.noop())
     type_name: str = 'azure_blob_parquet'
 
     @property
@@ -372,6 +432,26 @@ class AzureBlobParquetDataSource(
         creds = self.config.read_creds()
         df.collect().to_pandas().to_parquet(url, storage_options=creds)
 
+    def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
+        return FileFactualJob(self, [request], facts, date_formatter=self.date_formatter)
+
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+        return FileFullJob(self, request, limit, date_formatter=self.date_formatter)
+
+    def all_between_dates(
+        self,
+        request: RetrivalRequest,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> RetrivalJob:
+        return FileDateJob(
+            source=self,
+            request=request,
+            start_date=start_date,
+            end_date=end_date,
+            date_formatter=self.date_formatter,
+        )
+
 
 @dataclass
 class AzureBlobDeltaDataSource(
@@ -421,9 +501,6 @@ class AzureBlobDeltaDataSource(
             logger.info(f"Failed to get freshness for {self.path}. {error} - returning None.")
             return None
 
-    def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
-        return FileFactualJob(self, [request], facts, date_formatter=self.date_formatter)
-
     async def schema(self) -> dict[str, FeatureType]:
         try:
             schema = (await self.to_lazy_polars()).schema
@@ -433,6 +510,9 @@ class AzureBlobDeltaDataSource(
             raise UnableToFindFileException() from error
         except HTTPStatusError as error:
             raise UnableToFindFileException() from error
+
+    def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
+        return FileFactualJob(self, [request], facts, date_formatter=self.date_formatter)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         return FileFullJob(self, request, limit, date_formatter=self.date_formatter)
@@ -555,8 +635,6 @@ class AzureBlobDeltaDataSource(
 
         url = f"az://{self.path}"
         merge_on = set()
-
-        schemas = {}
 
         for request in requests:
             merge_on.update(request.entity_names)

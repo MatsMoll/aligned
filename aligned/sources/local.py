@@ -306,6 +306,7 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
     path: str
     mapping_keys: dict[str, str] = field(default_factory=dict)
     config: ParquetConfig = field(default_factory=ParquetConfig)
+    date_formatter: DateFormatter = field(default_factory=lambda: DateFormatter.noop())
 
     type_name: str = 'parquet'
 
@@ -356,12 +357,18 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
         df.collect().write_parquet(self.path, compression=self.config.compression)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
-        return FileFullJob(self, request, limit)
+        return FileFullJob(self, request, limit, date_formatter=self.date_formatter)
 
     def all_between_dates(
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime
     ) -> RetrivalJob:
-        return FileDateJob(source=self, request=request, start_date=start_date, end_date=end_date)
+        return FileDateJob(
+            source=self,
+            request=request,
+            start_date=start_date,
+            end_date=end_date,
+            date_formatter=self.date_formatter,
+        )
 
     @classmethod
     def multi_source_features_for(
@@ -377,6 +384,7 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
             source=source,
             requests=[request for _, request in requests],
             facts=facts,
+            date_formatter=source.date_formatter,
         )
 
     async def schema(self) -> dict[str, FeatureType]:
@@ -414,6 +422,7 @@ class DeltaFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference,
     path: str
     mapping_keys: dict[str, str] = field(default_factory=dict)
     config: DeltaFileConfig = field(default_factory=DeltaFileConfig)
+    date_formatter: DateFormatter = field(default_factory=lambda: DateFormatter.noop())
 
     type_name: str = 'delta'
 
@@ -442,6 +451,37 @@ class DeltaFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference,
         create_parent_dir(self.path)
         df.collect().write_delta(
             self.path, mode=self.config.mode, overwrite_schema=self.config.overwrite_schema
+        )
+
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+        return FileFullJob(self, request, limit, date_formatter=self.date_formatter)
+
+    def all_between_dates(
+        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrivalJob:
+        return FileDateJob(
+            source=self,
+            request=request,
+            start_date=start_date,
+            end_date=end_date,
+            date_formatter=self.date_formatter,
+        )
+
+    @classmethod
+    def multi_source_features_for(
+        cls, facts: RetrivalJob, requests: list[tuple[DeltaFileSource, RetrivalRequest]]
+    ) -> RetrivalJob:
+
+        source = requests[0][0]
+        if not isinstance(source, cls):
+            raise ValueError(f'Only {cls} is supported, recived: {source}')
+
+        # Group based on config
+        return FileFactualJob(
+            source=source,
+            requests=[request for _, request in requests],
+            facts=facts,
+            date_formatter=source.date_formatter,
         )
 
     async def schema(self) -> dict[str, FeatureType]:
@@ -613,15 +653,31 @@ class FileSource:
 
     @staticmethod
     def parquet_at(
-        path: str, mapping_keys: dict[str, str] | None = None, config: ParquetConfig | None = None
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        config: ParquetConfig | None = None,
+        date_formatter: DateFormatter | None = None,
     ) -> ParquetFileSource:
-        return ParquetFileSource(path=path, mapping_keys=mapping_keys or {}, config=config or ParquetConfig())
+        return ParquetFileSource(
+            path=path,
+            mapping_keys=mapping_keys or {},
+            config=config or ParquetConfig(),
+            date_formatter=date_formatter or DateFormatter.noop(),
+        )
 
     @staticmethod
     def delta_at(
-        path: str, mapping_keys: dict[str, str] | None = None, config: DeltaFileConfig | None = None
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        config: DeltaFileConfig | None = None,
+        date_formatter: DateFormatter | None = None,
     ) -> DeltaFileSource:
-        return DeltaFileSource(path, mapping_keys or {}, config=config or DeltaFileConfig())
+        return DeltaFileSource(
+            path,
+            mapping_keys or {},
+            config=config or DeltaFileConfig(),
+            date_formatter=date_formatter or DateFormatter.noop(),
+        )
 
     @staticmethod
     def directory(path: str) -> FileDirectory:

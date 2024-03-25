@@ -1,6 +1,6 @@
 import pytest
 
-from aligned import FeatureStore, feature_view, Int32, FileSource
+from aligned import FeatureStore, feature_view, Int32, Int64, FileSource
 
 
 @pytest.mark.asyncio
@@ -44,19 +44,19 @@ async def test_new_combined_solution() -> None:
 
     @feature_view(name='test', source=FileSource.csv_at('test_data/test.csv'))
     class Test:
-        some_id = Int32().as_entity()
+        some_id = Int64().as_entity()
 
-        feature = Int32()
+        feature = Int64()
 
         derived_feature = feature * 10
 
     @feature_view(name='other', source=FileSource.csv_at('test_data/other.csv'))
     class Other:
 
-        other_id = Int32().as_entity()
-        some_id = Int32()
+        other_id = Int64().as_entity()
+        some_id = Int64()
 
-        other_feature = Int32()
+        other_feature = Int64()
 
         test_feature = other_feature * 10
 
@@ -65,13 +65,14 @@ async def test_new_combined_solution() -> None:
 
     @feature_view(name='combined', source=Test.join(other, on=test.some_id))  # type: ignore
     class Combined:
-        some_id = Int32().as_entity()
+        some_id = Int64().as_entity()
 
         new_feature = test.derived_feature * other.test_feature
 
     result = await Combined.query().all().to_pandas()  # type: ignore
-    result['new_feature'] = result['new_feature'].astype('int64')
-    assert result[expected_df.columns].equals(expected_df)
+
+    new_df = result.sort_values('some_id', ascending=True)[expected_df.columns].reset_index(drop=True)
+    assert new_df.equals(expected_df)
 
 
 @pytest.mark.asyncio

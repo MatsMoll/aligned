@@ -16,10 +16,7 @@ class AllDateFormatters:
     @classmethod
     def shared(cls) -> AllDateFormatters:
         if cls._shared is None:
-            formatters = [
-                Timestamp,
-                StringDateFormatter,
-            ]
+            formatters = [Timestamp, StringDateFormatter, NoopFormatter]
             cls._shared = AllDateFormatters({formatter.name(): formatter for formatter in formatters})
         return cls._shared
 
@@ -58,11 +55,33 @@ class DateFormatter(Codable, SerializableType):
 
     @staticmethod
     def iso_8601() -> StringDateFormatter:
-        return StringDateFormatter('yyyy-MM-ddTHH:mm:ssZ')
+        return StringDateFormatter('%Y-%m-%dT%H:%M:%S%.f+%Z')
 
     @staticmethod
     def unix_timestamp(time_unit: TimeUnit = 'us', time_zone: str | None = 'UTC') -> Timestamp:
         return Timestamp(time_unit, time_zone)
+
+    @staticmethod
+    def noop() -> DateFormatter:
+        return NoopFormatter()
+
+
+@dataclass
+class NoopFormatter(DateFormatter):
+    """
+    A formatter that assumes that the underlying format can store timestamps.
+    Therefore, no decoding or encoding is necessary.
+    """
+
+    @classmethod
+    def name(cls) -> str:
+        return 'noop'
+
+    def decode_polars(self, column: str) -> pl.Expr:
+        return pl.col(column)
+
+    def encode_polars(self, column: str) -> pl.Expr:
+        return pl.col(column)
 
 
 @dataclass
@@ -97,8 +116,8 @@ class StringDateFormatter(DateFormatter):
 
     def decode_polars(self, column: str) -> pl.Expr:
         return pl.col(column).str.to_datetime(
-            self.date_format, time_unit=self.time_unit, time_zone=self.time_zone
+            format=self.date_format, time_unit=self.time_unit, time_zone=self.time_zone
         )
 
     def encode_polars(self, column: str) -> pl.Expr:
-        return pl.col(column).dt.strftime(self.date_format)
+        return pl.col(column).dt.to_string(self.date_format)

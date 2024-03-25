@@ -6,7 +6,6 @@ import logging
 import timeit
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Union, TypeVar, Coroutine, Any
@@ -1889,47 +1888,8 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
         return self.requests
 
     async def to_pandas(self) -> pd.DataFrame:
-        df = await self.job.to_pandas()
-        for request in self.requests:
-            features_to_check = request.all_required_features
-
-            if request.aggregated_features:
-                features_to_check = {feature.derived_feature for feature in request.aggregated_features}
-
-            for feature in features_to_check:
-
-                mask = ~df[feature.name].isnull()
-
-                with suppress(AttributeError, TypeError):
-                    df[feature.name] = df[feature.name].mask(
-                        ~mask, other=df.loc[mask, feature.name].str.strip('"')
-                    )
-
-                if feature.dtype.is_datetime:
-                    df[feature.name] = pd.to_datetime(df[feature.name], infer_datetime_format=True, utc=True)
-                elif feature.dtype == FeatureType.string():
-                    continue
-                elif (feature.dtype.is_array) or (feature.dtype == FeatureType.embedding()):
-                    import json
-
-                    if df[feature.name].dtype == 'object':
-                        df[feature.name] = df[feature.name].apply(
-                            lambda x: json.loads(x) if isinstance(x, str) else x
-                        )
-                elif (feature.dtype == FeatureType.json()) or feature.dtype.is_datetime:
-                    pass
-                else:
-                    if feature.dtype.is_numeric:
-                        df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce').astype(
-                            feature.dtype.pandas_type
-                        )
-                    else:
-                        df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
-
-            if request.event_timestamp and request.event_timestamp.name in df.columns:
-                feature = request.event_timestamp
-                df[feature.name] = pd.to_datetime(df[feature.name], infer_datetime_format=True, utc=True)
-        return df
+        df = await self.to_polars()
+        return df.to_pandas()
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         df = await self.job.to_lazy_polars()

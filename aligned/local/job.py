@@ -8,9 +8,12 @@ import polars as pl
 from aligned.request.retrival_request import AggregatedFeature, AggregateOver, RetrivalRequest
 from aligned.retrival_job import RequestResult, RetrivalJob
 from aligned.schemas.date_formatter import DateFormatter
-from aligned.schemas.feature import Feature, FeatureType
+from aligned.schemas.feature import Feature
 from aligned.sources.local import DataFileReference
 from aligned.schemas.constraints import Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class LiteralRetrivalJob(RetrivalJob):
@@ -133,14 +136,14 @@ def decode_timestamps(df: pl.LazyFrame, request: RetrivalRequest, formatter: Dat
             and feature.name in df.columns
             and not isinstance(dtypes[feature.name], pl.Datetime)
         ):
-            columns.add((feature.name, None))
+            columns.add((feature.name, feature.dtype.datetime_timezone))
 
     if (
         request.event_timestamp
         and request.event_timestamp.name in df.columns
         and not isinstance(dtypes[request.event_timestamp.name], pl.Datetime)
     ):
-        columns.add((request.event_timestamp.name, None))
+        columns.add((request.event_timestamp.name, request.event_timestamp.dtype.datetime_timezone))
 
     if not columns:
         return df
@@ -148,6 +151,8 @@ def decode_timestamps(df: pl.LazyFrame, request: RetrivalRequest, formatter: Dat
     exprs = []
 
     for column, time_zone in columns:
+        logger.info(f'Decoding column {column} with timezone {time_zone}')
+
         if time_zone is None:
             exprs.append(formatter.decode_polars(column).alias(column))
         else:
@@ -379,7 +384,7 @@ class FileFactualJob(RetrivalJob):
                 did_rename_event_timestamp = True
 
         row_id_name = 'row_id'
-        result = result.with_row_count(row_id_name)
+        result = result.with_row_index(row_id_name)
         for request in self.requests:
 
             entity_names = request.entity_names
@@ -468,11 +473,6 @@ class FileFactualJob(RetrivalJob):
                 field = request.event_timestamp.name
                 ttl = request.event_timestamp.ttl
 
-                if new_result.select(field).dtypes[0] == pl.Utf8():
-                    new_result = new_result.with_columns(
-                        pl.col(field).str.strptime(pl.Datetime, '%+').alias(field)
-                    )
-
                 if ttl:
                     ttl_request = (pl.col(field) <= pl.col(event_timestamp_col)) & (
                         pl.col(field) >= pl.col(event_timestamp_col) - ttl
@@ -484,9 +484,7 @@ class FileFactualJob(RetrivalJob):
                     )
                 new_result = new_result.sort(field, descending=True).select(pl.exclude(field))
             elif request.event_timestamp:
-                new_result = new_result.sort(
-                    [row_id_name, request.event_timestamp.name], descending=True
-                ).select(pl.exclude(request.event_timestamp.name))
+                new_result = new_result.sort([row_id_name, request.event_timestamp.name], descending=True)
 
             unique = new_result.unique(subset=row_id_name, keep='first')
             column_selects.remove('row_id')
