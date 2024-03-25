@@ -31,17 +31,29 @@ class BatchDataSourceFactory:
         from aligned.sources.psql import PostgreSQLDataSource
         from aligned.sources.redshift import RedshiftSQLDataSource
         from aligned.sources.s3 import AwsS3CsvDataSource, AwsS3ParquetDataSource
+        from aligned.sources.azure_blob_storage import (
+            AzureBlobCsvDataSource,
+            AzureBlobDeltaDataSource,
+            AzureBlobParquetDataSource,
+        )
         from aligned.schemas.feature_view import FeatureViewReferenceSource
         from aligned.schemas.model import ModelSource
 
         source_types = [
             PostgreSQLDataSource,
+            # File Sources
             ParquetFileSource,
             CsvFileSource,
             DeltaFileSource,
+            # Aws Sources
             AwsS3CsvDataSource,
             AwsS3ParquetDataSource,
             RedshiftSQLDataSource,
+            # Azure Sources
+            AzureBlobCsvDataSource,
+            AzureBlobDeltaDataSource,
+            AzureBlobParquetDataSource,
+            # Aligned Related Sources
             JoinDataSource,
             JoinAsofDataSource,
             FilteredDataSource,

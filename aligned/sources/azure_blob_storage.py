@@ -14,8 +14,15 @@ from aligned.exceptions import UnableToFindFileException
 from aligned.feature_source import WritableFeatureSource
 from aligned.local.job import FileDateJob, FileFactualJob, FileFullJob
 from aligned.retrival_job import RetrivalJob, RetrivalRequest
-from aligned.schemas.feature import FeatureType
-from aligned.sources.local import CsvConfig, DataFileReference, ParquetConfig, StorageFileReference, Directory
+from aligned.schemas.feature import FeatureType, EventTimestamp
+from aligned.sources.local import (
+    CsvConfig,
+    DataFileReference,
+    ParquetConfig,
+    StorageFileReference,
+    Directory,
+    data_file_freshness,
+)
 from aligned.storage import Storage
 from httpx import HTTPStatusError
 
@@ -139,7 +146,7 @@ class AzureBlobDirectory(Directory):
     sub_path: Path
 
     def json_at(self, path: str) -> StorageFileReference:
-        raise NotImplementedError(type(self))
+        return AzureBlobDataSource(self.config, (self.sub_path / path).as_posix())
 
     def parquet_at(self, path: str) -> AzureBlobParquetDataSource:
         sub_path = self.sub_path / path
@@ -404,6 +411,13 @@ class AzureBlobDeltaDataSource(
             raise UnableToFindFileException() from error
         except HTTPStatusError as error:
             raise UnableToFindFileException() from error
+
+    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+        try:
+            return await data_file_freshness(self, event_timestamp.name)
+        except Exception as error:
+            logger.info(f"Failed to get freshness for {self.path}. {error} - returning None.")
+            return None
 
     def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
         return FileFactualJob(self, [request], facts)
