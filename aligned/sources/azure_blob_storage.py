@@ -442,17 +442,14 @@ class AzureBlobDeltaDataSource(
             mode='append',
         )
 
-    async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+    def df_to_deltalake_compatible(
+        self, df: pl.DataFrame, requests: list[RetrivalRequest]
+    ) -> tuple[pl.DataFrame, dict]:
         import pyarrow as pa
         from aligned.schemas.constraints import Optional
         from aligned.schemas.feature import Feature
 
-        df = await job.to_polars()
-        url = f"az://{self.path}"
-
-        def pa_field(feature: Feature) -> pa.Field:
-            is_nullable = Optional() in (feature.constraints or set())
-
+        def pa_dtype(dtype: FeatureType) -> pa.DataType:
             pa_types = {
                 'int8': pa.int8(),
                 'int16': pa.int16(),
@@ -462,16 +459,33 @@ class AzureBlobDeltaDataSource(
                 'double': pa.float64(),
                 'string': pa.large_string(),
                 'date': pa.date64(),
+                'embedding': pa.large_list(pa.float32()),
                 'datetime': pa.float64(),
                 'list': pa.large_list(pa.int32()),
                 'array': pa.large_list(pa.int32()),
                 'bool': pa.bool_(),
             }
 
-            if feature.dtype.name in pa_types:
-                return pa.field(feature.name, pa_types[feature.dtype.name], nullable=is_nullable)
+            if dtype.name in pa_types:
+                return pa_types[dtype.name]
 
-            raise ValueError(f"Unsupported dtype: {feature.dtype}")
+            if dtype.is_datetime:
+                return pa.float64()
+
+            if dtype.is_array:
+                array_sub_dtype = dtype.array_subtype()
+                if array_sub_dtype:
+                    return pa.large_list(pa_dtype(array_sub_dtype))
+
+                return pa.large_list(pa.string())
+
+            raise ValueError(f"Unsupported dtype: {dtype}")
+
+        def pa_field(feature: Feature) -> pa.Field:
+            is_nullable = Optional() in (feature.constraints or set())
+
+            pa_type = pa_dtype(feature.dtype)
+            return pa.field(feature.name, pa_type, nullable=is_nullable)
 
         dtypes = dict(zip(df.columns, df.dtypes, strict=False))
         schemas = {}
@@ -479,18 +493,26 @@ class AzureBlobDeltaDataSource(
         for request in requests:
             for feature in request.all_features.union(request.entities):
                 schemas[feature.name] = pa_field(feature)
+
                 if dtypes[feature.name] == pl.Null:
                     df = df.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type))
-                elif feature.dtype.name == 'array':
-                    df = df.with_columns(pl.col(feature.name).cast(pl.List(pl.Int32())))
-                elif feature.dtype.name == 'datetime':
+                elif feature.dtype.is_datetime:
                     df = df.with_columns(pl.col(feature.name).dt.timestamp('ms').cast(pl.Float64()))
                 else:
                     df = df.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type))
 
+        return df, schemas
+
+    async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+        import pyarrow as pa
+
+        df = await job.to_polars()
+        url = f"az://{self.path}"
+
+        df, schemas = self.df_to_deltalake_compatible(df, requests)
+
         orderd_schema = OrderedDict(sorted(schemas.items()))
         schema = list(orderd_schema.values())
-
         df.select(list(orderd_schema.keys())).write_delta(
             url,
             storage_options=self.config.read_creds(),
@@ -500,8 +522,6 @@ class AzureBlobDeltaDataSource(
 
     async def upsert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
         import pyarrow as pa
-        from aligned.schemas.constraints import Optional
-        from aligned.schemas.feature import Feature
         from deltalake.exceptions import TableNotFoundError
 
         df = await job.to_polars()
@@ -509,49 +529,15 @@ class AzureBlobDeltaDataSource(
         url = f"az://{self.path}"
         merge_on = set()
 
-        def pa_field(feature: Feature) -> pa.Field:
-            is_nullable = Optional() in (feature.constraints or set())
-
-            pa_types = {
-                'int8': pa.int8(),
-                'int16': pa.int16(),
-                'int32': pa.int32(),
-                'int64': pa.int64(),
-                'float': pa.float64(),
-                'double': pa.float64(),
-                'string': pa.large_string(),
-                'date': pa.date64(),
-                'datetime': pa.float64(),
-                'list': pa.large_list(pa.int32()),
-                'array': pa.large_list(pa.int32()),
-                'bool': pa.bool_(),
-            }
-
-            if feature.dtype.name in pa_types:
-                return pa.field(feature.name, pa_types[feature.dtype.name], nullable=is_nullable)
-
-            raise ValueError(f"Unsupported dtype: {feature.dtype}")
-
-        dtypes = dict(zip(df.columns, df.dtypes, strict=False))
         schemas = {}
 
         for request in requests:
             merge_on.update(request.entity_names)
 
-            for feature in request.all_features.union(request.entities):
-                schemas[feature.name] = pa_field(feature)
-                if dtypes[feature.name] == pl.Null:
-                    df = df.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type))
-                elif feature.dtype.name == 'array':
-                    df = df.with_columns(pl.col(feature.name).cast(pl.List(pl.Int32())))
-                elif feature.dtype.name == 'datetime':
-                    df = df.with_columns(pl.col(feature.name).dt.timestamp('ms').cast(pl.Float64()))
-                else:
-                    df = df.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type))
+        df, schemas = self.df_to_deltalake_compatible(df, requests)
 
         orderd_schema = OrderedDict(sorted(schemas.items()))
         schema = list(orderd_schema.values())
-
         predicate = ' AND '.join([f"s.{key} = t.{key}" for key in merge_on])
 
         try:

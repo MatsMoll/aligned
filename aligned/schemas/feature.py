@@ -57,6 +57,13 @@ class FeatureType(Codable):
     def is_array(self) -> bool:
         return self.name.startswith('array')
 
+    def array_subtype(self) -> FeatureType | None:
+        if not self.is_array or '-' not in self.name:
+            return None
+
+        sub = str(self.name[len('array-') :])
+        return FeatureType(sub)
+
     @property
     def datetime_timezone(self) -> str | None:
         if not self.is_datetime:
@@ -115,9 +122,16 @@ class FeatureType(Codable):
 
     @property
     def polars_type(self) -> type:
-        if self.name.startswith('datetime-'):
-            time_zone = self.name.split('-')[1]
+        if self.is_datetime:
+            time_zone = self.datetime_timezone
             return pl.Datetime(time_zone=time_zone)  # type: ignore
+
+        if self.is_array:
+            sub_type = self.array_subtype()
+            if sub_type:
+                return pl.List(sub_type.polars_type)  # type: ignore
+            else:
+                return pl.List(pl.Utf8)  # type: ignore
 
         for name, dtype in NAME_POLARS_MAPPING:
             if name == self.name:
