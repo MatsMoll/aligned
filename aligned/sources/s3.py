@@ -12,7 +12,14 @@ from aligned.local.job import FileDateJob, FileFullJob
 from aligned.retrival_job import RetrivalRequest, RetrivalJob
 from aligned.s3.storage import AwsS3Storage
 from aligned.schemas.codable import Codable
-from aligned.sources.local import CsvConfig, DataFileReference, ParquetConfig, StorageFileReference
+from aligned.sources.local import (
+    CsvConfig,
+    DataFileReference,
+    ParquetConfig,
+    StorageFileReference,
+    Directory,
+    DeltaFileConfig,
+)
 from aligned.storage import Storage
 
 try:
@@ -67,9 +74,56 @@ class AwsS3Config(Codable):
             config=self, path=path, mapping_keys=mapping_keys or {}, parquet_config=config or ParquetConfig()
         )
 
+    def sub_directory(self, path: str) -> 'AwsS3Directory':
+        return AwsS3Directory(config=self, path=path)
+
+    def directory(self, path: str) -> 'AwsS3Directory':
+        return self.sub_directory(path)
+
     @property
     def storage(self) -> Storage:
         return AwsS3Storage(self)
+
+
+@dataclass
+class AwsS3Directory(Directory):
+
+    config: AwsS3Config
+    path: str
+
+    def json_at(self, path: str) -> 'AwsS3DataSource':
+        return AwsS3DataSource(config=self.config, path=f'{self.path}/{path}')
+
+    def csv_at(
+        self, path: str, mapping_keys: dict[str, str] | None = None, csv_config: CsvConfig | None = None
+    ) -> 'AwsS3CsvDataSource':
+        return AwsS3CsvDataSource(
+            config=self.config,
+            path=f'{self.path}/{path}',
+            mapping_keys=mapping_keys or {},
+            csv_config=csv_config or CsvConfig(),
+        )
+
+    def parquet_at(
+        self, path: str, mapping_keys: dict[str, str] | None = None, config: ParquetConfig | None = None
+    ) -> 'AwsS3ParquetDataSource':
+        return AwsS3ParquetDataSource(
+            config=self.config,
+            path=f'{self.path}/{path}',
+            mapping_keys=mapping_keys or {},
+            parquet_config=config or ParquetConfig(),
+        )
+
+    def delta_at(
+        self, path: str, mapping_keys: dict[str, str] | None = None, config: DeltaFileConfig | None = None
+    ) -> BatchDataSource:
+        raise NotImplementedError(type(self))
+
+    def sub_directory(self, path: str) -> 'AwsS3Directory':
+        return AwsS3Directory(config=self.config, path=f'{self.path}/{path}')
+
+    def directory(self, path: str) -> 'AwsS3Directory':
+        return self.sub_directory(path)
 
 
 @dataclass

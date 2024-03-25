@@ -1905,11 +1905,11 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                         ~mask, other=df.loc[mask, feature.name].str.strip('"')
                     )
 
-                if feature.dtype == FeatureType.datetime():
+                if feature.dtype.is_datetime:
                     df[feature.name] = pd.to_datetime(df[feature.name], infer_datetime_format=True, utc=True)
-                elif feature.dtype == FeatureType.datetime() or feature.dtype == FeatureType.string():
+                elif feature.dtype == FeatureType.string():
                     continue
-                elif (feature.dtype == FeatureType.array()) or (feature.dtype == FeatureType.embedding()):
+                elif (feature.dtype.is_array) or (feature.dtype == FeatureType.embedding()):
                     import json
 
                     if df[feature.name].dtype == 'object':
@@ -1950,14 +1950,23 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
 
                 if feature.dtype == FeatureType.bool():
                     df = df.with_columns(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
-                elif feature.dtype == FeatureType.datetime():
+                elif feature.dtype.is_datetime:
+
                     current_dtype = df.select([feature.name]).dtypes[0]
 
-                    if isinstance(current_dtype, pl.Datetime):
-                        continue
+                    tz_value = feature.dtype.datetime_timezone
 
-                    df = df.with_columns(self.date_formatter.decode_polars(feature.name))
-                elif (feature.dtype == FeatureType.array()) or (feature.dtype == FeatureType.embedding()):
+                    if not isinstance(current_dtype, pl.Datetime):
+                        expr = self.date_formatter.decode_polars(feature.name)
+                    else:
+                        expr = pl.col(feature.name)
+
+                    if tz_value and tz_value != current_dtype.time_zone:
+                        df = df.with_columns(expr.dt.convert_time_zone(tz_value))
+                    else:
+                        df = df.with_columns(expr)
+
+                elif (feature.dtype.is_array) or (feature.dtype == FeatureType.embedding()):
                     dtype = df.select(feature.name).dtypes[0]
                     if dtype == pl.Utf8:
                         df = df.with_columns(pl.col(feature.name).str.json_extract(pl.List(pl.Utf8)))

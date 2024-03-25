@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, Protocol
 from uuid import uuid4
 
 import pandas as pd
@@ -312,11 +312,11 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
     @property
     def to_markdown(self) -> str:
         return f'''#### Parquet File
-*Renames*: {self.mapping_keys}
+        *Renames*: {self.mapping_keys}
 
-*File*: {self.path}
+        *File*: {self.path}
 
-[Go to file]({self.path})'''
+        [Go to file]({self.path})'''
 
     def job_group_key(self) -> str:
         return f'{self.type_name}/{self.path}'
@@ -515,8 +515,31 @@ class DirectoryRepo(AsRepoDefinition):
         return await RepoReader.definition_from_path(self.dir, self.exclude)
 
 
+class Directory(Protocol):
+    def json_at(self, path: str) -> StorageFileReference:
+        ...
+
+    def csv_at(
+        self, path: str, mapping_keys: dict[str, str] | None = None, csv_config: CsvConfig | None = None
+    ) -> BatchDataSource:
+        ...
+
+    def parquet_at(
+        self, path: str, mapping_keys: dict[str, str] | None = None, config: ParquetConfig | None = None
+    ) -> BatchDataSource:
+        ...
+
+    def delta_at(
+        self, path: str, mapping_keys: dict[str, str] | None = None, config: DeltaFileConfig | None = None
+    ) -> BatchDataSource:
+        ...
+
+    def sub_directory(self, path: str) -> Directory:
+        ...
+
+
 @dataclass
-class FileDirectory(Codable):
+class FileDirectory(Codable, Directory):
 
     dir_path: Path
 
@@ -552,8 +575,11 @@ class FileDirectory(Codable):
     ) -> DeltaFileSource:
         return DeltaFileSource(self.path_string(path), mapping_keys or {}, config=config or DeltaFileConfig())
 
-    def directory(self, path: str) -> FileDirectory:
+    def sub_directory(self, path: str) -> FileDirectory:
         return FileDirectory(self.dir_path / path)
+
+    def directory(self, path: str) -> FileDirectory:
+        return self.sub_directory(path)
 
     def repo_from_dir(self, dir: str, exclude: list[str] | None = None) -> AsRepoDefinition:
         return DirectoryRepo(Path(dir), exclude)

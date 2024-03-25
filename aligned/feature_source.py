@@ -36,6 +36,9 @@ class WritableFeatureSource:
     async def upsert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
         raise NotImplementedError(f'Upsert write is not implemented for {type(self)}.')
 
+    async def overwrite(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+        raise NotImplementedError(f'Overwrite write is not implemented for {type(self)}.')
+
 
 class RangeFeatureSource:
     def all_for(self, request: FeatureRequest, limit: int | None = None) -> RetrivalJob:

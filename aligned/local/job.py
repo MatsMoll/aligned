@@ -124,28 +124,36 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
 
 def decode_timestamps(df: pl.LazyFrame, request: RetrivalRequest, formatter: DateFormatter) -> pl.LazyFrame:
 
-    columns: set[str] = set()
+    columns: set[tuple[str, str | None]] = set()
     dtypes = dict(zip(df.columns, df.dtypes))
 
     for feature in request.all_features:
         if (
-            feature.dtype == FeatureType.datetime
+            feature.dtype.is_datetime
             and feature.name in df.columns
             and not isinstance(dtypes[feature.name], pl.Datetime)
         ):
-            columns.add(feature.name)
+            columns.add((feature.name, None))
 
     if (
         request.event_timestamp
         and request.event_timestamp.name in df.columns
         and not isinstance(dtypes[request.event_timestamp.name], pl.Datetime)
     ):
-        columns.add(request.event_timestamp.name)
+        columns.add((request.event_timestamp.name, None))
 
     if not columns:
         return df
 
-    return df.with_columns([formatter.decode_polars(column).alias(column) for column in columns])
+    exprs = []
+
+    for column, time_zone in columns:
+        if time_zone is None:
+            exprs.append(formatter.decode_polars(column).alias(column))
+        else:
+            exprs.append(formatter.decode_polars(column).dt.convert_time_zone(time_zone).alias(column))
+
+    return df.with_columns(exprs)
 
 
 @dataclass

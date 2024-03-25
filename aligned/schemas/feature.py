@@ -54,6 +54,17 @@ class FeatureType(Codable):
         return self.name.startswith('datetime')
 
     @property
+    def is_array(self) -> bool:
+        return self.name.startswith('array')
+
+    @property
+    def datetime_timezone(self) -> str | None:
+        if not self.is_datetime:
+            return None
+
+        return self.name.split('-')[1] if '-' in self.name else None
+
+    @property
     def python_type(self) -> type:
         from datetime import date, datetime, time, timedelta
         from uuid import UUID

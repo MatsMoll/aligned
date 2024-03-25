@@ -20,7 +20,7 @@ from aligned.feature_store import FeatureStore
 from aligned.feature_view import feature_view, combined_feature_view, check_schema
 from aligned.schemas.text_vectoriser import EmbeddingModel
 from aligned.sources.kafka import KafkaConfig
-from aligned.sources.local import FileSource
+from aligned.sources.local import FileSource, Directory, ParquetConfig, CsvConfig
 from aligned.sources.psql import PostgreSQLConfig
 from aligned.sources.redis import RedisConfig
 from aligned.sources.redshift import RedshiftSQLConfig
@@ -66,4 +66,8 @@ __all__ = [
     'FeatureLocation',
     'FeatureInputVersions',
     'check_schema',
+    'Directory',
+    # File Configs
+    'CsvConfig',
+    'ParquetConfig',
 ]
