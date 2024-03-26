@@ -404,9 +404,30 @@ class FeatureFactory(FeatureReferencable):
         )
 
     def as_classification_label(self) -> ClassificationLabel:
+        """
+        Tells Aligned that this feature is a classification target in a model_contract.
+
+        This can simplify the process of creating training datasets,
+        as Aligned knows which features will be det ground truth.
+        """
         return ClassificationLabel(self)
 
     def as_regression_label(self) -> RegressionLabel:
+        """
+        Tells Aligned that this feature is a regression target in a model_contract.
+
+        This can simplify the process of creating training datasets,
+        as Aligned knows which features will be det ground truth.
+        """
+        return RegressionLabel(self)
+
+    def as_regression_target(self) -> RegressionLabel:
+        """
+        Tells Aligned that this feature is a regression target in a model_contract.
+
+        This can simplify the process of creating training datasets,
+        as Aligned knows which features will be det ground truth.
+        """
         return RegressionLabel(self)
 
     def as_recommendation_target(self) -> RecommendationTarget:

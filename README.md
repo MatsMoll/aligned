@@ -142,7 +142,7 @@ from aligned import FileSource
 from aligned.schemas.date_formatter import DateFormatter
 
 iso_formatter = DateFormatter.iso_8601()
-unix_formatter = DateFormatter.uniq_timestamp(time_unit="us", time_zone="UTC")
+unix_formatter = DateFormatter.unix_timestamp(time_unit="us", time_zone="UTC")
 custom_strtime_formatter = DateFormatter.string_format("%Y/%m/%d %H:%M:%S")
 
 FileSource.csv_at("my/file.csv", date_formatter=unix_formatter)
