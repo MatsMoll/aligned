@@ -1180,6 +1180,7 @@ class EventTimestamp(DateFeature, ArithmeticFeature):
             name=self.name,
             ttl=int(self.ttl.total_seconds()) if self.ttl else None,
             description=self._description,
+            dtype=self.dtype,
         )
 
 

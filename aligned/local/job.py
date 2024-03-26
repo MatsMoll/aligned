@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 
+from pytz import timezone
 from datetime import datetime
 
 import pandas as pd
@@ -127,36 +128,40 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
 
 def decode_timestamps(df: pl.LazyFrame, request: RetrivalRequest, formatter: DateFormatter) -> pl.LazyFrame:
 
-    columns: set[tuple[str, str | None]] = set()
+    decode_columns: dict[str, str | None] = {}
+    check_timezone_columns: dict[str, str | None] = {}
+
     dtypes = dict(zip(df.columns, df.dtypes))
 
-    for feature in request.all_features:
-        if (
-            feature.dtype.is_datetime
-            and feature.name in df.columns
-            and not isinstance(dtypes[feature.name], pl.Datetime)
-        ):
-            columns.add((feature.name, feature.dtype.datetime_timezone))
+    all_features = request.all_features
 
-    if (
-        request.event_timestamp
-        and request.event_timestamp.name in df.columns
-        and not isinstance(dtypes[request.event_timestamp.name], pl.Datetime)
-    ):
-        columns.add((request.event_timestamp.name, request.event_timestamp.dtype.datetime_timezone))
+    if request.event_timestamp:
+        all_features.add(request.event_timestamp.as_feature())
 
-    if not columns:
-        return df
+    for feature in all_features:
+        if feature.dtype.is_datetime and feature.name in df.columns:
+
+            if not isinstance(dtypes[feature.name], pl.Datetime):
+                decode_columns[feature.name] = feature.dtype.datetime_timezone
+            else:
+                check_timezone_columns[feature.name] = feature.dtype.datetime_timezone
 
     exprs = []
 
-    for column, time_zone in columns:
+    for column, time_zone in decode_columns.items():
         logger.info(f'Decoding column {column} using {formatter} with timezone {time_zone}')
 
         if time_zone is None:
-            exprs.append(formatter.decode_polars(column).alias(column))
+            exprs.append(formatter.decode_polars(column).dt.replace_time_zone(None).alias(column))
         else:
             exprs.append(formatter.decode_polars(column).dt.convert_time_zone(time_zone).alias(column))
+
+    for column, time_zone in check_timezone_columns.items():
+        logger.info(f'Checking timezone for column {column} with timezone {time_zone}')
+        if time_zone is None:
+            exprs.append(pl.col(column).dt.replace_time_zone(None).alias(column))
+        else:
+            exprs.append(pl.col(column).dt.convert_time_zone(time_zone).alias(column))
 
     return df.with_columns(exprs)
 
@@ -285,7 +290,16 @@ class FileDateJob(RetrivalJob):
         event_timestamp_column = self.request.event_timestamp.name
         df = decode_timestamps(df, self.request, self.date_formatter)
 
-        return df.filter(pl.col(event_timestamp_column).is_between(self.start_date, self.end_date))
+        time_zone = self.request.event_timestamp.dtype.datetime_timezone
+        if time_zone is None:
+            start_date = self.start_date.replace(tzinfo=None)
+            end_date = self.end_date.replace(tzinfo=None)
+        else:
+            tz = timezone(time_zone)
+            start_date = tz.localize(self.start_date)
+            end_date = tz.localize(self.end_date)
+
+        return df.filter(pl.col(event_timestamp_column).is_between(start_date, end_date))
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()

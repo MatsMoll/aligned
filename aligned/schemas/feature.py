@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 from zoneinfo import ZoneInfo
 
@@ -315,7 +315,7 @@ class EventTimestamp(Codable):
     ttl: int | None = None
     description: str | None = None
     tags: dict[str, str] | None = None
-    dtype: FeatureType = FeatureType.datetime()
+    dtype: FeatureType = field(default_factory=lambda: FeatureType.datetime())
 
     def __hash__(self) -> int:
         return hash(self.name)
