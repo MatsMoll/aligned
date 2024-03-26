@@ -117,12 +117,28 @@ class FeatureStore:
         self.models = models
 
     @staticmethod
-    def experimental() -> FeatureStore:
+    def empty() -> FeatureStore:
+        """
+        Creates a feature store with no features or models.
+
+        ```python
+        store = FeatureStore.empty()
+
+        store.add_compiled_view(MyFeatureView.compile())
+        store.add_compiled_model(MyModel.compile())
+
+        df = await store.execute_sql("SELECT * FROM my_view LIMIT 10").to_polars()
+        ```
+        """
         return FeatureStore.from_definition(
             RepoDefinition(
                 metadata=RepoMetadata(created_at=datetime.utcnow(), name='experimental'),
             )
         )
+
+    @staticmethod
+    def experimental() -> FeatureStore:
+        return FeatureStore.empty()
 
     @staticmethod
     def register_enrichers(enrichers: list[EnricherReference]) -> None:
@@ -208,6 +224,26 @@ class FeatureStore:
             models=set(self.models.values()),
             enrichers=[],
         )
+
+    def combine(self, other: FeatureStore) -> FeatureStore:
+        """
+        Combines two different feature stores together.
+        """
+        new_store = FeatureStore.empty()
+
+        for view in self.feature_views.values():
+            new_store.add_view(view)
+
+        for view in other.feature_views.values():
+            new_store.add_view(view)
+
+        for model in self.models.values():
+            new_store.add_compiled_model(model)
+
+        for model in other.models.values():
+            new_store.add_compiled_model(model)
+
+        return new_store
 
     @staticmethod
     async def from_reference_at_path(
@@ -501,6 +537,11 @@ class FeatureStore:
             RetrivalRequest.combine(requests),
         )
 
+    def requests_for_features(
+        self, features: list[str], event_timestamp_column: str | None = None
+    ) -> FeatureRequest:
+        return self.requests_for(RawStringFeatureRequest(set(features)), event_timestamp_column)
+
     def requests_for(
         self, feature_request: RawStringFeatureRequest, event_timestamp_column: str | None = None
     ) -> FeatureRequest:
@@ -574,6 +615,9 @@ class FeatureStore:
         Args:
             view (CompiledFeatureView): The feature view to add
         """
+        if view.name in self.feature_views:
+            raise ValueError(f'Feature view with name {view.name} already exists')
+
         self.feature_views[view.name] = view
         if isinstance(self.feature_source, BatchFeatureSource):
             self.feature_source.sources[FeatureLocation.feature_view(view.name).identifier] = (
@@ -600,12 +644,20 @@ class FeatureStore:
         Args:
             model (Model): The model to add
         """
-        compiled_model = model.compile()
-        self.models[compiled_model.name] = compiled_model
+        self.add_compiled_model(model.compile())
 
     def add_compiled_model(self, model: ModelSchema) -> None:
+
+        if model.name in self.models:
+            raise ValueError(f'Model with name {model.name} already exists')
+
         self.models[model.name] = model
-        if isinstance(self.feature_source, BatchFeatureSource) and model.predictions_view.source:
+
+        if model.predictions_view.source is None:
+            logging.info(f"Model '{model.name}' has no source.")
+            return
+
+        if isinstance(self.feature_source, BatchFeatureSource):
             self.feature_source.sources[
                 FeatureLocation.model(model.name).identifier
             ] = model.predictions_view.source

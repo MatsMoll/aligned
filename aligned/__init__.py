@@ -25,6 +25,7 @@ from aligned.sources.psql import PostgreSQLConfig
 from aligned.sources.redis import RedisConfig
 from aligned.sources.redshift import RedshiftSQLConfig
 from aligned.sources.s3 import AwsS3Config
+from aligned.sources.azure_blob_storage import AzureBlobConfig
 from aligned.schemas.feature import FeatureLocation
 
 __all__ = [
@@ -34,6 +35,7 @@ __all__ = [
     'PostgreSQLConfig',
     'FileSource',
     'AwsS3Config',
+    'AzureBlobConfig',
     'RedshiftSQLConfig',
     'CustomMethodDataSource',
     # Stream Data Source
