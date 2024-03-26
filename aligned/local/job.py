@@ -151,7 +151,7 @@ def decode_timestamps(df: pl.LazyFrame, request: RetrivalRequest, formatter: Dat
     exprs = []
 
     for column, time_zone in columns:
-        logger.info(f'Decoding column {column} with timezone {time_zone}')
+        logger.info(f'Decoding column {column} using {formatter} with timezone {time_zone}')
 
         if time_zone is None:
             exprs.append(formatter.decode_polars(column).alias(column))

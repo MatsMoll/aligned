@@ -1900,53 +1900,32 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
             if request.aggregated_features:
                 features_to_check.update({feature.derived_feature for feature in request.aggregated_features})
 
+            if request.event_timestamp:
+                features_to_check.add(request.event_timestamp.as_feature())
+
             for feature in features_to_check:
 
                 if feature.name not in org_schema:
                     continue
 
                 if feature.dtype.polars_type.is_(org_schema[feature.name]):
+                    logger.debug(f'Skipping feature {feature.name}, already correct type')
                     continue
 
                 if feature.dtype == FeatureType.bool():
                     df = df.with_columns(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
-                elif feature.dtype.is_datetime:
-
-                    current_dtype = df.select([feature.name]).dtypes[0]
-
-                    tz_value = feature.dtype.datetime_timezone
-
-                    if not isinstance(current_dtype, pl.Datetime):
-                        expr = self.date_formatter.decode_polars(feature.name)
-                    else:
-                        expr = pl.col(feature.name)
-
-                    if tz_value and tz_value != current_dtype.time_zone:
-                        df = df.with_columns(expr.dt.convert_time_zone(tz_value))
-                    else:
-                        df = df.with_columns(expr)
-
                 elif (feature.dtype.is_array) or (feature.dtype == FeatureType.embedding()):
                     dtype = df.select(feature.name).dtypes[0]
                     if dtype == pl.Utf8:
                         df = df.with_columns(pl.col(feature.name).str.json_extract(pl.List(pl.Utf8)))
                 elif (feature.dtype == FeatureType.json()) or feature.dtype.is_datetime:
+                    logger.debug(f'Converting {feature.name} to {feature.dtype.name}')
                     pass
                 else:
-                    df = df.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type, strict=False))
-
-            if request.event_timestamp:
-                feature = request.event_timestamp
-                if feature.name not in df.columns:
-                    continue
-                current_dtype = df.select([feature.name]).dtypes[0]
-
-                if not isinstance(current_dtype, pl.Datetime):
-                    df = df.with_columns(
-                        (pl.col(feature.name).cast(pl.Int64) * 1000)
-                        .cast(pl.Datetime(time_zone='UTC'))
-                        .alias(feature.name)
+                    logger.debug(
+                        f'Converting {feature.name} to {feature.dtype.name} - {feature.dtype.polars_type}'
                     )
+                    df = df.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type, strict=False))
 
         return df
 

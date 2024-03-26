@@ -330,8 +330,25 @@ class AzureBlobCsvDataSource(
             raise ValueError(f"Only support writing on request, got {len(requests)}.")
 
         features = requests[0].all_returned_columns
-        df = await job.to_polars()
+        df = await job.to_lazy_polars()
         await self.write_polars(df.select(features))
+
+    @classmethod
+    def multi_source_features_for(
+        cls, facts: RetrivalJob, requests: list[tuple[AzureBlobCsvDataSource, RetrivalRequest]]
+    ) -> RetrivalJob:
+
+        source = requests[0][0]
+        if not isinstance(source, cls):
+            raise ValueError(f'Only {cls} is supported, recived: {source}')
+
+        # Group based on config
+        return FileFactualJob(
+            source=source,
+            requests=[request for _, request in requests],
+            facts=facts,
+            date_formatter=source.date_formatter,
+        )
 
     def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
         return FileFactualJob(self, [request], facts, date_formatter=self.date_formatter)
@@ -430,7 +447,25 @@ class AzureBlobParquetDataSource(
     async def write_polars(self, df: pl.LazyFrame) -> None:
         url = f"az://{self.path}"
         creds = self.config.read_creds()
+        df.collect().write_parquet(url, storage_options=creds)
         df.collect().to_pandas().to_parquet(url, storage_options=creds)
+
+    @classmethod
+    def multi_source_features_for(
+        cls, facts: RetrivalJob, requests: list[tuple[AzureBlobParquetDataSource, RetrivalRequest]]
+    ) -> RetrivalJob:
+
+        source = requests[0][0]
+        if not isinstance(source, cls):
+            raise ValueError(f'Only {cls} is supported, recived: {source}')
+
+        # Group based on config
+        return FileFactualJob(
+            source=source,
+            requests=[request for _, request in requests],
+            facts=facts,
+            date_formatter=source.date_formatter,
+        )
 
     def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
         return FileFactualJob(self, [request], facts, date_formatter=self.date_formatter)
@@ -510,6 +545,23 @@ class AzureBlobDeltaDataSource(
             raise UnableToFindFileException() from error
         except HTTPStatusError as error:
             raise UnableToFindFileException() from error
+
+    @classmethod
+    def multi_source_features_for(
+        cls, facts: RetrivalJob, requests: list[tuple[AzureBlobDeltaDataSource, RetrivalRequest]]
+    ) -> RetrivalJob:
+
+        source = requests[0][0]
+        if not isinstance(source, cls):
+            raise ValueError(f'Only {cls} is supported, recived: {source}')
+
+        # Group based on config
+        return FileFactualJob(
+            source=source,
+            requests=[request for _, request in requests],
+            facts=facts,
+            date_formatter=source.date_formatter,
+        )
 
     def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
         return FileFactualJob(self, [request], facts, date_formatter=self.date_formatter)
