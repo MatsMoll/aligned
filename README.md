@@ -3,8 +3,37 @@
 A data managment tool for ML applications.
 
 Similar to have DBT is a data managment tool for business analytics, will Aligned manage ML projects.
-Therefore, Aligned makes it possible to collect data lineage between models, feature transformations etc. While also making it easy to reduce data leakage with point-in-time valid data and fix other problems described in [Sculley et al. [2015]](https://papers.nips.cc/paper/2015/file/86df7dcfd896fcaf2674f757a2463eba-Paper.pdf).
 
+Aligned does this through two things.
+1. A light weight data managment system. Making it possible to query a data lake and databases.
+2. Tooling to define a `model_contract`. Clearing up common unanswerd questions through code.
+
+
+Furthermore, Aligned collect data lineage between models, basic feature transformations. While also making it easy to reduce data leakage with point-in-time valid data and fix other problems described in [Sculley et al. [2015]](https://papers.nips.cc/paper/2015/file/86df7dcfd896fcaf2674f757a2463eba-Paper.pdf).
+
+## Examples
+
+Bellow are some examples of how Aligned can be used.
+
+### Aligned UI
+
+Aligned provides an UI to view which data exists, the expectations we have and find faults.
+
+[View the example UI](https://aligned-catalog.azurewebsites.net/).
+However, this is still under development, so sign up for a [wait list](https://aligned-managed-web.vercel.app/) to get access.
+
+
+### Example Repo
+
+Want to look at examples of how to use `aligned`?
+View the [`MatsMoll/aligned-example` repo](https://github.com/MatsMoll/aligned-example).
+
+Or see how you could query a file in a data lake.
+
+```python
+store = await FeatureStore.from_dir(".")
+df = await store.execute_sql("SELECT * FROM titanic LIMIT 10").to_polars()
+```
 
 ## Docs
 
@@ -12,22 +41,20 @@ Check out the [Aligned Docs](https://www.aligned.codes), but keep in mind that t
 
 ---
 
-Want to look at examples of how to use `aligned`?
-View the [`MatsMoll/aligned-example` repo](https://github.com/MatsMoll/aligned-example).
+### Available Features
 
-This is done by providing an new innovative way to describe how data flow in ML systems, and what our ML products produce. While also collecting dependency metadata that would otherwise be too inconvenient and error prone to manually type out.
+Bellow are some of the features Aligned offers:
 
-Therefore, you get the following:
+- [Data Catalog](https://aligned-managed-web.vercel.app/)
+- [Data Lineage](https://aligned-managed-web.vercel.app/)
+- [Model Performance Monitoring](https://aligned-managed-web.vercel.app/)
 - [Data Freshness](#data-freshness)
 - [Data Quality Assurance](#data-quality)
 - [Easy Data Loading](#access-data)
-- [Load Form Multiple Sources](#fast-development)
 - [Feature Store](https://matsmoll.github.io/posts/understanding-the-chaotic-landscape-of-mlops#feature-store)
+- [Load Form Multiple Sources](#fast-development)
 - [Feature Server](#feature-server)
 - [Stream Processing](#stream-worker)
-- Model Performance Monitoring - Documentation coming soon
-- Data Catalog - Documentation coming soon
-- Data Lineage - Documentation coming soon
 
 
 All from the simple API of defining
@@ -44,12 +71,89 @@ await store.model("titanic").features_for(entities).to_pandas()
 
 Aligned is still in active development, so changes are likely.
 
+## Model Contract
+
+Aligned introduces a new concept called the "model contract", which tries to answer the following questions.
+
+- What is predicted?
+- What is assosiated with a prediction? - A user id?
+- Where do we store predictions?
+- Do a model depend on other models?
+- Is the model exposed through an API?
+- What needs to be sent in, to use the model?
+- Is it classification, regression, gen ai?
+- Where is the ground truth stored? - if any
+- Who owns the model?
+- Where do we store data sets?
+
+All this is described through a `model_contract`, as shown bellow.
+
+```python
+@model_contract(
+    name="eta_taxi",
+    features=[
+        trips.eucledian_distance,
+        trips.number_of_passengers,
+        traffic.expected_delay
+    ],
+    prediction_source=FileSource.delta_at("titanic_model/predictions")
+)
+class EtaTaxi:
+    trip_id = Int32().as_entity()
+    predicted_at = EventTimestamp()
+    predicted_duration = trips.duration.as_regression_target()
+```
+
+## Data Sources
+
+Alinged makes handling data sources easy, as you do not have to think about how it is done.
+
+Furthermore, Aligned makes it easy to switch parts of the business logic to a local setup for debugging purposes.
+
+```python
+from aligned import FileSource, AwsS3Config, AzureBlobConfig, Directory
+import os
+
+root_directory: Directory = FileSource.directory("my-awesome-project")
+
+if os.getenv("USE_AWS", "false").lower() == "true":
+
+    aws_config = AwsS3Config(...)
+    root_directory = aws_config.directory("my-awesome-project")
+
+elif os.getenv("USE_AZURE", "false").lower() == "true":
+
+    azure_config = AzureBlobConfig(...)
+    root_directory = azure_config.directory("my-awesome-project")
+
+
+taxi_project = root_directory.sub_directory("eta_taxi")
+
+csv_source = taxi_project.csv_at("predictions.csv")
+parquet_source = taxi_project.parquet_at("predictions.parquet")
+delta_source = taxi_project.delta_at("predictions")
+```
+
+### Date Formatting
+Managing a data lake can be hard. However, a common problem when using file formats can be managing date formats. As a result do Aligned provide a way to standardise this, so you can focus on what matters.
+
+```python
+from aligned import FileSource
+from aligned.schemas.date_formatter import DateFormatter
+
+iso_formatter = DateFormatter.iso_8601()
+unix_formatter = DateFormatter.uniq_timestamp(time_unit="us", time_zone="UTC")
+custom_strtime_formatter = DateFormatter.string_format("%Y/%m/%d %H:%M:%S")
+
+FileSource.csv_at("my/file.csv", date_formatter=unix_formatter)
+```
+
 ## Feature Views
 
-Write features as the should be, as data models.
+Aligned also makes it possible to define data and features through `feature_view`s.
 Then get code completion and typesafety by referencing them in other features.
 
-This makes the features light weight, data source indipendent, and flexible.
+This makes the features light weight, data source independent, and flexible.
 
 ```python
 @feature_view(
@@ -71,43 +175,12 @@ class TitanicPassenger:
 
     name = String()
     sex = String().accepted_values(["male", "female"])
-    survived = Bool().description("If the passenger survived")
+    did_survive = Bool().description("If the passenger survived")
     sibsp = Int32().lower_bound(0).description("Number of siblings on titanic")
     cabin = String().is_optional()
 
     # Creates two one hot encoded values
     is_male, is_female = sex.one_hot_encode(['male', 'female'])
-```
-
-## Data sources
-
-Alinged makes handling data sources easy, as you do not have to think about how it is done.
-Only define where the data is, and we handle the dirty work.
-
-Furthermore, you can also add materialised sources which can be used as intermediate sources.
-
-```python
-my_db = PostgreSQLConfig(env_var="DATABASE_URL")
-redis = RedisConfig(env_var="REDIS_URL")
-
-@feature_view(
-    name="passenger",
-    description="Some features from the titanic dataset",
-    source=my_db.table(
-        "passenger",
-        mapping_keys={
-            "Passenger_Id": "passenger_id"
-        }
-    ),
-    materialized_source=my_db.with_schema("inter").table("passenger"),
-    stream_source=redis.stream(topic="titanic")
-)
-class TitanicPassenger:
-
-    passenger_id = Int32().as_entity()
-
-    # Some features
-    ...
 ```
 
 ### Fast development
