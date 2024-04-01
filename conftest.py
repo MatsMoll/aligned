@@ -436,7 +436,7 @@ def titanic_model(titanic_feature_view: FeatureView) -> ModelContractWrapper:
     @model_contract(
         name='titanic',
         description='A model predicting if a passenger will survive',
-        features=[
+        input_features=[
             features.age,  # type: ignore
             features.sibsp,  # type: ignore
             features.has_siblings,  # type: ignore
@@ -629,7 +629,7 @@ def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> ModelContractWra
     @model_contract(
         'titanic',
         description='A model predicting if a passenger will survive',
-        features=[features.age, features.sibsp, features.has_siblings, features.is_male],  # type: ignore
+        input_features=[features.age, features.sibsp, features.has_siblings, features.is_male],  # type: ignore
         acceptable_freshness=timedelta(days=1),
         unacceptable_freshness=timedelta(days=2),
     )

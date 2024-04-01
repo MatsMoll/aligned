@@ -58,7 +58,6 @@ pydantic = "^2.0.0"
 prometheus_client = "^0.16.0"
 asgi-correlation-id = { version = "^3.0.0", optional = true }
 pandera = { version = "^0.17.0", optional = true}
-httpx = "^0.23.0"
 polars = { version = "^0.20.0", extras = ["pyarrow"] }
 pillow = { version = "^9.4.0", optional = true }
 prometheus-fastapi-instrumentator = { version="^5.9.1", optional = true }
@@ -68,7 +67,9 @@ prometheus-fastapi-instrumentator = { version="^5.9.1", optional = true }
 kafka-python = { version= "^2.0.2", optional = true }
 connectorx = { version = "^0.3.2", optional = true }
 asyncpg = { version = "^0.29.0", optional = true }
-sqlglot = "^22.5.0"
+sqlglot = { version = "^22.5.0", optional = true }
+ollama = { version = "^0.1.8", optional = true }
+httpx = "^0.27.0"
 
 [tool.poetry.extras]
 aws = ["aioaws", "connectorx"]
@@ -78,6 +79,8 @@ server = ["asgi-correlation-id", "fastapi", "uvicorn", "prometheus-fastapi-instr
 pandera = ["pandera"]
 image = ["pillow"]
 kafka = ["kafka-python"]
+ollama = ["ollama"]
+sql = ["sqlglot"]
 # text = ["gensim", "openai", "sentence-transformers"]
 
 [tool.poetry.group.dev.dependencies]

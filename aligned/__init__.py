@@ -26,6 +26,7 @@ from aligned.sources.redis import RedisConfig
 from aligned.sources.redshift import RedshiftSQLConfig
 from aligned.sources.s3 import AwsS3Config
 from aligned.sources.azure_blob_storage import AzureBlobConfig
+from aligned.exposed_model.interface import ExposedModel
 from aligned.schemas.feature import FeatureLocation
 
 __all__ = [
@@ -45,6 +46,7 @@ __all__ = [
     # Streaming Sources
     'KafkaConfig',
     # Types
+    'ExposedModel',
     'Entity',
     'String',
     'Bool',

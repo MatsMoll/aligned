@@ -11,6 +11,7 @@ from aligned.schemas.target import ClassificationTarget, RecommendationTarget, R
 from aligned.schemas.feature_view import CompiledFeatureView, FeatureViewReferenceSource
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.folder import DatasetStore
+from aligned.exposed_model.interface import ExposedModel
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.retrival_job import RetrivalJob
@@ -156,6 +157,7 @@ class Model(Codable):
     tags: list[str] | None = field(default=None)
     dataset_store: DatasetStore | None = field(default=None)
     exposed_at_url: str | None = field(default=None)
+    exposed_model: ExposedModel | None = field(default=None)
 
     def __hash__(self) -> int:
         return self.name.__hash__()

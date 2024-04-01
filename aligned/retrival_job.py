@@ -34,9 +34,10 @@ if TYPE_CHECKING:
     from aligned.schemas.folder import DatasetMetadata, DatasetStore
 
     from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver
-    from aligned.schemas.model import EventTrigger
+    from aligned.schemas.model import EventTrigger, Model
     from aligned.sources.local import DataFileReference, StorageFileReference
     from aligned.feature_source import WritableFeatureSource
+    from aligned.feature_store import FeatureStore
 
 
 logger = logging.getLogger(__name__)
@@ -2168,3 +2169,69 @@ class CustomLazyPolarsJob(RetrivalJob):
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_polars()).to_pandas()
+
+
+@dataclass
+class PredictionJob(RetrivalJob):
+
+    job: RetrivalJob
+    model: Model
+    store: FeatureStore
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.job.request_result
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.job.retrival_requests
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return await self.job.to_pandas()
+
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        predictor = self.model.exposed_model
+        if not predictor:
+            raise ValueError('No predictor defined for model')
+
+        df = await predictor.run_polars(
+            self.job,
+            self.store.model(self.model.name),
+        )
+        return df.lazy()
+
+    def remove_derived_features(self) -> RetrivalJob:
+        return self.job.remove_derived_features()
+
+    async def insert_into_output_source(self) -> None:
+        pred_source = self.model.predictions_view.source
+        if not pred_source:
+            raise ValueError('No source defined for predictions view')
+
+        if not isinstance(pred_source, WritableFeatureSource):
+            raise ValueError('Source for predictions view is not writable')
+
+        req = self.model.predictions_view.request('preds')
+        await pred_source.insert(self, [req])
+
+    async def upsert_into_output_source(self) -> None:
+        pred_source = self.model.predictions_view.source
+        if not pred_source:
+            raise ValueError('No source defined for predictions view')
+
+        if not isinstance(pred_source, WritableFeatureSource):
+            raise ValueError('Source for predictions view is not writable')
+
+        req = self.model.predictions_view.request('preds')
+        await pred_source.upsert(self, [req])
+
+    async def overwrite_output_source(self) -> None:
+        pred_source = self.model.predictions_view.source
+        if not pred_source:
+            raise ValueError('No source defined for predictions view')
+
+        if not isinstance(pred_source, WritableFeatureSource):
+            raise ValueError('Source for predictions view is not writable')
+
+        req = self.model.predictions_view.request('preds')
+        await pred_source.overwrite(self, [req])

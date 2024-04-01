@@ -313,11 +313,11 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
     @property
     def to_markdown(self) -> str:
         return f'''#### Parquet File
-        *Renames*: {self.mapping_keys}
+*Renames*: {self.mapping_keys}
 
-        *File*: {self.path}
+*File*: {self.path}
 
-        [Go to file]({self.path})'''
+[Go to file]({self.path})'''
 
     def job_group_key(self) -> str:
         return f'{self.type_name}/{self.path}'

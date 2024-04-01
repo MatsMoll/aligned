@@ -73,7 +73,7 @@ async def test_model_wrapper() -> None:
 
     @model_contract(
         name='test_model',
-        features=[],
+        input_features=[],
     )
     class TestModel:
         id = Int32().as_entity()
@@ -82,7 +82,7 @@ async def test_model_wrapper() -> None:
 
     test_model_features = TestModel()
 
-    @model_contract(name='new_model', features=[test_model_features.a])
+    @model_contract(name='new_model', input_features=[test_model_features.a])
     class NewModel:
 
         id = Int32().as_entity()
@@ -120,8 +120,8 @@ async def test_model_insert_predictions() -> None:
 
     @model_contract(
         name='test_model',
-        features=[],
-        prediction_source=FileSource.parquet_at(path).with_renames({'some_id': 'id'}),
+        input_features=[],
+        output_source=FileSource.parquet_at(path).with_renames({'some_id': 'id'}),
     )
     class TestModel:
         id = Int32().as_entity()
@@ -157,8 +157,8 @@ async def test_model_insert_predictions_csv() -> None:
 
     @model_contract(
         name='test_model',
-        features=[],
-        prediction_source=FileSource.csv_at(path).with_renames({'some_id': 'id'}),
+        input_features=[],
+        output_source=FileSource.csv_at(path).with_renames({'some_id': 'id'}),
     )
     class TestModel:
         id = Int32().as_entity()
@@ -193,7 +193,7 @@ async def test_model_upsert_predictions() -> None:
 
     path = 'test_data/test_model.parquet'
 
-    @model_contract(name='test_model', features=[], prediction_source=FileSource.parquet_at(path))
+    @model_contract(name='test_model', input_features=[], output_source=FileSource.parquet_at(path))
     class TestModel:
         id = Int32().as_entity()
 

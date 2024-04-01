@@ -101,7 +101,7 @@ income_agg = IncomeAgg()
 
 @model_contract(
     name='model',
-    features=[
+    input_features=[
         expences.abs_amount,
         expences.is_expence,
         income_agg.total_amount,

@@ -240,6 +240,43 @@ class Split(TransformationFactory):
         return SplitTransformation(self.from_feature.name, self.pattern)
 
 
+@dataclass
+class OllamaEmbedding(TransformationFactory):
+
+    model: str
+    from_feature: FeatureFactory
+    host_env: str | None
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.from_feature]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import OllamaEmbedding as OllamaEmbeddingTransformation
+
+        return OllamaEmbeddingTransformation(self.from_feature.name, self.model, self.host_env)
+
+
+@dataclass
+class OllamaGenerate(TransformationFactory):
+
+    model: str
+    system: str | None
+    prompt_feature: FeatureFactory
+    host_env: str | None
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.prompt_feature]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import OllamaGenerate as OllamaGenerateTransformation
+
+        return OllamaGenerateTransformation(
+            self.prompt_feature.name, self.model, self.system or '', self.host_env
+        )
+
+
 # @dataclass
 # class Split(TransformationFactory):
 

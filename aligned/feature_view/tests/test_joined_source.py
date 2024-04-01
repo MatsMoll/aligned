@@ -29,8 +29,8 @@ class RightOtherIdData:
 
 @model_contract(
     name='some_model',
-    features=[],
-    prediction_source=FileSource.csv_at('test_data/other.csv'),
+    input_features=[],
+    output_source=FileSource.csv_at('test_data/other.csv'),
 )
 class ModelData:
 

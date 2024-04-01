@@ -91,8 +91,8 @@ def resolve_source(source: BatchDataSource | FeatureViewWrapper) -> BatchDataSou
 
 
 def feature_view(
-    name: str,
     source: BatchDataSource | FeatureViewWrapper,
+    name: str | None = None,
     description: str | None = None,
     stream_source: StreamDataSource | None = None,
     application_source: BatchDataSource | None = None,
@@ -104,10 +104,13 @@ def feature_view(
 ) -> Callable[[Type[T]], FeatureViewWrapper[T]]:
     def decorator(cls: Type[T]) -> FeatureViewWrapper[T]:
 
+        used_name = name or str(cls.__name__).lower()
+        used_description = description or str(cls.__doc__)
+
         metadata = FeatureViewMetadata(
-            name,
+            used_name,
             resolve_source(source),
-            description=description,
+            description=used_description,
             stream_source=stream_source,
             application_source=application_source,
             materialized_source=materialized_source,

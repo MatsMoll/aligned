@@ -1050,13 +1050,31 @@ class String(
     def aggregate(self) -> StringAggregation:
         return StringAggregation(self)
 
-    def split(self, pattern: str, max_splits: int | None = None) -> String:
-        raise NotImplementedError()
+    def ollama_embedding(self, model: str, host_env: str | None = None) -> Embedding:
+        from aligned.compiler.transformation_factory import OllamaEmbedding
+
+        feature = Embedding()
+        feature.transformation = OllamaEmbedding(model, self, host_env)
+        return feature
+
+    def ollama_generate(self, model: str, system: str | None = None, host_env: str | None = None) -> String:
+        from aligned.compiler.transformation_factory import OllamaGenerate
+
+        feature = Json()
+        feature.transformation = OllamaGenerate(model, system or '', self, host_env)
+        return feature
+
+    def split(self, pattern: str) -> String:
+        from aligned.compiler.transformation_factory import Split
+
+        feature = self.copy_type()
+        feature.transformation = Split(pattern, self)
+        return feature
 
     def replace(self, values: dict[str, str]) -> String:
         from aligned.compiler.transformation_factory import ReplaceFactory
 
-        feature = String()
+        feature = self.copy_type()
         feature.transformation = ReplaceFactory(values, self)
         return feature
 
@@ -1091,7 +1109,7 @@ class String(
     def prepend(self, other: FeatureFactory | str) -> String:
         from aligned.compiler.transformation_factory import AppendStrings, PrependConstString
 
-        feature = String()
+        feature = self.copy_type()
         if isinstance(other, FeatureFactory):
             feature.transformation = AppendStrings(other, self)
         else:

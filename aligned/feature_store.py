@@ -25,6 +25,7 @@ from aligned.feature_view.combined_view import CombinedFeatureView, CompiledComb
 from aligned.feature_view.feature_view import FeatureView, FeatureViewWrapper
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import (
+    PredictionJob,
     SelectColumnsJob,
     RetrivalJob,
     StreamAggregationJob,
@@ -918,13 +919,39 @@ class ModelFeatureStore:
     def request(
         self, except_features: set[str] | None = None, event_timestamp_column: str | None = None
     ) -> FeatureRequest:
+        feature_refs = self.raw_string_features(except_features or set())
+        if not feature_refs:
+            raise ValueError(f"No features to request for model '{self.model.name}'")
+
         return self.store.requests_for(
-            RawStringFeatureRequest(self.raw_string_features(except_features or set())),
+            RawStringFeatureRequest(feature_refs),
             event_timestamp_column,
         )
 
     def needed_entities(self) -> set[Feature]:
         return self.request().request_result.entities
+
+    def feature_references_for(self, version: str) -> list[FeatureReferance]:
+        return self.model.features.features_for(version)
+
+    def has_exposed_model(self) -> bool:
+        return self.model.exposed_model is not None
+
+    def predict_over(
+        self,
+        entities: ConvertableToRetrivalJob | RetrivalJob,
+    ) -> PredictionJob:
+        predictor = self.model.exposed_model
+        if not predictor:
+            raise ValueError(
+                f'Model {self.model.name} has no predictor set. '
+                'This can be done by setting the `exposed_at` value'
+            )
+
+        if not isinstance(entities, RetrivalJob):
+            entities = RetrivalJob.from_convertable(entities, self.request().needed_requests)
+
+        return PredictionJob(entities, self.model, self.store)
 
     def features_for(
         self, entities: ConvertableToRetrivalJob | RetrivalJob, event_timestamp_column: str | None = None
@@ -956,6 +983,9 @@ class ModelFeatureStore:
         Returns:
             RetrivalJob: A retrival job that can be used to fetch the features
         """
+        import polars as pl
+        import pandas as pd
+
         request = self.request(event_timestamp_column=event_timestamp_column)
         if isinstance(entities, dict):
             features = self.raw_string_features(set(entities.keys()))
@@ -966,11 +996,26 @@ class ModelFeatureStore:
             entities, list(features), event_timestamp_column=event_timestamp_column
         ).with_request(request.needed_requests)
 
-        if isinstance(entities, dict):
-            subset_request = self.request(set(entities.keys()), event_timestamp_column)
+        if isinstance(entities, (dict, pl.DataFrame, pd.DataFrame)):
 
-            if subset_request.request_result.feature_columns != request.request_result.feature_columns:
-                job = job.derive_features(request.needed_requests)
+            existing_keys = set()
+            if isinstance(entities, dict):
+                existing_keys = set(entities.keys())
+            elif isinstance(entities, (pl.DataFrame, pd.DataFrame)):
+                existing_keys = set(entities.columns)
+
+            subset_request = self.request(existing_keys, event_timestamp_column)
+
+            needs_core_features = False
+
+            for req in subset_request.needed_requests:
+                missing_keys = set(req.feature_names) - existing_keys
+                if missing_keys:
+                    needs_core_features = True
+                    break
+
+            if not needs_core_features:
+                job = RetrivalJob.from_convertable(entities, request).derive_features(request.needed_requests)
 
         return job.select_columns(request.features_to_include)
 

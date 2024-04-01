@@ -27,7 +27,7 @@ other = OtherView()
 
 @model_contract(
     'test_model',
-    features=FeatureInputVersions(
+    input_features=FeatureInputVersions(
         default_version='v1',
         versions={
             'v1': [view.feature_a, other.feature_b],
@@ -43,7 +43,7 @@ class First:
 first = First()
 
 
-@model_contract('second_model', features=[first.target])
+@model_contract('second_model', input_features=[first.target])
 class Second:
     other_id = Int32().as_entity()
     view_id = Int32().as_entity()
