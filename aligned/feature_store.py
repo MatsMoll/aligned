@@ -398,6 +398,7 @@ class FeatureStore:
         entities: ConvertableToRetrivalJob | RetrivalJob,
         features: list[str],
         event_timestamp_column: str | None = None,
+        model_version_as_entity: bool | None = None,
     ) -> RetrivalJob:
         """
         Returns a set of features given a set of entities.
@@ -417,7 +418,7 @@ class FeatureStore:
         """
 
         feature_request = RawStringFeatureRequest(features=set(features))
-        requests = self.requests_for(feature_request, event_timestamp_column)
+        requests = self.requests_for(feature_request, event_timestamp_column, model_version_as_entity)
 
         feature_names = set()
 
@@ -480,6 +481,7 @@ class FeatureStore:
         combined_feature_views: dict[str, CompiledCombinedFeatureView],
         models: dict[str, ModelSchema],
         event_timestamp_column: str | None = None,
+        model_version_as_entity: bool | None = None,
     ) -> FeatureRequest:
 
         features = feature_request.grouped_features
@@ -488,13 +490,16 @@ class FeatureStore:
 
         for location in feature_request.locations:
             location_name = location.name
+
             if location.location == 'model':
                 model = models[location_name]
                 view = model.predictions_view
                 if len(features[location]) == 1 and list(features[location])[0] == '*':
-                    request = view.request(location_name)
+                    request = view.request(location_name, model_version_as_entity or False)
                 else:
-                    request = view.request_for(features[location], location_name)
+                    request = view.request_for(
+                        features[location], location_name, model_version_as_entity or False
+                    )
                 requests.append(request)
                 entity_names.update(request.entity_names)
 
@@ -526,9 +531,11 @@ class FeatureStore:
                     raise ValueError(f'Unable to find: {location_name}')
 
                 if len(features[location]) == 1 and list(features[location])[0] == '*':
-                    sub_request = feature_view.request(location_name)
+                    sub_request = feature_view.request(location_name, model_version_as_entity or False)
                 else:
-                    sub_request = feature_view.request_for(features[location], location_name)
+                    sub_request = feature_view.request_for(
+                        features[location], location_name, model_version_as_entity or False
+                    )
 
                 requests.append(sub_request)
                 entity_names.update(sub_request.entity_names)
@@ -560,7 +567,10 @@ class FeatureStore:
         return self.requests_for(RawStringFeatureRequest(set(features)), event_timestamp_column)
 
     def requests_for(
-        self, feature_request: RawStringFeatureRequest, event_timestamp_column: str | None = None
+        self,
+        feature_request: RawStringFeatureRequest,
+        event_timestamp_column: str | None = None,
+        model_version_as_entity: bool | None = None,
     ) -> FeatureRequest:
         return FeatureStore._requests_for(
             feature_request,
@@ -568,6 +578,7 @@ class FeatureStore:
             self.combined_feature_views,
             self.models,
             event_timestamp_column=event_timestamp_column,
+            model_version_as_entity=model_version_as_entity,
         )
 
     def feature_view(self, view: str) -> FeatureViewStore:
@@ -1133,12 +1144,18 @@ class ModelFeatureStore:
         )
 
     def predictions_for(
-        self, entities: ConvertableToRetrivalJob | RetrivalJob, event_timestamp_column: str | None = None
+        self,
+        entities: ConvertableToRetrivalJob | RetrivalJob,
+        event_timestamp_column: str | None = None,
+        model_version_as_entity: bool | None = None,
     ) -> RetrivalJob:
 
         location_id = self.location.identifier
         return self.store.features_for(
-            entities, features=[f'{location_id}:*'], event_timestamp_column=event_timestamp_column
+            entities,
+            features=[f'{location_id}:*'],
+            event_timestamp_column=event_timestamp_column,
+            model_version_as_entity=model_version_as_entity,
         )
 
     def predictions_between(self, start_date: datetime, end_date: datetime) -> RetrivalJob:

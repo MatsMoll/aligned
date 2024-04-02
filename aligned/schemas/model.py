@@ -104,18 +104,28 @@ class PredictionsView(Codable):
 
         return schema
 
-    def request(self, name: str) -> RetrivalRequest:
+    def request(self, name: str, model_version_as_entity: bool = False) -> RetrivalRequest:
+        entities = self.entities
+
+        if model_version_as_entity and self.model_version_column:
+            entities = entities.union({self.model_version_column})
+
         return RetrivalRequest(
             name=name,
             location=FeatureLocation.model(name),
-            entities=self.entities,
+            entities=entities,
             features=self.features,
             derived_features=self.derived_features,
             event_timestamp=self.event_timestamp,
         )
 
-    def request_for(self, features: set[str], name: str) -> RetrivalRequest:
+    def request_for(
+        self, features: set[str], name: str, model_version_as_entity: bool = False
+    ) -> RetrivalRequest:
         entities = self.entities
+
+        if model_version_as_entity and self.model_version_column:
+            entities = entities.union({self.model_version_column})
 
         return RetrivalRequest(
             name=name,

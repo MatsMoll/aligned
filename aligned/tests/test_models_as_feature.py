@@ -1,3 +1,4 @@
+import pytest
 from aligned import Bool, FeatureStore, FileSource, Int32, String
 from aligned.feature_view.feature_view import feature_view
 from aligned.compiler.model import FeatureInputVersions, model_contract
@@ -43,6 +44,13 @@ class First:
 first = First()
 
 
+@model_contract(name='first_with_versions', input_features=[view.feature_a, other.feature_b])
+class FirstWithVersions:
+    some_id = Int32().as_entity()
+    target = other.is_true.as_classification_label()
+    model_version = String().as_model_version()
+
+
 @model_contract(name='second_model', input_features=[first.target])
 class Second:
     other_id = Int32().as_entity()
@@ -81,3 +89,31 @@ def test_model_version() -> None:
 
     model_request = store.model('test_model').using_version('v2').request()
     assert model_request.features_to_include == {'feature_a', 'is_true', 'feature_b', 'view_id', 'other_id'}
+
+
+@pytest.mark.asyncio
+async def test_load_preds_with_different_model_version() -> None:
+    import polars as pl
+
+    store = FeatureStore.experimental()
+    store.add_model(FirstWithVersions)
+
+    source = FileSource.csv_at('test_data/model_preds.csv')
+
+    await source.write_polars(
+        pl.DataFrame(
+            {'some_id': [1, 2, 1, 2], 'target': [0, 1, 1, 1], 'model_version': ['v1', 'v1', 'v2', 'v2']}
+        ).lazy()
+    )
+
+    model_store = store.model('first_with_versions').using_source(source)
+
+    df = await model_store.predictions_for({'some_id': [1, 2], 'model_version': ['v2', 'v2']}).to_polars()
+
+    assert df['target'].to_list() == [False, True]
+
+    new_df = await model_store.predictions_for(
+        {'some_id': [1, 2], 'model_version': ['v2', 'v2']}, model_version_as_entity=True
+    ).to_polars()
+
+    assert new_df['target'].to_list() == [True, True]
