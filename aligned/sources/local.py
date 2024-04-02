@@ -150,7 +150,14 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
             raise UnableToFindFileException(self.path)
 
         try:
-            return pl.scan_csv(self.path, separator=self.csv_config.seperator, try_parse_dates=True)
+            schema: dict[str, pl.PolarsDataType] | None = None
+            if self.expected_schema:
+                schema = { # type: ignore
+                    name: dtype.polars_type 
+                    for name, dtype 
+                    in self.expected_schema.items() if not dtype.is_datetime 
+                } 
+            return pl.scan_csv(self.path, dtypes=schema, separator=self.csv_config.seperator, try_parse_dates=True)
         except OSError:
             raise UnableToFindFileException(self.path)
 
@@ -164,7 +171,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
         potential_timestamps = request.all_features
 
         if request.event_timestamp:
-            potential_timestamps.add(request.event_timestamp)
+            potential_timestamps.add(request.event_timestamp.as_feature())
 
         for feature in potential_timestamps:
             if feature.dtype.name == 'datetime':
