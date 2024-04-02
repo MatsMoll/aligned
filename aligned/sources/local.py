@@ -152,12 +152,15 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
         try:
             schema: dict[str, pl.PolarsDataType] | None = None
             if self.expected_schema:
-                schema = { # type: ignore
-                    name: dtype.polars_type 
-                    for name, dtype 
-                    in self.expected_schema.items() if not dtype.is_datetime 
-                } 
-            return pl.scan_csv(self.path, dtypes=schema, separator=self.csv_config.seperator, try_parse_dates=True)
+                schema = {  # type: ignore
+                    name: dtype.polars_type
+                    for name, dtype in self.expected_schema.items()
+                    if not dtype.is_datetime
+                }
+
+            return pl.scan_csv(
+                self.path, dtypes=schema, separator=self.csv_config.seperator, try_parse_dates=True
+            )
         except OSError:
             raise UnableToFindFileException(self.path)
 
@@ -251,12 +254,21 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
         return CsvFileEnricher(file=self.path)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+        from aligned.schemas.constraints import Optional
+
+        optional_constraint = Optional()
+
         with_schema = CsvFileSource(
             path=self.path,
             mapping_keys=self.mapping_keys,
             csv_config=self.csv_config,
             formatter=self.formatter,
-            expected_schema={feat.name: feat.dtype for feat in request.features},
+            expected_schema={
+                feat.name: feat.dtype
+                for feat in request.features
+                if not (feat.constraints and optional_constraint in feat.constraints)
+                and not feat.name.isdigit()
+            },
         )
         return FileFullJob(with_schema, request, limit, date_formatter=self.formatter)
 

@@ -165,7 +165,7 @@ async def test_model_with_label_multiple_views() -> None:
             'user_id': ['b', 'b', 'a', 'a'],
             'total_amount': [109.0, 109.0, 120.0, 120.0],
             'is_expence': [True, True, True, True],
-            'abs_amount': [20, 100, 20, 100],
+            'abs_amount': [20.0, 100.0, 20.0, 100.0],
             'amount': [-20.0, -100.0, -20.0, -100.0],
         }
     )
