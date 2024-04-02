@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import polars as pl
+import pandas as pd
+
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -429,15 +432,28 @@ class FeatureStore:
                     if view.name == request.location.name:
                         feature_names.update(request.all_feature_names)
 
+        if not isinstance(entities, RetrivalJob):
+            entities = RetrivalJob.from_convertable(entities, requests)
+
+        existing_features = set(entities.loaded_columns)
+
+        loaded_requests = []
+
         for request_index in range(len(requests.needed_requests)):
             request = requests.needed_requests[request_index]
             feature_names.update(request.entity_names)
 
-            if isinstance(entities, dict):
-                # Do not load the features if they already exist as an entity
-                request.features = {feature for feature in request.features if feature.name not in entities}
+            if request.features_to_include - existing_features:
+                request.features = {
+                    feature for feature in request.features if feature.name not in existing_features
+                }
+                loaded_requests.append(request)
 
-        return self.features_for_request(requests, entities, feature_names)
+        if not loaded_requests:
+            return entities
+
+        new_request = FeatureRequest(requests.location, requests.features_to_include, loaded_requests)
+        return self.features_for_request(new_request, entities, feature_names)
 
     def model(self, name: str) -> ModelFeatureStore:
         """
@@ -983,9 +999,6 @@ class ModelFeatureStore:
         Returns:
             RetrivalJob: A retrival job that can be used to fetch the features
         """
-        import polars as pl
-        import pandas as pd
-
         request = self.request(event_timestamp_column=event_timestamp_column)
         if isinstance(entities, dict):
             features = self.raw_string_features(set(entities.keys()))

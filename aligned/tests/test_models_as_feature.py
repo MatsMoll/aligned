@@ -4,7 +4,7 @@ from aligned.compiler.model import FeatureInputVersions, model_contract
 from aligned.schemas.feature import FeatureLocation
 
 
-@feature_view('view', FileSource.csv_at(''), 'test')
+@feature_view(source=FileSource.csv_at(''))
 class View:
 
     view_id = Int32().as_entity()
@@ -12,7 +12,7 @@ class View:
     feature_a = String()
 
 
-@feature_view('other', FileSource.csv_at(''), 'test')
+@feature_view(source=FileSource.csv_at(''))
 class OtherView:
 
     other_id = Int32().as_entity()
@@ -26,7 +26,7 @@ other = OtherView()
 
 
 @model_contract(
-    'test_model',
+    name='test_model',
     input_features=FeatureInputVersions(
         default_version='v1',
         versions={
@@ -43,7 +43,7 @@ class First:
 first = First()
 
 
-@model_contract('second_model', input_features=[first.target])
+@model_contract(name='second_model', input_features=[first.target])
 class Second:
     other_id = Int32().as_entity()
     view_id = Int32().as_entity()

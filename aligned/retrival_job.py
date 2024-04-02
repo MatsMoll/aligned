@@ -467,6 +467,12 @@ ConvertableToRetrivalJob = Union[dict[str, list], pd.DataFrame, pl.DataFrame, pl
 
 class RetrivalJob(ABC):
     @property
+    def loaded_columns(self) -> list[str]:
+        if isinstance(self, ModificationJob):
+            return self.job.loaded_columns
+        return []
+
+    @property
     def request_result(self) -> RequestResult:
         if isinstance(self, ModificationJob):
             return self.job.request_result
@@ -1293,6 +1299,10 @@ class LiteralDictJob(RetrivalJob):
 
     data: dict[str, list]
     requests: list[RetrivalRequest]
+
+    @property
+    def loaded_columns(self) -> list[str]:
+        return list(self.data.keys())
 
     @property
     def request_result(self) -> RequestResult:

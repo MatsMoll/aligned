@@ -3,6 +3,7 @@
 .DS_STORE
 
 test_data/feature-store.json
+test_data/mlruns
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

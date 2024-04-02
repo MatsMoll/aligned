@@ -77,7 +77,18 @@ async def data_file_freshness(reference: DataFileReference, column_name: str) ->
 
 
 def create_parent_dir(path: str) -> None:
-    Path(path).parent.mkdir(exist_ok=True)
+
+    parents = []
+
+    file_path = Path(path)
+    parent = file_path.parent
+
+    while not parent.is_dir():
+        parents.append(parent)
+        parent = file_path.parent
+
+    for parent in reversed(parents):
+        parent.mkdir(exist_ok=True)
 
 
 def do_file_exist(path: str) -> bool:
@@ -105,6 +116,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
     mapping_keys: dict[str, str] = field(default_factory=dict)
     csv_config: CsvConfig = field(default_factory=CsvConfig)
     formatter: DateFormatter = field(default_factory=DateFormatter.iso_8601)
+    expected_schema: dict[str, FeatureType] | None = field(default=None)
 
     type_name: str = 'csv'
 
@@ -232,7 +244,14 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
         return CsvFileEnricher(file=self.path)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
-        return FileFullJob(self, request, limit, date_formatter=self.formatter)
+        with_schema = CsvFileSource(
+            path=self.path,
+            mapping_keys=self.mapping_keys,
+            csv_config=self.csv_config,
+            formatter=self.formatter,
+            expected_schema={feat.name: feat.dtype for feat in request.features},
+        )
+        return FileFullJob(with_schema, request, limit, date_formatter=self.formatter)
 
     def all_between_dates(
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime

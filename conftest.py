@@ -627,7 +627,7 @@ def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> ModelContractWra
     features = titanic_feature_view_scd
 
     @model_contract(
-        'titanic',
+        name='titanic',
         description='A model predicting if a passenger will survive',
         input_features=[features.age, features.sibsp, features.has_siblings, features.is_male],  # type: ignore
         acceptable_freshness=timedelta(days=1),

@@ -87,7 +87,7 @@ def resolve_source(source: BatchDataSource | FeatureViewWrapper) -> BatchDataSou
     elif isinstance(source, BatchDataSource):
         return source
     else:
-        raise ValueError(f'Unable to use source: {source}')
+        raise ValueError(f'Unable to use source: {type(source)} - {source}')
 
 
 def feature_view(

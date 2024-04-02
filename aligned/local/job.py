@@ -30,6 +30,10 @@ class LiteralRetrivalJob(RetrivalJob):
             self.df = df
 
     @property
+    def loaded_columns(self) -> list[str]:
+        return self.df.columns
+
+    @property
     def retrival_requests(self) -> list[RetrivalRequest]:
         return self.requests
 
@@ -169,10 +173,17 @@ def decode_timestamps(df: pl.LazyFrame, request: RetrivalRequest, formatter: Dat
 @dataclass
 class FileFullJob(RetrivalJob):
 
-    source: DataFileReference
+    source: DataFileReference | RetrivalJob
     request: RetrivalRequest
     limit: int | None = field(default=None)
     date_formatter: DateFormatter = field(default_factory=DateFormatter.iso_8601)
+
+    @property
+    def loaded_columns(self) -> list[str]:
+        if isinstance(self.source, DataFileReference):
+            return []
+        else:
+            return self.source.loaded_columns
 
     @property
     def request_result(self) -> RequestResult:
