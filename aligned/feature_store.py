@@ -1534,7 +1534,13 @@ class FeatureViewStore:
         features_in_models = self.store.model_features_for(self.view.name)
         return self.select(features_in_models)
 
+    def select_columns(self, columns: list[str]) -> RetrivalJob:
+        return self.all_columns().select_columns(set(columns))
+
     def all(self, limit: int | None = None) -> RetrivalJob:
+        return self.all_columns(limit)
+
+    def all_columns(self, limit: int | None = None) -> RetrivalJob:
         if not isinstance(self.source, RangeFeatureSource):
             raise ValueError(f'The source ({self.source}) needs to conform to RangeFeatureSource')
 

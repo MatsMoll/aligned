@@ -158,6 +158,10 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
                     if not dtype.is_datetime
                 }
 
+                if self.mapping_keys:
+                    reverse_mapping = {v: k for k, v in self.mapping_keys.items()}
+                    schema = {reverse_mapping.get(name, name): dtype for name, dtype in schema.items()}
+
             return pl.scan_csv(
                 self.path, dtypes=schema, separator=self.csv_config.seperator, try_parse_dates=True
             )

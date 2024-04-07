@@ -156,6 +156,15 @@ class FeatureViewWrapper(Generic[T]):
         view = set_location_for_features_in(view, FeatureLocation.feature_view(self.metadata.name))
         return FeatureView.compile_with_metadata(view, self.metadata)
 
+    def vstack(
+        self, source: BatchDataSource | FeatureViewWrapper, source_column: str | None = None
+    ) -> BatchDataSource:
+        from aligned.data_source.batch_data_source import StackSource
+
+        return StackSource(
+            top=resolve_source(self), bottom=resolve_source(source), source_column=source_column
+        )
+
     def filter(
         self, name: str, where: Callable[[T], Bool], materialize_source: BatchDataSource | None = None
     ) -> FeatureViewWrapper[T]:

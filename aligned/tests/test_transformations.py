@@ -135,3 +135,23 @@ async def test_transform_entity(titanic_source: CsvFileSource) -> None:
     data = await Titanic.query().all().to_pandas()  # type: ignore
 
     assert data['cabin'].isnull().sum() == 0
+
+
+@pytest.mark.asyncio
+async def test_fill_optional_column_bug(titanic_source: CsvFileSource) -> None:
+    @feature_view(name='test_fill', source=titanic_source)
+    class TestFill:
+
+        passenger_id = String().as_entity()
+
+        cabin = String().is_optional()
+        some_new_column = Int32().is_optional().fill_na(0)
+        some_string = String().is_optional().fill_na('some_string')
+
+        is_male = cabin == 'male'
+
+    df = await TestFill.query().all().to_polars()
+
+    assert df['some_new_column'].isnull().sum() == 0
+    assert df['some_string'].isnull().sum() == 0
+    assert False

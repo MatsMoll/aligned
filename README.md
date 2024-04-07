@@ -2,7 +2,7 @@
 
 A data managment tool for ML applications.
 
-Similar to have DBT is a data managment tool for business analytics, will Aligned manage ML projects.
+Similar to how DBT is a data managment tool for business analytics, will Aligned manage ML projects.
 
 Aligned does this through two things.
 1. A light weight data managment system. Making it possible to query a data lake and databases.

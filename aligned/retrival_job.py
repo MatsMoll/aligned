@@ -28,6 +28,7 @@ from aligned.split_strategy import (
     TrainTestValidateSet,
 )
 from aligned.validation.interface import Validator
+from aligned.feature_source import WritableFeatureSource
 
 if TYPE_CHECKING:
     from typing import AsyncIterator
@@ -36,7 +37,6 @@ if TYPE_CHECKING:
     from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver
     from aligned.schemas.model import EventTrigger, Model
     from aligned.sources.local import DataFileReference, StorageFileReference
-    from aligned.feature_source import WritableFeatureSource
     from aligned.feature_store import FeatureStore
 
 
@@ -1037,6 +1037,50 @@ class AggregateJob(RetrivalJob, ModificationJob):
 
     def describe(self) -> str:
         return f'Aggregating over {self.job.describe()}'
+
+
+@dataclass
+class StackSourceColumn:
+    top_source_name: str
+    bottom_source_name: str
+    source_column: str
+
+
+@dataclass
+class StackJob(RetrivalJob):
+
+    top: RetrivalJob
+    bottom: RetrivalJob
+
+    source_column: StackSourceColumn | None
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.top.request_result
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return RetrivalRequest.combine(self.top.retrival_requests + self.bottom.retrival_requests)
+
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        top = await self.top.to_lazy_polars()
+        bottom = await self.bottom.to_lazy_polars()
+
+        if self.source_column:
+            top = top.with_columns(
+                pl.lit(self.source_column.top_source_name).alias(self.source_column.source_column)
+            )
+            bottom = bottom.with_columns(
+                pl.lit(self.source_column.bottom_source_name).alias(self.source_column.source_column)
+            )
+
+        return top.collect().vstack(bottom.collect()).lazy()
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return (await self.to_lazy_polars()).collect().to_pandas()
+
+    def describe(self) -> str:
+        return f'Stacking {self.top.describe()} on top of {self.bottom.describe()}'
 
 
 @dataclass

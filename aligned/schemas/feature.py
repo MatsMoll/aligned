@@ -16,6 +16,10 @@ NAME_POLARS_MAPPING = [
     ('int16', pl.Int16),
     ('int32', pl.Int32),
     ('int64', pl.Int64),
+    ('uint8', pl.UInt8),
+    ('uint16', pl.UInt16),
+    ('uint32', pl.UInt32),
+    ('uint64', pl.UInt64),
     ('float', pl.Float64),
     ('float', pl.Float32),
     ('double', pl.Float64),
@@ -45,6 +49,10 @@ class FeatureType(Codable):
             'int16',
             'int32',
             'int64',
+            'uint8',
+            'uint16',
+            'uint32',
+            'uint64',
             'float',
             'double',
         }  # Can be represented as an int
@@ -156,6 +164,10 @@ class FeatureType(Codable):
             'int16': ff.Int16(),
             'int32': ff.Int32(),
             'int64': ff.Int64(),
+            'uint8': ff.UInt8(),
+            'uint16': ff.UInt16(),
+            'uint32': ff.UInt32(),
+            'uint64': ff.UInt64(),
             'float': ff.Float(),
             'double': ff.Float(),
             'bool': ff.Bool(),
@@ -207,6 +219,22 @@ class FeatureType(Codable):
     @staticmethod
     def string() -> FeatureType:
         return FeatureType(name='string')
+
+    @staticmethod
+    def uint8() -> FeatureType:
+        return FeatureType(name='uint8')
+
+    @staticmethod
+    def uint16() -> FeatureType:
+        return FeatureType(name='uint16')
+
+    @staticmethod
+    def uint32() -> FeatureType:
+        return FeatureType(name='uint32')
+
+    @staticmethod
+    def uint64() -> FeatureType:
+        return FeatureType(name='uint64')
 
     @staticmethod
     def int8() -> FeatureType:

@@ -201,6 +201,9 @@ class ModelSource(BatchDataSource):
 
     type_name: str = 'model_source'
 
+    def job_group_key(self) -> str:
+        return FeatureLocation.model(self.pred_view.name).identifier
+
     async def schema(self) -> dict[str, FeatureType]:
         if self.model.predictions_view.source:
             return await self.model.predictions_view.source.schema()

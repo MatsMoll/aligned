@@ -327,7 +327,7 @@ class FeatureViewReferenceSource(BatchDataSource):
     type_name = 'view_ref'
 
     def job_group_key(self) -> str:
-        return self.view.name
+        return FeatureLocation.feature_view(self.view.name).identifier
 
     async def schema(self) -> dict[str, FeatureType]:
         if self.view.materialized_source:

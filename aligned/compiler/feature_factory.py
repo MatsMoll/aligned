@@ -533,13 +533,12 @@ class FeatureFactory(FeatureReferencable):
     def transform_polars(
         self,
         expression: pl.Expr,
-        using_features: list[FeatureFactory] | None = None,
         as_dtype: T | None = None,
     ) -> T:
         from aligned.compiler.transformation_factory import PolarsTransformationFactory
 
         dtype: FeatureFactory = as_dtype or self.copy_type()  # type: ignore [assignment]
-        dtype.transformation = PolarsTransformationFactory(dtype, expression, using_features or [self])
+        dtype.transformation = PolarsTransformationFactory(dtype, expression, [self])
         return dtype  # type: ignore [return-value]
 
     def polars_aggregation(self, aggregation: pl.Expr, as_type: T) -> T:
@@ -925,6 +924,62 @@ class Float(ArithmeticFeature, DecimalOperations):
     @property
     def dtype(self) -> FeatureType:
         return FeatureType.float()
+
+    def aggregate(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
+
+
+class UInt8(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
+    def copy_type(self) -> UInt8:
+        if self.constraints and Optional() in self.constraints:
+            return UInt8().is_optional()
+        return UInt8()
+
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType.uint8()
+
+    def aggregate(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
+
+
+class UInt16(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
+    def copy_type(self) -> UInt16:
+        if self.constraints and Optional() in self.constraints:
+            return UInt16().is_optional()
+        return UInt16()
+
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType.uint16()
+
+    def aggregate(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
+
+
+class UInt32(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
+    def copy_type(self) -> UInt32:
+        if self.constraints and Optional() in self.constraints:
+            return UInt32().is_optional()
+        return UInt32()
+
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType.uint32()
+
+    def aggregate(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
+
+
+class UInt64(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
+    def copy_type(self) -> UInt64:
+        if self.constraints and Optional() in self.constraints:
+            return UInt64().is_optional()
+        return UInt64()
+
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType.uint64()
 
     def aggregate(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)

@@ -1,8 +1,10 @@
 from __future__ import annotations
 from copy import copy
+from datetime import timedelta, timezone, datetime
 
 from typing import TYPE_CHECKING, TypeVar, Any, Callable, Coroutine
 from dataclasses import dataclass
+from uuid import uuid4
 
 from mashumaro.types import SerializableType
 from aligned.data_file import DataFileReference
@@ -13,11 +15,14 @@ from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation, Fe
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.compiler.feature_factory import FeatureFactory
 from polars.type_aliases import TimeUnit
+import polars as pl
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from aligned.retrival_job import RetrivalJob
-    from datetime import datetime
-    import polars as pl
 
 
 class BatchDataSourceFactory:
@@ -60,6 +65,7 @@ class BatchDataSourceFactory:
             FeatureViewReferenceSource,
             CustomMethodDataSource,
             ModelSource,
+            StackSource,
         ]
 
         self.supported_data_sources = {source.type_name: source for source in source_types}
@@ -730,6 +736,92 @@ class JoinAsofDataSource(BatchDataSource):
 
 
 @dataclass
+class StackSource(BatchDataSource):
+
+    top: BatchDataSource
+    bottom: BatchDataSource
+
+    source_column: str | None = None
+
+    type_name: str = 'stack'
+
+    @property
+    def source_column_config(self):
+        from aligned.retrival_job import StackSourceColumn
+
+        if not self.source_column:
+            return None
+
+        return StackSourceColumn(
+            top_source_name=self.top.source_id(),
+            bottom_source_name=self.bottom.source_id(),
+            source_column=self.source_column,
+        )
+
+    def sub_request(self, request: RetrivalRequest, config) -> RetrivalRequest:
+        return RetrivalRequest(
+            name=request.name,
+            location=request.location,
+            features={feature for feature in request.features if feature.name != config.source_column},
+            entities=request.entities,
+            derived_features={
+                feature
+                for feature in request.derived_features
+                if not any(dep.name == config.source_column for dep in feature.depending_on)
+            },
+            aggregated_features=request.aggregated_features,
+            event_timestamp_request=request.event_timestamp_request,
+            features_to_include=request.features_to_include - {config.source_column},
+        )
+
+    def job_group_key(self) -> str:
+        return f'stack/{self.top.job_group_key()}/{self.bottom.job_group_key()}'
+
+    async def schema(self) -> dict[str, FeatureType]:
+        top_schema = await self.top.schema()
+        bottom_schema = await self.bottom.schema()
+
+        return {**top_schema, **bottom_schema}
+
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+        from aligned.retrival_job import StackJob
+
+        config = self.source_column_config
+
+        sub_request = request
+
+        if config:
+            sub_request = self.sub_request(request, config)
+
+        return (
+            StackJob(
+                top=self.top.all_data(sub_request, int(limit / 2) if limit else None),
+                bottom=self.bottom.all_data(sub_request, int(limit / 2) if limit else None),
+                source_column=self.source_column_config,
+            )
+            .with_request([request])
+            .derive_features([request])
+        )
+
+    def all_between_dates(
+        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrivalJob:
+        from aligned.retrival_job import StackJob
+
+        top = self.top.all_between_dates(request, start_date, end_date)
+        bottom = self.bottom.all_between_dates(request, start_date, end_date)
+
+        return StackJob(
+            top=top,
+            bottom=bottom,
+            source_column=self.source_column_config,
+        )
+
+    def depends_on(self) -> set[FeatureLocation]:
+        return self.top.depends_on().union(self.bottom.depends_on())
+
+
+@dataclass
 class JoinDataSource(BatchDataSource):
 
     source: BatchDataSource
@@ -846,3 +938,143 @@ class ColumnFeatureMappable:
     def feature_identifier_for(self, columns: list[str]) -> list[str]:
         reverse_map = {v: k for k, v in self.mapping_keys.items()}
         return [reverse_map.get(column, column) for column in columns]
+
+
+def data_for_request(request: RetrivalRequest, size: int) -> pl.DataFrame:
+    from aligned.schemas.constraints import (
+        InDomain,
+        LowerBound,
+        LowerBoundInclusive,
+        Unique,
+        UpperBound,
+        UpperBoundInclusive,
+        Optional,
+    )
+    import numpy as np
+
+    needed_features = request.features.union(request.entities)
+    schema = {feature.name: feature.dtype.polars_type for feature in needed_features}
+
+    exprs = []
+
+    for feature in needed_features:
+        dtype = feature.dtype
+
+        choices: list[Any] | None = None
+        max_value: float | None = None
+        min_value: float | None = None
+
+        is_optional = False
+        is_unique = False
+
+        for constraints in feature.constraints or set():
+            if isinstance(constraints, InDomain):
+                choices = constraints.values
+            elif isinstance(constraints, LowerBound):
+                min_value = constraints.value
+            elif isinstance(constraints, LowerBoundInclusive):
+                min_value = constraints.value
+            elif isinstance(constraints, UpperBound):
+                max_value = constraints.value
+            elif isinstance(constraints, UpperBoundInclusive):
+                max_value = constraints.value
+            elif isinstance(constraints, Unique):
+                is_unique = True
+            elif isinstance(constraints, Optional):
+                is_optional = True
+
+        if dtype.is_numeric:
+            if is_unique:
+                values = np.arange(0, size, dtype=dtype.pandas_type)
+            else:
+                values = np.random.random(size)
+
+                if max_value is not None:
+                    values = values * max_value
+
+            if min_value is not None:
+                values = values - min_value
+        elif dtype.is_datetime:
+            values = [
+                datetime.now(tz=timezone.utc) - np.random.random() * timedelta(days=365) for _ in range(size)
+            ]
+        else:
+            if choices:
+                values = np.random.choice(choices, size=size)
+            else:
+                values = np.random.choice(list('abcde'), size=size)
+
+        if is_optional:
+            values = np.where(np.random.random(size) > 0.5, values, np.NaN)
+
+        exprs.append(pl.lit(values).alias(feature.name))
+
+    return pl.DataFrame(exprs, schema=schema)
+
+
+class DummyDataBatchSource(BatchDataSource):
+    """
+    The DummyDataBatchSource is a data source that generates random data for a given request.
+    This can be useful for testing and development purposes.
+
+    It will use the data types and constraints defined on a feature to generate the data.
+
+    ```python
+    from aligned import feature_view, Int64, String, DummyDataBatchSource
+
+    @feature_view(
+        source=DummyDataBatchSource(),
+    )
+    class MyView:
+        passenger_id = Int64().as_entity()
+        survived = Bool()
+        age = Float().lower_bound(0).upper_bound(100)
+        name = String()
+        sex = String().accepted_values(["male", "female"])
+    ```
+    """
+
+    type_name: str = 'dummy_data'
+
+    def job_group_key(self) -> str:
+        return str(uuid4())
+
+    @classmethod
+    def multi_source_features_for(
+        cls: type[T], facts: RetrivalJob, requests: list[tuple[T, RetrivalRequest]]
+    ) -> RetrivalJob:
+        async def random_features_for(facts: RetrivalJob, request: RetrivalRequest) -> pl.LazyFrame:
+            df = await facts.to_polars()
+            return data_for_request(request, df.height).lazy()
+
+        return CustomMethodDataSource.from_methods(
+            features_for=random_features_for,
+        ).features_for(facts, requests[0][1])
+
+    def all_data(self, request: RetrivalRequest, limit: int | None = None) -> RetrivalJob:
+        from aligned import CustomMethodDataSource
+
+        async def all_data(request: RetrivalRequest, limit: int | None = None) -> pl.LazyFrame:
+            return data_for_request(request, limit or 100).lazy()
+
+        return CustomMethodDataSource.from_methods(all_data=all_data).all_data(request, limit)
+
+    def all_between_dates(
+        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrivalJob:
+        from aligned import CustomMethodDataSource
+
+        async def between_date(
+            request: RetrivalRequest, start_date: datetime, end_date: datetime
+        ) -> pl.LazyFrame:
+            return data_for_request(request, 100).lazy()
+
+        return CustomMethodDataSource.from_methods(all_between_dates=between_date).all_between_dates(
+            request, start_date, end_date
+        )
+
+    async def schema(self) -> dict[str, FeatureType]:
+        return {}
+
+    def depends_on(self) -> set[FeatureLocation]:
+        return set()

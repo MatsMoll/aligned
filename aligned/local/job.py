@@ -233,7 +233,9 @@ class FileFullJob(RetrivalJob):
         if optional_features:
             df = df.with_columns([pl.lit(None).alias(feature.name) for feature in optional_features])
 
-        df = df.rename(mapping=renames)
+        if renames:
+            df = df.rename(mapping=renames)
+
         df = decode_timestamps(df, self.request, self.date_formatter)
 
         if self.request.aggregated_features:
