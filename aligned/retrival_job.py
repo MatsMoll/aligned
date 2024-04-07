@@ -28,11 +28,11 @@ from aligned.split_strategy import (
     TrainTestValidateSet,
 )
 from aligned.validation.interface import Validator
-from aligned.feature_source import WritableFeatureSource
 
 if TYPE_CHECKING:
     from typing import AsyncIterator
     from aligned.schemas.folder import DatasetMetadata, DatasetStore
+    from aligned.feature_source import WritableFeatureSource
 
     from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver
     from aligned.schemas.model import EventTrigger, Model
@@ -2258,6 +2258,8 @@ class PredictionJob(RetrivalJob):
         return self.job.remove_derived_features()
 
     async def insert_into_output_source(self) -> None:
+        from aligned.feature_source import WritableFeatureSource
+
         pred_source = self.model.predictions_view.source
         if not pred_source:
             raise ValueError('No source defined for predictions view')
@@ -2269,6 +2271,8 @@ class PredictionJob(RetrivalJob):
         await pred_source.insert(self, [req])
 
     async def upsert_into_output_source(self) -> None:
+        from aligned.feature_source import WritableFeatureSource
+
         pred_source = self.model.predictions_view.source
         if not pred_source:
             raise ValueError('No source defined for predictions view')
@@ -2280,6 +2284,8 @@ class PredictionJob(RetrivalJob):
         await pred_source.upsert(self, [req])
 
     async def overwrite_output_source(self) -> None:
+        from aligned.feature_source import WritableFeatureSource
+
         pred_source = self.model.predictions_view.source
         if not pred_source:
             raise ValueError('No source defined for predictions view')
