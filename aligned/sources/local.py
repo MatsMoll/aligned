@@ -126,6 +126,20 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
     def __hash__(self) -> int:
         return hash(self.job_group_key())
 
+    def to_markdown(self) -> str:
+        return f"""### CSV File
+
+*Renames*: {self.mapping_keys}
+
+*File*: {self.path}
+
+*CSV Config*: {self.csv_config}
+
+*Datetime Formatter*: {self.formatter}
+
+[Go to file]({self.path})
+"""
+
     async def read_pandas(self) -> pd.DataFrame:
         try:
             return pd.read_csv(
@@ -181,7 +195,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
             potential_timestamps.add(request.event_timestamp.as_feature())
 
         for feature in potential_timestamps:
-            if feature.dtype.name == 'datetime':
+            if feature.dtype.is_datetime:
                 data = data.with_columns(self.formatter.encode_polars(feature.name))
 
         if self.mapping_keys:
@@ -206,7 +220,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
 
         data = (await job.to_lazy_polars()).select(request.all_returned_columns)
         for feature in request.features:
-            if feature.dtype.name == 'datetime':
+            if feature.dtype.is_datetime:
                 data = data.with_columns(self.formatter.encode_polars(feature.name))
 
         if self.mapping_keys:
@@ -220,6 +234,25 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
             write_df = data
 
         await self.write_polars(write_df)
+
+    async def overwrite(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+
+        if len(requests) != 1:
+            raise ValueError('Csv files only support one write request as of now')
+
+        request = requests[0]
+
+        data = (await job.to_lazy_polars()).select(request.all_returned_columns)
+        for feature in request.features:
+            if feature.dtype.is_datetime:
+                data = data.with_columns(self.formatter.encode_polars(feature.name))
+
+        if self.mapping_keys:
+            columns = self.feature_identifier_for(data.columns)
+            data = data.rename(dict(zip(data.columns, columns)))
+
+        logger.error(f'Overwriting {self.path} with {data.columns}')
+        await self.write_polars(data)
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
         create_parent_dir(self.path)
@@ -269,7 +302,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
             formatter=self.formatter,
             expected_schema={
                 feat.name: feat.dtype
-                for feat in request.features
+                for feat in request.features.union(request.entities)
                 if not (feat.constraints and optional_constraint in feat.constraints)
                 and not feat.name.isdigit()
             },

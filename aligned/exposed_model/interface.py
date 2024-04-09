@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import polars as pl
 from typing import TYPE_CHECKING
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from aligned.retrival_job import RetrivalJob
 from aligned.schemas.codable import Codable
 from mashumaro.types import SerializableType
@@ -112,18 +112,28 @@ class ExposedModel(Codable, SerializableType):
     def in_memory_mlflow(
         model_name: str,
         model_alias: str,
-        prediction_column: str,
-        model_version_column: str | None = None,
-        predicted_at_column: str | None = None,
         model_contract_version_tag: str | None = None,
     ):
         return InMemMLFlowAlias(
             model_name=model_name,
             model_alias=model_alias,
-            prediction_column=prediction_column,
-            predicted_at_column=predicted_at_column or 'predicted_at',
-            model_version_column=model_version_column or 'model_version',
             model_contract_version_tag=model_contract_version_tag,
+        )
+
+    @staticmethod
+    def mlflow_server(
+        host: str,
+        model_name: str,
+        model_alias: str,
+        model_contract_version_tag: str | None = None,
+        timeout: int = 30,
+    ):
+        return MLFlowServer(
+            host=host,
+            model_name=model_name,
+            model_alias=model_alias,
+            model_contract_version_tag=model_contract_version_tag,
+            timeout=timeout,
         )
 
 
@@ -313,10 +323,6 @@ class InMemMLFlowAlias(ExposedModel):
     model_name: str
     model_alias: str
 
-    prediction_column: str
-    predicted_at_column: str
-    model_version_column: str
-
     model_contract_version_tag: str | None
 
     model_type: str = 'latest_mlflow'
@@ -341,7 +347,8 @@ class InMemMLFlowAlias(ExposedModel):
         if self.model_contract_version_tag:
             if self.model_contract_version_tag not in model_version.tags:  # noqa
                 raise ValueError(
-                    f"Model contract version tag {self.model_contract_version_tag} not found in model version tags"
+                    f"Model contract version tag {self.model_contract_version_tag} not "
+                    'found in model version tags'
                 )
             else:
                 version = model_version.tags[self.model_contract_version_tag]
@@ -362,6 +369,14 @@ class InMemMLFlowAlias(ExposedModel):
         import polars as pl
         from datetime import datetime, timezone
 
+        pred_label = list(store.model.predictions_view.labels())[0]
+        pred_at = store.model.predictions_view.event_timestamp
+        model_version_column = store.model.predictions_view.model_version_column
+        mv = None
+
+        if model_version_column:
+            mv = self.get_model_version()
+
         model_uri = f"models:/{self.model_name}@{self.model_alias}"
         mv = self.get_model_version()
 
@@ -369,12 +384,109 @@ class InMemMLFlowAlias(ExposedModel):
 
         job = store.features_for(values)
         df = await job.to_polars()
-        features = job.request_result.feature_columns
 
+        features = job.request_result.feature_columns
         predictions = model.predict(df[features])
 
+        if pred_at:
+            df = df.with_columns(
+                pl.lit(datetime.now(timezone.utc)).alias(pred_at.name),
+            )
+
+        if mv and model_version_column:
+            df = df.with_columns(
+                pl.lit(mv.run_id).alias(model_version_column.name),
+            )
+
         return df.with_columns(
-            pl.Series(name=self.prediction_column, values=predictions),
-            pl.lit(mv.run_id).alias(self.model_version_column),
-            pl.lit(datetime.now(timezone.utc)).alias(self.predicted_at_column),
+            pl.Series(name=pred_label.name, values=predictions),
+        )
+
+
+@dataclass
+class MLFlowServer(ExposedModel):
+
+    host: str
+
+    model_name: str
+    model_alias: str
+    model_contract_version_tag: str | None
+
+    timeout: int = field(default=30)
+
+    model_type: str = 'latest_mlflow'
+
+    @property
+    def exposed_at_url(self) -> str | None:
+        return self.host
+
+    @property
+    def as_markdown(self) -> str:
+        return f"""Using the latest MLFlow model: `{self.model_name}`."""
+
+    def get_model_version(self):
+        from mlflow.tracking import MlflowClient
+
+        mlflow_client = MlflowClient()
+        return mlflow_client.get_model_version_by_alias(self.model_name, self.model_alias)
+
+    def contract_version(self, model_version) -> str:
+        version = 'default'
+        if self.model_contract_version_tag:
+            if self.model_contract_version_tag not in model_version.tags:  # noqa
+                raise ValueError(
+                    f"Model contract version tag {self.model_contract_version_tag} not "
+                    'found in model version tags'
+                )
+            else:
+                version = model_version.tags[self.model_contract_version_tag]
+        return version
+
+    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReferance]:
+        mv = self.get_model_version()
+        version = self.contract_version(mv)
+        return store.feature_references_for(version)
+
+    async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
+        mv = self.get_model_version()
+        version = self.contract_version(mv)
+        return store.using_version(version).needed_entities()
+
+    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+        import polars as pl
+        from httpx import AsyncClient
+        from datetime import datetime, timezone
+
+        pred_label = list(store.model.predictions_view.labels())[0]
+        pred_at = store.model.predictions_view.event_timestamp
+        model_version_column = store.model.predictions_view.model_version_column
+        mv = None
+
+        if model_version_column:
+            mv = self.get_model_version()
+
+        job = store.features_for(values)
+        df = await job.to_polars()
+
+        features = job.request_result.feature_columns
+
+        async with AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(
+                f'{self.host}/invocations', json={'dataframe_records': df[features].to_dicts()}
+            )
+            response.raise_for_status()
+            preds = response.json()['predictions']
+
+        if pred_at:
+            df = df.with_columns(
+                pl.lit(datetime.now(timezone.utc)).alias(pred_at.name),
+            )
+
+        if mv and model_version_column:
+            df = df.with_columns(
+                pl.lit(mv.run_id).alias(model_version_column.name),
+            )
+
+        return df.with_columns(
+            pl.Series(name=pred_label.name, values=preds),
         )

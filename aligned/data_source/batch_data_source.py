@@ -803,6 +803,37 @@ class StackSource(BatchDataSource):
             .derive_features([request])
         )
 
+    @classmethod
+    def multi_source_features_for(
+        cls, facts: RetrivalJob, requests: list[tuple[StackSource, RetrivalRequest]]
+    ) -> RetrivalJob:
+        sources = {source.job_group_key() for source, _ in requests}
+        if len(sources) != 1:
+            raise ValueError(f'Only able to load one {requests} at a time')
+
+        source = requests[0][0]
+        if not isinstance(source, cls):
+            raise ValueError(f'Only {cls} is supported, recived: {source}')
+
+        return source.features_for(facts, requests[0][1])
+
+    def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
+        from aligned.local.job import FileFactualJob
+        from aligned.retrival_job import StackJob
+
+        config = self.source_column_config
+        sub_request = request
+
+        if config:
+            sub_request = self.sub_request(request, config)
+
+        top = self.top.features_for(facts, sub_request)
+        bottom = self.bottom.features_for(facts, sub_request)
+
+        stack_job = StackJob(top=top, bottom=bottom, source_column=config)
+
+        return FileFactualJob(stack_job, [request], facts)
+
     def all_between_dates(
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime
     ) -> RetrivalJob:

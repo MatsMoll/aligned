@@ -280,7 +280,12 @@ def model_contract(
             )
 
         used_name = name or str(cls.__name__).lower()
-        used_description = description or str(cls.__doc__)
+
+        used_description = None
+        if description:
+            used_description = description
+        elif cls.__doc__:
+            used_description = str(cls.__doc__)
 
         used_exposed_at_url = exposed_at_url
         if exposed_model:

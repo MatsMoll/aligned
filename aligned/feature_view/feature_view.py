@@ -236,11 +236,20 @@ class FeatureViewWrapper(Generic[T]):
             right_on=right_on,
         )
 
-    def with_source(self, named: str, source: BatchDataSource | FeatureViewWrapper) -> FeatureViewWrapper[T]:
+    def with_source(
+        self,
+        named: str,
+        source: BatchDataSource | FeatureViewWrapper,
+        materialized_source: BatchDataSource | None = None,
+    ) -> FeatureViewWrapper[T]:
 
         meta = copy.deepcopy(self.metadata)
         meta.name = named
         meta.source = resolve_source(source)
+        meta.materialized_source = None
+
+        if materialized_source:
+            meta.materialized_source = resolve_source(materialized_source)
 
         return FeatureViewWrapper(meta, self.view)
 

@@ -917,6 +917,34 @@ class FeatureStore:
         else:
             raise ValueError(f'The source {type(source)} do not support writes')
 
+    async def overwrite(
+        self, location: FeatureLocation | str, values: ConvertableToRetrivalJob | RetrivalJob
+    ) -> None:
+        if isinstance(location, str):
+            used_location = FeatureLocation.from_string(location)
+        elif isinstance(location, FeatureLocation):
+            used_location = location
+        else:
+            raise ValueError(f'Location was of an unsupported type: {type(location)}')
+
+        source: FeatureSource | BatchDataSource = self.feature_source
+
+        if isinstance(source, BatchFeatureSource):
+            source = source.sources[used_location.identifier]
+
+        write_request = self.write_request_for(used_location)
+
+        if not isinstance(values, RetrivalJob):
+            values = RetrivalJob.from_convertable(values, write_request)
+
+        if isinstance(source, WritableFeatureSource):
+            await source.overwrite(values, [write_request])
+        elif isinstance(source, DataFileReference):
+            df = (await values.to_lazy_polars()).select(write_request.all_returned_columns)
+            await source.write_polars(df)
+        else:
+            raise ValueError(f'The source {type(source)} do not support writes')
+
 
 @dataclass
 class ModelFeatureStore:
