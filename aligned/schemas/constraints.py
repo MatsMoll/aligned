@@ -33,19 +33,6 @@ class SupportedConstraints:
 
     def __init__(self) -> None:
         from aligned.schemas.constraint_types import (
-            LowerBound,
-            LowerBoundInclusive,
-            UpperBound,
-            UpperBoundInclusive,
-            Required,
-            Optional,
-            InDomain,
-            MaxLength,
-            MinLength,
-            StartsWith,
-            EndsWith,
-            Unique,
-            Regex,
             ReferencingColumn,
         )
 

@@ -152,5 +152,5 @@ async def test_fill_optional_column_bug(titanic_source: CsvFileSource) -> None:
 
     df = await TestFill.query().all().to_polars()
 
-    assert df['some_new_column'].isnull().sum() == 0
-    assert df['some_string'].isnull().sum() == 0
+    assert df['some_new_column'].is_null().sum() == 0
+    assert df['some_string'].is_null().sum() == 0

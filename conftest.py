@@ -16,6 +16,7 @@ from aligned import (
     Int64,
     RedisConfig,
     String,
+    Int8,
     EmbeddingModel,
 )
 from aligned.feature_view.feature_view import FeatureView, FeatureViewMetadata
@@ -405,14 +406,14 @@ def titanic_feature_view(titanic_source: CsvFileSource) -> FeatureView:
             name='titanic', description='Some features from the titanic dataset', source=titanic_source
         )
 
-        passenger_id = Entity(dtype=Int32())
+        passenger_id = Int32().as_entity()
 
         # Input values
         age = Float().lower_bound(0).upper_bound(100).description('A float as some have decimals')
 
         name = String().is_optional()
         sex = String().is_optional().accepted_values(['male', 'female'])
-        survived = Bool().description('If the passenger survived')
+        survived = Int8().description('If the passenger survived')
 
         sibsp = (
             Int32().is_optional().lower_bound(0).upper_bound(20).description('Number of siblings on titanic')
@@ -512,7 +513,7 @@ def alot_of_transforations_feature_view(titanic_source: CsvFileSource) -> Featur
         age = Float()
         name = String()
         sex = String()
-        survived = Bool()
+        survived = Int8()
         sibsp = Int32()
         cabin = String().fill_na('Nada')
 

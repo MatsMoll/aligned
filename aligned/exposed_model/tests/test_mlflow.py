@@ -34,20 +34,19 @@ async def test_mlflow() -> None:
         entity_id = String().as_entity()
         x = Int32()
 
+    input = InputFeatureView()
+
     @model_contract(
         input_features=[InputFeatureView().x],
         exposed_model=ExposedModel.in_memory_mlflow(
             model_name=model_name,
             model_alias=model_alias,
-            prediction_column='prediction',
-            model_version_column='model_version',
-            predicted_at_column='predicted_at',
         ),
     )
     class MyModelContract:
         entity_id = String().as_entity()
         predicted_at = EventTimestamp()
-        prediction = Int32()
+        prediction = input.x.as_regression_target()
         model_version = String().as_model_version()
 
     preds = await MyModelContract.predict_over(

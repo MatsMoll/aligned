@@ -99,4 +99,5 @@ async def test_view_reference() -> None:
 
     result = await TestRef.query().all().to_pandas()  # type: ignore
     result['new_feature'] = result['new_feature'].astype('int64')
+    result['some_id'] = result['some_id'].astype('int64')
     assert result[expected_df.columns].equals(expected_df)
