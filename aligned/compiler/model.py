@@ -27,7 +27,7 @@ from aligned.exposed_model.interface import ExposedModel
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import ConvertableToRetrivalJob, PredictionJob, RetrivalJob
 from aligned.schemas.derivied_feature import DerivedFeature
-from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
+from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference, FeatureType
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.model import Model as ModelSchema
@@ -102,7 +102,7 @@ class ModelContractWrapper(Generic[T]):
         values: ConvertableToRetrivalJob | RetrivalJob,
         needed_views: list[FeatureViewWrapper | ModelContractWrapper] | None = None,
     ) -> PredictionJob:
-        from aligned import FeatureStore
+        from aligned import ContractStore
         from aligned.retrival_job import RetrivalJob
 
         model = self.compile()
@@ -122,7 +122,7 @@ class ModelContractWrapper(Generic[T]):
             )
             values = RetrivalJob.from_convertable(values, request)
 
-        store = FeatureStore.empty()
+        store = ContractStore.empty()
 
         for needed_data in needed_views or []:
             if isinstance(needed_data, ModelContractWrapper):
@@ -249,14 +249,15 @@ class FeatureInputVersions:
         return FeatureVersionSchema(
             default_version=self.default_version,
             versions={
-                version: [feature.feature_referance() for feature in features]
+                version: [feature.feature_reference() for feature in features]
                 for version, features in self.versions.items()
             },
         )
 
 
 def model_contract(
-    input_features: list[FeatureReferencable] | FeatureInputVersions,
+    input_features: list[FeatureReferencable | FeatureViewWrapper | ModelContractWrapper]
+    | FeatureInputVersions,
     name: str | None = None,
     contacts: list[str] | None = None,
     tags: list[str] | None = None,
@@ -275,8 +276,30 @@ def model_contract(
         if isinstance(input_features, FeatureInputVersions):
             features_versions = input_features
         else:
+            unwrapped_input_features: list[FeatureReferencable] = []
+
+            for feature in input_features:
+                if isinstance(feature, FeatureViewWrapper):
+                    compiled_view = feature.compile()
+                    request = compiled_view.request_all
+                    features = [
+                        feat.as_reference(FeatureLocation.feature_view(compiled_view.name))
+                        for feat in request.request_result.features
+                    ]
+                    unwrapped_input_features.extend(features)
+                elif isinstance(feature, ModelContractWrapper):
+                    compiled_model = feature.compile()
+                    request = compiled_model.predictions_view.request('')
+                    features = [
+                        feat.as_reference(FeatureLocation.model(compiled_model.name))
+                        for feat in request.request_result.features
+                    ]
+                    unwrapped_input_features.extend(features)
+                else:
+                    unwrapped_input_features.append(feature)
+
             features_versions = FeatureInputVersions(
-                default_version='default', versions={'default': input_features}
+                default_version='default', versions={'default': unwrapped_input_features}
             )
 
         used_name = name or str(cls.__name__).lower()
@@ -422,7 +445,7 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
             dtype=transformation.dtype,
             transformation=transformation,
             depending_on={
-                FeatureReferance(feat, FeatureLocation.model(metadata.name), dtype=FeatureType.float())
+                FeatureReference(feat, FeatureLocation.model(metadata.name), dtype=FeatureType.float())
                 for feat in transformation.column_mappings.keys()
             },
             depth=1,

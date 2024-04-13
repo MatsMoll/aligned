@@ -1,7 +1,7 @@
 import pytest
 from aligned.compiler.feature_factory import EventTimestamp, Int32, String, Float
 
-from aligned.feature_store import FeatureStore
+from aligned.feature_store import ContractStore
 from aligned.feature_view.feature_view import feature_view
 from aligned.schemas.transformation import SupportedTransformations
 from aligned.sources.local import FileSource, CsvFileSource
@@ -24,7 +24,7 @@ async def test_polars_transformation() -> None:
 
 
 @pytest.mark.asyncio
-async def test_transformations_in_feture_view(alot_of_transforation_feature_store: FeatureStore) -> None:
+async def test_transformations_in_feture_view(alot_of_transforation_feature_store: ContractStore) -> None:
     store = alot_of_transforation_feature_store
 
     amount = 100
@@ -154,4 +154,3 @@ async def test_fill_optional_column_bug(titanic_source: CsvFileSource) -> None:
 
     assert df['some_new_column'].isnull().sum() == 0
     assert df['some_string'].isnull().sum() == 0
-    assert False

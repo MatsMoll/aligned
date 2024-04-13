@@ -20,11 +20,11 @@ from aligned import (
 )
 from aligned.feature_view.feature_view import FeatureView, FeatureViewMetadata
 from aligned.compiler.model import model_contract, ModelContractWrapper
-from aligned.feature_store import FeatureStore
+from aligned.feature_store import ContractStore
 from aligned.feature_view.combined_view import CombinedFeatureView, CombinedFeatureViewMetadata
 from aligned.retrival_job import DerivedFeatureJob, RetrivalJob, RetrivalRequest
 from aligned.schemas.derivied_feature import DerivedFeature
-from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
+from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference, FeatureType
 from aligned.schemas.record_coders import JsonRecordCoder
 from aligned.sources.local import CsvFileSource, FileFullJob, LiteralReference, ParquetFileSource
 
@@ -72,12 +72,12 @@ def retrival_request_with_derived() -> RetrivalRequest:
                 name='c+d',
                 dtype=FeatureType.int32(),
                 depending_on={
-                    FeatureReferance(
+                    FeatureReference(
                         name='c',
                         location=FeatureLocation.feature_view('test_with_ts'),
                         dtype=FeatureType.int32(),
                     ),
-                    FeatureReferance(
+                    FeatureReference(
                         name='d',
                         location=FeatureLocation.feature_view('test_with_ts'),
                         dtype=FeatureType.int32(),
@@ -131,12 +131,12 @@ def combined_retrival_request() -> RetrivalRequest:
                 name='a+c+d',
                 dtype=FeatureType.int32(),
                 depending_on={
-                    FeatureReferance(
+                    FeatureReference(
                         name='c+d',
                         location=FeatureLocation.feature_view('test_with_ts'),
                         dtype=FeatureType.int32(),
                     ),
-                    FeatureReferance(
+                    FeatureReference(
                         name='a', location=FeatureLocation.feature_view('test'), dtype=FeatureType.int32()
                     ),
                 },
@@ -212,8 +212,8 @@ def breast_scan_feature_viewout_with_datetime(scan_without_datetime: CsvFileSour
 @pytest_asyncio.fixture
 async def breast_scan_without_timestamp_feature_store(
     breast_scan_feature_viewout_with_datetime: FeatureView,
-) -> FeatureStore:
-    store = FeatureStore.empty()
+) -> ContractStore:
+    store = ContractStore.empty()
     store.add_feature_view(breast_scan_feature_viewout_with_datetime)
     return store
 
@@ -346,8 +346,8 @@ def breast_scan_feature_view_with_datetime_and_aggregation(scan_with_datetime: C
 @pytest_asyncio.fixture
 async def breast_scan_with_timestamp_feature_store(
     breast_scan_feature_view_with_datetime: FeatureView,
-) -> FeatureStore:
-    store = FeatureStore.empty()
+) -> ContractStore:
+    store = ContractStore.empty()
     store.add_feature_view(breast_scan_feature_view_with_datetime)
     return store
 
@@ -355,8 +355,8 @@ async def breast_scan_with_timestamp_feature_store(
 @pytest_asyncio.fixture
 async def breast_scan_with_timestamp_and_aggregation_feature_store(
     breast_scan_feature_view_with_datetime_and_aggregation: FeatureView,
-) -> FeatureStore:
-    store = FeatureStore.empty()
+) -> ContractStore:
+    store = ContractStore.empty()
     store.add_feature_view(breast_scan_feature_view_with_datetime_and_aggregation)
     return store
 
@@ -490,8 +490,8 @@ async def titanic_feature_store(
     titanic_feature_view: FeatureView,
     titanic_feature_view_parquet: FeatureView,
     titanic_model: ModelContractWrapper,
-) -> FeatureStore:
-    feature_store = FeatureStore.empty()
+) -> ContractStore:
+    feature_store = ContractStore.empty()
     feature_store.add_feature_view(titanic_feature_view)
     feature_store.add_feature_view(titanic_feature_view_parquet)
     feature_store.add_model(titanic_model)
@@ -539,8 +539,8 @@ def alot_of_transforations_feature_view(titanic_source: CsvFileSource) -> Featur
 @pytest_asyncio.fixture
 async def alot_of_transforation_feature_store(
     alot_of_transforations_feature_view: FeatureView,
-) -> FeatureStore:
-    feature_store = FeatureStore.empty()
+) -> ContractStore:
+    feature_store = ContractStore.empty()
     feature_store.add_feature_view(alot_of_transforations_feature_view)
     return feature_store
 
@@ -569,8 +569,8 @@ async def combined_feature_store(
     titanic_feature_view: FeatureView,
     breast_scan_feature_viewout_with_datetime: FeatureView,
     combined_view: CombinedFeatureView,
-) -> FeatureStore:
-    feature_store = FeatureStore.empty()
+) -> ContractStore:
+    feature_store = ContractStore.empty()
     feature_store.add_feature_view(titanic_feature_view)
     feature_store.add_feature_view(breast_scan_feature_viewout_with_datetime)
     feature_store.add_combined_feature_view(combined_view)
@@ -629,7 +629,12 @@ def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> ModelContractWra
     @model_contract(
         name='titanic',
         description='A model predicting if a passenger will survive',
-        input_features=[features.age, features.sibsp, features.has_siblings, features.is_male],  # type: ignore
+        input_features=[
+            features.age,  # type: ignore
+            features.sibsp,  # type: ignore
+            features.has_siblings,  # type: ignore
+            features.is_male,  # type: ignore
+        ],
         acceptable_freshness=timedelta(days=1),
         unacceptable_freshness=timedelta(days=2),
     )
@@ -646,8 +651,8 @@ async def titanic_feature_store_scd(
     titanic_feature_view_scd: FeatureView,
     titanic_feature_view_parquet: FeatureView,
     titanic_model_scd: ModelContractWrapper,
-) -> FeatureStore:
-    feature_store = FeatureStore.empty()
+) -> ContractStore:
+    feature_store = ContractStore.empty()
     feature_store.add_feature_view(titanic_feature_view_scd)
     feature_store.add_feature_view(titanic_feature_view_parquet)
     feature_store.add_model(titanic_model_scd)

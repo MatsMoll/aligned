@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 from aligned.data_source.stream_data_source import HttpStreamSource
 from aligned.feature_source import WritableFeatureSource
-from aligned.feature_store import FeatureStore
+from aligned.feature_store import ContractStore
 from aligned.schemas.feature import Feature
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.sources.local import StorageFileReference
@@ -35,7 +35,7 @@ class TopicInfo:
 
 class FastAPIServer:
     @staticmethod
-    def write_to_topic_path(topic: TopicInfo, feature_store: FeatureStore, app: FastAPI) -> None:
+    def write_to_topic_path(topic: TopicInfo, feature_store: ContractStore, app: FastAPI) -> None:
 
         required_features: set[Feature] = set()
         for view in topic.views:
@@ -95,7 +95,7 @@ class FastAPIServer:
             )
 
     @staticmethod
-    def feature_view_path(name: str, feature_store: FeatureStore, app: FastAPI) -> None:
+    def feature_view_path(name: str, feature_store: ContractStore, app: FastAPI) -> None:
         @app.post(f'/feature-views/{name}/all')
         async def all(limit: int | None = None) -> dict:
             df = await feature_store.feature_view(name).all(limit=limit).to_pandas()
@@ -103,7 +103,7 @@ class FastAPIServer:
             return df.to_dict('list')
 
     @staticmethod
-    def model_path(name: str, feature_store: FeatureStore, app: FastAPI) -> None:
+    def model_path(name: str, feature_store: ContractStore, app: FastAPI) -> None:
         from aligned.feature_store import RawStringFeatureRequest
 
         model = feature_store.models[name]
@@ -168,7 +168,7 @@ class FastAPIServer:
             return Response(content=f'{{{body}}}', media_type='application/json')
 
     @staticmethod
-    def app(feature_store: FeatureStore, auth_tokens: list[str] | None = None) -> FastAPI:
+    def app(feature_store: ContractStore, auth_tokens: list[str] | None = None) -> FastAPI:
         from asgi_correlation_id import CorrelationIdMiddleware
         from fastapi import FastAPI
         from fastapi.middleware import Middleware
@@ -243,7 +243,7 @@ class FastAPIServer:
 
     @staticmethod
     def run(
-        feature_store: FeatureStore,
+        feature_store: ContractStore,
         host: str | None = None,
         port: int | None = None,
         workers: int | None = None,

@@ -25,7 +25,7 @@ from aligned.schemas.constraints import (
 from aligned.schemas.derivied_feature import DerivedFeature, AggregateOver
 from aligned.schemas.event_trigger import EventTrigger as EventTriggerSchema
 from aligned.schemas.feature import EventTimestamp as EventTimestampFeature
-from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
+from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference, FeatureType
 from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.target import ClassificationTarget as ClassificationTargetSchemas
 from aligned.schemas.target import ClassTargetProbability
@@ -65,7 +65,7 @@ class TransformationFactory:
 
 class AggregationTransformationFactory:
     def aggregate_over(
-        self, group_by: list[FeatureReferance], time_columns: FeatureReferance | None
+        self, group_by: list[FeatureReference], time_columns: FeatureReference | None
     ) -> AggregateOver:
         raise NotImplementedError(type(self))
 
@@ -99,8 +99,8 @@ class TargetProbability:
 
 
 class FeatureReferencable:
-    def feature_referance(self) -> FeatureReferance:
-        pass
+    def feature_reference(self) -> FeatureReference:
+        raise NotImplementedError(type(self))
 
 
 def compile_hidden_features(
@@ -184,24 +184,24 @@ class RecommendationTarget(FeatureReferencable):
     def __set_name__(self, owner, name):
         self._name = name
 
-    def feature_referance(self) -> FeatureReferance:
+    def feature_reference(self) -> FeatureReference:
         if not self._name:
             raise ValueError('Missing name, can not create reference')
         if not self._location:
             raise ValueError('Missing location, can not create reference')
-        return FeatureReferance(self._name, self._location, self.feature.dtype)
+        return FeatureReference(self._name, self._location, self.feature.dtype)
 
     def estemating_rank(self, feature: FeatureFactory) -> RecommendationTarget:
         self.rank_feature = feature
         return self
 
     def compile(self) -> RecommendationTargetSchemas:
-        self_ref = self.feature_referance()
+        self_ref = self.feature_reference()
 
         return RecommendationTargetSchemas(
-            self.feature.feature_referance(),
+            self.feature.feature_reference(),
             feature=self_ref.as_feature(),
-            estimating_rank=self.rank_feature.feature_referance() if self.rank_feature else None,
+            estimating_rank=self.rank_feature.feature_reference() if self.rank_feature else None,
         )
 
 
@@ -216,12 +216,12 @@ class RegressionLabel(FeatureReferencable):
     def __set_name__(self, owner, name):
         self._name = name
 
-    def feature_referance(self) -> FeatureReferance:
+    def feature_reference(self) -> FeatureReference:
         if not self._name:
             raise ValueError('Missing name, can not create reference')
         if not self._location:
             raise ValueError('Missing location, can not create reference')
-        return FeatureReferance(self._name, self._location, self.feature.dtype)
+        return FeatureReference(self._name, self._location, self.feature.dtype)
 
     def listen_to_ground_truth_event(self, stream: StreamDataSource) -> RegressionLabel:
         return RegressionLabel(
@@ -253,7 +253,7 @@ class RegressionLabel(FeatureReferencable):
                 on_ground_truth_event = event.event
 
         return RegressionTargetSchemas(
-            self.feature.feature_referance(),
+            self.feature.feature_reference(),
             feature=Feature(self._name, self.feature.dtype),
             on_ground_truth_event=on_ground_truth_event,
             event_trigger=trigger,
@@ -271,12 +271,12 @@ class ClassificationLabel(FeatureReferencable):
     def __set_name__(self, owner, name):
         self._name = name
 
-    def feature_referance(self) -> FeatureReferance:
+    def feature_reference(self) -> FeatureReference:
         if not self._name:
             raise ValueError('Missing name, can not create reference')
         if not self._location:
             raise ValueError('Missing location, can not create reference')
-        return FeatureReferance(self._name, self._location, self.feature.dtype)
+        return FeatureReference(self._name, self._location, self.feature.dtype)
 
     def listen_to_ground_truth_event(self, stream: StreamDataSource) -> ClassificationLabel:
         return ClassificationLabel(
@@ -335,7 +335,7 @@ class ClassificationLabel(FeatureReferencable):
                 on_ground_truth_event = event.event
 
         return ClassificationTargetSchemas(
-            self.feature.feature_referance(),
+            self.feature.feature_reference(),
             feature=Feature(self._name, self.feature.dtype),
             on_ground_truth_event=on_ground_truth_event,
             event_trigger=trigger,
@@ -386,13 +386,13 @@ class FeatureFactory(FeatureReferencable):
             return []
         return [feat._name for feat in self.transformation.using_features if feat._name]
 
-    def feature_referance(self) -> FeatureReferance:
+    def feature_reference(self) -> FeatureReference:
         if not self._location:
             raise ValueError(
                 f'_location is not set for {self.name}. '
                 'Therefore, making it impossible to create a referance.'
             )
-        return FeatureReferance(self.name, self._location, self.dtype)
+        return FeatureReference(self.name, self._location, self.dtype)
 
     def feature(self) -> Feature:
         return Feature(
@@ -441,7 +441,7 @@ class FeatureFactory(FeatureReferencable):
         return DerivedFeature(
             name=self.name,
             dtype=self.dtype,
-            depending_on={feat.feature_referance() for feat in self.transformation.using_features},
+            depending_on={feat.feature_reference() for feat in self.transformation.using_features},
             transformation=self.transformation.compile(),
             depth=self.depth(),
             description=self._description,
@@ -585,6 +585,12 @@ class FeatureFactory(FeatureReferencable):
         instance = Bool()
         instance.transformation = NotNullFactory(self)
         return instance
+
+    def referencing(self, entity: FeatureFactory) -> FeatureFactory:
+        from aligned.schemas.constraint_types import ReferencingColumn
+
+        self._add_constraint(ReferencingColumn(entity.feature_reference()))
+        return self
 
 
 class CouldBeModelVersion:

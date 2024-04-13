@@ -2,7 +2,7 @@ import pytest
 import polars as pl
 from pathlib import Path
 
-from aligned import FeatureStore, FileSource, feature_view, Int32
+from aligned import ContractStore, FileSource, feature_view, Int32
 from aligned.feature_view.feature_view import FeatureView
 from aligned.schemas.date_formatter import DateFormatter
 from conftest import DataTest
@@ -11,7 +11,7 @@ from conftest import DataTest
 @pytest.mark.asyncio
 async def test_read_parquet(point_in_time_data_test: DataTest) -> None:
 
-    store = FeatureStore.experimental()
+    store = ContractStore.experimental()
 
     for source in point_in_time_data_test.sources:
         view = source.view
@@ -37,7 +37,7 @@ async def test_read_parquet(point_in_time_data_test: DataTest) -> None:
 @pytest.mark.asyncio
 async def test_parquest(point_in_time_data_test: DataTest) -> None:
 
-    store = FeatureStore.experimental()
+    store = ContractStore.experimental()
 
     for source in point_in_time_data_test.sources:
         view = source.view
@@ -74,7 +74,7 @@ async def test_parquet_without_event_timestamp(
     point_in_time_data_test_wituout_event_timestamp: DataTest,
 ) -> None:
 
-    store = FeatureStore.experimental()
+    store = ContractStore.experimental()
 
     for source in point_in_time_data_test_wituout_event_timestamp.sources:
         view = source.view
@@ -108,7 +108,7 @@ async def test_parquet_without_event_timestamp(
 @pytest.mark.asyncio
 async def test_read_csv(point_in_time_data_test: DataTest) -> None:
 
-    store = FeatureStore.experimental()
+    store = ContractStore.experimental()
 
     for source in point_in_time_data_test.sources:
         view = source.view

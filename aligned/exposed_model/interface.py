@@ -8,7 +8,7 @@ from aligned.schemas.codable import Codable
 from mashumaro.types import SerializableType
 import logging
 
-from aligned.schemas.feature import Feature, FeatureReferance
+from aligned.schemas.feature import Feature, FeatureReference
 
 if TYPE_CHECKING:
     from aligned.feature_store import ModelFeatureStore
@@ -48,7 +48,7 @@ class ExposedModel(Codable, SerializableType):
     def exposed_at_url(self) -> str | None:
         return None
 
-    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReferance]:
+    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
         raise NotImplementedError(type(self))
 
     async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
@@ -154,7 +154,7 @@ class EnitityPredictor(ExposedModel):
     def as_markdown(self) -> str:
         return f"""Sending entities to as a JSON payload stored column wise: {self.endpoint}."""
 
-    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReferance]:
+    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
         return store.feature_references_for(self.input_features_versions)
 
     async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
@@ -204,7 +204,7 @@ And use the prompt template:
 {self.prompt_template}
 ```"""
 
-    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReferance]:
+    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
         return store.feature_references_for(self.input_features_versions)
 
     async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
@@ -274,7 +274,7 @@ class OllamaEmbeddingPredictor(ExposedModel):
 
 This will use the model: `{self.model_name}` to generate the embeddings."""
 
-    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReferance]:
+    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
         return store.feature_references_for(self.input_features_versions)
 
     async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
@@ -354,7 +354,7 @@ class InMemMLFlowAlias(ExposedModel):
                 version = model_version.tags[self.model_contract_version_tag]
         return version
 
-    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReferance]:
+    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
         mv = self.get_model_version()
         version = self.contract_version(mv)
         return store.feature_references_for(version)
@@ -414,7 +414,7 @@ class MLFlowServer(ExposedModel):
 
     timeout: int = field(default=30)
 
-    model_type: str = 'latest_mlflow'
+    model_type: str = 'mlflow_server'
 
     @property
     def exposed_at_url(self) -> str | None:
@@ -422,7 +422,8 @@ class MLFlowServer(ExposedModel):
 
     @property
     def as_markdown(self) -> str:
-        return f"""Using the latest MLFlow model: `{self.model_name}`."""
+        return f"""Using a MLFlow server at `{self.host}`.
+Assumes that it is the model: `{self.model_name}` with alias: `{self.model_alias}`, and will load the features needed for that model based on the input version defined at tag `{self.model_contract_version_tag}`."""  # noqa: E501
 
     def get_model_version(self):
         from mlflow.tracking import MlflowClient
@@ -442,7 +443,7 @@ class MLFlowServer(ExposedModel):
                 version = model_version.tags[self.model_contract_version_tag]
         return version
 
-    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReferance]:
+    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
         mv = self.get_model_version()
         version = self.contract_version(mv)
         return store.feature_references_for(version)

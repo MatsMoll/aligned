@@ -3,10 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from aligned.schemas.feature import Feature, FeatureLocation
 from aligned.schemas.vector_storage import VectorIndex, VectorStorage
 
 if TYPE_CHECKING:
+    from aligned.schemas.feature import Feature, FeatureLocation
     from aligned.compiler.feature_factory import FeatureFactory
 
 

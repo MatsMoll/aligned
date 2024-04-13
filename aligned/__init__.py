@@ -22,7 +22,7 @@ from aligned.compiler.feature_factory import (
 from aligned.compiler.model import model_contract, FeatureInputVersions
 from aligned.data_source.stream_data_source import HttpStreamSource
 from aligned.data_source.batch_data_source import CustomMethodDataSource
-from aligned.feature_store import FeatureStore
+from aligned.feature_store import ContractStore, FeatureStore
 from aligned.feature_view import feature_view, combined_feature_view, check_schema
 from aligned.schemas.text_vectoriser import EmbeddingModel
 from aligned.sources.kafka import KafkaConfig
@@ -36,6 +36,7 @@ from aligned.exposed_model.interface import ExposedModel
 from aligned.schemas.feature import FeatureLocation
 
 __all__ = [
+    'ContractStore',
     'FeatureStore',
     'feature_view',
     # Batch Data sources

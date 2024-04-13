@@ -31,13 +31,14 @@ from aligned.validation.interface import Validator
 
 if TYPE_CHECKING:
     from typing import AsyncIterator
+    from aligned.sources.local import Directory
     from aligned.schemas.folder import DatasetMetadata, DatasetStore
     from aligned.feature_source import WritableFeatureSource
 
     from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver
     from aligned.schemas.model import EventTrigger, Model
     from aligned.sources.local import DataFileReference, StorageFileReference
-    from aligned.feature_store import FeatureStore
+    from aligned.feature_store import ContractStore
 
 
 logger = logging.getLogger(__name__)
@@ -197,22 +198,59 @@ class TrainTestValidateJob:
     def validate(self) -> SupervisedJob:
         return SupervisedJob(self.validate_job, self.target_columns, self.should_filter_out_null_targets)
 
+    def store_dataset_at_directory(
+        self,
+        directory: Directory,
+        dataset_store: DatasetStore | StorageFileReference | None,
+        metadata: DatasetMetadata | None = None,
+    ) -> TrainTestValidateJob:
+        from uuid import uuid4
+        from aligned.schemas.folder import DatasetMetadata
+
+        if not dataset_store:
+            logger.info('No dataset store provided, skipping to store dataset.')
+            return self
+
+        if not metadata:
+            metadata = DatasetMetadata(
+                id=str(uuid4()),
+                name='train_test_validate - ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                description='A train, test and validation dataset.',
+            )
+
+        run_dir = directory.sub_directory(metadata.id)
+        return self.store_dataset(
+            dataset_store=dataset_store,
+            train_source=run_dir.parquet_at('train.parquet'),  # type: ignore
+            test_source=run_dir.parquet_at('test.parquet'),  # type: ignore
+            validate_source=run_dir.parquet_at('validate.parquet'),  # type: ignore
+            metadata=metadata,
+        )
+
     def store_dataset(
         self,
         dataset_store: DatasetStore | StorageFileReference,
-        metadata: DatasetMetadata,
         train_source: DataFileReference,
         test_source: DataFileReference,
         validate_source: DataFileReference,
+        metadata: DatasetMetadata | None = None,
         train_size: float | None = None,
         test_size: float | None = None,
         validation_size: float | None = None,
     ) -> TrainTestValidateJob:
-        from aligned.schemas.folder import TrainDatasetMetadata, JsonDatasetStore
+        from aligned.schemas.folder import TrainDatasetMetadata, JsonDatasetStore, DatasetMetadata
         from aligned.data_source.batch_data_source import BatchDataSource
-        from aligned.sources.local import StorageFileReference
+        from aligned.sources.local import StorageFileSource
+        from uuid import uuid4
 
-        if isinstance(dataset_store, StorageFileReference):
+        if metadata is None:
+            metadata = DatasetMetadata(
+                id=str(uuid4()),
+                name='train_test_validate - ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                description='A train, test and validation dataset.',
+            )
+
+        if isinstance(dataset_store, StorageFileSource):
             data_store = JsonDatasetStore(dataset_store)
         else:
             data_store = dataset_store
@@ -2331,7 +2369,7 @@ class PredictionJob(RetrivalJob):
 
     job: RetrivalJob
     model: Model
-    store: FeatureStore
+    store: ContractStore
 
     @property
     def request_result(self) -> RequestResult:

@@ -27,7 +27,7 @@ from aligned.schemas.date_formatter import DateFormatter
 if TYPE_CHECKING:
     from datetime import datetime
     from aligned.schemas.repo_definition import RepoDefinition
-    from aligned.feature_store import FeatureStore
+    from aligned.feature_store import ContractStore
 
 
 logger = logging.getLogger(__name__)
@@ -37,10 +37,10 @@ class AsRepoDefinition:
     async def as_repo_definition(self) -> RepoDefinition:
         raise NotImplementedError()
 
-    async def feature_store(self) -> FeatureStore:
-        from aligned.feature_store import FeatureStore
+    async def feature_store(self) -> ContractStore:
+        from aligned.feature_store import ContractStore
 
-        return FeatureStore.from_definition(await self.as_repo_definition())
+        return ContractStore.from_definition(await self.as_repo_definition())
 
 
 class StorageFileReference(AsRepoDefinition):
@@ -83,9 +83,9 @@ def create_parent_dir(path: str) -> None:
     file_path = Path(path)
     parent = file_path.parent
 
-    while not parent.is_dir():
+    while not parent.exists():
         parents.append(parent)
-        parent = file_path.parent
+        parent = parent.parent
 
     for parent in reversed(parents):
         parent.mkdir(exist_ok=True)
@@ -138,7 +138,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
 *Datetime Formatter*: {self.formatter}
 
 [Go to file]({self.path})
-"""
+"""  # noqa
 
     async def read_pandas(self) -> pd.DataFrame:
         try:
@@ -392,7 +392,7 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
 
 *File*: {self.path}
 
-[Go to file]({self.path})'''
+[Go to file]({self.path})'''  # noqa
 
     def job_group_key(self) -> str:
         return f'{self.type_name}/{self.path}'

@@ -36,8 +36,9 @@ from aligned.retrival_job import (
     ConvertableToRetrivalJob,
     CustomLazyPolarsJob,
 )
-from aligned.schemas.feature import FeatureLocation, Feature, FeatureReferance
+from aligned.schemas.feature import FeatureLocation, Feature, FeatureReference
 from aligned.schemas.feature_view import CompiledFeatureView
+from aligned.schemas.folder import DatasetStore
 from aligned.schemas.model import EventTrigger
 from aligned.schemas.model import Model as ModelSchema
 from aligned.schemas.repo_definition import EnricherReference, RepoDefinition, RepoMetadata
@@ -97,7 +98,7 @@ class RawStringFeatureRequest:
             raise ValueError(f'Unable to decode {splits}')
 
 
-class FeatureStore:
+class ContractStore:
 
     feature_source: FeatureSource
     feature_views: dict[str, CompiledFeatureView]
@@ -121,12 +122,12 @@ class FeatureStore:
         self.models = models
 
     @staticmethod
-    def empty() -> FeatureStore:
+    def empty() -> ContractStore:
         """
         Creates a feature store with no features or models.
 
         ```python
-        store = FeatureStore.empty()
+        store = ContractStore.empty()
 
         store.add_compiled_view(MyFeatureView.compile())
         store.add_compiled_model(MyModel.compile())
@@ -134,15 +135,15 @@ class FeatureStore:
         df = await store.execute_sql("SELECT * FROM my_view LIMIT 10").to_polars()
         ```
         """
-        return FeatureStore.from_definition(
+        return ContractStore.from_definition(
             RepoDefinition(
                 metadata=RepoMetadata(created_at=datetime.utcnow(), name='experimental'),
             )
         )
 
     @staticmethod
-    def experimental() -> FeatureStore:
-        return FeatureStore.empty()
+    def experimental() -> ContractStore:
+        return ContractStore.empty()
 
     @staticmethod
     def register_enrichers(enrichers: list[EnricherReference]) -> None:
@@ -181,7 +182,7 @@ class FeatureStore:
             )
 
     @staticmethod
-    def from_definition(repo: RepoDefinition) -> FeatureStore:
+    def from_definition(repo: RepoDefinition) -> ContractStore:
         """Creates a feature store based on a repo definition
         A feature source can also be defined if wanted, otherwise will the batch source be used for reads
 
@@ -201,7 +202,7 @@ class FeatureStore:
         feature_views = {fv.name: fv for fv in repo.feature_views}
         combined_feature_views = {fv.name: fv for fv in repo.combined_feature_views}
 
-        FeatureStore.register_enrichers(repo.enrichers)
+        ContractStore.register_enrichers(repo.enrichers)
         sources = {
             FeatureLocation.feature_view(view.name).identifier: view.materialized_source
             if view.materialized_source
@@ -213,7 +214,7 @@ class FeatureStore:
             if model.predictions_view.source is not None
         }
 
-        return FeatureStore(
+        return ContractStore(
             feature_views=feature_views,
             combined_feature_views=combined_feature_views,
             models={model.name: model for model in repo.models},
@@ -229,11 +230,11 @@ class FeatureStore:
             enrichers=[],
         )
 
-    def combine(self, other: FeatureStore) -> FeatureStore:
+    def combine(self, other: ContractStore) -> ContractStore:
         """
         Combines two different feature stores together.
         """
-        new_store = FeatureStore.empty()
+        new_store = ContractStore.empty()
 
         for view in self.feature_views.values():
             new_store.add_view(view)
@@ -252,7 +253,7 @@ class FeatureStore:
     @staticmethod
     async def from_reference_at_path(
         path: str = '.', reference_file: str = 'feature_store_location.py'
-    ) -> FeatureStore:
+    ) -> ContractStore:
         """Looks for a file reference struct, and loads the associated repo.
 
         This can be used for changing which feature store definitions
@@ -268,10 +269,10 @@ class FeatureStore:
             FeatureStore: A feature store based on the feature references
         """
         repo_def = await RepoDefinition.from_reference_at_path(path, reference_file)
-        return FeatureStore.from_definition(repo_def)
+        return ContractStore.from_definition(repo_def)
 
     @staticmethod
-    async def from_dir(path: str = '.') -> FeatureStore:
+    async def from_dir(path: str = '.') -> ContractStore:
         """Reads and generates a feature store based on the given directory's content.
 
         This will read the feature views, services etc in a given repo and generate a feature store.
@@ -288,7 +289,7 @@ class FeatureStore:
             FeatureStore: The generated feature store
         """
         definition = await RepoDefinition.from_path(path)
-        return FeatureStore.from_definition(definition)
+        return ContractStore.from_definition(definition)
 
     def execute_sql(self, query: str) -> RetrivalJob:
         import polars as pl
@@ -572,7 +573,7 @@ class FeatureStore:
         event_timestamp_column: str | None = None,
         model_version_as_entity: bool | None = None,
     ) -> FeatureRequest:
-        return FeatureStore._requests_for(
+        return ContractStore._requests_for(
             feature_request,
             self.feature_views,
             self.combined_feature_views,
@@ -690,7 +691,7 @@ class FeatureStore:
                 FeatureLocation.model(model.name).identifier
             ] = model.predictions_view.source
 
-    def with_source(self, source: FeatureSourceable = None) -> FeatureStore:
+    def with_source(self, source: FeatureSourceable = None) -> ContractStore:
         """
         Creates a new instance of a feature store, but changes where to fetch the features from
 
@@ -726,14 +727,14 @@ class FeatureStore:
                 f'or FeatureSourceFactory. Got: {type(source)}'
             )
 
-        return FeatureStore(
+        return ContractStore(
             feature_views=self.feature_views,
             combined_feature_views=self.combined_feature_views,
             models=self.models,
             feature_source=feature_source,
         )
 
-    def update_source_for(self, location: FeatureLocation | str, source: BatchDataSource) -> FeatureStore:
+    def update_source_for(self, location: FeatureLocation | str, source: BatchDataSource) -> ContractStore:
         if not isinstance(self.feature_source, BatchFeatureSource):
             raise ValueError(
                 f'.update_source_for(...) needs a `BatchFeatureSource`, got {type(self.feature_source)}'
@@ -745,14 +746,14 @@ class FeatureStore:
         new_source = self.feature_source
         new_source.sources[location.identifier] = source
 
-        return FeatureStore(
+        return ContractStore(
             feature_views=self.feature_views,
             combined_feature_views=self.combined_feature_views,
             models=self.models,
             feature_source=new_source,
         )
 
-    def offline_store(self) -> FeatureStore:
+    def offline_store(self) -> ContractStore:
         """
         Will set the source to the defined batch sources.
 
@@ -761,7 +762,7 @@ class FeatureStore:
         """
         return self.with_source()
 
-    def use_application_sources(self) -> FeatureStore:
+    def use_application_sources(self) -> ContractStore:
         """
         Selects features from the application source if added.
         Otherwise, the we will default back to the batch source.
@@ -777,7 +778,7 @@ class FeatureStore:
             for model in set(self.models.values())
             if model.predictions_view.source is not None
         }
-        return FeatureStore(
+        return ContractStore(
             feature_views=self.feature_views,
             combined_feature_views=self.combined_feature_views,
             models=self.models,
@@ -946,16 +947,23 @@ class FeatureStore:
             raise ValueError(f'The source {type(source)} do not support writes')
 
 
+FeatureStore = ContractStore
+
+
 @dataclass
 class ModelFeatureStore:
 
     model: ModelSchema
-    store: FeatureStore
+    store: ContractStore
     selected_version: str | None = None
 
     @property
     def location(self) -> FeatureLocation:
         return FeatureLocation.model(self.model.name)
+
+    @property
+    def dataset_store(self) -> DatasetStore | None:
+        return self.model.dataset_store
 
     def raw_string_features(self, except_features: set[str]) -> set[str]:
 
@@ -986,7 +994,7 @@ class ModelFeatureStore:
     def needed_entities(self) -> set[Feature]:
         return self.request().request_result.entities
 
-    def feature_references_for(self, version: str) -> list[FeatureReferance]:
+    def feature_references_for(self, version: str) -> list[FeatureReference]:
         return self.model.features.features_for(version)
 
     def has_exposed_model(self) -> bool:
@@ -1069,7 +1077,7 @@ class ModelFeatureStore:
             if not needs_core_features:
                 job = RetrivalJob.from_convertable(entities, request).derive_features(request.needed_requests)
 
-        return job.select_columns(request.features_to_include)
+        return job
 
     async def freshness(self) -> dict[FeatureLocation, datetime | None]:
         from aligned.schemas.feature import EventTimestamp
@@ -1082,7 +1090,7 @@ class ModelFeatureStore:
 
         return await self.store.feature_source.freshness_for(locs)
 
-    def with_labels(self, label_refs: set[FeatureReferance] | None = None) -> SupervisedModelFeatureStore:
+    def with_labels(self, label_refs: set[FeatureReference] | None = None) -> SupervisedModelFeatureStore:
         """Will also load the labels for the model
 
         ```python
@@ -1346,8 +1354,8 @@ class ModelFeatureStore:
 class SupervisedModelFeatureStore:
 
     model: ModelSchema
-    store: FeatureStore
-    labels_estimates_refs: set[FeatureReferance]
+    store: ContractStore
+    labels_estimates_refs: set[FeatureReference]
 
     selected_version: str | None = None
 
@@ -1499,7 +1507,7 @@ class SupervisedModelFeatureStore:
 @dataclass
 class FeatureViewStore:
 
-    store: FeatureStore
+    store: ContractStore
     view: CompiledFeatureView
     event_triggers: set[EventTrigger] = field(default_factory=set)
     feature_filter: set[str] | None = field(default=None)

@@ -6,7 +6,7 @@ from typing import Callable
 from aligned.compiler.feature_factory import (
     AggregationTransformationFactory,
     FeatureFactory,
-    FeatureReferance,
+    FeatureReference,
     String,
     TransformationFactory,
 )
@@ -15,8 +15,8 @@ from aligned.schemas.transformation import Transformation
 
 
 def aggregate_over(
-    group_by: list[FeatureReferance],
-    time_column: FeatureReferance | None,
+    group_by: list[FeatureReference],
+    time_column: FeatureReference | None,
     time_window: timedelta | None,
     every_interval: timedelta | None,
     offset_interval: timedelta | None,
@@ -54,12 +54,12 @@ class ConcatStringsAggrigationFactory(TransformationFactory, AggregationTransfor
         from aligned.schemas.transformation import ConcatStringAggregation
 
         return ConcatStringAggregation(
-            key=self.feature.feature_referance().name,
+            key=self.feature.feature_reference().name,
             separator=self.separator or '',
         )
 
     def aggregate_over(
-        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+        self, group_by: list[FeatureReference], time_column: FeatureReference | None
     ) -> AggregateOver:
         return aggregate_over(
             group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
@@ -82,11 +82,11 @@ class SumAggregationFactory(TransformationFactory, AggregationTransformationFact
         from aligned.schemas.transformation import SumAggregation
 
         return SumAggregation(
-            key=self.feature.feature_referance().name,
+            key=self.feature.feature_reference().name,
         )
 
     def aggregate_over(
-        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+        self, group_by: list[FeatureReference], time_column: FeatureReference | None
     ) -> AggregateOver:
         return aggregate_over(
             group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
@@ -109,11 +109,11 @@ class MeanAggregationFactory(TransformationFactory, AggregationTransformationFac
         from aligned.schemas.transformation import MeanAggregation
 
         return MeanAggregation(
-            key=self.feature.feature_referance().name,
+            key=self.feature.feature_reference().name,
         )
 
     def aggregate_over(
-        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+        self, group_by: list[FeatureReference], time_column: FeatureReference | None
     ) -> AggregateOver:
         return aggregate_over(
             group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
@@ -136,11 +136,11 @@ class MinAggregationFactory(TransformationFactory, AggregationTransformationFact
         from aligned.schemas.transformation import MinAggregation
 
         return MinAggregation(
-            key=self.feature.feature_referance().name,
+            key=self.feature.feature_reference().name,
         )
 
     def aggregate_over(
-        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+        self, group_by: list[FeatureReference], time_column: FeatureReference | None
     ) -> AggregateOver:
         return aggregate_over(
             group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
@@ -163,11 +163,11 @@ class MaxAggregationFactory(TransformationFactory, AggregationTransformationFact
         from aligned.schemas.transformation import MaxAggregation
 
         return MaxAggregation(
-            key=self.feature.feature_referance().name,
+            key=self.feature.feature_reference().name,
         )
 
     def aggregate_over(
-        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+        self, group_by: list[FeatureReference], time_column: FeatureReference | None
     ) -> AggregateOver:
         return aggregate_over(
             group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
@@ -190,11 +190,11 @@ class CountAggregationFactory(TransformationFactory, AggregationTransformationFa
         from aligned.schemas.transformation import CountAggregation
 
         return CountAggregation(
-            key=self.feature.feature_referance().name,
+            key=self.feature.feature_reference().name,
         )
 
     def aggregate_over(
-        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+        self, group_by: list[FeatureReference], time_column: FeatureReference | None
     ) -> AggregateOver:
         return aggregate_over(
             group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
@@ -217,11 +217,11 @@ class CountDistinctAggregationFactory(TransformationFactory, AggregationTransfor
         from aligned.schemas.transformation import CountDistinctAggregation
 
         return CountDistinctAggregation(
-            key=self.feature.feature_referance().name,
+            key=self.feature.feature_reference().name,
         )
 
     def aggregate_over(
-        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+        self, group_by: list[FeatureReference], time_column: FeatureReference | None
     ) -> AggregateOver:
         return aggregate_over(
             group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
@@ -244,11 +244,11 @@ class StdAggregationFactory(TransformationFactory, AggregationTransformationFact
         from aligned.schemas.transformation import StdAggregation
 
         return StdAggregation(
-            key=self.feature.feature_referance().name,
+            key=self.feature.feature_reference().name,
         )
 
     def aggregate_over(
-        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+        self, group_by: list[FeatureReference], time_column: FeatureReference | None
     ) -> AggregateOver:
         return aggregate_over(
             group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
@@ -271,11 +271,11 @@ class VarianceAggregationFactory(TransformationFactory, AggregationTransformatio
         from aligned.schemas.transformation import VarianceAggregation
 
         return VarianceAggregation(
-            key=self.feature.feature_referance().name,
+            key=self.feature.feature_reference().name,
         )
 
     def aggregate_over(
-        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+        self, group_by: list[FeatureReference], time_column: FeatureReference | None
     ) -> AggregateOver:
         return aggregate_over(
             group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
@@ -298,11 +298,11 @@ class MedianAggregationFactory(TransformationFactory, AggregationTransformationF
         from aligned.schemas.transformation import MedianAggregation
 
         return MedianAggregation(
-            key=self.feature.feature_referance().name,
+            key=self.feature.feature_reference().name,
         )
 
     def aggregate_over(
-        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+        self, group_by: list[FeatureReference], time_column: FeatureReference | None
     ) -> AggregateOver:
         return aggregate_over(
             group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
@@ -326,12 +326,12 @@ class PercentileAggregationFactory(TransformationFactory, AggregationTransformat
         from aligned.schemas.transformation import PercentileAggregation
 
         return PercentileAggregation(
-            key=self.feature.feature_referance().name,
+            key=self.feature.feature_reference().name,
             percentile=self.percentile,
         )
 
     def aggregate_over(
-        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+        self, group_by: list[FeatureReference], time_column: FeatureReference | None
     ) -> AggregateOver:
         return aggregate_over(
             group_by, time_column, self.time_window, self.every_interval, self.offset_interval, None
@@ -350,7 +350,7 @@ class PolarsTransformationFactoryAggregation(TransformationFactory, AggregationT
         return self._using_features
 
     def aggregate_over(
-        self, group_by: list[FeatureReferance], time_column: FeatureReferance | None
+        self, group_by: list[FeatureReference], time_column: FeatureReference | None
     ) -> AggregateOver:
         return aggregate_over(group_by, time_column, None, None, None, None)
 
@@ -363,7 +363,7 @@ class PolarsTransformationFactoryAggregation(TransformationFactory, AggregationT
         from aligned.schemas.transformation import PolarsFunctionTransformation, PolarsLambdaTransformation
 
         if isinstance(self.method, pl.Expr):
-            method = lambda df, alias: self.method  # type: ignore
+            method = lambda df, alias: self.method  # noqa: E731
             code = ''
             return PolarsLambdaTransformation(method=dill.dumps(method), code=code, dtype=self.dtype.dtype)
         else:

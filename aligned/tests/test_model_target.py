@@ -4,12 +4,12 @@ import numpy as np
 import polars as pl
 import pytest
 
-from aligned import FeatureStore, model_contract, String, Int32
+from aligned import ContractStore, model_contract, String, Int32
 from aligned.schemas.feature import FeatureLocation
 
 
 @pytest.mark.asyncio
-async def test_titanic_model_with_targets(titanic_feature_store: FeatureStore) -> None:
+async def test_titanic_model_with_targets(titanic_feature_store: ContractStore) -> None:
 
     entity_list = [1, 4, 5, 6, 7, 30, 31, 2]
 
@@ -28,7 +28,7 @@ async def test_titanic_model_with_targets(titanic_feature_store: FeatureStore) -
 
 
 @pytest.mark.asyncio
-async def test_titanic_model_with_targets_and_scd(titanic_feature_store_scd: FeatureStore) -> None:
+async def test_titanic_model_with_targets_and_scd(titanic_feature_store_scd: ContractStore) -> None:
 
     entities = pl.DataFrame(
         {
@@ -114,7 +114,7 @@ async def test_model_insert_predictions() -> None:
     """
     Test the insert (aka. ish append) method on the feature store.
     """
-    from aligned import FileSource, FeatureStore
+    from aligned import FileSource, ContractStore
 
     path = 'test_data/test_model.parquet'
 
@@ -128,7 +128,7 @@ async def test_model_insert_predictions() -> None:
 
         a = Int32()
 
-    store = FeatureStore.experimental()
+    store = ContractStore.experimental()
     initial_frame = pl.DataFrame({'id': [1, 2, 3], 'a': [1, 2, 3]})
     initial_frame.write_parquet(path)
 
@@ -151,7 +151,7 @@ async def test_model_insert_predictions_csv() -> None:
     """
     Test the insert (aka. ish append) method on the feature store.
     """
-    from aligned import FileSource, FeatureStore
+    from aligned import FileSource, ContractStore
 
     path = 'test_data/test_model.csv'
 
@@ -165,7 +165,7 @@ async def test_model_insert_predictions_csv() -> None:
 
         a = Int32()
 
-    store = FeatureStore.experimental()
+    store = ContractStore.experimental()
 
     initial_frame = pl.DataFrame({'some_id': [1, 2, 3], 'a': [1, 2, 3]})
     initial_frame.write_csv(path)
@@ -189,7 +189,7 @@ async def test_model_upsert_predictions() -> None:
     """
     Test the insert (aka. ish append) method on the feature store.
     """
-    from aligned import FileSource, FeatureStore
+    from aligned import FileSource, ContractStore
 
     path = 'test_data/test_model.parquet'
 
@@ -199,7 +199,7 @@ async def test_model_upsert_predictions() -> None:
 
         a = Int32()
 
-    store = FeatureStore.experimental()
+    store = ContractStore.experimental()
     initial_frame = pl.DataFrame({'id': [1, 2, 3, 4], 'a': [1, 2, 3, 4]})
     initial_frame.write_parquet(path)
 

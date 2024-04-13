@@ -31,7 +31,7 @@ from aligned.retrival_job import ConvertableToRetrivalJob, RetrivalJob
 from aligned.schemas.derivied_feature import (
     AggregatedFeature,
 )
-from aligned.schemas.feature import FeatureLocation, FeatureReferance
+from aligned.schemas.feature import FeatureLocation, FeatureReference
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.compiler.feature_factory import FeatureFactory
 
@@ -316,9 +316,9 @@ class FeatureViewWrapper(Generic[T]):
         Returns:
             FeatureViewStore: Returns a queryable `FeatureViewStore` containing the feature view
         """
-        from aligned import FeatureStore
+        from aligned import ContractStore
 
-        store = FeatureStore.experimental()
+        store = ContractStore.experimental()
         store.add_compiled_view(self.compile())
         return store.feature_view(self.metadata.name)
 
@@ -605,9 +605,9 @@ class FeatureView(ABC):
             raise ValueError(f'FeatureView {metadata.name} must contain at least one Entity')
 
         loc = FeatureLocation.feature_view(view.name)
-        aggregation_group_by = [FeatureReferance(entity.name, loc, entity.dtype) for entity in view.entities]
+        aggregation_group_by = [FeatureReference(entity.name, loc, entity.dtype) for entity in view.entities]
         event_timestamp_ref = (
-            FeatureReferance(view.event_timestamp.name, loc, view.event_timestamp.dtype)
+            FeatureReference(view.event_timestamp.name, loc, view.event_timestamp.dtype)
             if view.event_timestamp
             else None
         )
@@ -649,10 +649,10 @@ class FeatureView(ABC):
         Returns:
             FeatureViewStore: Returns a queryable `FeatureViewStore` containing the feature view
         """
-        from aligned import FeatureStore
+        from aligned import ContractStore
 
         self = cls()
-        store = FeatureStore.experimental()
+        store = ContractStore.experimental()
         store.add_feature_view(self)
         return store.feature_view(self.metadata.name)
 

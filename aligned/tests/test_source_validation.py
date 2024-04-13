@@ -1,12 +1,12 @@
 import pytest
 
-from aligned import FeatureStore, FileSource
+from aligned import ContractStore, FileSource
 from aligned.schemas.feature import FeatureType, FeatureLocation
 from aligned.source_validation import validate_sources_in
 
 
 @pytest.mark.asyncio
-async def test_source_validation(titanic_feature_store: FeatureStore) -> None:
+async def test_source_validation(titanic_feature_store: ContractStore) -> None:
 
     source = FileSource.parquet_at('test_data/titanic.parquet')
 
@@ -21,8 +21,7 @@ async def test_source_validation(titanic_feature_store: FeatureStore) -> None:
 @pytest.mark.asyncio
 async def test_schema_loading() -> None:
     source = FileSource.parquet_at('test_data/titanic.parquet')
-    schema = await source.schema()
-    dtype_schema = {key: feature for key, feature in schema.items()}
+    dtype_schema = await source.schema()
     assert dtype_schema == {
         'passenger_id': FeatureType(name='int64'),
         'survived': FeatureType(name='int64'),

@@ -1,5 +1,5 @@
 import pytest
-from aligned import Bool, FeatureStore, FileSource, Int32, String
+from aligned import Bool, ContractStore, FileSource, Int32, String
 from aligned.feature_view.feature_view import feature_view
 from aligned.compiler.model import FeatureInputVersions, model_contract
 from aligned.schemas.feature import FeatureLocation
@@ -68,7 +68,7 @@ def test_model_referenced_as_feature() -> None:
 
 
 def test_model_request() -> None:
-    store = FeatureStore.experimental()
+    store = ContractStore.experimental()
     store.add_feature_view(View)  # type: ignore
     store.add_feature_view(OtherView)  # type: ignore
     store.add_model(First)
@@ -80,7 +80,7 @@ def test_model_request() -> None:
 
 
 def test_model_version() -> None:
-    store = FeatureStore.experimental()
+    store = ContractStore.experimental()
     store.add_feature_view(View)  # type: ignore
     store.add_feature_view(OtherView)  # type: ignore
     store.add_model(First)
@@ -95,7 +95,7 @@ def test_model_version() -> None:
 async def test_load_preds_with_different_model_version() -> None:
     import polars as pl
 
-    store = FeatureStore.experimental()
+    store = ContractStore.experimental()
     store.add_model(FirstWithVersions)
 
     source = FileSource.csv_at('test_data/model_preds.csv')

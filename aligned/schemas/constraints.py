@@ -32,6 +32,23 @@ class SupportedConstraints:
     _shared: OptionalType['SupportedConstraints'] = None
 
     def __init__(self) -> None:
+        from aligned.schemas.constraint_types import (
+            LowerBound,
+            LowerBoundInclusive,
+            UpperBound,
+            UpperBoundInclusive,
+            Required,
+            Optional,
+            InDomain,
+            MaxLength,
+            MinLength,
+            StartsWith,
+            EndsWith,
+            Unique,
+            Regex,
+            ReferencingColumn,
+        )
+
         self.types = {}
 
         for tran_type in [
@@ -48,6 +65,7 @@ class SupportedConstraints:
             EndsWith,
             Unique,
             Regex,
+            ReferencingColumn,
         ]:
             self.add(tran_type)
 

@@ -98,23 +98,35 @@ def ollama_generate_contract(
 
 
 def ollama_embedding_contract(
-    text: FeatureFactory,
+    input: FeatureFactory | list[FeatureFactory],
     contract_name: str,
     endpoint: str,
     model: str,
     entities: list[FeatureFactory] | FeatureFactory,
     output_source: BatchDataSource | None = None,
+    prompt_template: str | None = None,
 ):
     from aligned import model_contract, FeatureInputVersions
 
+    if isinstance(input, FeatureFactory) and prompt_template is None:
+        prompt_template = f"{{{input.name}}}"
+
+    if prompt_template is None:
+        raise ValueError('prompt_template must be provided if input is a list')
+
+    if not isinstance(input, list):
+        input = [input]
+
     @model_contract(
         name=contract_name,
-        input_features=FeatureInputVersions(default_version='default', versions={'default': [text]}),
+        input_features=FeatureInputVersions(
+            default_version='default', versions={'default': input}  # type: ignore
+        ),
         exposed_model=ExposedModel.ollama_embedding(
             endpoint=endpoint,
             model=model,
             input_features_versions='default',
-            prompt_template=f"{{{text.name}}}",
+            prompt_template=prompt_template,
             embedding_name='embedding',
         ),
         output_source=output_source,
@@ -178,7 +190,7 @@ def ollama_classification_contract(
         prompt_template += 'You have the following information at your disposal:\n'
 
         for feature in input:
-            ref = feature.feature_referance()
+            ref = feature.feature_reference()
             prompt_template += f"{ref.name}: {{{ref.name}}}\n"
 
         prompt_template += (

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Protocol
 
 from mashumaro.types import SerializableType
 from aligned.data_source.batch_data_source import BatchDataSource
@@ -12,7 +13,7 @@ from aligned.schemas.codable import Codable
 
 class DatasetStorageFactory:
 
-    supported_stores: dict[str, type[DatasetStore]] = dict()
+    supported_stores: dict[str, type[DatasetStore]] = {}
 
     _shared: DatasetStorageFactory | None = None
 
@@ -31,10 +32,26 @@ class DatasetStorageFactory:
         return cls._shared
 
 
+class DatasetMetadataInterface(Protocol):
+    id: str
+    name: str | None
+    description: str | None
+    tags: list[str] | None
+
+
 @dataclass
 class DatasetMetadata(Codable):
 
     id: str
+    name: str | None = field(default=None)
+    description: str | None = field(default=None)
+    tags: list[str] | None = field(default=None)
+
+
+@dataclass
+class SingleDatasetMetadata(Codable):
+    id: str
+    source: BatchDataSource
     name: str | None = field(default=None)
     description: str | None = field(default=None)
     tags: list[str] | None = field(default=None)
@@ -66,15 +83,15 @@ class TrainDatasetMetadata(Codable):
 @dataclass
 class GroupedDatasetList(Codable):
 
-    raw_data: list[DatasetMetadata]
+    raw_data: list[SingleDatasetMetadata]
 
     train_test: list[TrainDatasetMetadata]
     train_test_validation: list[TrainDatasetMetadata]
 
-    active_learning: list[DatasetMetadata]
+    active_learning: list[SingleDatasetMetadata]
 
     @property
-    def all(self) -> list[DatasetMetadata]:
+    def all(self) -> list[DatasetMetadataInterface]:
         return self.raw_data + self.train_test + self.train_test_validation + self.active_learning
 
 

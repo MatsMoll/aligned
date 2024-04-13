@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Literal, TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 import polars as pl
 
-import aligned.compiler.feature_factory as ff
 from aligned.schemas.codable import Codable
 from aligned.schemas.constraints import Constraint
+
+if TYPE_CHECKING:
+    from aligned.compiler.feature_factory import FeatureFactory
+
 
 NAME_POLARS_MAPPING = [
     ('string', pl.Utf8),
@@ -148,7 +151,8 @@ class FeatureType(Codable):
         raise ValueError(f'Unable to find a value that can represent {self.name}')
 
     @property
-    def feature_factory(self) -> ff.FeatureFactory:
+    def feature_factory(self) -> FeatureFactory:
+        from aligned.compiler import feature_factory as ff
 
         if self.name.startswith('datetime-'):
             time_zone = self.name.split('-')[1]
@@ -320,8 +324,8 @@ class Feature(Codable):
             constraints=self.constraints,
         )
 
-    def as_reference(self, location: FeatureLocation) -> FeatureReferance:
-        return FeatureReferance(
+    def as_reference(self, location: FeatureLocation) -> FeatureReference:
+        return FeatureReference(
             name=self.name,
             location=location,
             dtype=self.dtype,
@@ -397,7 +401,7 @@ class FeatureLocation(Codable):
 
 
 @dataclass
-class FeatureReferance(Codable):
+class FeatureReference(Codable):
     name: str
     location: FeatureLocation
     dtype: FeatureType
@@ -418,3 +422,6 @@ class FeatureReferance(Codable):
     @property
     def identifier(self) -> str:
         return f'{self.location.identifier}:{self.name}'
+
+    def feature_reference(self) -> FeatureReference:
+        return self

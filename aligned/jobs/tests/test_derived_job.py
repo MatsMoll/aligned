@@ -5,7 +5,7 @@ import pytest
 
 from aligned import feature_view, Float, String, FileSource
 from aligned.compiler.model import model_contract
-from aligned.feature_store import FeatureStore
+from aligned.feature_store import ContractStore
 from aligned.local.job import FileFullJob
 from aligned.retrival_job import DerivedFeatureJob, RetrivalRequest
 from aligned.sources.local import LiteralReference
@@ -113,8 +113,8 @@ class Model:
     pred_amount = expences.amount.as_regression_label()
 
 
-def feature_store() -> FeatureStore:
-    store = FeatureStore.experimental()
+def feature_store() -> ContractStore:
+    store = ContractStore.experimental()
 
     views = [Transaction, Expences, Income, ExpenceAgg, IncomeAgg]
     for view in views:

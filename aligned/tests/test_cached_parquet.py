@@ -1,10 +1,10 @@
 import pytest
 
-from aligned import FeatureStore, FileSource
+from aligned import ContractStore, FileSource
 
 
 @pytest.mark.asyncio
-async def test_cached_at(titanic_feature_store: FeatureStore) -> None:
+async def test_cached_at(titanic_feature_store: ContractStore) -> None:
     """
     Checks that we load all rows form the cached file.
     """

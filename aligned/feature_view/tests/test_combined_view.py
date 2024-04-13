@@ -1,10 +1,10 @@
 import pytest
 
-from aligned import FeatureStore, feature_view, Int32, Int64, FileSource
+from aligned import ContractStore, feature_view, Int32, Int64, FileSource
 
 
 @pytest.mark.asyncio
-async def test_combined_view(combined_feature_store: FeatureStore) -> None:
+async def test_combined_view(combined_feature_store: ContractStore) -> None:
 
     entities = {'passenger_id': [1, 2, 3, 4, None], 'scan_id': [842302, 84300903, 843786, None, 842301]}
     result_job = combined_feature_store.features_for(
@@ -24,7 +24,7 @@ async def test_combined_view(combined_feature_store: FeatureStore) -> None:
 
 
 @pytest.mark.asyncio
-async def test_combined_view_get_all_features(combined_feature_store: FeatureStore) -> None:
+async def test_combined_view_get_all_features(combined_feature_store: ContractStore) -> None:
 
     entities = {'passenger_id': [1, 2, 3, 4, None], 'scan_id': [842302, 84300903, 843786, None, 842301]}
     result = await combined_feature_store.features_for(entities, features=['combined:*']).to_pandas()

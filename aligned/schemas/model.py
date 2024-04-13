@@ -5,7 +5,7 @@ from datetime import timedelta, datetime
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import FeatureLocation, FeatureType
-from aligned.schemas.feature import EventTimestamp, Feature, FeatureReferance
+from aligned.schemas.feature import EventTimestamp, Feature, FeatureReference
 from aligned.schemas.event_trigger import EventTrigger
 from aligned.schemas.target import ClassificationTarget, RecommendationTarget, RegressionTarget
 from aligned.schemas.feature_view import CompiledFeatureView, FeatureViewReferenceSource
@@ -23,19 +23,19 @@ logger = logging.getLogger(__name__)
 class FeatureInputVersions(Codable):
 
     default_version: str
-    versions: dict[str, list[FeatureReferance]]
+    versions: dict[str, list[FeatureReference]]
 
-    def features_for(self, version: str) -> list[FeatureReferance]:
+    def features_for(self, version: str) -> list[FeatureReference]:
         return self.versions.get(version, [])
 
     @property
-    def default_features(self) -> list[FeatureReferance]:
+    def default_features(self) -> list[FeatureReference]:
         return self.features_for(self.default_version)
 
 
 @dataclass
 class Target(Codable):
-    estimating: FeatureReferance
+    estimating: FeatureReference
     feature: Feature
 
     on_ground_truth_event: StreamDataSource | None = field(default=None)
@@ -136,7 +136,7 @@ class PredictionsView(Codable):
             event_timestamp=self.event_timestamp,
         )
 
-    def labels_estimates_refs(self) -> set[FeatureReferance]:
+    def labels_estimates_refs(self) -> set[FeatureReference]:
         if self.classification_targets:
             return {feature.estimating for feature in self.classification_targets}
         elif self.regression_targets:
@@ -172,7 +172,7 @@ class Model(Codable):
     def __hash__(self) -> int:
         return self.name.__hash__()
 
-    def feature_references(self, version: str | None = None) -> set[FeatureReferance]:
+    def feature_references(self, version: str | None = None) -> set[FeatureReference]:
         return set(self.features.features_for(version or self.features.default_version))
 
     @property
