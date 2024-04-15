@@ -52,7 +52,8 @@ Bellow are some of the features Aligned offers:
 - [Data Quality Assurance](#data-quality)
 - [Easy Data Loading](#access-data)
 - [Feature Store](https://matsmoll.github.io/posts/understanding-the-chaotic-landscape-of-mlops#feature-store)
-- [Load Form Multiple Sources](#fast-development)
+- [Exposing Models](#exposed-models)
+- [Load From Multiple Sources](#fast-development)
 - [Feature Server](#feature-server)
 - [Stream Processing](#stream-worker)
 
@@ -91,12 +92,12 @@ All this is described through a `model_contract`, as shown bellow.
 ```python
 @model_contract(
     name="eta_taxi",
-    features=[
+    input_features=[
         trips.eucledian_distance,
         trips.number_of_passengers,
         traffic.expected_delay
     ],
-    prediction_source=FileSource.delta_at("titanic_model/predictions")
+    output_source=FileSource.delta_at("titanic_model/predictions")
 )
 class EtaTaxi:
     trip_id = Int32().as_entity()
@@ -183,6 +184,51 @@ class TitanicPassenger:
     is_male, is_female = sex.one_hot_encode(['male', 'female'])
 ```
 
+### Exposed models
+
+Aligned mainly focuses on defining the expected input and output of different models. However, this in itself makes it hard to use the models. This is why Aligned makes it possible to define how our ML models are exposed by setting an `exposed_model` attribute.
+
+
+```python
+from aligned.exposed_model.mlflow import mlflow_server
+
+@model_contract(
+    name="eta_taxi",
+    exposed_model=mlflow_server(
+        host="http://localhost:8000",
+    ),
+    ...
+)
+class EtaTaxi:
+    trip_id = Int32().as_entity()
+    predicted_at = EventTimestamp()
+    predicted_duration = trips.duration.as_regression_target()
+```
+
+This also makes it possible to get predictions with the following command:
+
+```python
+await store.model("eta_taxi").predict_over({
+    "trip_id": [...]
+}).to_polars()
+```
+
+Or store them directly in the `output_source` with something like:
+
+```python
+await store.model("eta_taxi").predict_over({
+    "trip_id": [...]
+}).upsert_into_output_source()
+```
+
+Some of the existing implementations are:
+- MLFlow Server
+- Run MLFLow model in memory
+- Ollama completion endpoint
+- Ollama embedded endpoint
+- Send entities to generic endpoint
+
+
 ### Fast development
 
 Making iterativ and fast exploration in ML is important. This is why Aligned also makes it super easy to combine, and test multiple sources.
@@ -226,7 +272,7 @@ location = LocationFeatures()
 
 @model_contract(
     name="titanic",
-    features=[ # aka. the model input
+    input_features=[
         passenger.constant_filled_age,
         passenger.ordinal_sex,
         passenger.sibsp,

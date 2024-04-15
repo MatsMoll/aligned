@@ -2,7 +2,7 @@ from __future__ import annotations
 from copy import copy
 from datetime import timedelta, timezone, datetime
 
-from typing import TYPE_CHECKING, TypeVar, Any, Callable, Coroutine
+from typing import TYPE_CHECKING, Awaitable, TypeVar, Any, Callable, Coroutine
 from dataclasses import dataclass
 from uuid import uuid4
 
@@ -120,6 +120,49 @@ class BatchDataSource(Codable, SerializableType):
     def __hash__(self) -> int:
         return hash(self.job_group_key())
 
+    def transform_with_polars(
+        self,
+        method: Callable[[pl.LazyFrame], Awaitable[pl.LazyFrame]] | Callable[[pl.LazyFrame], pl.LazyFrame],
+    ) -> BatchDataSource:
+        async def all(request: RetrivalRequest, limit: int | None) -> pl.LazyFrame:
+            import inspect
+
+            df = await self.all_data(request, limit).to_lazy_polars()
+
+            if inspect.iscoroutinefunction(method):
+                return await method(df)
+            else:
+                return method(df)
+
+        async def all_between_dates(
+            request: RetrivalRequest, start_date: datetime, end_date: datetime
+        ) -> pl.LazyFrame:
+            import inspect
+
+            df = await self.all_between_dates(request, start_date, end_date).to_lazy_polars()
+
+            if inspect.iscoroutinefunction(method):
+                return await method(df)
+            else:
+                return method(df)
+
+        async def features_for(entities: RetrivalJob, request: RetrivalRequest) -> pl.LazyFrame:
+            import inspect
+
+            df = await self.features_for(entities, request).to_lazy_polars()
+
+            if inspect.iscoroutinefunction(method):
+                return await method(df)
+            else:
+                return method(df)
+
+        return CustomMethodDataSource.from_methods(
+            all_data=all,
+            all_between_dates=all_between_dates,
+            features_for=features_for,
+            depends_on_sources=self.location_id(),
+        )
+
     def contains_config(self, config: Any) -> bool:
         """
         Checks if a data source contains a source config.
@@ -161,6 +204,9 @@ class BatchDataSource(Codable, SerializableType):
         data_class = BatchDataSourceFactory.shared().supported_data_sources[name_type]
         return data_class.from_dict(value)
 
+    def all_columns(self, limit: int | None = None) -> RetrivalJob:
+        return self.all(RequestResult.empty(), limit=limit)
+
     def all(self, result: RequestResult, limit: int | None = None) -> RetrivalJob:
         return self.all_data(
             result.as_retrival_request('read_all', location=FeatureLocation.feature_view('read_all')),
@@ -193,7 +239,7 @@ class BatchDataSource(Codable, SerializableType):
 
             return FileDateJob(self, request=request, start_date=start_date, end_date=end_date)
 
-        raise NotImplementedError()
+        raise NotImplementedError(type(self))
 
     @classmethod
     def multi_source_features_for(
@@ -298,6 +344,9 @@ class BatchDataSource(Codable, SerializableType):
     def filter(self, condition: DerivedFeature | Feature) -> BatchDataSource:
         return FilteredDataSource(self, condition)
 
+    def location_id(self) -> set[FeatureLocation]:
+        return self.depends_on()
+
     def depends_on(self) -> set[FeatureLocation]:
         return set()
 
@@ -308,6 +357,7 @@ class CustomMethodDataSource(BatchDataSource):
     all_data_method: bytes
     all_between_dates_method: bytes
     features_for_method: bytes
+    depends_on_sources: set[FeatureLocation] | None = None
 
     type_name: str = 'custom_method'
 
@@ -363,6 +413,7 @@ class CustomMethodDataSource(BatchDataSource):
         | None = None,
         features_for: Callable[[RetrivalJob, RetrivalRequest], Coroutine[None, None, pl.LazyFrame]]
         | None = None,
+        depends_on_sources: set[FeatureLocation] | None = None,
     ) -> 'CustomMethodDataSource':
         import dill
 
@@ -379,11 +430,15 @@ class CustomMethodDataSource(BatchDataSource):
             all_data_method=dill.dumps(all_data),
             all_between_dates_method=dill.dumps(all_between_dates),
             features_for_method=dill.dumps(features_for),
+            depends_on_sources=depends_on_sources,
         )
 
     @staticmethod
     def default_throw(**kwargs: Any) -> pl.LazyFrame:
         raise NotImplementedError('No method is defined for this data source.')
+
+    def depends_on(self) -> set[FeatureLocation]:
+        return self.depends_on_sources or set()
 
 
 @dataclass

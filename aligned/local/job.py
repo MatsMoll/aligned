@@ -199,6 +199,9 @@ class FileFullJob(RetrivalJob):
     async def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
 
+        if not self.request.features_to_include:
+            return df
+
         if self.request.aggregated_features:
             first_feature = list(self.request.aggregated_features)[0]
             if first_feature.name in df.columns:
@@ -273,6 +276,9 @@ class FileDateJob(RetrivalJob):
 
     def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
+
+        if not self.request.features_to_include:
+            return df
 
         entity_names = self.request.entity_names
         all_names = list(self.request.all_required_feature_names.union(entity_names))
