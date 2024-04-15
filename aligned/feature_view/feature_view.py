@@ -418,6 +418,13 @@ class FeatureViewWrapper(Generic[T]):
         else:
             raise ValueError(f'Invalid data type: {type(data)}')
 
+    def as_source(self, renames: dict[str, str] | None = None) -> BatchDataSource:
+        from aligned.schemas.feature_view import FeatureViewReferenceSource
+
+        return FeatureViewReferenceSource(
+            self.compile(), FeatureLocation.feature_view(self.metadata.name), renames=renames or {}
+        )
+
 
 class FeatureView(ABC):
     """

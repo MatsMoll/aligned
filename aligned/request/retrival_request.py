@@ -206,8 +206,12 @@ class RetrivalRequest(Codable):
         if self.event_timestamp_request:
             request = EventTimestampRequest(self.event_timestamp_request.event_timestamp, None)
 
+        name = self.name
+        if name_sufix:
+            name = f'{name}{name_sufix}'
+
         return RetrivalRequest(
-            name=f'{self.name}{name_sufix or ' '}',
+            name=name,
             location=self.location,
             entities=self.entities,
             features=self.features,
