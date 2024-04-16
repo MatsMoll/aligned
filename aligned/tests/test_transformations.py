@@ -1,7 +1,7 @@
 import pytest
 from aligned.compiler.feature_factory import EventTimestamp, Int32, String, Float
 
-from aligned.feature_store import FeatureStore
+from aligned.feature_store import ContractStore
 from aligned.feature_view.feature_view import feature_view
 from aligned.schemas.transformation import SupportedTransformations
 from aligned.sources.local import FileSource, CsvFileSource
@@ -24,7 +24,7 @@ async def test_polars_transformation() -> None:
 
 
 @pytest.mark.asyncio
-async def test_transformations_in_feture_view(alot_of_transforation_feature_store: FeatureStore) -> None:
+async def test_transformations_in_feture_view(alot_of_transforation_feature_store: ContractStore) -> None:
     store = alot_of_transforation_feature_store
 
     amount = 100
@@ -135,3 +135,22 @@ async def test_transform_entity(titanic_source: CsvFileSource) -> None:
     data = await Titanic.query().all().to_pandas()  # type: ignore
 
     assert data['cabin'].isnull().sum() == 0
+
+
+@pytest.mark.asyncio
+async def test_fill_optional_column_bug(titanic_source: CsvFileSource) -> None:
+    @feature_view(name='test_fill', source=titanic_source)
+    class TestFill:
+
+        passenger_id = String().as_entity()
+
+        cabin = String().is_optional()
+        some_new_column = Int32().is_optional().fill_na(0)
+        some_string = String().is_optional().fill_na('some_string')
+
+        is_male = cabin == 'male'
+
+    df = await TestFill.query().all().to_polars()
+
+    assert df['some_new_column'].is_null().sum() == 0
+    assert df['some_string'].is_null().sum() == 0

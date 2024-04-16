@@ -2,14 +2,14 @@ from datetime import datetime
 
 import pytest
 
-from aligned import FeatureStore
+from aligned import ContractStore
 from aligned.feature_view.feature_view import FeatureView
 
 
 @pytest.mark.asyncio
 async def test_between_datetime_features(
     breast_scan_feature_view_with_datetime: FeatureView,
-    breast_scan_with_timestamp_feature_store: FeatureStore,
+    breast_scan_with_timestamp_feature_store: ContractStore,
 ) -> None:
     feature_view = breast_scan_feature_view_with_datetime
     store = breast_scan_with_timestamp_feature_store
@@ -34,7 +34,7 @@ async def test_between_datetime_features(
 @pytest.mark.asyncio
 async def test_between_datetime_features_with_aggregation(
     breast_scan_feature_view_with_datetime_and_aggregation: FeatureView,
-    breast_scan_with_timestamp_and_aggregation_feature_store: FeatureStore,
+    breast_scan_with_timestamp_and_aggregation_feature_store: ContractStore,
 ) -> None:
     feature_view = breast_scan_feature_view_with_datetime_and_aggregation
     store = breast_scan_with_timestamp_and_aggregation_feature_store

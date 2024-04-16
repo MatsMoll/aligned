@@ -2,7 +2,7 @@ from os import environ
 
 import pytest
 
-from aligned import FeatureStore, PostgreSQLConfig
+from aligned import ContractStore, PostgreSQLConfig
 from aligned.feature_view.feature_view import FeatureView
 from conftest import DataTest
 import platform
@@ -24,7 +24,7 @@ async def test_postgresql(point_in_time_data_test: DataTest, psql: PostgreSQLCon
 
     psql_database = environ['PSQL_DATABASE_TEST']
 
-    store = FeatureStore.experimental()
+    store = ContractStore.experimental()
 
     for source in point_in_time_data_test.sources:
         view = source.view
@@ -58,7 +58,7 @@ async def test_postgresql(point_in_time_data_test: DataTest, psql: PostgreSQLCon
     platform.uname().machine.startswith('arm'), reason='Needs psycopg2 which is not supported on arm'
 )
 @pytest.mark.asyncio
-async def test_postgresql_write(titanic_feature_store: FeatureStore, psql: PostgreSQLConfig) -> None:
+async def test_postgresql_write(titanic_feature_store: ContractStore, psql: PostgreSQLConfig) -> None:
     import polars as pl
     from polars.testing import assert_frame_equal
 
@@ -98,7 +98,7 @@ async def test_postgresql_without_event(
 
     psql_database = environ['PSQL_DATABASE_TEST']
 
-    store = FeatureStore.experimental()
+    store = ContractStore.experimental()
 
     for source in point_in_time_data_test_wituout_event_timestamp.sources:
         view = source.view

@@ -1,10 +1,10 @@
 import pytest
 
-from aligned import FeatureStore, feature_view, Int32, Int64, FileSource
+from aligned import ContractStore, feature_view, Int32, Int64, FileSource
 
 
 @pytest.mark.asyncio
-async def test_combined_view(combined_feature_store: FeatureStore) -> None:
+async def test_combined_view(combined_feature_store: ContractStore) -> None:
 
     entities = {'passenger_id': [1, 2, 3, 4, None], 'scan_id': [842302, 84300903, 843786, None, 842301]}
     result_job = combined_feature_store.features_for(
@@ -24,7 +24,7 @@ async def test_combined_view(combined_feature_store: FeatureStore) -> None:
 
 
 @pytest.mark.asyncio
-async def test_combined_view_get_all_features(combined_feature_store: FeatureStore) -> None:
+async def test_combined_view_get_all_features(combined_feature_store: ContractStore) -> None:
 
     entities = {'passenger_id': [1, 2, 3, 4, None], 'scan_id': [842302, 84300903, 843786, None, 842301]}
     result = await combined_feature_store.features_for(entities, features=['combined:*']).to_pandas()
@@ -99,4 +99,5 @@ async def test_view_reference() -> None:
 
     result = await TestRef.query().all().to_pandas()  # type: ignore
     result['new_feature'] = result['new_feature'].astype('int64')
+    result['some_id'] = result['some_id'].astype('int64')
     assert result[expected_df.columns].equals(expected_df)

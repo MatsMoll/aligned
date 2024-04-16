@@ -206,8 +206,12 @@ class RetrivalRequest(Codable):
         if self.event_timestamp_request:
             request = EventTimestampRequest(self.event_timestamp_request.event_timestamp, None)
 
+        name = self.name
+        if name_sufix:
+            name = f'{name}{name_sufix}'
+
         return RetrivalRequest(
-            name=f'{self.name}{name_sufix or ""}',
+            name=name,
             location=self.location,
             entities=self.entities,
             features=self.features,
@@ -228,6 +232,21 @@ class RetrivalRequest(Codable):
             derived_features=self.derived_features,
             aggregated_features=self.aggregated_features,
             event_timestamp_request=et_request,
+        )
+
+    @staticmethod
+    def all_data() -> 'RetrivalRequest':
+        """
+        This is a hack to tell aligned that we want all the data, and no filtering should be done.
+        """
+        return RetrivalRequest(
+            name='',
+            location=FeatureLocation.feature_view(''),
+            entities=set(),
+            features=set(),
+            derived_features=set(),
+            aggregated_features=set(),
+            event_timestamp_request=None,
         )
 
     @staticmethod
@@ -339,6 +358,10 @@ class RequestResult(Codable):
             features={feature for feature in self.features if feature.name in features_to_include},
             event_timestamp=self.event_timestamp,
         )
+
+    @staticmethod
+    def all_data() -> 'RequestResult':
+        return RequestResult(entities=set(), features=set(), event_timestamp=None)
 
     @staticmethod
     def from_request(request: RetrivalRequest) -> 'RequestResult':

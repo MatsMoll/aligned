@@ -30,6 +30,10 @@ class LiteralRetrivalJob(RetrivalJob):
             self.df = df
 
     @property
+    def loaded_columns(self) -> list[str]:
+        return self.df.columns
+
+    @property
     def retrival_requests(self) -> list[RetrivalRequest]:
         return self.requests
 
@@ -169,10 +173,17 @@ def decode_timestamps(df: pl.LazyFrame, request: RetrivalRequest, formatter: Dat
 @dataclass
 class FileFullJob(RetrivalJob):
 
-    source: DataFileReference
+    source: DataFileReference | RetrivalJob
     request: RetrivalRequest
     limit: int | None = field(default=None)
     date_formatter: DateFormatter = field(default_factory=DateFormatter.iso_8601)
+
+    @property
+    def loaded_columns(self) -> list[str]:
+        if isinstance(self.source, DataFileReference):
+            return []
+        else:
+            return self.source.loaded_columns
 
     @property
     def request_result(self) -> RequestResult:
@@ -187,6 +198,9 @@ class FileFullJob(RetrivalJob):
 
     async def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
+
+        if not self.request.features_to_include:
+            return df
 
         if self.request.aggregated_features:
             first_feature = list(self.request.aggregated_features)[0]
@@ -222,7 +236,9 @@ class FileFullJob(RetrivalJob):
         if optional_features:
             df = df.with_columns([pl.lit(None).alias(feature.name) for feature in optional_features])
 
-        df = df.rename(mapping=renames)
+        if renames:
+            df = df.rename(mapping=renames)
+
         df = decode_timestamps(df, self.request, self.date_formatter)
 
         if self.request.aggregated_features:
@@ -260,6 +276,9 @@ class FileDateJob(RetrivalJob):
 
     def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
+
+        if not self.request.features_to_include:
+            return df
 
         entity_names = self.request.entity_names
         all_names = list(self.request.all_required_feature_names.union(entity_names))

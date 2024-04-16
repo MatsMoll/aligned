@@ -1,7 +1,7 @@
 import pytest
 
 from pathlib import Path
-from aligned.feature_store import FeatureStore
+from aligned.feature_store import ContractStore
 from aligned.retrival_job import split
 from aligned.schemas.folder import DatasetMetadata
 from aligned.sources.local import CsvFileSource, FileSource
@@ -25,7 +25,7 @@ async def test_split(scan_with_datetime: CsvFileSource) -> None:
 
 
 @pytest.mark.asyncio
-async def test_train_test_validate_set(titanic_feature_store: FeatureStore) -> None:
+async def test_train_test_validate_set(titanic_feature_store: ContractStore) -> None:
 
     dataset_size = 100
     train_fraction = 0.6
@@ -55,7 +55,7 @@ async def test_train_test_validate_set(titanic_feature_store: FeatureStore) -> N
 
 
 @pytest.mark.asyncio
-async def test_train_test_validate_set_new(titanic_feature_store: FeatureStore) -> None:
+async def test_train_test_validate_set_new(titanic_feature_store: ContractStore) -> None:
     from aligned.schemas.folder import JsonDatasetStore
 
     unlink_paths = [
@@ -101,7 +101,7 @@ async def test_train_test_validate_set_new(titanic_feature_store: FeatureStore) 
     store = JsonDatasetStore(dataset_store)
     datasets = await store.list_datasets()
 
-    assert store.to_json() != None
+    assert store.to_json() is not None
 
     assert len(datasets.train_test_validation) == 1
     train_dataset = datasets.train_test_validation[0]

@@ -1,12 +1,12 @@
 import pytest
 
-from aligned import FeatureStore
+from aligned import ContractStore
 from aligned.feature_view.feature_view import FeatureView
 
 
 @pytest.mark.asyncio
 async def test_all_features(
-    breast_scan_without_timestamp_feature_store: FeatureStore,
+    breast_scan_without_timestamp_feature_store: ContractStore,
     breast_scan_feature_viewout_with_datetime: FeatureView,
 ) -> None:
     store = breast_scan_without_timestamp_feature_store

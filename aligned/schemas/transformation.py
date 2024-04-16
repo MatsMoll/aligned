@@ -234,6 +234,7 @@ class SupportedTransformations:
             Clip,
             ArrayContains,
             ArrayAtIndex,
+            OllamaEmbedding,
         ]:
             self.add(tran_type)
 
@@ -2154,6 +2155,109 @@ class StructField(Transformation):
             return await JsonPath(self.key, f'$.{self.field}').transform_polars(df, alias)
         else:
             return pl.col(self.key).struct.field(self.field).alias(alias)
+
+
+@dataclass
+class OllamaGenerate(Transformation):
+
+    key: str
+    model: str
+    system: str
+
+    host_env: str | None = None
+    name = 'ollama_embedding'
+    dtype = FeatureType.json()
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        from ollama import AsyncClient
+        import os
+
+        host = None
+        if self.host_env:
+            host = os.getenv(self.host_env)
+
+        client = AsyncClient(host=host)
+
+        response = pd.Series([[]] * df.shape[0])
+
+        for index, row in df.iterrows():
+            response.iloc[index] = await client.generate(
+                model=self.model,
+                prompt=row[self.key],
+                system=self.system,
+            )
+
+        return response
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        def generate_embedding(values: pl.Series) -> pl.Series:
+            from ollama import Client
+            import os
+
+            host = None
+            if self.host_env:
+                host = os.getenv(self.host_env)
+
+            client = Client(host=host)
+
+            return pl.Series(
+                [
+                    str(
+                        client.generate(
+                            model=self.model,
+                            prompt=value,
+                            system=self.system,
+                        )
+                    )
+                    for value in values
+                ]
+            )
+
+        return pl.col(self.key).map_batches(generate_embedding, return_dtype=pl.String())
+
+
+@dataclass
+class OllamaEmbedding(Transformation):
+
+    key: str
+    model: str
+
+    host_env: str | None = None
+    name = 'ollama_embedding'
+    dtype = FeatureType.embedding()
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        from ollama import AsyncClient
+        import os
+
+        host = None
+        if self.host_env:
+            host = os.getenv(self.host_env)
+
+        client = AsyncClient(host=host)
+
+        response = pd.Series([[]] * df.shape[0])
+
+        for index, row in df.iterrows():
+            response.iloc[index] = await client.embeddings(self.model, row[self.key])['embedding']
+
+        return response
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        def generate_embedding(values: pl.Series) -> pl.Series:
+            from ollama import Client
+            import os
+
+            host = None
+            if self.host_env:
+                host = os.getenv(self.host_env)
+
+            client = Client(host=host)
+
+            values = [client.embeddings(self.model, value)['embedding'] for value in values]
+            return pl.Series(values)
+
+        return pl.col(self.key).map_batches(generate_embedding, return_dtype=pl.List(pl.Float64()))
 
 
 @dataclass

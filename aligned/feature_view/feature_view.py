@@ -31,7 +31,7 @@ from aligned.retrival_job import ConvertableToRetrivalJob, RetrivalJob
 from aligned.schemas.derivied_feature import (
     AggregatedFeature,
 )
-from aligned.schemas.feature import FeatureLocation, FeatureReferance
+from aligned.schemas.feature import FeatureLocation, FeatureReference
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.compiler.feature_factory import FeatureFactory
 
@@ -87,12 +87,12 @@ def resolve_source(source: BatchDataSource | FeatureViewWrapper) -> BatchDataSou
     elif isinstance(source, BatchDataSource):
         return source
     else:
-        raise ValueError(f'Unable to use source: {source}')
+        raise ValueError(f'Unable to use source: {type(source)} - {source}')
 
 
 def feature_view(
-    name: str,
     source: BatchDataSource | FeatureViewWrapper,
+    name: str | None = None,
     description: str | None = None,
     stream_source: StreamDataSource | None = None,
     application_source: BatchDataSource | None = None,
@@ -104,10 +104,13 @@ def feature_view(
 ) -> Callable[[Type[T]], FeatureViewWrapper[T]]:
     def decorator(cls: Type[T]) -> FeatureViewWrapper[T]:
 
+        used_name = name or str(cls.__name__).lower()
+        used_description = description or str(cls.__doc__)
+
         metadata = FeatureViewMetadata(
-            name,
+            used_name,
             resolve_source(source),
-            description=description,
+            description=used_description,
             stream_source=stream_source,
             application_source=application_source,
             materialized_source=materialized_source,
@@ -152,6 +155,15 @@ class FeatureViewWrapper(Generic[T]):
         view = copy.deepcopy(self.view)
         view = set_location_for_features_in(view, FeatureLocation.feature_view(self.metadata.name))
         return FeatureView.compile_with_metadata(view, self.metadata)
+
+    def vstack(
+        self, source: BatchDataSource | FeatureViewWrapper, source_column: str | None = None
+    ) -> BatchDataSource:
+        from aligned.data_source.batch_data_source import StackSource
+
+        return StackSource(
+            top=resolve_source(self), bottom=resolve_source(source), source_column=source_column
+        )
 
     def filter(
         self, name: str, where: Callable[[T], Bool], materialize_source: BatchDataSource | None = None
@@ -224,11 +236,20 @@ class FeatureViewWrapper(Generic[T]):
             right_on=right_on,
         )
 
-    def with_source(self, named: str, source: BatchDataSource | FeatureViewWrapper) -> FeatureViewWrapper[T]:
+    def with_source(
+        self,
+        named: str,
+        source: BatchDataSource | FeatureViewWrapper,
+        materialized_source: BatchDataSource | None = None,
+    ) -> FeatureViewWrapper[T]:
 
         meta = copy.deepcopy(self.metadata)
         meta.name = named
         meta.source = resolve_source(source)
+        meta.materialized_source = None
+
+        if materialized_source:
+            meta.materialized_source = resolve_source(materialized_source)
 
         return FeatureViewWrapper(meta, self.view)
 
@@ -295,9 +316,9 @@ class FeatureViewWrapper(Generic[T]):
         Returns:
             FeatureViewStore: Returns a queryable `FeatureViewStore` containing the feature view
         """
-        from aligned import FeatureStore
+        from aligned import ContractStore
 
-        store = FeatureStore.experimental()
+        store = ContractStore.experimental()
         store.add_compiled_view(self.compile())
         return store.feature_view(self.metadata.name)
 
@@ -396,6 +417,13 @@ class FeatureViewWrapper(Generic[T]):
             return validated  # type: ignore
         else:
             raise ValueError(f'Invalid data type: {type(data)}')
+
+    def as_source(self, renames: dict[str, str] | None = None) -> BatchDataSource:
+        from aligned.schemas.feature_view import FeatureViewReferenceSource
+
+        return FeatureViewReferenceSource(
+            self.compile(), FeatureLocation.feature_view(self.metadata.name), renames=renames or {}
+        )
 
 
 class FeatureView(ABC):
@@ -584,9 +612,9 @@ class FeatureView(ABC):
             raise ValueError(f'FeatureView {metadata.name} must contain at least one Entity')
 
         loc = FeatureLocation.feature_view(view.name)
-        aggregation_group_by = [FeatureReferance(entity.name, loc, entity.dtype) for entity in view.entities]
+        aggregation_group_by = [FeatureReference(entity.name, loc, entity.dtype) for entity in view.entities]
         event_timestamp_ref = (
-            FeatureReferance(view.event_timestamp.name, loc, view.event_timestamp.dtype)
+            FeatureReference(view.event_timestamp.name, loc, view.event_timestamp.dtype)
             if view.event_timestamp
             else None
         )
@@ -628,10 +656,10 @@ class FeatureView(ABC):
         Returns:
             FeatureViewStore: Returns a queryable `FeatureViewStore` containing the feature view
         """
-        from aligned import FeatureStore
+        from aligned import ContractStore
 
         self = cls()
-        store = FeatureStore.experimental()
+        store = ContractStore.experimental()
         store.add_feature_view(self)
         return store.feature_view(self.metadata.name)
 

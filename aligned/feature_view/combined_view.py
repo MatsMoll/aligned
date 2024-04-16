@@ -60,9 +60,9 @@ class CombinedFeatureViewWrapper(Generic[T]):
         Returns:
             FeatureViewStore: Returns a queryable `FeatureViewStore` containing the feature view
         """
-        from aligned import FeatureStore
+        from aligned import ContractStore
 
-        store = FeatureStore.experimental()
+        store = ContractStore.experimental()
         store.add_combined_view(self.compile())
         return store.feature_view(self.metadata.name)
 

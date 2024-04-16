@@ -23,8 +23,11 @@ from aligned.compiler.feature_factory import (
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.feature_view.feature_view import FeatureView, FeatureViewWrapper
+from aligned.exposed_model.interface import ExposedModel
+from aligned.request.retrival_request import RetrivalRequest
+from aligned.retrival_job import ConvertableToRetrivalJob, PredictionJob, RetrivalJob
 from aligned.schemas.derivied_feature import DerivedFeature
-from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
+from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference, FeatureType
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.model import Model as ModelSchema
@@ -51,14 +54,17 @@ class ModelMetadata:
     contacts: list[str] | None = field(default=None)
     tags: list[str] | None = field(default=None)
     description: str | None = field(default=None)
-    prediction_source: BatchDataSource | None = field(default=None)
-    prediction_stream: StreamDataSource | None = field(default=None)
+
+    output_source: BatchDataSource | None = field(default=None)
+    output_stream: StreamDataSource | None = field(default=None)
+
     application_source: BatchDataSource | None = field(default=None)
 
     acceptable_freshness: timedelta | None = field(default=None)
     unacceptable_freshness: timedelta | None = field(default=None)
 
     exposed_at_url: str | None = field(default=None)
+    exposed_model: ExposedModel | None = field(default=None)
 
     dataset_store: DatasetStore | None = field(default=None)
 
@@ -91,6 +97,43 @@ class ModelContractWrapper(Generic[T]):
     def compile(self) -> ModelSchema:
         return compile_with_metadata(self.contract(), self.metadata)
 
+    def predict_over(
+        self,
+        values: ConvertableToRetrivalJob | RetrivalJob,
+        needed_views: list[FeatureViewWrapper | ModelContractWrapper] | None = None,
+    ) -> PredictionJob:
+        from aligned import ContractStore
+        from aligned.retrival_job import RetrivalJob
+
+        model = self.compile()
+        model.features.default_features
+
+        if not model.exposed_model:
+            raise ValueError(f"Model {model.name} does not have an `exposed_model` to use for predictions.")
+
+        if not isinstance(values, RetrivalJob):
+            features = {feat.as_feature() for feat in model.features.default_features}
+            request = RetrivalRequest(
+                name='default',
+                location=FeatureLocation.model(model.name),
+                entities=set(),
+                features=features,
+                derived_features=set(),
+            )
+            values = RetrivalJob.from_convertable(values, request)
+
+        store = ContractStore.empty()
+
+        for needed_data in needed_views or []:
+            if isinstance(needed_data, ModelContractWrapper):
+                store.add_compiled_model(needed_data.compile())
+            else:
+                store.add_compiled_view(needed_data.compile())
+
+        store.add_compiled_model(model)
+
+        return store.model(model.name).predict_over(values)
+
     def as_view(self) -> CompiledFeatureView | None:
 
         compiled = self.compile()
@@ -108,7 +151,7 @@ class ModelContractWrapper(Generic[T]):
 
         condition = where(self.__call__())
 
-        main_source = meta.prediction_source
+        main_source = meta.output_source
         if not main_source:
             raise ValueError(
                 f'Model: {self.metadata.name} needs a `prediction_source` to use `filter`, got None.'
@@ -119,9 +162,9 @@ class ModelContractWrapper(Generic[T]):
             condition._location = FeatureLocation.model(name)
 
         if condition.transformation:
-            meta.prediction_source = FilteredDataSource(main_source, condition.compile())
+            meta.output_source = FilteredDataSource(main_source, condition.compile())
         else:
-            meta.prediction_source = FilteredDataSource(main_source, condition.feature())
+            meta.output_source = FilteredDataSource(main_source, condition.feature())
 
         if application_source:
             meta.application_source = application_source
@@ -206,44 +249,83 @@ class FeatureInputVersions:
         return FeatureVersionSchema(
             default_version=self.default_version,
             versions={
-                version: [feature.feature_referance() for feature in features]
+                version: [feature.feature_reference() for feature in features]
                 for version, features in self.versions.items()
             },
         )
 
 
 def model_contract(
-    name: str,
-    features: list[FeatureReferencable] | FeatureInputVersions,
+    input_features: list[FeatureReferencable | FeatureViewWrapper | ModelContractWrapper]
+    | FeatureInputVersions,
+    name: str | None = None,
     contacts: list[str] | None = None,
     tags: list[str] | None = None,
     description: str | None = None,
-    prediction_source: BatchDataSource | None = None,
-    prediction_stream: StreamDataSource | None = None,
+    output_source: BatchDataSource | None = None,
+    output_stream: StreamDataSource | None = None,
     application_source: BatchDataSource | None = None,
     dataset_store: DatasetStore | StorageFileReference | None = None,
     exposed_at_url: str | None = None,
+    exposed_model: ExposedModel | None = None,
     acceptable_freshness: timedelta | None = None,
     unacceptable_freshness: timedelta | None = None,
 ) -> Callable[[Type[T]], ModelContractWrapper[T]]:
     def decorator(cls: Type[T]) -> ModelContractWrapper[T]:
 
-        if isinstance(features, FeatureInputVersions):
-            input_features = features
+        if isinstance(input_features, FeatureInputVersions):
+            features_versions = input_features
         else:
-            input_features = FeatureInputVersions(default_version='default', versions={'default': features})
+            unwrapped_input_features: list[FeatureReferencable] = []
+
+            for feature in input_features:
+                if isinstance(feature, FeatureViewWrapper):
+                    compiled_view = feature.compile()
+                    request = compiled_view.request_all
+                    features = [
+                        feat.as_reference(FeatureLocation.feature_view(compiled_view.name))
+                        for feat in request.request_result.features
+                    ]
+                    unwrapped_input_features.extend(features)
+                elif isinstance(feature, ModelContractWrapper):
+                    compiled_model = feature.compile()
+                    request = compiled_model.predictions_view.request('')
+                    features = [
+                        feat.as_reference(FeatureLocation.model(compiled_model.name))
+                        for feat in request.request_result.features
+                    ]
+                    unwrapped_input_features.extend(features)
+                else:
+                    unwrapped_input_features.append(feature)
+
+            features_versions = FeatureInputVersions(
+                default_version='default', versions={'default': unwrapped_input_features}
+            )
+
+        used_name = name or str(cls.__name__).lower()
+
+        used_description = None
+        if description:
+            used_description = description
+        elif cls.__doc__:
+            used_description = str(cls.__doc__)
+
+        used_exposed_at_url = exposed_at_url
+        if exposed_model:
+            used_exposed_at_url = exposed_model.exposed_at_url or exposed_at_url
 
         metadata = ModelMetadata(
-            name,
-            input_features,
+            used_name,
+            features_versions,
             contacts=contacts,
             tags=tags,
-            description=description,
-            prediction_source=prediction_source,
-            prediction_stream=prediction_stream,
+            description=used_description,
+            output_source=output_source,
+            output_stream=output_stream,
             application_source=application_source,
             dataset_store=resolve_dataset_store(dataset_store) if dataset_store else None,
-            exposed_at_url=exposed_at_url,
+            exposed_at_url=used_exposed_at_url,
+            exposed_model=exposed_model,
             acceptable_freshness=acceptable_freshness,
             unacceptable_freshness=unacceptable_freshness,
         )
@@ -275,9 +357,9 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
         features=set(),
         derived_features=set(),
         model_version_column=None,
-        source=metadata.prediction_source,
+        source=metadata.output_source,
         application_source=metadata.application_source,
-        stream_source=metadata.prediction_stream,
+        stream_source=metadata.output_stream,
         classification_targets=set(),
         regression_targets=set(),
         recommendation_targets=set(),
@@ -363,7 +445,7 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
             dtype=transformation.dtype,
             transformation=transformation,
             depending_on={
-                FeatureReferance(feat, FeatureLocation.model(metadata.name), dtype=FeatureType.float())
+                FeatureReference(feat, FeatureLocation.model(metadata.name), dtype=FeatureType.float())
                 for feat in transformation.column_mappings.keys()
             },
             depth=1,
@@ -382,4 +464,5 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
         description=metadata.description,
         dataset_store=metadata.dataset_store,
         exposed_at_url=metadata.exposed_at_url,
+        exposed_model=metadata.exposed_model,
     )

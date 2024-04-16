@@ -3,13 +3,13 @@ from dataclasses import dataclass, field
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.schemas.codable import Codable
 from aligned.schemas.event_trigger import EventTrigger
-from aligned.schemas.feature import Feature, FeatureReferance
+from aligned.schemas.feature import Feature, FeatureReference
 from aligned.schemas.literal_value import LiteralValue
 
 
 @dataclass
 class RegressionTarget(Codable):
-    estimating: FeatureReferance
+    estimating: FeatureReference
     feature: Feature
 
     on_ground_truth_event: StreamDataSource | None = field(default=None)
@@ -35,7 +35,7 @@ class ClassTargetProbability(Codable):
 
 @dataclass
 class ClassificationTarget(Codable):
-    estimating: FeatureReferance
+    estimating: FeatureReference
     feature: Feature
 
     on_ground_truth_event: StreamDataSource | None = field(default=None)
@@ -52,10 +52,10 @@ class ClassificationTarget(Codable):
 @dataclass
 class RecommendationTarget(Codable):
 
-    estimating: FeatureReferance
+    estimating: FeatureReference
     feature: Feature
 
-    estimating_rank: FeatureReferance | None = field(default=None)
+    estimating_rank: FeatureReference | None = field(default=None)
 
     def __hash__(self) -> int:
         return self.feature.name.__hash__()

@@ -5,7 +5,7 @@ import pytest
 
 from aligned import feature_view, Float, String, FileSource
 from aligned.compiler.model import model_contract
-from aligned.feature_store import FeatureStore
+from aligned.feature_store import ContractStore
 from aligned.local.job import FileFullJob
 from aligned.retrival_job import DerivedFeatureJob, RetrivalRequest
 from aligned.sources.local import LiteralReference
@@ -101,7 +101,7 @@ income_agg = IncomeAgg()
 
 @model_contract(
     name='model',
-    features=[
+    input_features=[
         expences.abs_amount,
         expences.is_expence,
         income_agg.total_amount,
@@ -113,8 +113,8 @@ class Model:
     pred_amount = expences.amount.as_regression_label()
 
 
-def feature_store() -> FeatureStore:
-    store = FeatureStore.experimental()
+def feature_store() -> ContractStore:
+    store = ContractStore.experimental()
 
     views = [Transaction, Expences, Income, ExpenceAgg, IncomeAgg]
     for view in views:
@@ -165,7 +165,7 @@ async def test_model_with_label_multiple_views() -> None:
             'user_id': ['b', 'b', 'a', 'a'],
             'total_amount': [109.0, 109.0, 120.0, 120.0],
             'is_expence': [True, True, True, True],
-            'abs_amount': [20, 100, 20, 100],
+            'abs_amount': [20.0, 100.0, 20.0, 100.0],
             'amount': [-20.0, -100.0, -20.0, -100.0],
         }
     )

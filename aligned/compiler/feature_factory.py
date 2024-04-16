@@ -25,7 +25,7 @@ from aligned.schemas.constraints import (
 from aligned.schemas.derivied_feature import DerivedFeature, AggregateOver
 from aligned.schemas.event_trigger import EventTrigger as EventTriggerSchema
 from aligned.schemas.feature import EventTimestamp as EventTimestampFeature
-from aligned.schemas.feature import Feature, FeatureLocation, FeatureReferance, FeatureType
+from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference, FeatureType
 from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.target import ClassificationTarget as ClassificationTargetSchemas
 from aligned.schemas.target import ClassTargetProbability
@@ -65,7 +65,7 @@ class TransformationFactory:
 
 class AggregationTransformationFactory:
     def aggregate_over(
-        self, group_by: list[FeatureReferance], time_columns: FeatureReferance | None
+        self, group_by: list[FeatureReference], time_columns: FeatureReference | None
     ) -> AggregateOver:
         raise NotImplementedError(type(self))
 
@@ -99,8 +99,8 @@ class TargetProbability:
 
 
 class FeatureReferencable:
-    def feature_referance(self) -> FeatureReferance:
-        pass
+    def feature_reference(self) -> FeatureReference:
+        raise NotImplementedError(type(self))
 
 
 def compile_hidden_features(
@@ -184,24 +184,24 @@ class RecommendationTarget(FeatureReferencable):
     def __set_name__(self, owner, name):
         self._name = name
 
-    def feature_referance(self) -> FeatureReferance:
+    def feature_reference(self) -> FeatureReference:
         if not self._name:
             raise ValueError('Missing name, can not create reference')
         if not self._location:
             raise ValueError('Missing location, can not create reference')
-        return FeatureReferance(self._name, self._location, self.feature.dtype)
+        return FeatureReference(self._name, self._location, self.feature.dtype)
 
     def estemating_rank(self, feature: FeatureFactory) -> RecommendationTarget:
         self.rank_feature = feature
         return self
 
     def compile(self) -> RecommendationTargetSchemas:
-        self_ref = self.feature_referance()
+        self_ref = self.feature_reference()
 
         return RecommendationTargetSchemas(
-            self.feature.feature_referance(),
+            self.feature.feature_reference(),
             feature=self_ref.as_feature(),
-            estimating_rank=self.rank_feature.feature_referance() if self.rank_feature else None,
+            estimating_rank=self.rank_feature.feature_reference() if self.rank_feature else None,
         )
 
 
@@ -216,12 +216,12 @@ class RegressionLabel(FeatureReferencable):
     def __set_name__(self, owner, name):
         self._name = name
 
-    def feature_referance(self) -> FeatureReferance:
+    def feature_reference(self) -> FeatureReference:
         if not self._name:
             raise ValueError('Missing name, can not create reference')
         if not self._location:
             raise ValueError('Missing location, can not create reference')
-        return FeatureReferance(self._name, self._location, self.feature.dtype)
+        return FeatureReference(self._name, self._location, self.feature.dtype)
 
     def listen_to_ground_truth_event(self, stream: StreamDataSource) -> RegressionLabel:
         return RegressionLabel(
@@ -253,7 +253,7 @@ class RegressionLabel(FeatureReferencable):
                 on_ground_truth_event = event.event
 
         return RegressionTargetSchemas(
-            self.feature.feature_referance(),
+            self.feature.feature_reference(),
             feature=Feature(self._name, self.feature.dtype),
             on_ground_truth_event=on_ground_truth_event,
             event_trigger=trigger,
@@ -271,12 +271,12 @@ class ClassificationLabel(FeatureReferencable):
     def __set_name__(self, owner, name):
         self._name = name
 
-    def feature_referance(self) -> FeatureReferance:
+    def feature_reference(self) -> FeatureReference:
         if not self._name:
             raise ValueError('Missing name, can not create reference')
         if not self._location:
             raise ValueError('Missing location, can not create reference')
-        return FeatureReferance(self._name, self._location, self.feature.dtype)
+        return FeatureReference(self._name, self._location, self.feature.dtype)
 
     def listen_to_ground_truth_event(self, stream: StreamDataSource) -> ClassificationLabel:
         return ClassificationLabel(
@@ -335,7 +335,7 @@ class ClassificationLabel(FeatureReferencable):
                 on_ground_truth_event = event.event
 
         return ClassificationTargetSchemas(
-            self.feature.feature_referance(),
+            self.feature.feature_reference(),
             feature=Feature(self._name, self.feature.dtype),
             on_ground_truth_event=on_ground_truth_event,
             event_trigger=trigger,
@@ -386,13 +386,13 @@ class FeatureFactory(FeatureReferencable):
             return []
         return [feat._name for feat in self.transformation.using_features if feat._name]
 
-    def feature_referance(self) -> FeatureReferance:
+    def feature_reference(self) -> FeatureReference:
         if not self._location:
             raise ValueError(
                 f'_location is not set for {self.name}. '
                 'Therefore, making it impossible to create a referance.'
             )
-        return FeatureReferance(self.name, self._location, self.dtype)
+        return FeatureReference(self.name, self._location, self.dtype)
 
     def feature(self) -> Feature:
         return Feature(
@@ -441,7 +441,7 @@ class FeatureFactory(FeatureReferencable):
         return DerivedFeature(
             name=self.name,
             dtype=self.dtype,
-            depending_on={feat.feature_referance() for feat in self.transformation.using_features},
+            depending_on={feat.feature_reference() for feat in self.transformation.using_features},
             transformation=self.transformation.compile(),
             depth=self.depth(),
             description=self._description,
@@ -533,13 +533,12 @@ class FeatureFactory(FeatureReferencable):
     def transform_polars(
         self,
         expression: pl.Expr,
-        using_features: list[FeatureFactory] | None = None,
         as_dtype: T | None = None,
     ) -> T:
         from aligned.compiler.transformation_factory import PolarsTransformationFactory
 
         dtype: FeatureFactory = as_dtype or self.copy_type()  # type: ignore [assignment]
-        dtype.transformation = PolarsTransformationFactory(dtype, expression, using_features or [self])
+        dtype.transformation = PolarsTransformationFactory(dtype, expression, [self])
         return dtype  # type: ignore [return-value]
 
     def polars_aggregation(self, aggregation: pl.Expr, as_type: T) -> T:
@@ -586,6 +585,12 @@ class FeatureFactory(FeatureReferencable):
         instance = Bool()
         instance.transformation = NotNullFactory(self)
         return instance
+
+    def referencing(self, entity: FeatureFactory) -> FeatureFactory:
+        from aligned.schemas.constraint_types import ReferencingColumn
+
+        self._add_constraint(ReferencingColumn(entity.feature_reference()))
+        return self
 
 
 class CouldBeModelVersion:
@@ -930,6 +935,62 @@ class Float(ArithmeticFeature, DecimalOperations):
         return ArithmeticAggregation(self)
 
 
+class UInt8(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
+    def copy_type(self) -> UInt8:
+        if self.constraints and Optional() in self.constraints:
+            return UInt8().is_optional()
+        return UInt8()
+
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType.uint8()
+
+    def aggregate(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
+
+
+class UInt16(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
+    def copy_type(self) -> UInt16:
+        if self.constraints and Optional() in self.constraints:
+            return UInt16().is_optional()
+        return UInt16()
+
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType.uint16()
+
+    def aggregate(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
+
+
+class UInt32(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
+    def copy_type(self) -> UInt32:
+        if self.constraints and Optional() in self.constraints:
+            return UInt32().is_optional()
+        return UInt32()
+
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType.uint32()
+
+    def aggregate(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
+
+
+class UInt64(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
+    def copy_type(self) -> UInt64:
+        if self.constraints and Optional() in self.constraints:
+            return UInt64().is_optional()
+        return UInt64()
+
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType.uint64()
+
+    def aggregate(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
+
+
 class Int8(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
     def copy_type(self) -> Int8:
         if self.constraints and Optional() in self.constraints:
@@ -1050,13 +1111,31 @@ class String(
     def aggregate(self) -> StringAggregation:
         return StringAggregation(self)
 
-    def split(self, pattern: str, max_splits: int | None = None) -> String:
-        raise NotImplementedError()
+    def ollama_embedding(self, model: str, host_env: str | None = None) -> Embedding:
+        from aligned.compiler.transformation_factory import OllamaEmbedding
+
+        feature = Embedding()
+        feature.transformation = OllamaEmbedding(model, self, host_env)
+        return feature
+
+    def ollama_generate(self, model: str, system: str | None = None, host_env: str | None = None) -> String:
+        from aligned.compiler.transformation_factory import OllamaGenerate
+
+        feature = Json()
+        feature.transformation = OllamaGenerate(model, system or '', self, host_env)
+        return feature
+
+    def split(self, pattern: str) -> String:
+        from aligned.compiler.transformation_factory import Split
+
+        feature = self.copy_type()
+        feature.transformation = Split(pattern, self)
+        return feature
 
     def replace(self, values: dict[str, str]) -> String:
         from aligned.compiler.transformation_factory import ReplaceFactory
 
-        feature = String()
+        feature = self.copy_type()
         feature.transformation = ReplaceFactory(values, self)
         return feature
 
@@ -1091,7 +1170,7 @@ class String(
     def prepend(self, other: FeatureFactory | str) -> String:
         from aligned.compiler.transformation_factory import AppendStrings, PrependConstString
 
-        feature = String()
+        feature = self.copy_type()
         if isinstance(other, FeatureFactory):
             feature.transformation = AppendStrings(other, self)
         else:

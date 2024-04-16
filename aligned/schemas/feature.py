@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Literal, TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 import polars as pl
 
-import aligned.compiler.feature_factory as ff
 from aligned.schemas.codable import Codable
 from aligned.schemas.constraints import Constraint
+
+if TYPE_CHECKING:
+    from aligned.compiler.feature_factory import FeatureFactory
+
 
 NAME_POLARS_MAPPING = [
     ('string', pl.Utf8),
@@ -16,6 +19,10 @@ NAME_POLARS_MAPPING = [
     ('int16', pl.Int16),
     ('int32', pl.Int32),
     ('int64', pl.Int64),
+    ('uint8', pl.UInt8),
+    ('uint16', pl.UInt16),
+    ('uint32', pl.UInt32),
+    ('uint64', pl.UInt64),
     ('float', pl.Float64),
     ('float', pl.Float32),
     ('double', pl.Float64),
@@ -45,6 +52,10 @@ class FeatureType(Codable):
             'int16',
             'int32',
             'int64',
+            'uint8',
+            'uint16',
+            'uint32',
+            'uint64',
             'float',
             'double',
         }  # Can be represented as an int
@@ -140,7 +151,8 @@ class FeatureType(Codable):
         raise ValueError(f'Unable to find a value that can represent {self.name}')
 
     @property
-    def feature_factory(self) -> ff.FeatureFactory:
+    def feature_factory(self) -> FeatureFactory:
+        from aligned.compiler import feature_factory as ff
 
         if self.name.startswith('datetime-'):
             time_zone = self.name.split('-')[1]
@@ -156,6 +168,10 @@ class FeatureType(Codable):
             'int16': ff.Int16(),
             'int32': ff.Int32(),
             'int64': ff.Int64(),
+            'uint8': ff.UInt8(),
+            'uint16': ff.UInt16(),
+            'uint32': ff.UInt32(),
+            'uint64': ff.UInt64(),
             'float': ff.Float(),
             'double': ff.Float(),
             'bool': ff.Bool(),
@@ -207,6 +223,22 @@ class FeatureType(Codable):
     @staticmethod
     def string() -> FeatureType:
         return FeatureType(name='string')
+
+    @staticmethod
+    def uint8() -> FeatureType:
+        return FeatureType(name='uint8')
+
+    @staticmethod
+    def uint16() -> FeatureType:
+        return FeatureType(name='uint16')
+
+    @staticmethod
+    def uint32() -> FeatureType:
+        return FeatureType(name='uint32')
+
+    @staticmethod
+    def uint64() -> FeatureType:
+        return FeatureType(name='uint64')
 
     @staticmethod
     def int8() -> FeatureType:
@@ -292,8 +324,8 @@ class Feature(Codable):
             constraints=self.constraints,
         )
 
-    def as_reference(self, location: FeatureLocation) -> FeatureReferance:
-        return FeatureReferance(
+    def as_reference(self, location: FeatureLocation) -> FeatureReference:
+        return FeatureReference(
             name=self.name,
             location=location,
             dtype=self.dtype,
@@ -369,7 +401,7 @@ class FeatureLocation(Codable):
 
 
 @dataclass
-class FeatureReferance(Codable):
+class FeatureReference(Codable):
     name: str
     location: FeatureLocation
     dtype: FeatureType
@@ -390,3 +422,6 @@ class FeatureReferance(Codable):
     @property
     def identifier(self) -> str:
         return f'{self.location.identifier}:{self.name}'
+
+    def feature_reference(self) -> FeatureReference:
+        return self

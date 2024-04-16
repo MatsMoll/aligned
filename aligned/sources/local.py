@@ -27,7 +27,7 @@ from aligned.schemas.date_formatter import DateFormatter
 if TYPE_CHECKING:
     from datetime import datetime
     from aligned.schemas.repo_definition import RepoDefinition
-    from aligned.feature_store import FeatureStore
+    from aligned.feature_store import ContractStore
 
 
 logger = logging.getLogger(__name__)
@@ -37,10 +37,13 @@ class AsRepoDefinition:
     async def as_repo_definition(self) -> RepoDefinition:
         raise NotImplementedError()
 
-    async def feature_store(self) -> FeatureStore:
-        from aligned.feature_store import FeatureStore
+    async def as_contract_store(self) -> ContractStore:
+        from aligned.feature_store import ContractStore
 
-        return FeatureStore.from_definition(await self.as_repo_definition())
+        return ContractStore.from_definition(await self.as_repo_definition())
+
+    async def feature_store(self) -> ContractStore:
+        return await self.as_contract_store()
 
 
 class StorageFileReference(AsRepoDefinition):
@@ -77,7 +80,18 @@ async def data_file_freshness(reference: DataFileReference, column_name: str) ->
 
 
 def create_parent_dir(path: str) -> None:
-    Path(path).parent.mkdir(exist_ok=True)
+
+    parents = []
+
+    file_path = Path(path)
+    parent = file_path.parent
+
+    while not parent.exists():
+        parents.append(parent)
+        parent = parent.parent
+
+    for parent in reversed(parents):
+        parent.mkdir(exist_ok=True)
 
 
 def do_file_exist(path: str) -> bool:
@@ -105,6 +119,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
     mapping_keys: dict[str, str] = field(default_factory=dict)
     csv_config: CsvConfig = field(default_factory=CsvConfig)
     formatter: DateFormatter = field(default_factory=DateFormatter.iso_8601)
+    expected_schema: dict[str, FeatureType] | None = field(default=None)
 
     type_name: str = 'csv'
 
@@ -113,6 +128,20 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
 
     def __hash__(self) -> int:
         return hash(self.job_group_key())
+
+    def to_markdown(self) -> str:
+        return f"""### CSV File
+
+*Renames*: {self.mapping_keys}
+
+*File*: {self.path}
+
+*CSV Config*: {self.csv_config}
+
+*Datetime Formatter*: {self.formatter}
+
+[Go to file]({self.path})
+"""  # noqa
 
     async def read_pandas(self) -> pd.DataFrame:
         try:
@@ -138,7 +167,21 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
             raise UnableToFindFileException(self.path)
 
         try:
-            return pl.scan_csv(self.path, separator=self.csv_config.seperator, try_parse_dates=True)
+            schema: dict[str, pl.PolarsDataType] | None = None
+            if self.expected_schema:
+                schema = {  # type: ignore
+                    name: dtype.polars_type
+                    for name, dtype in self.expected_schema.items()
+                    if not dtype.is_datetime
+                }
+
+                if self.mapping_keys:
+                    reverse_mapping = {v: k for k, v in self.mapping_keys.items()}
+                    schema = {reverse_mapping.get(name, name): dtype for name, dtype in schema.items()}
+
+            return pl.scan_csv(
+                self.path, dtypes=schema, separator=self.csv_config.seperator, try_parse_dates=True
+            )
         except OSError:
             raise UnableToFindFileException(self.path)
 
@@ -152,10 +195,10 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
         potential_timestamps = request.all_features
 
         if request.event_timestamp:
-            potential_timestamps.add(request.event_timestamp)
+            potential_timestamps.add(request.event_timestamp.as_feature())
 
         for feature in potential_timestamps:
-            if feature.dtype.name == 'datetime':
+            if feature.dtype.is_datetime:
                 data = data.with_columns(self.formatter.encode_polars(feature.name))
 
         if self.mapping_keys:
@@ -180,7 +223,7 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
 
         data = (await job.to_lazy_polars()).select(request.all_returned_columns)
         for feature in request.features:
-            if feature.dtype.name == 'datetime':
+            if feature.dtype.is_datetime:
                 data = data.with_columns(self.formatter.encode_polars(feature.name))
 
         if self.mapping_keys:
@@ -194,6 +237,25 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
             write_df = data
 
         await self.write_polars(write_df)
+
+    async def overwrite(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+
+        if len(requests) != 1:
+            raise ValueError('Csv files only support one write request as of now')
+
+        request = requests[0]
+
+        data = (await job.to_lazy_polars()).select(request.all_returned_columns)
+        for feature in request.features:
+            if feature.dtype.is_datetime:
+                data = data.with_columns(self.formatter.encode_polars(feature.name))
+
+        if self.mapping_keys:
+            columns = self.feature_identifier_for(data.columns)
+            data = data.rename(dict(zip(data.columns, columns)))
+
+        logger.error(f'Overwriting {self.path} with {data.columns}')
+        await self.write_polars(data)
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
         create_parent_dir(self.path)
@@ -232,7 +294,23 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
         return CsvFileEnricher(file=self.path)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
-        return FileFullJob(self, request, limit, date_formatter=self.formatter)
+        from aligned.schemas.constraints import Optional
+
+        optional_constraint = Optional()
+
+        with_schema = CsvFileSource(
+            path=self.path,
+            mapping_keys=self.mapping_keys,
+            csv_config=self.csv_config,
+            formatter=self.formatter,
+            expected_schema={
+                feat.name: feat.dtype
+                for feat in request.features.union(request.entities)
+                if not (feat.constraints and optional_constraint in feat.constraints)
+                and not feat.name.isdigit()
+            },
+        )
+        return FileFullJob(with_schema, request, limit, date_formatter=self.formatter)
 
     def all_between_dates(
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime
@@ -313,11 +391,11 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
     @property
     def to_markdown(self) -> str:
         return f'''#### Parquet File
-        *Renames*: {self.mapping_keys}
+*Renames*: {self.mapping_keys}
 
-        *File*: {self.path}
+*File*: {self.path}
 
-        [Go to file]({self.path})'''
+[Go to file]({self.path})'''  # noqa
 
     def job_group_key(self) -> str:
         return f'{self.type_name}/{self.path}'

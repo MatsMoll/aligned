@@ -4,13 +4,13 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 
 from aligned.schemas.codable import Codable
-from aligned.schemas.feature import Constraint, Feature, FeatureLocation, FeatureReferance, FeatureType
+from aligned.schemas.feature import Constraint, Feature, FeatureLocation, FeatureReference, FeatureType
 from aligned.schemas.transformation import Transformation
 
 
 class DerivedFeature(Feature):
 
-    depending_on: set[FeatureReferance]
+    depending_on: set[FeatureReference]
     transformation: Transformation
     depth: int = 1
 
@@ -18,7 +18,7 @@ class DerivedFeature(Feature):
         self,
         name: str,
         dtype: FeatureType,
-        depending_on: set[FeatureReferance],
+        depending_on: set[FeatureReference],
         transformation: Transformation,
         depth: int,
         description: str | None = None,
@@ -38,7 +38,7 @@ class DerivedFeature(Feature):
         from aligned.schemas.transformation import SupportedTransformations
 
         for feature in self.depending_on:
-            assert isinstance(feature, FeatureReferance)
+            assert isinstance(feature, FeatureReference)
 
         assert isinstance(self.transformation, Transformation)
         assert self.transformation.name in SupportedTransformations.shared().types
@@ -67,7 +67,7 @@ class DerivedFeature(Feature):
 @dataclass
 class AggregationTimeWindow(Codable):
     time_window: timedelta
-    time_column: FeatureReferance
+    time_column: FeatureReference
 
     every_interval: timedelta | None = field(default=None)
     offset_interval: timedelta | None = field(default=None)
@@ -78,7 +78,7 @@ class AggregationTimeWindow(Codable):
 
 @dataclass
 class AggregateOver(Codable):
-    group_by: list[FeatureReferance]
+    group_by: list[FeatureReference]
     window: AggregationTimeWindow | None = field(default=None)
     condition: DerivedFeature | None = field(default=None)
 
@@ -106,7 +106,7 @@ class AggregatedFeature(Codable):
         return self.derived_feature.name.__hash__()
 
     @property
-    def depending_on(self) -> set[FeatureReferance]:
+    def depending_on(self) -> set[FeatureReference]:
         return self.derived_feature.depending_on
 
     @property

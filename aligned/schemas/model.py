@@ -5,12 +5,13 @@ from datetime import timedelta, datetime
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import FeatureLocation, FeatureType
-from aligned.schemas.feature import EventTimestamp, Feature, FeatureReferance
+from aligned.schemas.feature import EventTimestamp, Feature, FeatureReference
 from aligned.schemas.event_trigger import EventTrigger
 from aligned.schemas.target import ClassificationTarget, RecommendationTarget, RegressionTarget
 from aligned.schemas.feature_view import CompiledFeatureView, FeatureViewReferenceSource
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.folder import DatasetStore
+from aligned.exposed_model.interface import ExposedModel
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.retrival_job import RetrivalJob
@@ -22,19 +23,19 @@ logger = logging.getLogger(__name__)
 class FeatureInputVersions(Codable):
 
     default_version: str
-    versions: dict[str, list[FeatureReferance]]
+    versions: dict[str, list[FeatureReference]]
 
-    def features_for(self, version: str) -> list[FeatureReferance]:
+    def features_for(self, version: str) -> list[FeatureReference]:
         return self.versions.get(version, [])
 
     @property
-    def default_features(self) -> list[FeatureReferance]:
+    def default_features(self) -> list[FeatureReference]:
         return self.features_for(self.default_version)
 
 
 @dataclass
 class Target(Codable):
-    estimating: FeatureReferance
+    estimating: FeatureReference
     feature: Feature
 
     on_ground_truth_event: StreamDataSource | None = field(default=None)
@@ -103,18 +104,28 @@ class PredictionsView(Codable):
 
         return schema
 
-    def request(self, name: str) -> RetrivalRequest:
+    def request(self, name: str, model_version_as_entity: bool = False) -> RetrivalRequest:
+        entities = self.entities
+
+        if model_version_as_entity and self.model_version_column:
+            entities = entities.union({self.model_version_column})
+
         return RetrivalRequest(
             name=name,
             location=FeatureLocation.model(name),
-            entities=self.entities,
+            entities=entities,
             features=self.features,
             derived_features=self.derived_features,
             event_timestamp=self.event_timestamp,
         )
 
-    def request_for(self, features: set[str], name: str) -> RetrivalRequest:
+    def request_for(
+        self, features: set[str], name: str, model_version_as_entity: bool = False
+    ) -> RetrivalRequest:
         entities = self.entities
+
+        if model_version_as_entity and self.model_version_column:
+            entities = entities.union({self.model_version_column})
 
         return RetrivalRequest(
             name=name,
@@ -125,7 +136,7 @@ class PredictionsView(Codable):
             event_timestamp=self.event_timestamp,
         )
 
-    def labels_estimates_refs(self) -> set[FeatureReferance]:
+    def labels_estimates_refs(self) -> set[FeatureReference]:
         if self.classification_targets:
             return {feature.estimating for feature in self.classification_targets}
         elif self.regression_targets:
@@ -156,11 +167,12 @@ class Model(Codable):
     tags: list[str] | None = field(default=None)
     dataset_store: DatasetStore | None = field(default=None)
     exposed_at_url: str | None = field(default=None)
+    exposed_model: ExposedModel | None = field(default=None)
 
     def __hash__(self) -> int:
         return self.name.__hash__()
 
-    def feature_references(self, version: str | None = None) -> set[FeatureReferance]:
+    def feature_references(self, version: str | None = None) -> set[FeatureReference]:
         return set(self.features.features_for(version or self.features.default_version))
 
     @property
@@ -188,6 +200,12 @@ class ModelSource(BatchDataSource):
     pred_view: CompiledFeatureView
 
     type_name: str = 'model_source'
+
+    def job_group_key(self) -> str:
+        return FeatureLocation.model(self.pred_view.name).identifier
+
+    def location_id(self) -> set[FeatureLocation]:
+        return {FeatureLocation.model(self.model.name)}
 
     async def schema(self) -> dict[str, FeatureType]:
         if self.model.predictions_view.source:

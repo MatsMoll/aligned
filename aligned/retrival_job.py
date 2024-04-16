@@ -31,12 +31,14 @@ from aligned.validation.interface import Validator
 
 if TYPE_CHECKING:
     from typing import AsyncIterator
+    from aligned.sources.local import Directory
     from aligned.schemas.folder import DatasetMetadata, DatasetStore
+    from aligned.feature_source import WritableFeatureSource
 
     from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver
-    from aligned.schemas.model import EventTrigger
+    from aligned.schemas.model import EventTrigger, Model
     from aligned.sources.local import DataFileReference, StorageFileReference
-    from aligned.feature_source import WritableFeatureSource
+    from aligned.feature_store import ContractStore
 
 
 logger = logging.getLogger(__name__)
@@ -182,34 +184,73 @@ class TrainTestValidateJob:
 
     target_columns: set[str]
 
+    should_filter_out_null_targets: bool = True
+
     @property
     def train(self) -> SupervisedJob:
-        return SupervisedJob(self.train_job, self.target_columns)
+        return SupervisedJob(self.train_job, self.target_columns, self.should_filter_out_null_targets)
 
     @property
     def test(self) -> SupervisedJob:
-        return SupervisedJob(self.test_job, self.target_columns)
+        return SupervisedJob(self.test_job, self.target_columns, self.should_filter_out_null_targets)
 
     @property
     def validate(self) -> SupervisedJob:
-        return SupervisedJob(self.validate_job, self.target_columns)
+        return SupervisedJob(self.validate_job, self.target_columns, self.should_filter_out_null_targets)
+
+    def store_dataset_at_directory(
+        self,
+        directory: Directory,
+        dataset_store: DatasetStore | StorageFileReference | None,
+        metadata: DatasetMetadata | None = None,
+    ) -> TrainTestValidateJob:
+        from uuid import uuid4
+        from aligned.schemas.folder import DatasetMetadata
+
+        if not dataset_store:
+            logger.info('No dataset store provided, skipping to store dataset.')
+            return self
+
+        if not metadata:
+            metadata = DatasetMetadata(
+                id=str(uuid4()),
+                name='train_test_validate - ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                description='A train, test and validation dataset.',
+            )
+
+        run_dir = directory.sub_directory(metadata.id)
+        return self.store_dataset(
+            dataset_store=dataset_store,
+            train_source=run_dir.parquet_at('train.parquet'),  # type: ignore
+            test_source=run_dir.parquet_at('test.parquet'),  # type: ignore
+            validate_source=run_dir.parquet_at('validate.parquet'),  # type: ignore
+            metadata=metadata,
+        )
 
     def store_dataset(
         self,
         dataset_store: DatasetStore | StorageFileReference,
-        metadata: DatasetMetadata,
         train_source: DataFileReference,
         test_source: DataFileReference,
         validate_source: DataFileReference,
+        metadata: DatasetMetadata | None = None,
         train_size: float | None = None,
         test_size: float | None = None,
         validation_size: float | None = None,
     ) -> TrainTestValidateJob:
-        from aligned.schemas.folder import TrainDatasetMetadata, JsonDatasetStore
+        from aligned.schemas.folder import TrainDatasetMetadata, JsonDatasetStore, DatasetMetadata
         from aligned.data_source.batch_data_source import BatchDataSource
-        from aligned.sources.local import StorageFileReference
+        from aligned.sources.local import StorageFileSource
+        from uuid import uuid4
 
-        if isinstance(dataset_store, StorageFileReference):
+        if metadata is None:
+            metadata = DatasetMetadata(
+                id=str(uuid4()),
+                name='train_test_validate - ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                description='A train, test and validation dataset.',
+            )
+
+        if isinstance(dataset_store, StorageFileSource):
             data_store = JsonDatasetStore(dataset_store)
         else:
             data_store = dataset_store
@@ -259,6 +300,9 @@ class TrainTestValidateJob:
             .cached_at(validate_source),
             target_columns=self.target_columns,
         )
+
+
+SplitterCallable = Callable[[pl.DataFrame], tuple[pl.DataFrame, pl.DataFrame]]
 
 
 @dataclass
@@ -333,20 +377,62 @@ class SupervisedJob:
             target_columns=self.target_columns,
         )
 
-    def train_test_validate(self, train_size: float, validate_size: float) -> TrainTestValidateJob:
+    def train_test_validate(
+        self,
+        train_size: float,
+        validate_size: float,
+        splitter_factory: Callable[[SplitConfig], SplitterCallable] | None = None,
+    ) -> TrainTestValidateJob:
 
-        cached_job = InMemoryCacheJob(self.job)
+        job_to_cache = self.job
+        if self.should_filter_out_null_targets:
+            job_to_cache = self.job.polars_method(lambda df: df.drop_nulls(self.target_columns))
 
         event_timestamp = self.job.request_result.event_timestamp
 
-        test_ratio_start = train_size
-        validate_ratio_start = test_ratio_start + validate_size
+        leftover_size = 1 - train_size
+
+        train_config = SplitConfig(
+            left_size=train_size,
+            right_size=leftover_size,
+            event_timestamp_column=event_timestamp,
+            target_columns=list(self.target_columns),
+        )
+        test_config = SplitConfig(
+            left_size=(leftover_size - validate_size) / leftover_size,
+            right_size=validate_size / leftover_size,
+            event_timestamp_column=event_timestamp,
+            target_columns=list(self.target_columns),
+        )
+
+        if splitter_factory:
+            train_splitter = splitter_factory(train_config)
+            validate_splitter = splitter_factory(test_config)
+        else:
+
+            def train_splitter(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
+                return (
+                    subset_polars(df, 0, train_config.left_size, event_timestamp),
+                    subset_polars(df, train_config.left_size, 1, event_timestamp),
+                )
+
+            def validate_splitter(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
+                return (
+                    subset_polars(df, 0, test_config.left_size, event_timestamp),
+                    subset_polars(df, test_config.left_size, 1, event_timestamp),
+                )
+
+        train_job, rem_job = job_to_cache.split(train_splitter, (train_size, 1 - train_size))
+        test_job, validate_job = rem_job.split(
+            validate_splitter, (1 - train_size - validate_size, validate_size)
+        )
 
         return TrainTestValidateJob(
-            train_job=SubsetJob(cached_job, 0, train_size, event_timestamp),
-            test_job=SubsetJob(cached_job, train_size, validate_ratio_start, event_timestamp),
-            validate_job=SubsetJob(cached_job, validate_ratio_start, 1, event_timestamp),
+            train_job=train_job,
+            test_job=test_job,
+            validate_job=validate_job,
             target_columns=self.target_columns,
+            should_filter_out_null_targets=self.should_filter_out_null_targets,
         )
 
     def with_subfeatures(self) -> SupervisedJob:
@@ -466,6 +552,12 @@ ConvertableToRetrivalJob = Union[dict[str, list], pd.DataFrame, pl.DataFrame, pl
 
 class RetrivalJob(ABC):
     @property
+    def loaded_columns(self) -> list[str]:
+        if isinstance(self, ModificationJob):
+            return self.job.loaded_columns
+        return []
+
+    @property
     def request_result(self) -> RequestResult:
         if isinstance(self, ModificationJob):
             return self.job.request_result
@@ -543,6 +635,15 @@ class RetrivalJob(ABC):
         if should_return_validation is None:
             should_return_validation = False
         return ReturnInvalidJob(self, should_return_validation)
+
+    def split(
+        self,
+        splitter: Callable[[pl.DataFrame], tuple[pl.DataFrame, pl.DataFrame]],
+        dataset_sizes: tuple[float, float],
+    ) -> tuple[RetrivalJob, RetrivalJob]:
+
+        job = InMemorySplitCacheJob(self, splitter, dataset_sizes, 0)
+        return (job, job.with_dataset_index(1))
 
     def join(
         self, job: RetrivalJob, method: str, left_on: str | list[str], right_on: str | list[str]
@@ -973,6 +1074,51 @@ class EncodeDatesJob(RetrivalJob, ModificationJob):
 
 
 @dataclass
+class SplitConfig:
+
+    left_size: float
+    right_size: float
+
+    event_timestamp_column: str | None = None
+    target_columns: list[str] | None = None
+
+
+@dataclass
+class InMemorySplitCacheJob(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+
+    splitter: Callable[[pl.DataFrame], tuple[pl.DataFrame, pl.DataFrame]]
+    dataset_sizes: tuple[float, float]
+    dataset_index: int
+
+    cached_data: tuple[pl.DataFrame, pl.DataFrame] | None = None
+
+    @property
+    def fraction(self) -> float:
+        return self.dataset_sizes[self.dataset_index]
+
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        cache = self
+
+        if isinstance(self.job, InMemorySplitCacheJob):
+            cache = self.job
+
+        if cache.cached_data is not None:
+            return cache.cached_data[self.dataset_index].lazy()
+
+        data = (await self.job.to_lazy_polars()).collect()
+        self.cached_data = self.splitter(data)
+        return self.cached_data[self.dataset_index].lazy()
+
+    def with_dataset_index(self, dataset_index: int) -> InMemorySplitCacheJob:
+        return InMemorySplitCacheJob(self, self.splitter, self.dataset_sizes, dataset_index, self.cached_data)
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return (await self.to_lazy_polars()).collect().to_pandas()
+
+
+@dataclass
 class InMemoryCacheJob(RetrivalJob, ModificationJob):
 
     job: RetrivalJob
@@ -1030,6 +1176,50 @@ class AggregateJob(RetrivalJob, ModificationJob):
 
     def describe(self) -> str:
         return f'Aggregating over {self.job.describe()}'
+
+
+@dataclass
+class StackSourceColumn:
+    top_source_name: str
+    bottom_source_name: str
+    source_column: str
+
+
+@dataclass
+class StackJob(RetrivalJob):
+
+    top: RetrivalJob
+    bottom: RetrivalJob
+
+    source_column: StackSourceColumn | None
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.top.request_result
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return RetrivalRequest.combine(self.top.retrival_requests + self.bottom.retrival_requests)
+
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        top = await self.top.to_lazy_polars()
+        bottom = await self.bottom.to_lazy_polars()
+
+        if self.source_column:
+            top = top.with_columns(
+                pl.lit(self.source_column.top_source_name).alias(self.source_column.source_column)
+            )
+            bottom = bottom.with_columns(
+                pl.lit(self.source_column.bottom_source_name).alias(self.source_column.source_column)
+            )
+
+        return top.select(top.columns).collect().vstack(bottom.select(top.columns).collect()).lazy()
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return (await self.to_lazy_polars()).collect().to_pandas()
+
+    def describe(self) -> str:
+        return f'Stacking {self.top.describe()} on top of {self.bottom.describe()}'
 
 
 @dataclass
@@ -1292,6 +1482,10 @@ class LiteralDictJob(RetrivalJob):
 
     data: dict[str, list]
     requests: list[RetrivalRequest]
+
+    @property
+    def loaded_columns(self) -> list[str]:
+        return list(self.data.keys())
 
     @property
     def request_result(self) -> RequestResult:
@@ -2168,3 +2362,75 @@ class CustomLazyPolarsJob(RetrivalJob):
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_polars()).to_pandas()
+
+
+@dataclass
+class PredictionJob(RetrivalJob):
+
+    job: RetrivalJob
+    model: Model
+    store: ContractStore
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.job.request_result
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.job.retrival_requests
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return await self.job.to_pandas()
+
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        predictor = self.model.exposed_model
+        if not predictor:
+            raise ValueError('No predictor defined for model')
+
+        df = await predictor.run_polars(
+            self.job,
+            self.store.model(self.model.name),
+        )
+        return df.lazy()
+
+    def remove_derived_features(self) -> RetrivalJob:
+        return self.job.remove_derived_features()
+
+    async def insert_into_output_source(self) -> None:
+        from aligned.feature_source import WritableFeatureSource
+
+        pred_source = self.model.predictions_view.source
+        if not pred_source:
+            raise ValueError('No source defined for predictions view')
+
+        if not isinstance(pred_source, WritableFeatureSource):
+            raise ValueError('Source for predictions view is not writable')
+
+        req = self.model.predictions_view.request('preds')
+        await pred_source.insert(self, [req])
+
+    async def upsert_into_output_source(self) -> None:
+        from aligned.feature_source import WritableFeatureSource
+
+        pred_source = self.model.predictions_view.source
+        if not pred_source:
+            raise ValueError('No source defined for predictions view')
+
+        if not isinstance(pred_source, WritableFeatureSource):
+            raise ValueError('Source for predictions view is not writable')
+
+        req = self.model.predictions_view.request('preds')
+        await pred_source.upsert(self, [req])
+
+    async def overwrite_output_source(self) -> None:
+        from aligned.feature_source import WritableFeatureSource
+
+        pred_source = self.model.predictions_view.source
+        if not pred_source:
+            raise ValueError('No source defined for predictions view')
+
+        if not isinstance(pred_source, WritableFeatureSource):
+            raise ValueError('Source for predictions view is not writable')
+
+        req = self.model.predictions_view.request('preds')
+        await pred_source.overwrite(self, [req])

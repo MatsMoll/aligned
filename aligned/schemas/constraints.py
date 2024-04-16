@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional as OptionalType
 
 from mashumaro.types import SerializableType
 
@@ -29,9 +29,13 @@ class SupportedConstraints:
 
     types: dict[str, type[Constraint]]
 
-    _shared: Optional['SupportedConstraints'] = None
+    _shared: OptionalType['SupportedConstraints'] = None
 
     def __init__(self) -> None:
+        from aligned.schemas.constraint_types import (
+            ReferencingColumn,
+        )
+
         self.types = {}
 
         for tran_type in [
@@ -44,6 +48,11 @@ class SupportedConstraints:
             InDomain,
             MaxLength,
             MinLength,
+            StartsWith,
+            EndsWith,
+            Unique,
+            Regex,
+            ReferencingColumn,
         ]:
             self.add(tran_type)
 

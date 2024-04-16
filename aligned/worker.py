@@ -14,7 +14,7 @@ from aligned.active_learning.write_policy import ActiveLearningWritePolicy
 from aligned.data_source.batch_data_source import ColumnFeatureMappable
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.feature_source import WritableFeatureSource
-from aligned.feature_store import FeatureStore, FeatureViewStore, ModelFeatureStore
+from aligned.feature_store import ContractStore, FeatureViewStore, ModelFeatureStore
 from aligned.retrival_job import RetrivalJob, StreamAggregationJob
 from aligned.sources.local import AsRepoDefinition
 from aligned.streams.interface import ReadableStream
@@ -132,7 +132,7 @@ class StreamWorker:
             self.should_prune_unused_features = should_prune_unused_features
         return self
 
-    def feature_views_by_topic(self, store: FeatureStore) -> dict[str, list[FeatureViewStore]]:
+    def feature_views_by_topic(self, store: ContractStore) -> dict[str, list[FeatureViewStore]]:
         from aligned.data_source.stream_data_source import HttpStreamSource
 
         feature_views_to_process = self.views_to_process or set()
