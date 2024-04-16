@@ -230,7 +230,7 @@ class ContractStore:
             enrichers=[],
         )
 
-    def combine(self, other: ContractStore) -> ContractStore:
+    def combined_with(self, other: ContractStore) -> ContractStore:
         """
         Combines two different feature stores together.
         """

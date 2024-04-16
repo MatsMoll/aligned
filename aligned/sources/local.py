@@ -37,10 +37,13 @@ class AsRepoDefinition:
     async def as_repo_definition(self) -> RepoDefinition:
         raise NotImplementedError()
 
-    async def feature_store(self) -> ContractStore:
+    async def as_contract_store(self) -> ContractStore:
         from aligned.feature_store import ContractStore
 
         return ContractStore.from_definition(await self.as_repo_definition())
+
+    async def feature_store(self) -> ContractStore:
+        return await self.as_contract_store()
 
 
 class StorageFileReference(AsRepoDefinition):

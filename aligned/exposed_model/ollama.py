@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from aligned.compiler.model import ModelContractWrapper
 from aligned.compiler.feature_factory import (
     Embedding,
@@ -14,9 +16,190 @@ import logging
 
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.exposed_model.interface import ExposedModel
+from aligned.schemas.feature import Feature, FeatureReference
+from aligned.retrival_job import RetrivalJob
+import polars as pl
 
+if TYPE_CHECKING:
+    from aligned.feature_store import ModelFeatureStore
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class OllamaGeneratePredictor(ExposedModel):
+
+    endpoint: str
+    model_name: str
+
+    prompt_template: str
+    input_features_versions: str
+
+    model_type: str = 'ollama_generate'
+
+    @property
+    def exposed_at_url(self) -> str | None:
+        return self.endpoint
+
+    def prompt_template_hash(self) -> str:
+        from hashlib import sha256
+
+        return sha256(self.prompt_template.encode(), usedforsecurity=False).hexdigest()
+
+    @property
+    def as_markdown(self) -> str:
+        return f"""Sending a `generate` request to an Ollama server located at: {self.endpoint}.
+
+This will use the model: `{self.model_name}` to generate the responses.
+
+And use the prompt template:
+```
+{self.prompt_template}
+```"""
+
+    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
+        return store.feature_references_for(self.input_features_versions)
+
+    async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
+        return store.using_version(self.input_features_versions).needed_entities()
+
+    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+        from ollama import AsyncClient
+        import polars as pl
+
+        client = AsyncClient(host=self.endpoint)
+
+        entities = await values.to_polars()
+
+        features = store.feature_references_for(self.input_features_versions)
+        expected_cols = {feat.name for feat in features}
+        missing_cols = expected_cols - set(entities.columns)
+
+        if missing_cols:
+            entities = await (
+                store.using_version(self.input_features_versions).features_for(values).to_polars()
+            )
+
+        prompts = entities
+
+        ret_vals = []
+        model_version = f"{self.prompt_template_hash()} -> {self.model_name}"
+
+        for value in prompts.iter_rows(named=True):
+            prompt = self.prompt_template.format(**value)
+
+            response = await client.generate(self.model_name, prompt, stream=False)
+
+            if isinstance(response, dict):
+                response['model_version'] = model_version
+            else:
+                logger.info(f"Unable to log prompt to the Ollama response. Got: {type(response)}")
+
+            ret_vals.append(response)
+
+        return prompts.hstack(pl.DataFrame(ret_vals))
+
+
+@dataclass
+class OllamaEmbeddingPredictor(ExposedModel):
+
+    endpoint: str
+    model_name: str
+    embedding_name: str
+
+    prompt_template: str
+    input_features_versions: str
+
+    model_type: str = 'ollama_embedding'
+
+    @property
+    def exposed_at_url(self) -> str | None:
+        return self.endpoint
+
+    def prompt_template_hash(self) -> str:
+        from hashlib import sha256
+
+        return sha256(self.prompt_template.encode(), usedforsecurity=False).hexdigest()
+
+    @property
+    def as_markdown(self) -> str:
+        return f"""Sending a `embedding` request to an Ollama server located at: {self.endpoint}.
+
+This will use the model: `{self.model_name}` to generate the embeddings."""
+
+    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
+        return store.feature_references_for(self.input_features_versions)
+
+    async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
+        return store.using_version(self.input_features_versions).needed_entities()
+
+    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+        from ollama import AsyncClient
+        import polars as pl
+
+        client = AsyncClient(host=self.endpoint)
+
+        expected_cols = [feat.name for feat in store.feature_references_for(self.input_features_versions)]
+
+        entities = await values.to_polars()
+        missing_cols = set(expected_cols) - set(entities.columns)
+        if missing_cols:
+            entities = (
+                await store.using_version(self.input_features_versions).features_for(values).to_polars()
+            )
+
+        prompts = entities
+
+        ret_vals = []
+
+        for value in prompts.iter_rows(named=True):
+            prompt = self.prompt_template.format(**value)
+
+            response = await client.embeddings(self.model_name, prompt)
+
+            if isinstance(response, dict):
+                embedding = response['embedding']  # type: ignore
+            else:
+                embedding = response
+
+            ret_vals.append(embedding)
+
+        model_version = f"{self.prompt_template_hash()} -> {self.model_name}"
+        return prompts.hstack([pl.Series(name=self.embedding_name, values=ret_vals)]).with_columns(
+            pl.lit(model_version).alias('model_version')
+        )
+
+
+def ollama_generate(
+    endpoint: str,
+    model: str,
+    prompt_template: str,
+    input_features_versions: str,
+) -> 'OllamaGeneratePredictor':
+
+    return OllamaGeneratePredictor(
+        endpoint=endpoint,
+        model_name=model,
+        prompt_template=prompt_template,
+        input_features_versions=input_features_versions,
+    )
+
+
+def ollama_embedding(
+    endpoint: str,
+    model: str,
+    input_features_versions: str,
+    prompt_template: str,
+    embedding_name: str | None = None,
+) -> 'OllamaEmbeddingPredictor':
+
+    return OllamaEmbeddingPredictor(
+        endpoint=endpoint,
+        model_name=model,
+        prompt_template=prompt_template,
+        input_features_versions=input_features_versions,
+        embedding_name=embedding_name or 'embedding',
+    )
 
 
 class OllamaGeneration:
