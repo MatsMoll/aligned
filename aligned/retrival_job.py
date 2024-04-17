@@ -365,15 +365,35 @@ class SupervisedJob:
     def train_set(self, train_size: float) -> SupervisedTrainJob:
         return SupervisedTrainJob(self, train_size)
 
-    def train_test(self, train_size: float) -> TrainTestJob:
+    def train_test(
+        self, train_size: float, splitter_factory: Callable[[SplitConfig], SplitterCallable] | None = None
+    ) -> TrainTestJob:
 
         cached_job = InMemoryCacheJob(self.job)
 
         event_timestamp = self.job.request_result.event_timestamp
 
+        train_config = SplitConfig(
+            left_size=train_size,
+            right_size=1 - train_size,
+            event_timestamp_column=event_timestamp,
+            target_columns=list(self.target_columns),
+        )
+
+        if splitter_factory:
+            train_splitter = splitter_factory(train_config)  # type: ignore
+        else:
+
+            def train_splitter(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
+                return (
+                    subset_polars(df, 0, train_config.left_size, event_timestamp),
+                    subset_polars(df, train_config.left_size, 1, event_timestamp),
+                )
+
+        train_job, test_job = cached_job.split(train_splitter, (train_size, 1 - train_size))
         return TrainTestJob(
-            train_job=SubsetJob(cached_job, 0, train_size, event_timestamp),
-            test_job=SubsetJob(cached_job, train_size, 1, event_timestamp),
+            train_job=train_job,
+            test_job=test_job,
             target_columns=self.target_columns,
         )
 
@@ -406,8 +426,8 @@ class SupervisedJob:
         )
 
         if splitter_factory:
-            train_splitter = splitter_factory(train_config)
-            validate_splitter = splitter_factory(test_config)
+            train_splitter = splitter_factory(train_config)  # type: ignore
+            validate_splitter = splitter_factory(test_config)  # type: ignore
         else:
 
             def train_splitter(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:

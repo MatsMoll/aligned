@@ -239,13 +239,13 @@ class TaxiDepartures:
 
     pickuped_at = EventTimestamp()
 
-    number_of_passengers = Int32()
+    number_of_passengers = Int32().is_optional()
 
-    dropoff_latitude = Float().is_required()
-    dropoff_longitude = Float().is_required()
+    dropoff_latitude = Float()
+    dropoff_longitude = Float()
 
-    pickup_latitude = Float().is_required()
-    pickup_longitude = Float().is_required()
+    pickup_latitude = Float()
+    pickup_longitude = Float()
 
 
 freshness = await TaxiDepartures.freshness_in_batch_source()
@@ -261,19 +261,16 @@ In addition will aligned also make sure that the returend features aligne with d
 ```python
 @feature_view(...)
 class TitanicPassenger:
-
     ...
-
     age = (
         Float()
-            .is_required()
             .lower_bound(0)
             .upper_bound(110)
     )
-    sibsp = Int32().lower_bound(0, is_inclusive=True)
+    sibsp = Int32().lower_bound(0).is_optional()
 ```
 
-Then since our feature view have a `is_required` and a `lower_bound`, will the `.validate(...)` command filter out the entites that do not follow that behavior.
+Then since our feature view have a `is_optional` and a `lower_bound`, will the `.validate(...)` command filter out the entites that do not follow that behavior.
 
 ```python
 from aligned.validation.pandera import PanderaValidator

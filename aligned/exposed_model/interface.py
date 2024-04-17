@@ -33,6 +33,8 @@ class PredictorFactory:
             OllamaEmbeddingPredictor,
             MLFlowServer,
             InMemMLFlowAlias,
+            ShadowModel,
+            ABTestModel,
         ]
         for predictor in types:
             self.supported_predictors[predictor.model_type] = predictor
@@ -53,6 +55,10 @@ class ExposedModel(Codable, SerializableType):
     def exposed_at_url(self) -> str | None:
         return None
 
+    @property
+    def as_markdown(self) -> str:
+        raise NotImplementedError(type(self))
+
     async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
         raise NotImplementedError(type(self))
 
@@ -67,6 +73,9 @@ class ExposedModel(Codable, SerializableType):
             self.model_type in PredictorFactory.shared().supported_predictors
         ), f'Unknown predictor_type: {self.model_type}'
         return self.to_dict()
+
+    def with_shadow(self, shadow_model: ExposedModel) -> ShadowModel:
+        return ShadowModel(model=self, shadow_model=shadow_model)
 
     @classmethod
     def _deserialize(cls, value: dict) -> ExposedModel:
@@ -182,3 +191,102 @@ class EnitityPredictor(ExposedModel):
 
         dict_data = dict(response.json())
         return pl.DataFrame(data=dict_data)
+
+
+@dataclass
+class ShadowModel(ExposedModel):
+
+    model: ExposedModel
+    shadow_model: ExposedModel
+
+    model_type: str = 'shadow'
+
+    @property
+    def exposed_at_url(self) -> str | None:
+        return self.model.exposed_at_url
+
+    @property
+    def as_markdown(self) -> str:
+        return f"Main model: {self.model.as_markdown}.\n\nShadow model: {self.shadow_model.as_markdown}."
+
+    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
+        model_features = await self.model.needed_features(store)
+        shadow_features = await self.shadow_model.needed_features(store)
+        return model_features + shadow_features
+
+    async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
+        model_entities = await self.model.needed_entities(store)
+        shadow_entities = await self.shadow_model.needed_entities(store)
+        return model_entities.union(shadow_entities)
+
+    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+        pred_view = store.model.predictions_view
+
+        model_df = await self.model.run_polars(values, store)
+        shadow_df = await self.shadow_model.run_polars(values, store)
+
+        if pred_view.is_shadow_model_flag:
+            model_df = model_df.with_columns(pl.lit(False).alias(pred_view.is_shadow_model_flag.name))
+            shadow_df = shadow_df.with_columns(pl.lit(True).alias(pred_view.is_shadow_model_flag.name))
+        else:
+            logger.info(
+                'The model does not have a shadow model flag. '
+                'This makes it harder to seperate shadow and production predictions.\n'
+                'This can be set with `is_shadow = Bool().is_shadow_model_flag()`'
+            )
+        return model_df.vstack(shadow_df)
+
+
+@dataclass
+class ABTestModel(ExposedModel):
+    """
+    A model that runs multiple models in parallel and returns the
+    result of one of them based on a weight and a random value.
+    """
+
+    models: list[tuple[ExposedModel, float]]
+
+    model_type: str = 'abtest'
+
+    @property
+    def exposed_at_url(self) -> str | None:
+        return self.models[0][0].exposed_at_url
+
+    @property
+    def as_markdown(self) -> str:
+        model_definitions = [
+            f"Model {i}: {model.as_markdown} with weight {weight}."
+            for i, (model, weight) in enumerate(self.models)
+        ]
+        return '\n\n'.join(model_definitions)
+
+    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
+        features = []
+        for model, _ in self.models:
+            features += await model.needed_features(store)
+        return features
+
+    async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
+        entities = set()
+        for model, _ in self.models:
+            entities = entities.union(await model.needed_entities(store))
+        return entities
+
+    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+        import random
+
+        total_weight = sum([weight for _, weight in self.models])
+        total_sum = 0
+
+        random_value = random.random()
+
+        for model, weight in self.models:
+            total_sum += weight / total_weight
+            if random_value < total_sum:
+                return await model.run_polars(values, store)
+
+        return await self.models[-1][0].run_polars(values, store)
+
+
+def ab_test_model(models: list[tuple[ExposedModel, float]]) -> ABTestModel:
+    return ABTestModel(models=models)

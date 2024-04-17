@@ -911,6 +911,9 @@ class DateFeature(FeatureFactory):
 
 
 class Bool(EquatableFeature, LogicalOperatableFeature):
+
+    _is_shadow_model_flag: bool = field(default=False)
+
     @property
     def dtype(self) -> FeatureType:
         return FeatureType.bool()
@@ -919,6 +922,10 @@ class Bool(EquatableFeature, LogicalOperatableFeature):
         if self.constraints and Optional() in self.constraints:
             return Bool().is_optional()
         return Bool()
+
+    def is_shadow_model_flag(self: Bool, is_shadow: bool = True) -> Bool:
+        self._is_shadow_model_flag = is_shadow
+        return self
 
 
 class Float(ArithmeticFeature, DecimalOperations):

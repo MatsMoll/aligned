@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aligned"
-version = "0.0.93"
+version = "0.0.94"
 description = "A data managment and lineage tool for ML applications."
 authors = ["Mats E. Mollestad <mats@mollestad.no>"]
 license = "Apache-2.0"
@@ -15,6 +15,7 @@ keywords = [
     'feature',
     'store',
     'feature-store',
+    'mlops',
     'feast',
     'tecton',
     'dbt',

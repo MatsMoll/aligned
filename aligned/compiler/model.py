@@ -379,6 +379,7 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
 
         if isinstance(feature, ModelVersion):
             inference_view.model_version_column = feature.feature()
+
         if isinstance(feature, FeatureView):
             compiled = feature.compile()
             inference_view.entities.update(compiled.entities)
@@ -429,6 +430,8 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
             inference_view.entities.add(feature.feature())
         elif isinstance(feature, FeatureFactory):
             inference_view.features.add(feature.feature())
+        if isinstance(feature, Bool) and feature._is_shadow_model_flag:
+            inference_view.is_shadow_model_flag = feature.feature()
 
     # Needs to run after the feature views have compiled
     features = metadata.features.compile()
