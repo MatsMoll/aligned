@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Callable
 
 from pytz import timezone
 from datetime import datetime
@@ -535,10 +536,12 @@ class FileFactualJob(RetrivalJob):
     async def to_lazy_polars(self) -> pl.LazyFrame:
         return await self.file_transformations(await self.source.to_lazy_polars())
 
-    def log_each_job(self) -> RetrivalJob:
-        from aligned.retrival_job import LogJob
-
+    def log_each_job(self, logger_func: Callable[[object], None] | None = None) -> RetrivalJob:
         if isinstance(self.source, RetrivalJob):
-            return FileFactualJob(LogJob(self.source), self.requests, self.facts)
+            return FileFactualJob(
+                self.source.log_each_job(logger_func),
+                self.requests,
+                self.facts.log_each_job(logger_func),
+            )
         else:
             return self

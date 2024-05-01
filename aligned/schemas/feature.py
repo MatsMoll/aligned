@@ -118,8 +118,8 @@ class FeatureType(Codable):
             'int16': 'Int16',
             'int32': 'Int32',
             'int64': 'Int64',
-            'float': np.float64,
-            'double': np.double,
+            'float': np.float32,
+            'double': np.float64,
             'bool': 'boolean',
             'date': np.datetime64,
             'datetime': np.datetime64,
@@ -144,6 +144,9 @@ class FeatureType(Codable):
             else:
                 return pl.List(pl.Utf8)  # type: ignore
 
+        if self.is_embedding:
+            return pl.List(pl.Float64)  # type: ignore
+
         for name, dtype in NAME_POLARS_MAPPING:
             if name == self.name:
                 return dtype
@@ -161,6 +164,9 @@ class FeatureType(Codable):
         if self.name.startswith('array-'):
             sub_type = '-'.join(self.name.split('-')[1:])
             return ff.List(FeatureType(name=sub_type).feature_factory)
+
+        if self.is_embedding:
+            return ff.Embedding(embedding_size=self.embedding_size())
 
         return {
             'string': ff.String(),
@@ -180,8 +186,8 @@ class FeatureType(Codable):
             'time': ff.Timestamp(),
             'timedelta': ff.Timestamp(),
             'uuid': ff.UUID(),
-            'array': ff.Embedding(),
-            'embedding': ff.Embedding(),
+            'array': ff.List(ff.String()),
+            'embedding': ff.Embedding(768),
             'json': ff.Json(),
         }[self.name]
 
@@ -291,8 +297,15 @@ class FeatureType(Codable):
         return FeatureType(name='array')
 
     @staticmethod
-    def embedding() -> FeatureType:
-        return FeatureType(name='embedding')
+    def embedding(size: int) -> FeatureType:
+        return FeatureType(name=f'embedding-{size}')
+
+    @property
+    def is_embedding(self) -> bool:
+        return self.name.startswith('embedding')
+
+    def embedding_size(self) -> int:
+        return int(self.name.split('-')[1])
 
 
 @dataclass

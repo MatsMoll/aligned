@@ -100,6 +100,10 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
 
             jobs.append(job)
 
+        fact_features = set(facts.loaded_columns) - set(request.request_result.entity_columns)
+        if fact_features:
+            jobs.append(facts)
+
         if len(combined_requests) > 0 or len(jobs) > 1:
             return CombineFactualJob(
                 jobs=jobs,

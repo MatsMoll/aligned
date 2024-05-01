@@ -1726,7 +1726,7 @@ class WordVectoriser(Transformation):
     model: EmbeddingModel
 
     name = 'word_vectoriser'
-    dtype = FeatureType.embedding()
+    dtype = FeatureType.embedding(768)
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return await self.model.vectorise_pandas(df[self.key])
@@ -2224,7 +2224,7 @@ class OllamaEmbedding(Transformation):
 
     host_env: str | None = None
     name = 'ollama_embedding'
-    dtype = FeatureType.embedding()
+    dtype = FeatureType.embedding(768)
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         from ollama import AsyncClient

@@ -1118,10 +1118,10 @@ class String(
     def aggregate(self) -> StringAggregation:
         return StringAggregation(self)
 
-    def ollama_embedding(self, model: str, host_env: str | None = None) -> Embedding:
+    def ollama_embedding(self, model: str, embedding_size: int, host_env: str | None = None) -> Embedding:
         from aligned.compiler.transformation_factory import OllamaEmbedding
 
-        feature = Embedding()
+        feature = Embedding(embedding_size)
         feature.transformation = OllamaEmbedding(model, self, host_env)
         return feature
 
@@ -1156,9 +1156,8 @@ class String(
     def sentence_vector(self, model: EmbeddingModel) -> Embedding:
         from aligned.compiler.transformation_factory import WordVectoriserFactory
 
-        feature = Embedding()
+        feature = Embedding(model.embedding_size or 0)
         feature.transformation = WordVectoriserFactory(self, model)
-        feature.embedding_size = model.embedding_size
         return feature
 
     def embedding(self, model: EmbeddingModel) -> Embedding:
@@ -1291,20 +1290,25 @@ class EventTimestamp(DateFeature, ArithmeticFeature):
         )
 
 
+ValidFrom = EventTimestamp
+
+
+@dataclass
 class Embedding(FeatureFactory):
 
-    sub_type: FeatureFactory
-    embedding_size: int | None = None
+    embedding_size: int
     indexes: list[VectorIndexFactory] | None = None
+    sub_type: FeatureFactory = field(default_factory=Float)
 
     def copy_type(self) -> Embedding:
         if self.constraints and Optional() in self.constraints:
-            return Embedding().is_optional()
-        return Embedding()
+            return Embedding(sub_type=self.sub_type, embedding_size=self.embedding_size).is_optional()
+
+        return Embedding(sub_type=self.sub_type, embedding_size=self.embedding_size)
 
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType.embedding()
+        return FeatureType.embedding(self.embedding_size or 0)
 
     def indexed(
         self,

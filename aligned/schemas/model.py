@@ -53,9 +53,11 @@ class PredictionsView(Codable):
     entities: set[Feature]
     features: set[Feature]
     derived_features: set[DerivedFeature]
+    event_timestamp: EventTimestamp | None = field(default=None)
+
     model_version_column: Feature | None = field(default=None)
     is_shadow_model_flag: Feature | None = field(default=None)
-    event_timestamp: EventTimestamp | None = field(default=None)
+
     source: BatchDataSource | None = field(default=None)
     application_source: BatchDataSource | None = field(default=None)
     stream_source: StreamDataSource | None = field(default=None)

@@ -299,6 +299,9 @@ store.add_model(MyModel)
 This makes it possible to define different contracts per project, or team. As a result, you can also combine differnet stores with.
 
 ```python
+forecasting_store = await ContractStore.from_dir("path/for/forecasting")
+recommendation_store = await ContractStore.from_dir("path/for/recommendation")
+
 combined_store = recommendation_store.combined_with(forecasting_store)
 ```
 

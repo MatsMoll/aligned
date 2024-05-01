@@ -41,7 +41,6 @@ class DatasetMetadataInterface(Protocol):
 
 @dataclass
 class DatasetMetadata(Codable):
-
     id: str
     name: str | None = field(default=None)
     description: str | None = field(default=None)
@@ -121,7 +120,7 @@ class DatasetStore(Codable, SerializableType):
     async def list_datasets(self) -> GroupedDatasetList:
         raise NotImplementedError(type(self))
 
-    async def store_raw_data(self, metadata: DatasetMetadata) -> None:
+    async def store_raw_data(self, metadata: SingleDatasetMetadata) -> None:
         raise NotImplementedError(type(self))
 
     async def store_train_test(self, metadata: TrainDatasetMetadata) -> None:
@@ -130,13 +129,13 @@ class DatasetStore(Codable, SerializableType):
     async def store_train_test_validate(self, metadata: TrainDatasetMetadata) -> None:
         raise NotImplementedError(type(self))
 
-    async def store_active_learning(self, metadata: DatasetMetadata) -> None:
+    async def store_active_learning(self, metadata: SingleDatasetMetadata) -> None:
         raise NotImplementedError(type(self))
 
-    async def metadata_for(self, dataset_id: str) -> DatasetMetadata | None:
+    async def metadata_for(self, dataset_id: str) -> DatasetMetadataInterface | None:
         raise NotImplementedError(type(self))
 
-    async def delete_metadata_for(self, dataset_id: str) -> DatasetMetadata | None:
+    async def delete_metadata_for(self, dataset_id: str) -> DatasetMetadataInterface | None:
         raise NotImplementedError(type(self))
 
 
@@ -158,9 +157,7 @@ class JsonDatasetStore(DatasetStore):
                 active_learning=[],
             )
 
-    def index_of(
-        self, metadata_id: str, array: list[DatasetMetadata] | list[TrainDatasetMetadata]
-    ) -> int | None:
+    def index_of(self, metadata_id: str, array: list[DatasetMetadataInterface]) -> int | None:
 
         for i, dataset in enumerate(array):
             if dataset.id == metadata_id:
@@ -196,7 +193,7 @@ class JsonDatasetStore(DatasetStore):
 
         await self.source.write(data)
 
-    async def store_raw_data(self, metadata: DatasetMetadata) -> None:
+    async def store_raw_data(self, metadata: SingleDatasetMetadata) -> None:
         datasets = await self.list_datasets()
 
         index = self.index_of(metadata.id, datasets.raw_data)
@@ -210,7 +207,7 @@ class JsonDatasetStore(DatasetStore):
             data = data.encode('utf-8')
         await self.source.write(data)
 
-    async def store_active_learning(self, metadata: DatasetMetadata) -> None:
+    async def store_active_learning(self, metadata: SingleDatasetMetadata) -> None:
         datasets = await self.list_datasets()
 
         index = self.index_of(metadata.id, datasets.active_learning)
@@ -224,14 +221,14 @@ class JsonDatasetStore(DatasetStore):
             data = data.encode('utf-8')
         await self.source.write(data)
 
-    async def metadata_for(self, dataset_id: str) -> DatasetMetadata | None:
+    async def metadata_for(self, dataset_id: str) -> DatasetMetadataInterface | None:
         datasets = await self.list_datasets()
         for dataset in datasets.all:
             if dataset.id == dataset_id:
                 return dataset
         return None
 
-    async def delete_metadata_for(self, dataset_id: str) -> DatasetMetadata | None:
+    async def delete_metadata_for(self, dataset_id: str) -> DatasetMetadataInterface | None:
         datasets = await self.list_datasets()
         index = self.index_of(dataset_id, datasets.all)
         if index is None:

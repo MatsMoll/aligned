@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import polars as pl
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 from dataclasses import dataclass
 from aligned.retrival_job import RetrivalJob
 from aligned.schemas.codable import Codable
@@ -290,3 +290,57 @@ class ABTestModel(ExposedModel):
 
 def ab_test_model(models: list[tuple[ExposedModel, float]]) -> ABTestModel:
     return ABTestModel(models=models)
+
+
+@dataclass
+class DillFunction(ExposedModel):
+
+    function: bytes
+
+    model_type: str = 'dill_function'
+
+    @property
+    def exposed_at_url(self) -> str | None:
+        return None
+
+    @property
+    def as_markdown(self) -> str:
+        return 'A function stored in a dill file.'
+
+    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
+        default = store.model.features.default_version
+        return store.feature_references_for(store.selected_version or default)
+
+    async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
+        return store.request().request_result.entities
+
+    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+        import dill
+        import inspect
+
+        function = dill.loads(self.function)
+        if inspect.iscoroutinefunction(function):
+            return await function(values, store)
+        else:
+            return function(values, store)
+
+
+def python_function(function: Callable[[pl.DataFrame], pl.Series]) -> DillFunction:
+    import dill
+
+    async def function_wrapper(values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+
+        pred_columns = store.model.predictions_view.labels()
+        if len(pred_columns) != 1:
+            raise ValueError(f"Expected exactly one prediction column, got {len(pred_columns)} columns.")
+
+        feature_request = store.features_for(values).log_each_job()
+        input_features = feature_request.request_result.feature_columns
+        features = await feature_request.to_polars()
+
+        result = features.with_columns(
+            function(features.select(input_features)).alias(list(pred_columns)[0].name)
+        )
+        return result
+
+    return DillFunction(function=dill.dumps(function_wrapper))

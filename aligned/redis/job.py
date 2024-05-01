@@ -81,7 +81,7 @@ class FactualRedisJob(RetrivalJob):
                         .cast(feature.dtype.polars_type)
                         .alias(feature.name)
                     )
-                elif feature.dtype == FeatureType.embedding() or feature.dtype == FeatureType.array():
+                elif feature.dtype.is_embedding or feature.dtype.is_array:
                     import numpy as np
 
                     reqs = reqs.with_columns(pl.col(feature.name).apply(lambda row: np.frombuffer(row)))

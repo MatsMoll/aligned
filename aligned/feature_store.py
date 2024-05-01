@@ -199,27 +199,24 @@ class ContractStore:
         Returns:
             FeatureStore: A ready to use feature store
         """
-        feature_views = {fv.name: fv for fv in repo.feature_views}
         combined_feature_views = {fv.name: fv for fv in repo.combined_feature_views}
 
         ContractStore.register_enrichers(repo.enrichers)
-        sources = {
-            FeatureLocation.feature_view(view.name).identifier: view.materialized_source
-            if view.materialized_source
-            else view.source
-            for view in repo.feature_views
-        } | {
-            FeatureLocation.model(model.name).identifier: model.predictions_view.source
-            for model in repo.models
-            if model.predictions_view.source is not None
-        }
 
-        return ContractStore(
-            feature_views=feature_views,
+        store = ContractStore(
+            feature_views={},
             combined_feature_views=combined_feature_views,
-            models={model.name: model for model in repo.models},
-            feature_source=BatchFeatureSource(sources),
+            models={},
+            feature_source=BatchFeatureSource({}),
         )
+
+        for view in repo.feature_views:
+            store.add_compiled_view(view)
+
+        for model in repo.models:
+            store.add_compiled_model(model)
+
+        return store
 
     def repo_definition(self) -> RepoDefinition:
         return RepoDefinition(
@@ -645,7 +642,7 @@ class ContractStore:
             view (CompiledFeatureView): The feature view to add
         """
         if view.name in self.feature_views:
-            raise ValueError(f'Feature view with name {view.name} already exists')
+            raise ValueError(f'Feature view with name "{view.name}" already exists')
 
         self.feature_views[view.name] = view
         if isinstance(self.feature_source, BatchFeatureSource):
@@ -682,14 +679,16 @@ class ContractStore:
 
         self.models[model.name] = model
 
-        if model.predictions_view.source is None:
-            logging.info(f"Model '{model.name}' has no source.")
-            return
+        source = None
+        if model.predictions_view.source:
+            source = model.predictions_view.source
+        elif model.exposed_model:
+            from aligned.data_source.model_predictor import PredictModelSource
 
-        if isinstance(self.feature_source, BatchFeatureSource):
-            self.feature_source.sources[
-                FeatureLocation.model(model.name).identifier
-            ] = model.predictions_view.source
+            source = PredictModelSource(self.model(model.name))
+
+        if isinstance(self.feature_source, BatchFeatureSource) and source is not None:
+            self.feature_source.sources[FeatureLocation.model(model.name).identifier] = source
 
     def with_source(self, source: FeatureSourceable = None) -> ContractStore:
         """
@@ -829,7 +828,7 @@ class ContractStore:
         if location.location == 'feature_view':
             return self.feature_views[location.name].request_all.needed_requests[0]
         elif location.location == 'model':
-            return self.models[location.name].predictions_view.request('write')
+            return self.models[location.name].predictions_view.request('write', model_version_as_entity=True)
         elif location.location == 'combined_view':
             raise NotImplementedError(
                 'Have not implemented write requests for combined views. '
@@ -1570,8 +1569,8 @@ class FeatureViewStore:
         features_in_models = self.store.model_features_for(self.view.name)
         return self.select(features_in_models)
 
-    def select_columns(self, columns: list[str]) -> RetrivalJob:
-        return self.all_columns().select_columns(set(columns))
+    def select_columns(self, columns: list[str], limit: int | None = None) -> RetrivalJob:
+        return self.select(set(columns)).all(limit)
 
     def all(self, limit: int | None = None) -> RetrivalJob:
         return self.all_columns(limit)

@@ -4,7 +4,6 @@ from datetime import timedelta, timezone, datetime
 
 from typing import TYPE_CHECKING, Awaitable, TypeVar, Any, Callable, Coroutine
 from dataclasses import dataclass
-from uuid import uuid4
 
 from mashumaro.types import SerializableType
 from aligned.data_file import DataFileReference
@@ -350,6 +349,9 @@ class BatchDataSource(Codable, SerializableType):
     def depends_on(self) -> set[FeatureLocation]:
         return set()
 
+    def tags(self) -> list[str]:
+        return [self.type_name]
+
 
 @dataclass
 class CustomMethodDataSource(BatchDataSource):
@@ -469,10 +471,10 @@ class FilteredDataSource(BatchDataSource):
             )
         source, request = requests[0]
 
-        if isinstance(source.condition, Feature):
-            request.features.add(source.condition)
-        else:
+        if isinstance(source.condition, DerivedFeature):
             request.derived_features.add(source.condition)
+        else:
+            request.features.add(source.condition)
 
         return source.source.features_for(facts, request).filter(source.condition)
 
@@ -497,10 +499,10 @@ class FilteredDataSource(BatchDataSource):
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
 
-        if isinstance(self.condition, Feature):
-            request.features.add(self.condition)
-        else:
+        if isinstance(self.condition, DerivedFeature):
             request.derived_features.add(self.condition)
+        else:
+            request.features.add(self.condition)
 
         return (
             self.source.all_data(request, limit)
@@ -801,7 +803,7 @@ class StackSource(BatchDataSource):
     type_name: str = 'stack'
 
     @property
-    def source_column_config(self):
+    def source_column_config(self): # type: ignore
         from aligned.retrival_job import StackSourceColumn
 
         if not self.source_column:
@@ -813,7 +815,7 @@ class StackSource(BatchDataSource):
             source_column=self.source_column,
         )
 
-    def sub_request(self, request: RetrivalRequest, config) -> RetrivalRequest:
+    def sub_request(self, request: RetrivalRequest, config) -> RetrivalRequest: # type: ignore
         return RetrivalRequest(
             name=request.name,
             location=request.location,
@@ -1041,7 +1043,7 @@ def data_for_request(request: RetrivalRequest, size: int) -> pl.DataFrame:
     needed_features = request.features.union(request.entities)
     schema = {feature.name: feature.dtype.polars_type for feature in needed_features}
 
-    exprs = []
+    exprs = {}
 
     for feature in needed_features:
         dtype = feature.dtype
@@ -1073,7 +1075,7 @@ def data_for_request(request: RetrivalRequest, size: int) -> pl.DataFrame:
             if is_unique:
                 values = np.arange(0, size, dtype=dtype.pandas_type)
             else:
-                values = np.random.random(size)
+                values = np.random.random(size) * 1000
 
                 if max_value is not None:
                     values = values * max_value
@@ -1093,12 +1095,12 @@ def data_for_request(request: RetrivalRequest, size: int) -> pl.DataFrame:
         if is_optional:
             values = np.where(np.random.random(size) > 0.5, values, np.NaN)
 
-        exprs.append(pl.lit(values).alias(feature.name))
+        exprs[feature.name] = values
 
     return pl.DataFrame(exprs, schema=schema)
 
 
-class DummyDataBatchSource(BatchDataSource):
+class DummyDataSource(BatchDataSource):
     """
     The DummyDataBatchSource is a data source that generates random data for a given request.
     This can be useful for testing and development purposes.
@@ -1123,7 +1125,7 @@ class DummyDataBatchSource(BatchDataSource):
     type_name: str = 'dummy_data'
 
     def job_group_key(self) -> str:
-        return str(uuid4())
+        return self.type_name
 
     @classmethod
     def multi_source_features_for(

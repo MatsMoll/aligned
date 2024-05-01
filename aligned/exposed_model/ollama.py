@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 from aligned.compiler.model import ModelContractWrapper
 from aligned.compiler.feature_factory import (
     Embedding,
@@ -19,9 +18,8 @@ from aligned.exposed_model.interface import ExposedModel
 from aligned.schemas.feature import Feature, FeatureReference
 from aligned.retrival_job import RetrivalJob
 import polars as pl
+from aligned.feature_store import ModelFeatureStore
 
-if TYPE_CHECKING:
-    from aligned.feature_store import ModelFeatureStore
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +150,9 @@ This will use the model: `{self.model_name}` to generate the embeddings."""
 
         ret_vals = []
 
-        for value in prompts.iter_rows(named=True):
+        for index, value in enumerate(prompts.iter_rows(named=True)):
+            logger.info(f"Processing row {index + 1}/{len(prompts)}")
+
             prompt = self.prompt_template.format(**value)
 
             response = await client.embeddings(self.model_name, prompt)
@@ -222,7 +222,7 @@ class OllamaGeneration:
 
 
 def ollama_generate_contract(
-    prompt: FeatureFactory,
+    prompt: FeatureReferencable,
     contract_name: str,
     endpoint: str,
     model: str,
@@ -237,7 +237,7 @@ def ollama_generate_contract(
         exposed_model=ExposedModel.ollama_generate(
             endpoint=endpoint,
             model=model,
-            prompt_template=f"{{{prompt.name}}}",
+            prompt_template=f"{{{prompt.feature_reference().name}}}",
             input_features_versions='default',
         ),
         output_source=prediction_source,
@@ -281,24 +281,40 @@ def ollama_generate_contract(
 
 
 def ollama_embedding_contract(
-    input: FeatureFactory | list[FeatureFactory],
+    input: FeatureReferencable | list[FeatureReferencable],
     contract_name: str,
     endpoint: str,
     model: str,
     entities: list[FeatureFactory] | FeatureFactory,
     output_source: BatchDataSource | None = None,
     prompt_template: str | None = None,
+    embedding_size: int | None = None,
 ):
     from aligned import model_contract, FeatureInputVersions
 
-    if isinstance(input, FeatureFactory) and prompt_template is None:
-        prompt_template = f"{{{input.name}}}"
+    if isinstance(input, FeatureReferencable) and prompt_template is None:
+        ref = input.feature_reference()
+        prompt_template = f"{{{ref.name}}}"
 
     if prompt_template is None:
         raise ValueError('prompt_template must be provided if input is a list')
 
     if not isinstance(input, list):
         input = [input]
+
+    emb_size = embedding_size
+
+    ollama_model_sizes = {
+        'nomic-embed-text': 768,
+        'mxbai-embed-large': 512,
+        'all-minilm': 768,
+    }
+
+    if not emb_size:
+        emb_size = ollama_model_sizes.get(model, 768)
+
+    if not emb_size:
+        raise ValueError('embedding_size must be provided if model is not in the default sizes')
 
     @model_contract(
         name=contract_name,
@@ -316,7 +332,7 @@ def ollama_embedding_contract(
     )
     class OllamaEmbedding:
 
-        embedding = Embedding()
+        embedding = Embedding(embedding_size=emb_size)
 
     if not isinstance(entities, list):
         entities = [entities]
