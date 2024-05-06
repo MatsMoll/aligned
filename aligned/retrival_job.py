@@ -16,6 +16,7 @@ from polars.type_aliases import TimeUnit
 from prometheus_client import Histogram
 
 from aligned.exceptions import UnableToFindFileException
+
 from aligned.request.retrival_request import FeatureRequest, RequestResult, RetrivalRequest
 from aligned.schemas.feature import Feature, FeatureType
 from aligned.schemas.derivied_feature import DerivedFeature
@@ -133,7 +134,7 @@ class TrainTestJob:
         dataset_store: DatasetStore | StorageFileReference,
         metadata: DatasetMetadata | None = None,
         id: str | None = None,
-    ) -> TrainTestValidateJob:
+    ) -> TrainTestJob:
         from uuid import uuid4
         from aligned.schemas.folder import DatasetMetadata
 
@@ -230,7 +231,7 @@ class TrainTestValidateJob:
     def validate(self) -> SupervisedJob:
         return SupervisedJob(self.validate_job, self.target_columns, self.should_filter_out_null_targets)
 
-    def store_dataset_at_directory(
+    async def store_dataset_at_directory(
         self,
         directory: Directory,
         dataset_store: DatasetStore | StorageFileReference,
@@ -248,7 +249,7 @@ class TrainTestValidateJob:
             )
 
         run_dir = directory.sub_directory(metadata.id)
-        return self.store_dataset(
+        return await self.store_dataset(
             dataset_store=dataset_store,
             train_source=run_dir.parquet_at('train.parquet'),  # type: ignore
             test_source=run_dir.parquet_at('test.parquet'),  # type: ignore
@@ -256,7 +257,7 @@ class TrainTestValidateJob:
             metadata=metadata,
         )
 
-    def store_dataset(
+    async def store_dataset(
         self,
         dataset_store: DatasetStore | StorageFileReference,
         train_source: DataFileReference,
@@ -328,12 +329,26 @@ class TrainTestValidateJob:
         async def update_metadata() -> None:
             await data_store.store_train_test_validate(test_metadata)
 
-        return TrainTestValidateJob(
-            train_job=self.train_job.cached_at(train_source).on_load(update_metadata).cached_at(train_source),
-            test_job=self.test_job.cached_at(test_source).on_load(update_metadata).cached_at(test_source),
-            validate_job=self.validate_job.cached_at(validate_source)
+        _ = (
+            await self.train_job.cached_at(train_source)
             .on_load(update_metadata)
-            .cached_at(validate_source),
+            .cached_at(train_source)
+            .to_lazy_polars()
+        )
+        _ = (
+            await self.test_job.cached_at(test_source)
+            .on_load(update_metadata)
+            .cached_at(test_source)
+            .to_lazy_polars()
+        )
+        _ = await (
+            self.validate_job.cached_at(validate_source).on_load(update_metadata).cached_at(validate_source)
+        ).to_lazy_polars()
+
+        return TrainTestValidateJob(
+            train_job=train_source.all(request_result),
+            test_job=test_source.all(request_result),
+            validate_job=validate_source.all(request_result),
             target_columns=self.target_columns,
         )
 

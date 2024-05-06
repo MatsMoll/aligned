@@ -2,7 +2,7 @@ from __future__ import annotations
 from copy import copy
 from datetime import timedelta, timezone, datetime
 
-from typing import TYPE_CHECKING, Awaitable, TypeVar, Any, Callable, Coroutine
+from typing import TYPE_CHECKING, Awaitable, TypeVar, Any, Callable, Coroutine, TypeVar
 from dataclasses import dataclass
 
 from mashumaro.types import SerializableType
@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from aligned.retrival_job import RetrivalJob
+
+T = TypeVar('T')
 
 
 class BatchDataSourceFactory:
@@ -274,9 +276,6 @@ class BatchDataSource(Codable, SerializableType):
         schema = await source.schema()
         >>> {'passenger_id': FeatureType(name='int64'), ...}
         ```
-
-        Raises:
-            NotImplementedError: By default will this error be raised if not implemented
 
         Returns:
             dict[str, FeatureType]: A dictionary containing the column name and the feature type
@@ -803,7 +802,7 @@ class StackSource(BatchDataSource):
     type_name: str = 'stack'
 
     @property
-    def source_column_config(self): # type: ignore
+    def source_column_config(self):  # type: ignore
         from aligned.retrival_job import StackSourceColumn
 
         if not self.source_column:
@@ -815,7 +814,7 @@ class StackSource(BatchDataSource):
             source_column=self.source_column,
         )
 
-    def sub_request(self, request: RetrivalRequest, config) -> RetrivalRequest: # type: ignore
+    def sub_request(self, request: RetrivalRequest, config) -> RetrivalRequest:  # type: ignore
         return RetrivalRequest(
             name=request.name,
             location=request.location,

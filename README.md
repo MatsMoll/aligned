@@ -8,6 +8,7 @@ Aligned does this through two things.
 1. A light weight data managment system. Making it possible to query a data lake and databases.
 2. Tooling to define a `model_contract`. Clearing up common unanswerd questions through code.
 
+Therefore, aligned can also be seen as a way to implement interfaces or the [strategy pattern](https://en.wikipedia.org/wiki/Strategy_pattern) into data applications.
 
 Furthermore, Aligned collect data lineage between models, basic feature transformations. While also making it easy to reduce data leakage with point-in-time valid data and fix other problems described in [Sculley et al. [2015]](https://papers.nips.cc/paper/2015/file/86df7dcfd896fcaf2674f757a2463eba-Paper.pdf).
 
