@@ -128,7 +128,7 @@ class TrainTestJob:
     def test(self) -> SupervisedJob:
         return SupervisedJob(self.test_job, self.target_columns)
 
-    def store_dataset_at_directory(
+    async def store_dataset_at_directory(
         self,
         directory: Directory,
         dataset_store: DatasetStore | StorageFileReference,
@@ -146,14 +146,14 @@ class TrainTestJob:
             )
 
         run_dir = directory.sub_directory(metadata.id)
-        return self.store_dataset(
+        return await self.store_dataset(
             dataset_store=dataset_store,
             train_source=run_dir.parquet_at('train.parquet'),  # type: ignore
             test_source=run_dir.parquet_at('test.parquet'),  # type: ignore
             metadata=metadata,
         )
 
-    def store_dataset(
+    async def store_dataset(
         self,
         dataset_store: DatasetStore | StorageFileReference,
         metadata: DatasetMetadata,
@@ -201,9 +201,22 @@ class TrainTestJob:
         async def update_metadata() -> None:
             await data_store.store_train_test(test_metadata)
 
+        _ = (
+            self.train_job.cached_at(train_source)
+            .on_load(update_metadata)
+            .cached_at(train_source)
+            .to_lazy_polars()
+        )
+        _ = (
+            self.test_job.cached_at(test_source)
+            .on_load(update_metadata)
+            .cached_at(test_source)
+            .to_lazy_polars()
+        )
+
         return TrainTestJob(
-            train_job=self.train_job.on_load(update_metadata).cached_at(train_source),
-            test_job=self.test_job.on_load(update_metadata).cached_at(test_source),
+            train_job=train_source.all(request_result),
+            test_job=test_source.all(request_result),
             target_columns=self.target_columns,
         )
 
