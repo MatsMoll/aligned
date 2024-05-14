@@ -560,8 +560,12 @@ class ContractStore:
         )
 
     def requests_for_features(
-        self, features: list[str], event_timestamp_column: str | None = None
+        self, features: list[str] | list[FeatureReference], event_timestamp_column: str | None = None
     ) -> FeatureRequest:
+
+        features = [
+            feature.identifier if isinstance(feature, FeatureReference) else feature for feature in features
+        ]
         return self.requests_for(RawStringFeatureRequest(set(features)), event_timestamp_column)
 
     def requests_for(

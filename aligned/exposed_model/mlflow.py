@@ -126,7 +126,7 @@ class InMemMLFlowAlias(ExposedModel):
 
         if mv and model_version_column:
             df = df.with_columns(
-                pl.lit(mv.run_id).alias(model_version_column.name),
+                pl.lit(mv.version).alias(model_version_column.name),
             )
 
         return df.with_columns(
@@ -216,7 +216,7 @@ Assumes that it is the model: `{self.model_name}` with alias: `{self.model_alias
 
         if mv and model_version_column:
             df = df.with_columns(
-                pl.lit(mv.run_id).alias(model_version_column.name),
+                pl.lit(mv.version).alias(model_version_column.name),
             )
 
         return df.with_columns(

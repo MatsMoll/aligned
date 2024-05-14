@@ -162,7 +162,12 @@ class TrainTestJob:
         train_size: float | None = None,
         test_size: float | None = None,
     ) -> TrainTestJob:
-        from aligned.schemas.folder import TrainDatasetMetadata, JsonDatasetStore, StorageFileSource
+        from aligned.schemas.folder import (
+            TrainDatasetMetadata,
+            JsonDatasetStore,
+            StorageFileSource,
+            DatasetStore,
+        )
         from aligned.data_source.batch_data_source import BatchDataSource
 
         request_result = self.train_job.request_result
@@ -201,13 +206,13 @@ class TrainTestJob:
         async def update_metadata() -> None:
             await data_store.store_train_test(test_metadata)
 
-        _ = (
+        _ = await (
             self.train_job.cached_at(train_source)
             .on_load(update_metadata)
             .cached_at(train_source)
             .to_lazy_polars()
         )
-        _ = (
+        _ = await (
             self.test_job.cached_at(test_source)
             .on_load(update_metadata)
             .cached_at(test_source)

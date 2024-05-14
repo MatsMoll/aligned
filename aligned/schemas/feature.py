@@ -304,7 +304,9 @@ class FeatureType(Codable):
     def is_embedding(self) -> bool:
         return self.name.startswith('embedding')
 
-    def embedding_size(self) -> int:
+    def embedding_size(self) -> int | None:
+        if '-' not in self.name:
+            return None
         return int(self.name.split('-')[1])
 
 

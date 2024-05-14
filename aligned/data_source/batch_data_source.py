@@ -2,7 +2,7 @@ from __future__ import annotations
 from copy import copy
 from datetime import timedelta, timezone, datetime
 
-from typing import TYPE_CHECKING, Awaitable, TypeVar, Any, Callable, Coroutine, TypeVar
+from typing import TYPE_CHECKING, Awaitable, TypeVar, Any, Callable, Coroutine
 from dataclasses import dataclass
 
 from mashumaro.types import SerializableType
@@ -1070,7 +1070,9 @@ def data_for_request(request: RetrivalRequest, size: int) -> pl.DataFrame:
             elif isinstance(constraints, Optional):
                 is_optional = True
 
-        if dtype.is_numeric:
+        if dtype == FeatureType.bool():
+            values = np.random.choice([True, False], size=size)
+        elif dtype.is_numeric:
             if is_unique:
                 values = np.arange(0, size, dtype=dtype.pandas_type)
             else:
@@ -1085,6 +1087,9 @@ def data_for_request(request: RetrivalRequest, size: int) -> pl.DataFrame:
             values = [
                 datetime.now(tz=timezone.utc) - np.random.random() * timedelta(days=365) for _ in range(size)
             ]
+        elif dtype.is_embedding:
+            embedding_size = dtype.embedding_size() or 10
+            values = np.random.random((size, embedding_size))
         else:
             if choices:
                 values = np.random.choice(choices, size=size)
@@ -1132,11 +1137,14 @@ class DummyDataSource(BatchDataSource):
     ) -> RetrivalJob:
         async def random_features_for(facts: RetrivalJob, request: RetrivalRequest) -> pl.LazyFrame:
             df = await facts.to_polars()
-            return data_for_request(request, df.height).lazy()
+            random = data_for_request(request, df.height).lazy()
+            join_columns = set(request.all_returned_columns) - set(df.columns)
+            return df.hstack(random.select(pl.col(join_columns)).collect()).lazy()
 
+        request = RetrivalRequest.unsafe_combine([request for _, request in requests])
         return CustomMethodDataSource.from_methods(
             features_for=random_features_for,
-        ).features_for(facts, requests[0][1])
+        ).features_for(facts, request)
 
     def all_data(self, request: RetrivalRequest, limit: int | None = None) -> RetrivalJob:
         from aligned import CustomMethodDataSource
