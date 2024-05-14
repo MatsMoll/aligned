@@ -180,6 +180,7 @@ async def check_updates(
     from aligned.checks import (
         check_exposed_models_have_needed_features,
         impacted_models_from_transformation_diffs,
+        check_exposed_models_for_potential_distribution_shift,
         ContractStoreUpdateCheckReport,
     )
 
@@ -189,6 +190,9 @@ async def check_updates(
     old_contract_store = await store_from_reference(reference_contract)
 
     checks = await check_exposed_models_have_needed_features(new_contract_store)
+    potential_drifts = await check_exposed_models_for_potential_distribution_shift(
+        old_contract_store, new_contract_store
+    )
     transformation_changes = impacted_models_from_transformation_diffs(
         new_store=new_contract_store, old_store=old_contract_store
     )
@@ -196,6 +200,7 @@ async def check_updates(
 
     report = ContractStoreUpdateCheckReport(
         needed_model_input=not_ok_checks,
+        potential_distribution_shifts=potential_drifts,
         model_transformation_changes=transformation_changes,
     )
 

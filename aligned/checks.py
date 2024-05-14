@@ -84,6 +84,42 @@ async def check_exposed_models_have_needed_features(
 
 
 @dataclass
+class PotentialModelDistributionShift:
+    model_name: str
+    potential_drift: bool
+    contacts: list[str] | None = None
+
+    def as_markdown(self) -> str:
+        markdown = f"Model `{self.model_name}` has potential distribution shift: {self.potential_drift}\n\n"
+        if self.contacts:
+            contacts = '\n- '.join(self.contacts)
+            markdown += f"Contacts: {contacts}"
+
+        return markdown
+
+
+async def check_exposed_models_for_potential_distribution_shift(
+    old_store: ContractStore, new_store: ContractStore
+) -> list[PotentialModelDistributionShift]:
+
+    distribution_shifts: list[PotentialModelDistributionShift] = []
+    for model_name, model in new_store.models.items():
+        old_model = old_store.models.get(model_name)
+        if not old_model:
+            continue
+
+        if not old_model.exposed_model or not model.exposed_model:
+            continue
+
+        potential_drift = await model.exposed_model.can_lead_to_distribution_shift(old_model.exposed_model)
+        if potential_drift:
+            distribution_shifts.append(
+                PotentialModelDistributionShift(model_name, potential_drift, model.contacts)
+            )
+    return distribution_shifts
+
+
+@dataclass
 class TransformationDifference:
     location: FeatureLocation
     added: list[DerivedFeature]
@@ -172,14 +208,18 @@ class ContractStoreUpdateCheckReport:
 
     needed_model_input: list[ModelHaveNeededFeaturesCheck]
     model_transformation_changes: list[ModelsImpactedByTransformationChanges]
+    potential_distribution_shifts: list[PotentialModelDistributionShift]
 
     def as_markdown(self) -> str:
         markdown = ''
 
         for check in self.needed_model_input:
-            markdown += check.as_markdown() + '\n\n------------'
+            markdown += check.as_markdown() + '\n------------'
+
+        for check in self.potential_distribution_shifts:
+            markdown += check.as_markdown() + '\n------------'
 
         for check in self.model_transformation_changes:
-            markdown += check.as_markdown() + '\n\n------------'
+            markdown += check.as_markdown() + '\n------------'
 
         return markdown

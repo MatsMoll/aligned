@@ -119,6 +119,12 @@ class OllamaEmbeddingPredictor(ExposedModel):
 
         return sha256(self.prompt_template.encode(), usedforsecurity=False).hexdigest()
 
+    def can_lead_to_distribution_shift(self, old_model: ExposedModel) -> bool:
+        if not isinstance(old_model, OllamaEmbeddingPredictor):
+            return True
+
+        return old_model.model_name != self.model_name or old_model.prompt_template != self.prompt_template
+
     @property
     def as_markdown(self) -> str:
         return f"""Sending a `embedding` request to an Ollama server located at: {self.endpoint}.
