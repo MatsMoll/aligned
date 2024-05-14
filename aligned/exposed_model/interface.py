@@ -68,7 +68,7 @@ class ExposedModel(Codable, SerializableType):
     async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
         raise NotImplementedError(type(self))
 
-    async def can_lead_to_distribution_shift(self, old_model: ExposedModel) -> bool:
+    async def potential_drift_from_model(self, old_model: ExposedModel) -> str | None:
         raise NotImplementedError(type(self))
 
     def _serialize(self) -> dict:

@@ -119,11 +119,29 @@ class OllamaEmbeddingPredictor(ExposedModel):
 
         return sha256(self.prompt_template.encode(), usedforsecurity=False).hexdigest()
 
-    async def can_lead_to_distribution_shift(self, old_model: ExposedModel) -> bool:
-        if not isinstance(old_model, OllamaEmbeddingPredictor):
-            return True
+    async def potential_drift_from_model(self, old_model: ExposedModel) -> str | None:
+        """
+        Checks if a change in model can lead to a potential distribution shift.
 
-        return old_model.model_name != self.model_name or old_model.prompt_template != self.prompt_template
+        Returns:
+            str: A message explaining the potential drift.
+        """
+        if not isinstance(old_model, OllamaEmbeddingPredictor):
+            return None
+
+        changes = ''
+        if old_model.model_name != self.model_name:
+            changes += f"Model name changed from {old_model.model_name} to {self.model_name}.\n"
+
+        if old_model.prompt_template != self.prompt_template:
+            changes += (
+                f"Prompt template changed from `{old_model.prompt_template}` to `{self.prompt_template}`.\n"
+            )
+
+        if changes:
+            return changes
+        else:
+            return None
 
     @property
     def as_markdown(self) -> str:

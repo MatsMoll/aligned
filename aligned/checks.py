@@ -87,11 +87,11 @@ async def check_exposed_models_have_needed_features(
 @dataclass
 class PotentialModelDistributionShift:
     model_name: str
-    potential_drift: bool
+    reason: str
     contacts: list[str] | None = None
 
     def as_markdown(self) -> str:
-        markdown = f"Model `{self.model_name}` has potential distribution shift: {self.potential_drift}\n\n"
+        markdown = f"Model `{self.model_name}` has potential distribution shift: {self.reason}\n\n"
         if self.contacts:
             contacts = '\n- '.join(self.contacts)
             markdown += f"Contacts: {contacts}"
@@ -113,9 +113,7 @@ async def check_exposed_models_for_potential_distribution_shift(
             continue
 
         with suppress(NotImplementedError):
-            potential_drift = await model.exposed_model.can_lead_to_distribution_shift(
-                old_model.exposed_model
-            )
+            potential_drift = await model.exposed_model.potential_drift_from_model(old_model.exposed_model)
             if potential_drift:
                 distribution_shifts.append(
                     PotentialModelDistributionShift(model_name, potential_drift, model.contacts)
