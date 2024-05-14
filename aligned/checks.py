@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import suppress
 from dataclasses import dataclass, field
 from aligned import ContractStore
 from aligned.schemas.derivied_feature import DerivedFeature
@@ -111,11 +112,15 @@ async def check_exposed_models_for_potential_distribution_shift(
         if not old_model.exposed_model or not model.exposed_model:
             continue
 
-        potential_drift = await model.exposed_model.can_lead_to_distribution_shift(old_model.exposed_model)
-        if potential_drift:
-            distribution_shifts.append(
-                PotentialModelDistributionShift(model_name, potential_drift, model.contacts)
+        with suppress(NotImplementedError):
+            potential_drift = await model.exposed_model.can_lead_to_distribution_shift(
+                old_model.exposed_model
             )
+            if potential_drift:
+                distribution_shifts.append(
+                    PotentialModelDistributionShift(model_name, potential_drift, model.contacts)
+                )
+
     return distribution_shifts
 
 
