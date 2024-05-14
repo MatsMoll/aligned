@@ -57,7 +57,12 @@ async def check_exposed_model_have_needed_features(
             model_name=model.name, was_unchecked=True, missing_features=[], contacts=model.contacts
         )
 
-    needed_features = await model.exposed_model.needed_features(store.model(model.name))
+    try:
+        needed_features = await model.exposed_model.needed_features(store.model(model.name))
+    except Exception:
+        return ModelHaveNeededFeaturesCheck(
+            model_name=model.name, was_unchecked=True, missing_features=[], contacts=model.contacts
+        )
 
     missing_features = []
     for feature in needed_features:
