@@ -119,7 +119,7 @@ class OllamaEmbeddingPredictor(ExposedModel):
 
         return sha256(self.prompt_template.encode(), usedforsecurity=False).hexdigest()
 
-    def can_lead_to_distribution_shift(self, old_model: ExposedModel) -> bool:
+    async def can_lead_to_distribution_shift(self, old_model: ExposedModel) -> bool:
         if not isinstance(old_model, OllamaEmbeddingPredictor):
             return True
 
