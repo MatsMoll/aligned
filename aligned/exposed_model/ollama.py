@@ -313,6 +313,7 @@ def ollama_embedding_contract(
     output_source: BatchDataSource | None = None,
     prompt_template: str | None = None,
     embedding_size: int | None = None,
+    contacts: list[str] | None = None,
 ):
     from aligned import model_contract, FeatureInputVersions
 
@@ -353,6 +354,7 @@ def ollama_embedding_contract(
             embedding_name='embedding',
         ),
         output_source=output_source,
+        contacts=contacts,
     )
     class OllamaEmbedding:
 
