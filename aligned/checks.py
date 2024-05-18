@@ -91,7 +91,7 @@ class PotentialModelDistributionShift:
     contacts: list[str] | None = None
 
     def as_markdown(self) -> str:
-        markdown = f"Model `{self.model_name}` has potential distribution shift: {self.reason}\n\n"
+        markdown = f"Model `{self.model_name}` has potential distribution shift:\n{self.reason}\n\n"
         if self.contacts:
             contacts = '\n- '.join(self.contacts)
             markdown += f"Contacts: {contacts}"
@@ -225,4 +225,6 @@ class ContractStoreUpdateCheckReport:
         for check in self.model_transformation_changes:
             markdown += check.as_markdown() + '\n------------'
 
+        if markdown:
+            markdown = f"## Potential Issues\n\n{markdown}"
         return markdown

@@ -131,7 +131,7 @@ class OllamaEmbeddingPredictor(ExposedModel):
 
         changes = ''
         if old_model.model_name != self.model_name:
-            changes += f"Model name changed from {old_model.model_name} to {self.model_name}.\n"
+            changes += f"Model name changed from `{old_model.model_name}` to `{self.model_name}`.\n"
 
         if old_model.prompt_template != self.prompt_template:
             changes += (
