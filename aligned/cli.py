@@ -8,9 +8,11 @@ from pathlib import Path
 from typing import Any
 
 import click
+import json
 from pytz import utc  # type: ignore
 
 from aligned.compiler.repo_reader import RepoReader, RepoReference
+from aligned.feature_store import ContractStore
 from aligned.worker import StreamWorker
 from collections.abc import Callable
 from datetime import datetime
@@ -77,12 +79,31 @@ def setup_logger():
     dictConfig(configs)
 
 
+async def store_from_reference(reference_file: str, dir: Path | None = None) -> ContractStore:
+    from aligned import FileSource
+
+    if dir is None:
+        dir = Path.cwd()
+
+    if ':' in reference_file:
+        path, obj = reference_file.split(':')
+        reference_file_path = Path(path).absolute()
+        repo_ref = RepoReference.reference_object(dir, reference_file_path, obj)
+    else:
+        repo_ref = RepoReference('const', {'const': FileSource.json_at(reference_file)})
+
+    if file := repo_ref.selected_file:
+        return await file.as_contract_store()
+    else:
+        raise ValueError(f'No repo file found at {dir}')
+
+
 @click.group()
 def cli() -> None:
     pass
 
 
-@cli.command('apply')
+@cli.command('compile')
 @coro
 @click.option(
     '--repo-path',
@@ -91,8 +112,8 @@ def cli() -> None:
 )
 @click.option(
     '--reference-file',
-    default='source.py:source',
-    help='The path to a feature store reference file. Defining where to read and write the feature store',
+    default='contract_store.json',
+    help='The path to a contract store reference file. Defining where to read and write the feature store',
 )
 @click.option(
     '--env-file',
@@ -100,7 +121,7 @@ def cli() -> None:
     help='The path to env variables',
 )
 @click.option('--ignore-file', default='.alignedignore', help='The files Aligned should ignore')
-async def apply_command(repo_path: str, reference_file: str, env_file: str, ignore_file: str) -> None:
+async def compile(repo_path: str, reference_file: str, env_file: str, ignore_file: str) -> None:
     """
     Create or update a feature store deployment
     """
@@ -111,8 +132,6 @@ async def apply_command(repo_path: str, reference_file: str, env_file: str, igno
     dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
     ignore_path = dir / ignore_file
 
-    path, obj = reference_file.split(':')
-    reference_file_path = Path(path).absolute()
     load_envs(dir / env_file)
     sys.path.append(str(dir))
 
@@ -121,9 +140,12 @@ async def apply_command(repo_path: str, reference_file: str, env_file: str, igno
     if ignore_path.is_file():
         excludes = ignore_path.read_text().split('\n')
 
-    repo_ref = RepoReference('const', {'const': FileSource.json_at('./feature-store.json')})
-    with suppress(ValueError):
+    if ':' in reference_file:
+        path, obj = reference_file.split(':')
+        reference_file_path = Path(path).absolute()
         repo_ref = RepoReference.reference_object(dir, reference_file_path, obj)
+    else:
+        repo_ref = RepoReference('const', {'const': FileSource.json_at(reference_file)})
 
     if file := repo_ref.selected_file:
         click.echo(f'Updating file at: {file}')
@@ -135,26 +157,63 @@ async def apply_command(repo_path: str, reference_file: str, env_file: str, igno
         click.echo(f'No repo file found at {dir}')
 
 
-@cli.command('plan')
-@click.option(
-    '--repo-path',
-    default='.',
-    help='The path to the repo',
-)
-@click.option(
-    '--env-file',
-    default='.env',
-    help='The path to env variables',
-)
-def plan_command(repo_path: str, env_file: str) -> None:
+@cli.command('check-updates')
+@coro
+@click.option('--updated-contract')
+@click.option('--reference-contract')
+@click.option('--output-format', default='markdown', help='The output format')
+@click.option('--output-file', default=None, help='The output format')
+async def check_updates(
+    updated_contract: str,
+    reference_contract: str,
+    output_format: str,
+    output_file: str | None,
+):
     """
-    Prints the plan for updating the feature store file
-    """
+    Check if the current changes conflicts with an existing contract store.
 
-    dir = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
-    sys.path.append(str(dir))
-    load_envs(dir / env_file)
-    click.echo(RepoReader.definition_from_path(dir))
+    This will check if:
+
+    1. Exposed models have the needed features.
+    2. If any transformations that a model depend on have changed.
+    """
+    from aligned.checks import (
+        check_exposed_models_have_needed_features,
+        impacted_models_from_transformation_diffs,
+        check_exposed_models_for_potential_distribution_shift,
+        ContractStoreUpdateCheckReport,
+    )
+
+    as_markdown = output_format == 'markdown' or output_format == 'md'
+
+    new_contract_store = await store_from_reference(updated_contract)
+    old_contract_store = await store_from_reference(reference_contract)
+
+    checks = await check_exposed_models_have_needed_features(new_contract_store)
+    potential_drifts = await check_exposed_models_for_potential_distribution_shift(
+        old_contract_store, new_contract_store
+    )
+    transformation_changes = impacted_models_from_transformation_diffs(
+        new_store=new_contract_store, old_store=old_contract_store
+    )
+    not_ok_checks = [check for check in checks if not check.is_ok]
+
+    report = ContractStoreUpdateCheckReport(
+        needed_model_input=not_ok_checks,
+        potential_distribution_shifts=potential_drifts,
+        model_transformation_changes=transformation_changes,
+    )
+
+    if as_markdown:
+        output = report.as_markdown()
+    else:
+        output = json.dumps(report)
+
+    if output_file:
+        path = Path(output_file)
+        path.write_text(output)
+    else:
+        click.echo(output)
 
 
 @cli.command('serve')
@@ -200,7 +259,7 @@ def serve_command(
     repo_path: str, port: int, workers: int, env_file: str, reload: bool, server_path: str, host: str | None
 ) -> None:
     """
-    Starts a API serving the feature store
+    Starts an API serving data based on a contract store.
     """
     import uvicorn
 
@@ -243,7 +302,7 @@ def serve_command(
 )
 async def serve_worker_command(repo_path: str, worker_path: str, env_file: str) -> None:
     """
-    Starts a API serving the feature store
+    Starts a worker that process the contract store streams and store them in an online source.
     """
     setup_logger()
 
@@ -278,6 +337,9 @@ async def serve_worker_command(repo_path: str, worker_path: str, env_file: str) 
     help='The path to env variables',
 )
 async def create_indexes(repo_path: str, reference_file: str, env_file: str) -> None:
+    """
+    Creates a set of vector indexes for the contract store.
+    """
     from aligned import ContractStore, FileSource
 
     setup_logger()

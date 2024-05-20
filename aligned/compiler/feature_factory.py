@@ -1364,6 +1364,17 @@ class List(FeatureFactory, Generic[GenericFeature]):
         return feature
 
 
+class Url(StringValidatable):
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType.string()
+
+    def copy_type(self) -> Url:
+        if self.constraints and Optional() in self.constraints:
+            return Url().is_optional()
+        return Url()
+
+
 class ImageUrl(StringValidatable):
     @property
     def dtype(self) -> FeatureType:

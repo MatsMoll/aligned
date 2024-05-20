@@ -32,6 +32,12 @@ class FeatureInputVersions(Codable):
     def default_features(self) -> list[FeatureReference]:
         return self.features_for(self.default_version)
 
+    def all_features(self) -> set[FeatureReference]:
+        all_features = set()
+        for version in self.versions.values():
+            all_features.update(version)
+        return all_features
+
 
 @dataclass
 class Target(Codable):

@@ -2,6 +2,8 @@
 .pg/*
 .DS_STORE
 
+mlruns
+
 test_data/feature-store.json
 test_data/mlruns
 

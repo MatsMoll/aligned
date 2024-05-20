@@ -119,6 +119,30 @@ class OllamaEmbeddingPredictor(ExposedModel):
 
         return sha256(self.prompt_template.encode(), usedforsecurity=False).hexdigest()
 
+    async def potential_drift_from_model(self, old_model: ExposedModel) -> str | None:
+        """
+        Checks if a change in model can lead to a potential distribution shift.
+
+        Returns:
+            str: A message explaining the potential drift.
+        """
+        if not isinstance(old_model, OllamaEmbeddingPredictor):
+            return None
+
+        changes = ''
+        if old_model.model_name != self.model_name:
+            changes += f"Model name changed from `{old_model.model_name}` to `{self.model_name}`.\n"
+
+        if old_model.prompt_template != self.prompt_template:
+            changes += (
+                f"Prompt template changed from `{old_model.prompt_template}` to `{self.prompt_template}`.\n"
+            )
+
+        if changes:
+            return changes
+        else:
+            return None
+
     @property
     def as_markdown(self) -> str:
         return f"""Sending a `embedding` request to an Ollama server located at: {self.endpoint}.
@@ -227,12 +251,15 @@ def ollama_generate_contract(
     endpoint: str,
     model: str,
     entities: list[FeatureFactory] | FeatureFactory,
-    prediction_source: BatchDataSource | None = None,
+    output_source: BatchDataSource | None = None,
+    contacts: list[str] | None = None,
+    tags: list[str] | None = None,
 ) -> ModelContractWrapper[OllamaGeneration]:
     from aligned import model_contract, ExposedModel
 
     @model_contract(
         name=contract_name,
+        description=f'Contract for generating text using the {model} through Ollama.',
         input_features=[prompt],
         exposed_model=ExposedModel.ollama_generate(
             endpoint=endpoint,
@@ -240,7 +267,9 @@ def ollama_generate_contract(
             prompt_template=f"{{{prompt.feature_reference().name}}}",
             input_features_versions='default',
         ),
-        output_source=prediction_source,
+        output_source=output_source,
+        tags=tags,
+        contacts=contacts,
     )
     class OllamaOutput:
         model = String().as_model_version()
@@ -289,6 +318,8 @@ def ollama_embedding_contract(
     output_source: BatchDataSource | None = None,
     prompt_template: str | None = None,
     embedding_size: int | None = None,
+    contacts: list[str] | None = None,
+    tags: list[str] | None = None,
 ):
     from aligned import model_contract, FeatureInputVersions
 
@@ -311,13 +342,14 @@ def ollama_embedding_contract(
     }
 
     if not emb_size:
-        emb_size = ollama_model_sizes.get(model, 768)
+        emb_size = ollama_model_sizes.get(model)
 
     if not emb_size:
         raise ValueError('embedding_size must be provided if model is not in the default sizes')
 
     @model_contract(
         name=contract_name,
+        description=f'Contract for generating embeddings using the {model} through Ollama',
         input_features=FeatureInputVersions(
             default_version='default', versions={'default': input}  # type: ignore
         ),
@@ -329,6 +361,8 @@ def ollama_embedding_contract(
             embedding_name='embedding',
         ),
         output_source=output_source,
+        contacts=contacts,
+        tags=tags,
     )
     class OllamaEmbedding:
 
@@ -362,6 +396,8 @@ def ollama_classification_contract(
     ground_truth: FeatureFactory,
     output_source: BatchDataSource | None = None,
     prompt_template: str | None = None,
+    contacts: list[str] | None = None,
+    tags: list[str] | None = None,
 ):
     from aligned import model_contract, ExposedModel
     from aligned.schemas.constraints import InDomain
@@ -400,11 +436,14 @@ def ollama_classification_contract(
 
     @model_contract(
         name=contract_name,
-        input_features=input,
+        description=f'Contract for classifying text using the {model} through Ollama',
+        input_features=input,  # type: ignore
         exposed_model=ExposedModel.ollama_generate(
             endpoint=endpoint, model=model, prompt_template=prompt_template, input_features_versions='default'
         ),
         output_source=output_source,
+        contacts=contacts,
+        tags=tags,
     )
     class OllamaOutput:
         model_version = (

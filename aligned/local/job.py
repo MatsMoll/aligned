@@ -42,6 +42,9 @@ class LiteralRetrivalJob(RetrivalJob):
     def request_result(self) -> RequestResult:
         return RequestResult.from_request_list(self.requests)
 
+    def describe(self) -> str:
+        return f'Using literal data frame with columns {self.df.columns}'
+
     async def to_pandas(self) -> pd.DataFrame:
         return self.df.collect().to_pandas()
 
