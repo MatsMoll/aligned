@@ -342,7 +342,7 @@ def ollama_embedding_contract(
     }
 
     if not emb_size:
-        emb_size = ollama_model_sizes.get(model, 768)
+        emb_size = ollama_model_sizes.get(model)
 
     if not emb_size:
         raise ValueError('embedding_size must be provided if model is not in the default sizes')
