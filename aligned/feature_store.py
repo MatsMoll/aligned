@@ -1608,7 +1608,7 @@ class FeatureViewStore:
         if self.feature_filter:
             request = self.view.request_for(self.feature_filter)
             return SelectColumnsJob(
-                self.feature_filter, self.source.all_between(start_date, end_date, request)
+                list(self.feature_filter), self.source.all_between(start_date, end_date, request)
             )
 
         request = self.view.request_all

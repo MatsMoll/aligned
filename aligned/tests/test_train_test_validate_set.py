@@ -79,7 +79,7 @@ async def test_train_test_validate_set_new(titanic_feature_store: ContractStore)
     validate_size = int(round(dataset_size * validation_fraction))
 
     dataset_store = FileSource.json_at('test_data/titanic-sets.json')
-    dataset = (
+    dataset = await (
         titanic_feature_store.feature_view('titanic')
         .all(limit=dataset_size)
         .train_test_validate(train_fraction, validation_fraction, target_column='survived')
