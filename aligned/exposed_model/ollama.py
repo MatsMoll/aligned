@@ -251,12 +251,15 @@ def ollama_generate_contract(
     endpoint: str,
     model: str,
     entities: list[FeatureFactory] | FeatureFactory,
-    prediction_source: BatchDataSource | None = None,
+    output_source: BatchDataSource | None = None,
+    contacts: list[str] | None = None,
+    tags: list[str] | None = None,
 ) -> ModelContractWrapper[OllamaGeneration]:
     from aligned import model_contract, ExposedModel
 
     @model_contract(
         name=contract_name,
+        description=f'Contract for generating text using the {model} through Ollama.',
         input_features=[prompt],
         exposed_model=ExposedModel.ollama_generate(
             endpoint=endpoint,
@@ -264,7 +267,9 @@ def ollama_generate_contract(
             prompt_template=f"{{{prompt.feature_reference().name}}}",
             input_features_versions='default',
         ),
-        output_source=prediction_source,
+        output_source=output_source,
+        tags=tags,
+        contacts=contacts,
     )
     class OllamaOutput:
         model = String().as_model_version()
@@ -314,6 +319,7 @@ def ollama_embedding_contract(
     prompt_template: str | None = None,
     embedding_size: int | None = None,
     contacts: list[str] | None = None,
+    tags: list[str] | None = None,
 ):
     from aligned import model_contract, FeatureInputVersions
 
@@ -343,6 +349,7 @@ def ollama_embedding_contract(
 
     @model_contract(
         name=contract_name,
+        description=f'Contract for generating embeddings using the {model} through Ollama',
         input_features=FeatureInputVersions(
             default_version='default', versions={'default': input}  # type: ignore
         ),
@@ -355,6 +362,7 @@ def ollama_embedding_contract(
         ),
         output_source=output_source,
         contacts=contacts,
+        tags=tags,
     )
     class OllamaEmbedding:
 
@@ -388,6 +396,8 @@ def ollama_classification_contract(
     ground_truth: FeatureFactory,
     output_source: BatchDataSource | None = None,
     prompt_template: str | None = None,
+    contacts: list[str] | None = None,
+    tags: list[str] | None = None,
 ):
     from aligned import model_contract, ExposedModel
     from aligned.schemas.constraints import InDomain
@@ -426,11 +436,14 @@ def ollama_classification_contract(
 
     @model_contract(
         name=contract_name,
-        input_features=input,
+        description=f'Contract for classifying text using the {model} through Ollama',
+        input_features=input,  # type: ignore
         exposed_model=ExposedModel.ollama_generate(
             endpoint=endpoint, model=model, prompt_template=prompt_template, input_features_versions='default'
         ),
         output_source=output_source,
+        contacts=contacts,
+        tags=tags,
     )
     class OllamaOutput:
         model_version = (
