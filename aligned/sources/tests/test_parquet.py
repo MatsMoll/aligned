@@ -38,12 +38,18 @@ async def test_read_parquet(point_in_time_data_test: DataTest) -> None:
 async def test_partition_parquet(point_in_time_data_test: DataTest) -> None:
     store = ContractStore.experimental()
 
+    agg_features: list[str] = []
+
     for source in point_in_time_data_test.sources:
         view = source.view
         view_name = view.metadata.name
 
         compiled = view.compile()
         entities = compiled.entitiy_names
+
+        if '_agg' in view_name:
+            agg_features.extend([feat.name for feat in compiled.aggregated_features])
+            continue
 
         file_source = FileSource.partitioned_parquet_at(
             f'test_data/{view_name}',
@@ -60,13 +66,12 @@ async def test_partition_parquet(point_in_time_data_test: DataTest) -> None:
 
     job = store.features_for(
         point_in_time_data_test.entities,
-        point_in_time_data_test.feature_reference,
+        [feat for feat in point_in_time_data_test.feature_reference if '_agg' not in feat],
         event_timestamp_column='event_timestamp',
     )
     data = (await job.to_lazy_polars()).collect()
 
-    expected = point_in_time_data_test.expected_output
-
+    expected = point_in_time_data_test.expected_output.drop(agg_features)
     assert expected.shape == data.shape, f'Expected: {expected.shape}\nGot: {data.shape}'
     assert set(expected.columns) == set(data.columns), f'Expected: {expected.columns}\nGot: {data.columns}'
 

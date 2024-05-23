@@ -387,7 +387,7 @@ class PartitionedParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataF
     config: ParquetConfig = field(default_factory=ParquetConfig)
     date_formatter: DateFormatter = field(default_factory=lambda: DateFormatter.noop())
 
-    type_name: str = 'parquet'
+    type_name: str = 'partition_parquet'
 
     @property
     def to_markdown(self) -> str:
@@ -413,7 +413,7 @@ class PartitionedParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataF
 
         glob_path = f'{self.directory}/**/*.parquet'
         try:
-            return pl.scan_parquet(glob_path)
+            return pl.scan_parquet(glob_path, retries=3)
         except OSError:
             raise UnableToFindFileException(self.directory)
 
