@@ -6,6 +6,7 @@ mlruns
 
 test_data/feature-store.json
 test_data/mlruns
+test_data/temp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

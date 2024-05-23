@@ -45,14 +45,15 @@ async def test_partition_parquet(point_in_time_data_test: DataTest) -> None:
         view_name = view.metadata.name
 
         compiled = view.compile()
-        entities = compiled.entitiy_names
 
         if '_agg' in view_name:
             agg_features.extend([feat.name for feat in compiled.aggregated_features])
             continue
 
+        entities = compiled.entitiy_names
+
         file_source = FileSource.partitioned_parquet_at(
-            f'test_data/{view_name}',
+            f'test_data/temp/{view_name}',
             partition_keys=list(entities),
         )
         await file_source.write_polars(source.data.lazy())
