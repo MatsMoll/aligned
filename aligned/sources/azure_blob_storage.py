@@ -22,6 +22,7 @@ from aligned.sources.local import (
     ParquetConfig,
     StorageFileReference,
     Directory,
+    PartitionedParquetFileSource,
     data_file_freshness,
 )
 from aligned.storage import Storage
@@ -87,6 +88,16 @@ You can choose between two ways of authenticating with Azure Blob Storage.
         return AzureBlobParquetDataSource(
             self, path, mapping_keys=mapping_keys or {}, date_formatter=date_formatter or DateFormatter.noop()
         )
+
+    def partitioned_parquet_at(
+        self,
+        directory: str,
+        partition_keys: list[str],
+        mapping_keys: dict[str, str] | None = None,
+        config: ParquetConfig | None = None,
+        date_formatter: DateFormatter | None = None,
+    ) -> PartitionedParquetFileSource:
+        raise NotImplementedError(type(self))
 
     def csv_at(
         self,

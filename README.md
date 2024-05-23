@@ -98,7 +98,7 @@ All this is described through a `model_contract`, as shown bellow.
 )
 class EtaTaxi:
     trip_id = Int32().as_entity()
-    predicted_at = EventTimestamp()
+    predicted_at = ValidFrom()
     predicted_duration = trips.duration.as_regression_target()
 ```
 

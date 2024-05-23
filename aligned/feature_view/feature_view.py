@@ -57,6 +57,7 @@ class FeatureViewMetadata:
     stream_source: StreamDataSource | None = field(default=None)
     application_source: BatchDataSource | None = field(default=None)
     materialized_source: BatchDataSource | None = field(default=None)
+    materialize_from: datetime | None = field(default=None)
     contacts: list[str] | None = field(default=None)
     tags: list[str] | None = field(default=None)
     acceptable_freshness: timedelta | None = field(default=None)
@@ -72,6 +73,7 @@ class FeatureViewMetadata:
             stream_source=view.stream_data_source,
             application_source=view.application_source,
             materialized_source=view.materialized_source,
+            materialize_from=view.materialize_from,
             acceptable_freshness=view.acceptable_freshness,
             unacceptable_freshness=view.unacceptable_freshness,
         )
@@ -97,6 +99,7 @@ def feature_view(
     stream_source: StreamDataSource | None = None,
     application_source: BatchDataSource | None = None,
     materialized_source: BatchDataSource | None = None,
+    materialize_from: datetime | None = None,
     contacts: list[str] | None = None,
     tags: list[str] | None = None,
     acceptable_freshness: timedelta | None = None,
@@ -114,6 +117,7 @@ def feature_view(
             stream_source=stream_source,
             application_source=application_source,
             materialized_source=materialized_source,
+            materialize_from=materialize_from,
             contacts=contacts,
             tags=tags,
             acceptable_freshness=acceptable_freshness,
@@ -508,6 +512,7 @@ class FeatureView(ABC):
             stream_data_source=metadata.stream_source,
             application_source=metadata.application_source,
             materialized_source=metadata.materialized_source,
+            materialize_from=metadata.materialize_from,
             acceptable_freshness=metadata.acceptable_freshness,
             unacceptable_freshness=metadata.unacceptable_freshness,
             indexes=[],

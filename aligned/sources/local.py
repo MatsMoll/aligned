@@ -376,6 +376,109 @@ class ParquetConfig(Codable):
 
 
 @dataclass
+class PartitionedParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference):
+    """
+    A source pointing to a Parquet file
+    """
+
+    directory: str
+    partition_keys: list[str]
+    mapping_keys: dict[str, str] = field(default_factory=dict)
+    config: ParquetConfig = field(default_factory=ParquetConfig)
+    date_formatter: DateFormatter = field(default_factory=lambda: DateFormatter.noop())
+
+    type_name: str = 'partition_parquet'
+
+    @property
+    def to_markdown(self) -> str:
+        return f'''#### Partitioned Parquet File
+*Partition keys*: {self.partition_keys}
+
+*Renames*: {self.mapping_keys}
+
+*Directory*: {self.directory}
+
+[Go to directory]({self.directory})'''  # noqa
+
+    def job_group_key(self) -> str:
+        return f'{self.type_name}/{self.directory}'
+
+    def __hash__(self) -> int:
+        return hash(self.job_group_key())
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return (await self.to_lazy_polars()).collect().to_pandas()
+
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+
+        glob_path = f'{self.directory}/**/*.parquet'
+        try:
+            return pl.scan_parquet(glob_path, retries=3)
+        except OSError:
+            raise UnableToFindFileException(self.directory)
+
+    async def write_polars(self, df: pl.LazyFrame) -> None:
+        create_parent_dir(self.directory)
+        df.collect().write_parquet(
+            self.directory,
+            compression=self.config.compression,
+            use_pyarrow=True,
+            pyarrow_options={
+                'partition_cols': self.partition_keys,
+            },
+        )
+
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+        return FileFullJob(self, request, limit, date_formatter=self.date_formatter)
+
+    def all_between_dates(
+        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrivalJob:
+        return FileDateJob(
+            source=self,
+            request=request,
+            start_date=start_date,
+            end_date=end_date,
+            date_formatter=self.date_formatter,
+        )
+
+    @classmethod
+    def multi_source_features_for(
+        cls, facts: RetrivalJob, requests: list[tuple[ParquetFileSource, RetrivalRequest]]
+    ) -> RetrivalJob:
+
+        source = requests[0][0]
+        if not isinstance(source, cls):
+            raise ValueError(f'Only {cls} is supported, recived: {source}')
+
+        # Group based on config
+        return FileFactualJob(
+            source=source,
+            requests=[request for _, request in requests],
+            facts=facts,
+            date_formatter=source.date_formatter,
+        )
+
+    async def schema(self) -> dict[str, FeatureType]:
+        if self.path.startswith('http'):
+            parquet_schema = pl.scan_parquet(self.path).schema
+        else:
+            parquet_schema = pl.read_parquet_schema(self.path)
+
+        return {name: FeatureType.from_polars(pl_type) for name, pl_type in parquet_schema.items()}
+
+    async def feature_view_code(self, view_name: str) -> str:
+        from aligned.feature_view.feature_view import FeatureView
+
+        raw_schema = await self.schema()
+        schema = {name: feat.feature_factory for name, feat in raw_schema.items()}
+        data_source_code = f'FileSource.parquet_at("{self.path}")'
+        return FeatureView.feature_view_code_template(
+            schema, data_source_code, view_name, 'from aligned import FileSource'
+        )
+
+
+@dataclass
 class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference):
     """
     A source pointing to a Parquet file
@@ -642,6 +745,16 @@ class Directory(Protocol):
     ) -> BatchDataSource:
         ...
 
+    def partitioned_parquet_at(
+        self,
+        directory: str,
+        partition_keys: list[str],
+        mapping_keys: dict[str, str] | None = None,
+        config: ParquetConfig | None = None,
+        date_formatter: DateFormatter | None = None,
+    ) -> PartitionedParquetFileSource:
+        ...
+
     def parquet_at(
         self, path: str, mapping_keys: dict[str, str] | None = None, config: ParquetConfig | None = None
     ) -> BatchDataSource:
@@ -688,6 +801,23 @@ class FileDirectory(Codable, Directory):
             path=self.path_string(path), mapping_keys=mapping_keys or {}, config=config or ParquetConfig()
         )
 
+    def partitioned_parquet_at(
+        self,
+        directory: str,
+        partition_keys: list[str],
+        mapping_keys: dict[str, str] | None = None,
+        config: ParquetConfig | None = None,
+        date_formatter: DateFormatter | None = None,
+    ) -> PartitionedParquetFileSource:
+
+        return PartitionedParquetFileSource(
+            directory=self.path_string(directory),
+            partition_keys=partition_keys,
+            mapping_keys=mapping_keys or {},
+            config=config or ParquetConfig(),
+            date_formatter=date_formatter or DateFormatter.noop(),
+        )
+
     def delta_at(
         self, path: str, mapping_keys: dict[str, str] | None = None, config: DeltaFileConfig | None = None
     ) -> DeltaFileSource:
@@ -727,6 +857,23 @@ class FileSource:
             mapping_keys=mapping_keys or {},
             csv_config=csv_config or CsvConfig(),
             formatter=date_formatter or DateFormatter.iso_8601(),
+        )
+
+    @staticmethod
+    def partitioned_parquet_at(
+        directory: str,
+        partition_keys: list[str],
+        mapping_keys: dict[str, str] | None = None,
+        config: ParquetConfig | None = None,
+        date_formatter: DateFormatter | None = None,
+    ) -> PartitionedParquetFileSource:
+
+        return PartitionedParquetFileSource(
+            directory=directory,
+            partition_keys=partition_keys,
+            mapping_keys=mapping_keys or {},
+            config=config or ParquetConfig(),
+            date_formatter=date_formatter or DateFormatter.noop(),
         )
 
     @staticmethod

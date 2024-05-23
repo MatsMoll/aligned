@@ -33,7 +33,12 @@ class BatchDataSourceFactory:
     _shared: BatchDataSourceFactory | None = None
 
     def __init__(self) -> None:
-        from aligned.sources.local import CsvFileSource, ParquetFileSource, DeltaFileSource
+        from aligned.sources.local import (
+            CsvFileSource,
+            ParquetFileSource,
+            DeltaFileSource,
+            PartitionedParquetFileSource,
+        )
         from aligned.sources.psql import PostgreSQLDataSource
         from aligned.sources.redshift import RedshiftSQLDataSource
         from aligned.sources.s3 import AwsS3CsvDataSource, AwsS3ParquetDataSource
@@ -49,6 +54,7 @@ class BatchDataSourceFactory:
             PostgreSQLDataSource,
             # File Sources
             ParquetFileSource,
+            PartitionedParquetFileSource,
             CsvFileSource,
             DeltaFileSource,
             # Aws Sources
