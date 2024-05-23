@@ -40,7 +40,7 @@ async def test_file_full_job_polars(retrival_request_without_derived: RetrivalRe
 
 @pytest.mark.asyncio
 async def test_write_and_read_feature_store(titanic_feature_store_scd: ContractStore) -> None:
-    source = FileSource.json_at('test_data/feature-store.json')
+    source = FileSource.json_at('test_data/temp/feature-store.json')
     definition = titanic_feature_store_scd.repo_definition()
     await source.write(definition.to_json().encode('utf-8'))
     store = await source.feature_store()
