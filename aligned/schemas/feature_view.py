@@ -37,6 +37,8 @@ class CompiledFeatureView(Codable):
     application_source: BatchDataSource | None = field(default=None)
     materialized_source: BatchDataSource | None = field(default=None)
 
+    materialize_from: datetime | None = field(default=None)
+
     acceptable_freshness: timedelta | None = field(default=None)
     unacceptable_freshness: timedelta | None = field(default=None)
 
