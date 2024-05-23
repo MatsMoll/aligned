@@ -931,8 +931,11 @@ class RetrivalJob(ABC):
             return self.copy_with(self.job.ignore_event_timestamp())
         raise NotImplementedError('Not implemented ignore_event_timestamp')
 
-    def polars_method(self, polars_method: Callable[[pl.LazyFrame], pl.LazyFrame]) -> RetrivalJob:
+    def transform_polars(self, polars_method: Callable[[pl.LazyFrame], pl.LazyFrame]) -> RetrivalJob:
         return CustomPolarsJob(self, polars_method)
+
+    def polars_method(self, polars_method: Callable[[pl.LazyFrame], pl.LazyFrame]) -> RetrivalJob:
+        return self.transform_polars(polars_method)
 
     @staticmethod
     def from_dict(data: dict[str, list], request: list[RetrivalRequest] | RetrivalRequest) -> RetrivalJob:

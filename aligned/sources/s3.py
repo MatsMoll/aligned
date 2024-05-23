@@ -16,9 +16,11 @@ from aligned.sources.local import (
     CsvConfig,
     DataFileReference,
     ParquetConfig,
+    PartitionedParquetFileSource,
     StorageFileReference,
     Directory,
     DeltaFileConfig,
+    DateFormatter,
 )
 from aligned.storage import Storage
 
@@ -113,6 +115,16 @@ class AwsS3Directory(Directory):
             mapping_keys=mapping_keys or {},
             parquet_config=config or ParquetConfig(),
         )
+
+    def partitioned_parquet_at(
+        self,
+        directory: str,
+        partition_keys: list[str],
+        mapping_keys: dict[str, str] | None = None,
+        config: ParquetConfig | None = None,
+        date_formatter: DateFormatter | None = None,
+    ) -> PartitionedParquetFileSource:
+        raise NotImplementedError(type(self))
 
     def delta_at(
         self, path: str, mapping_keys: dict[str, str] | None = None, config: DeltaFileConfig | None = None
