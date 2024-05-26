@@ -22,7 +22,6 @@ from aligned.sources.local import (
     ParquetConfig,
     StorageFileReference,
     Directory,
-    PartitionedParquetFileSource,
     data_file_freshness,
 )
 from aligned.storage import Storage
@@ -53,7 +52,7 @@ def azure_container_blob(path: str) -> AzurePath:
 @dataclass
 class AzureBlobConfig(Directory):
     account_id_env: str
-    tenent_id_env: str
+    tenant_id_env: str
     client_id_env: str
     client_secret_env: str
     account_name_env: str
@@ -71,7 +70,7 @@ You can choose between two ways of authenticating with Azure Blob Storage.
 
 2. Using Tenant Id, Client Id and Client Secret
 
-- Tenant Id Env: `{self.tenent_id_env}`
+- Tenant Id Env: `{self.tenant_id_env}`
 - Client Id Env: `{self.client_id_env}`
 - Client Secret Env: `{self.client_secret_env}`
 """
@@ -96,8 +95,15 @@ You can choose between two ways of authenticating with Azure Blob Storage.
         mapping_keys: dict[str, str] | None = None,
         config: ParquetConfig | None = None,
         date_formatter: DateFormatter | None = None,
-    ) -> PartitionedParquetFileSource:
-        raise NotImplementedError(type(self))
+    ) -> AzureBlobPartitionedParquetDataSource:
+        return AzureBlobPartitionedParquetDataSource(
+            self,
+            directory,
+            partition_keys,
+            mapping_keys=mapping_keys or {},
+            parquet_config=config or ParquetConfig(),
+            date_formatter=date_formatter or DateFormatter.noop(),
+        )
 
     def csv_at(
         self,
@@ -164,7 +170,7 @@ You can choose between two ways of authenticating with Azure Blob Storage.
         else:
             return {
                 'account_name': account_name,
-                'tenant_id': os.environ[self.tenent_id_env],
+                'tenant_id': os.environ[self.tenant_id_env],
                 'client_id': os.environ[self.client_id_env],
                 'client_secret': os.environ[self.client_secret_env],
             }
@@ -191,7 +197,26 @@ class AzureBlobDirectory(Directory):
     ) -> AzureBlobParquetDataSource:
         sub_path = self.sub_path / path
         return self.config.parquet_at(
-            sub_path.as_posix(), date_formatter=date_formatter or DateFormatter.noop()
+            sub_path.as_posix(),
+            mapping_keys=mapping_keys,
+            date_formatter=date_formatter or DateFormatter.noop(),
+        )
+
+    def partitioned_parquet_at(
+        self,
+        directory: str,
+        partition_keys: list[str],
+        mapping_keys: dict[str, str] | None = None,
+        config: ParquetConfig | None = None,
+        date_formatter: DateFormatter | None = None,
+    ) -> AzureBlobPartitionedParquetDataSource:
+        sub_path = self.sub_path / directory
+        return self.config.partitioned_parquet_at(
+            sub_path.as_posix(),
+            partition_keys,
+            mapping_keys=mapping_keys,
+            config=config,
+            date_formatter=date_formatter,
         )
 
     def csv_at(
@@ -380,6 +405,113 @@ class AzureBlobCsvDataSource(
             end_date=end_date,
             date_formatter=self.date_formatter,
         )
+
+
+@dataclass
+class AzureBlobPartitionedParquetDataSource(BatchDataSource, DataFileReference, ColumnFeatureMappable):
+    config: AzureBlobConfig
+    directory: str
+    partition_keys: list[str]
+    mapping_keys: dict[str, str] = field(default_factory=dict)
+    parquet_config: ParquetConfig = field(default_factory=ParquetConfig)
+    date_formatter: DateFormatter = field(default_factory=lambda: DateFormatter.noop())
+    type_name: str = 'azure_blob_partitiond_parquet'
+
+    @property
+    def to_markdown(self) -> str:
+        return f"""Type: *Azure Blob Partitioned Parquet File*
+
+Directory: *{self.directory}*
+Partition Keys: *{self.partition_keys}*
+
+{self.config.to_markdown}"""
+
+    def job_group_key(self) -> str:
+        return f"{self.type_name}/{self.directory}"
+
+    def __hash__(self) -> int:
+        return hash(self.job_group_key())
+
+    @property
+    def storage(self) -> Storage:
+        return self.config.storage
+
+    async def schema(self) -> dict[str, FeatureType]:
+        try:
+            schema = (await self.to_lazy_polars()).schema
+            return {name: FeatureType.from_polars(pl_type) for name, pl_type in schema.items()}
+
+        except FileNotFoundError as error:
+            raise UnableToFindFileException() from error
+        except HTTPStatusError as error:
+            raise UnableToFindFileException() from error
+
+    async def read_pandas(self) -> pd.DataFrame:
+        return (await self.to_lazy_polars()).collect().to_pandas()
+
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        try:
+            url = f"az://{self.directory}/**/*.parquet"
+            creds = self.config.read_creds()
+            return pl.scan_parquet(url, storage_options=creds)
+        except FileNotFoundError as error:
+            raise UnableToFindFileException(self.directory) from error
+        except HTTPStatusError as error:
+            raise UnableToFindFileException(self.directory) from error
+        except pl.ComputeError as error:
+            raise UnableToFindFileException(self.directory) from error
+
+    async def write_pandas(self, df: pd.DataFrame) -> None:
+        await self.write_polars(pl.from_pandas(df).lazy())
+
+    async def write_polars(self, df: pl.LazyFrame) -> None:
+        url = f"az://{self.directory}"
+        creds = self.config.read_creds()
+        df.collect().to_pandas().to_parquet(url, partition_cols=self.partition_keys, storage_options=creds)
+
+    @classmethod
+    def multi_source_features_for(
+        cls, facts: RetrivalJob, requests: list[tuple[AzureBlobParquetDataSource, RetrivalRequest]]
+    ) -> RetrivalJob:
+
+        source = requests[0][0]
+        if not isinstance(source, cls):
+            raise ValueError(f'Only {cls} is supported, recived: {source}')
+
+        # Group based on config
+        return FileFactualJob(
+            source=source,
+            requests=[request for _, request in requests],
+            facts=facts,
+            date_formatter=source.date_formatter,
+        )
+
+    def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
+        return FileFactualJob(self, [request], facts, date_formatter=self.date_formatter)
+
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+        return FileFullJob(self, request, limit, date_formatter=self.date_formatter)
+
+    def all_between_dates(
+        self,
+        request: RetrivalRequest,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> RetrivalJob:
+        return FileDateJob(
+            source=self,
+            request=request,
+            start_date=start_date,
+            end_date=end_date,
+            date_formatter=self.date_formatter,
+        )
+
+    async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+        if len(requests) != 1:
+            raise ValueError(f"Only support writing on request, got {len(requests)}.")
+        features = requests[0].all_returned_columns
+        df = await job.select(features).to_lazy_polars()
+        await self.write_polars(df)
 
 
 @dataclass
