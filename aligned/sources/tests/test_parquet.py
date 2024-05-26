@@ -51,10 +51,10 @@ async def test_partition_parquet(point_in_time_data_test: DataTest) -> None:
             continue
 
         entities = compiled.entitiy_names
+        partition_keys = list(entities)
 
         file_source = FileSource.partitioned_parquet_at(
-            f'test_data/temp/{view_name}',
-            partition_keys=list(entities),
+            f'test_data/temp/{view_name}', partition_keys=partition_keys
         )
         await file_source.write_polars(source.data.lazy())
 

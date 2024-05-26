@@ -376,7 +376,9 @@ class ParquetConfig(Codable):
 
 
 @dataclass
-class PartitionedParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference):
+class PartitionedParquetFileSource(
+    BatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource
+):
     """
     A source pointing to a Parquet file
     """
@@ -460,11 +462,8 @@ class PartitionedParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataF
         )
 
     async def schema(self) -> dict[str, FeatureType]:
-        if self.path.startswith('http'):
-            parquet_schema = pl.scan_parquet(self.path).schema
-        else:
-            parquet_schema = pl.read_parquet_schema(self.path)
-
+        glob_path = f'{self.directory}/**/*.parquet'
+        parquet_schema = pl.scan_parquet(glob_path).schema
         return {name: FeatureType.from_polars(pl_type) for name, pl_type in parquet_schema.items()}
 
     async def feature_view_code(self, view_name: str) -> str:
@@ -472,10 +471,24 @@ class PartitionedParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataF
 
         raw_schema = await self.schema()
         schema = {name: feat.feature_factory for name, feat in raw_schema.items()}
-        data_source_code = f'FileSource.parquet_at("{self.path}")'
+        data_source_code = f'FileSource.partitioned_parquet_at("{self.directory}", {self.partition_keys})'
         return FeatureView.feature_view_code_template(
             schema, data_source_code, view_name, 'from aligned import FileSource'
         )
+
+    async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+        if len(requests) != 1:
+            raise ValueError('Partitioned Parquet files only support one write request as of now')
+        request = requests[0]
+        job = job.select(request.all_returned_columns)
+        df = await job.to_lazy_polars()
+        await self.write_polars(df)
+
+    async def overwrite(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+        import shutil
+
+        shutil.rmtree(self.directory)
+        await self.insert(job, requests)
 
 
 @dataclass
