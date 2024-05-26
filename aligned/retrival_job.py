@@ -1698,6 +1698,7 @@ class LogJob(RetrivalJob, ModificationJob):
             raise error
         self.logger(f'Results from {type(self.job).__name__} - {job_name}')
         self.logger(df.columns)
+        self.logger(df)
         self.logger(df.head(10).collect())
         return df
 
@@ -1810,6 +1811,7 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
 
                 if round_expressions:
                     df = df.with_columns(round_expressions)
+
         return df
 
     async def compute_derived_features_pandas(self, df: pd.DataFrame) -> pd.DataFrame:

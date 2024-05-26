@@ -4,7 +4,6 @@ from math import ceil, floor
 
 import polars as pl
 import pytest
-import pytest_asyncio
 
 from aligned import (
     Bool,
@@ -210,8 +209,8 @@ def breast_scan_feature_viewout_with_datetime(scan_without_datetime: CsvFileSour
     return BreastDiagnoseFeatureView()
 
 
-@pytest_asyncio.fixture
-async def breast_scan_without_timestamp_feature_store(
+@pytest.fixture
+def breast_scan_without_timestamp_feature_store(
     breast_scan_feature_viewout_with_datetime: FeatureView,
 ) -> ContractStore:
     store = ContractStore.empty()
@@ -344,8 +343,8 @@ def breast_scan_feature_view_with_datetime_and_aggregation(scan_with_datetime: C
     return BreastDiagnoseFeatureView()
 
 
-@pytest_asyncio.fixture
-async def breast_scan_with_timestamp_feature_store(
+@pytest.fixture
+def breast_scan_with_timestamp_feature_store(
     breast_scan_feature_view_with_datetime: FeatureView,
 ) -> ContractStore:
     store = ContractStore.empty()
@@ -353,8 +352,8 @@ async def breast_scan_with_timestamp_feature_store(
     return store
 
 
-@pytest_asyncio.fixture
-async def breast_scan_with_timestamp_and_aggregation_feature_store(
+@pytest.fixture
+def breast_scan_with_timestamp_and_aggregation_feature_store(
     breast_scan_feature_view_with_datetime_and_aggregation: FeatureView,
 ) -> ContractStore:
     store = ContractStore.empty()
@@ -486,8 +485,8 @@ def titanic_feature_view_parquet(titanic_source_parquet: ParquetFileSource) -> F
     return TitanicPassenger()
 
 
-@pytest_asyncio.fixture
-async def titanic_feature_store(
+@pytest.fixture
+def titanic_feature_store(
     titanic_feature_view: FeatureView,
     titanic_feature_view_parquet: FeatureView,
     titanic_model: ModelContractWrapper,
@@ -537,8 +536,8 @@ def alot_of_transforations_feature_view(titanic_source: CsvFileSource) -> Featur
     return TitanicPassenger()
 
 
-@pytest_asyncio.fixture
-async def alot_of_transforation_feature_store(
+@pytest.fixture
+def alot_of_transforation_feature_store(
     alot_of_transforations_feature_view: FeatureView,
 ) -> ContractStore:
     feature_store = ContractStore.empty()
@@ -546,8 +545,8 @@ async def alot_of_transforation_feature_store(
     return feature_store
 
 
-@pytest_asyncio.fixture
-async def combined_view(
+@pytest.fixture
+def combined_view(
     titanic_feature_view: FeatureView, breast_scan_feature_viewout_with_datetime: FeatureView
 ) -> CombinedFeatureView:
     class SomeCombinedView(CombinedFeatureView):
@@ -565,8 +564,8 @@ async def combined_view(
     return SomeCombinedView()
 
 
-@pytest_asyncio.fixture
-async def combined_feature_store(
+@pytest.fixture
+def combined_feature_store(
     titanic_feature_view: FeatureView,
     breast_scan_feature_viewout_with_datetime: FeatureView,
     combined_view: CombinedFeatureView,
@@ -647,8 +646,8 @@ def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> ModelContractWra
     return Titanic
 
 
-@pytest_asyncio.fixture
-async def titanic_feature_store_scd(
+@pytest.fixture
+def titanic_feature_store_scd(
     titanic_feature_view_scd: FeatureView,
     titanic_feature_view_parquet: FeatureView,
     titanic_model_scd: ModelContractWrapper,

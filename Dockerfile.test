@@ -5,7 +5,6 @@ WORKDIR /opt/app
 RUN pip install poetry
 RUN poetry config virtualenvs.create false
 RUN pip install pip --upgrade
-RUN apt-get update && apt-get install -y libpq-dev gcc
 
 COPY ./pyproject.toml /opt/app/pyproject.toml
 

@@ -46,6 +46,7 @@ class BatchDataSourceFactory:
             AzureBlobCsvDataSource,
             AzureBlobDeltaDataSource,
             AzureBlobParquetDataSource,
+            AzureBlobPartitionedParquetDataSource,
         )
         from aligned.schemas.feature_view import FeatureViewReferenceSource
         from aligned.schemas.model import ModelSource
@@ -65,6 +66,7 @@ class BatchDataSourceFactory:
             AzureBlobCsvDataSource,
             AzureBlobDeltaDataSource,
             AzureBlobParquetDataSource,
+            AzureBlobPartitionedParquetDataSource,
             # Aligned Related Sources
             JoinDataSource,
             JoinAsofDataSource,

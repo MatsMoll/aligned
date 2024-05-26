@@ -1,6 +1,5 @@
 import pytest
 
-from pathlib import Path
 from aligned.feature_store import ContractStore
 from aligned.retrival_job import split
 from aligned.schemas.folder import DatasetMetadata
@@ -58,18 +57,6 @@ async def test_train_test_validate_set(titanic_feature_store: ContractStore) -> 
 async def test_train_test_validate_set_new(titanic_feature_store: ContractStore) -> None:
     from aligned.schemas.folder import JsonDatasetStore
 
-    unlink_paths = [
-        'test_data/titanic-sets.json',
-        'test_data/titanic-train.csv',
-        'test_data/titanic-test.csv',
-        'test_data/titanic-validate.csv',
-    ]
-
-    for path_str in unlink_paths:
-        path = Path(path_str)
-        if path.exists():
-            path.unlink()
-
     dataset_size = 100
     train_fraction = 0.6
     validation_fraction = 0.2
@@ -78,7 +65,7 @@ async def test_train_test_validate_set_new(titanic_feature_store: ContractStore)
     test_size = int(round(dataset_size * (1 - train_fraction - validation_fraction)))
     validate_size = int(round(dataset_size * validation_fraction))
 
-    dataset_store = FileSource.json_at('test_data/titanic-sets.json')
+    dataset_store = FileSource.json_at('test_data/temp/titanic-sets.json')
     dataset = await (
         titanic_feature_store.feature_view('titanic')
         .all(limit=dataset_size)
@@ -88,9 +75,9 @@ async def test_train_test_validate_set_new(titanic_feature_store: ContractStore)
             metadata=DatasetMetadata(
                 id='titanic_test',
             ),
-            train_source=FileSource.csv_at('test_data/titanic-train.csv'),
-            test_source=FileSource.csv_at('test_data/titanic-test.csv'),
-            validate_source=FileSource.csv_at('test_data/titanic-validate.csv'),
+            train_source=FileSource.csv_at('test_data/temp/titanic-train.csv'),
+            test_source=FileSource.csv_at('test_data/temp/titanic-test.csv'),
+            validate_source=FileSource.csv_at('test_data/temp/titanic-validate.csv'),
         )
     )
 
