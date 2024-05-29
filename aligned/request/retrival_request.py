@@ -132,6 +132,18 @@ class RetrivalRequest(Codable):
         return {feature.derived_feature for feature in self.aggregated_features}
 
     @property
+    def core_column_names(self) -> list[str]:
+        """
+        Return all the columns that are expected to exist in the core source.
+
+        All other derived features should be able to derive from these core columns.
+        """
+        features = self.features.union(self.entities)
+        if self.event_timestamp:
+            features.add(self.event_timestamp.as_feature())
+        return sorted([feature.name for feature in features])
+
+    @property
     def all_required_features(self) -> set[Feature]:
         return self.features - self.entities
 

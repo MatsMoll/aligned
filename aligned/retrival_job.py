@@ -41,6 +41,11 @@ if TYPE_CHECKING:
     from aligned.sources.local import DataFileReference, StorageFileReference
     from aligned.feature_store import ContractStore
 
+    try:
+        from pyspark.sql import DataFrame as SparkFrame, SparkSession
+    except ModuleNotFoundError:
+        pass
+
 
 logger = logging.getLogger(__name__)
 
@@ -675,6 +680,18 @@ class RetrivalJob(ABC):
     async def to_polars(self) -> pl.DataFrame:
         return await (await self.to_lazy_polars()).collect_async()
 
+    async def to_spark(self, session: 'SparkSession') -> 'SparkFrame':
+        """
+        Loads the retrival request as a `pyspark.sql.DataFrame` object.
+        This assumes that `pyspark` is installed.
+        """
+        from aligned.sources.databricks import session_from_config
+
+        if session is None:
+            session = session_from_config({})
+
+        return session.createDataFrame(await self.to_pandas())
+
     def describe(self) -> str:
         if isinstance(self, ModificationJob):
             return f'{self.job.describe()} -> {self.__class__.__name__}'
@@ -694,6 +711,11 @@ class RetrivalJob(ABC):
         if isinstance(self, ModificationJob):
             return self.copy_with(self.job.unpack_embeddings())
         return self
+
+    def limit(self, limit: int) -> RetrivalJob:
+        if isinstance(self, ModificationJob):
+            return self.copy_with(self.job.limit(limit))
+        return LimitJob(self, limit)
 
     def join_asof(
         self,
@@ -916,6 +938,9 @@ class RetrivalJob(ABC):
         return self.unique_on(unique_on=request.entity_columns, sort_key=request.event_timestamp)
 
     def fill_missing_columns(self) -> RetrivalJob:
+        """
+        Fills missing columns that can be optional.
+        """
         return FillMissingColumnsJob(self)
 
     def rename(self, mappings: dict[str, str]) -> RetrivalJob:
@@ -1422,6 +1447,17 @@ class JoinAsofJob(RetrivalJob):
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
 
+    async def to_spark(self, session: 'SparkSession') -> 'SparkFrame':
+        left = await self.left_job.to_spark(session)
+        right = await self.right_job.to_spark(session)
+
+        return left._joinAsOf(
+            right,
+            leftAsOfColumn=self.left_event_timestamp,
+            rightAsOfColumn=self.right_event_timestamp,
+            on=self.left_on,
+        )
+
     def describe(self) -> str:
         return (
             f'({self.left_job.describe()}) -> '
@@ -1502,6 +1538,11 @@ class JoinJobs(RetrivalJob):
         right = await self.right_job.to_pandas()
         return left.merge(right, how=self.method, left_on=self.left_on, right_on=self.right_on)
 
+    async def to_spark(self, session: 'SparkSession') -> 'SparkFrame':
+        left = await self.left_job.to_spark(session)
+        right = await self.right_job.to_spark(session)
+        return left.join(right, on=self.left_on, how=self.method)
+
     def describe(self) -> str:
         return (
             f'({self.left_job.describe()}) -> '
@@ -1558,6 +1599,24 @@ class JoinBuilder:
 
 
 @dataclass
+class LimitJob(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+    limit: int
+
+    async def to_pandas(self) -> pd.DataFrame:
+        df = await self.job.to_pandas()
+        return df.head(self.limit)
+
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        df = await self.job.to_lazy_polars()
+        return df.limit(self.limit)
+
+    async def to_spark(self, session: 'SparkSession') -> 'SparkFrame':
+        return (await self.job.to_spark(session)).limit(self.limit)
+
+
+@dataclass
 class RenameJob(RetrivalJob, ModificationJob):
 
     job: RetrivalJob
@@ -1570,6 +1629,9 @@ class RenameJob(RetrivalJob, ModificationJob):
     async def to_lazy_polars(self) -> pl.LazyFrame:
         df = await self.job.to_lazy_polars()
         return df.rename(self.mappings)
+
+    async def to_spark(self, session: 'SparkSession') -> 'SparkFrame':
+        return (await self.job.to_spark(session)).withColumnsRenamed(self.mappings)
 
 
 @dataclass
@@ -1835,11 +1897,33 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
                     #         df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
         return df
 
+    async def compute_derived_features_spark(self, df: 'SparkFrame') -> 'SparkFrame':
+        for request in self.requests:
+            for feature_round in request.derived_features_order():
+
+                feature_columns = {}
+
+                for feature in feature_round:
+                    if feature.transformation.should_skip(feature.name, df.columns):
+                        logger.debug(f'Skipping to compute {feature.name} as it is aleady computed')
+                        continue
+
+                    logger.debug(f'Computing feature with spark: {feature.name}')
+                    feature_columns[feature.name] = await feature.transformation.transform_spark(df)
+
+                if feature_columns:
+                    df = df.withColumns(*feature_columns)
+
+        return df
+
     async def to_pandas(self) -> pd.DataFrame:
         return await self.compute_derived_features_pandas(await self.job.to_pandas())
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         return await self.compute_derived_features_polars(await self.job.to_lazy_polars())
+
+    async def to_spark(self, session: 'SparkSession') -> 'SparkFrame':
+        return await self.compute_derived_features_spark(await self.job.to_spark(session))
 
     def drop_invalid(self, validator: Validator | None = None) -> RetrivalJob:
         # We may validate a derived feature, so the validation should not propegate lower.
@@ -2258,6 +2342,10 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
         df = await self.to_polars()
         return df.to_pandas()
 
+    async def to_spark(self, session: 'SparkSession') -> 'SparkFrame':
+        logger.info('Ensure Type is not impelemented for Spark. Assume that they are correct')
+        return await self.job.to_spark(session)
+
     async def to_lazy_polars(self) -> pl.LazyFrame:
         df = await self.job.to_lazy_polars()
         org_schema = dict(df.schema)
@@ -2466,6 +2554,12 @@ class SelectColumnsJob(RetrivalJob, ModificationJob):
             return df.select(total_list)
         else:
             return df
+
+    async def to_spark(self, session: 'SparkSession') -> 'SparkFrame':
+        df = await self.job.to_spark(session)
+        if not self.include_features:
+            return df
+        return df.select(self.include_features)
 
     def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
         return SelectColumnsJob(self.include_features, self.job.cached_at(location))

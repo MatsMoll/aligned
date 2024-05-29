@@ -16,6 +16,12 @@ from aligned.schemas.feature import FeatureType
 from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.text_vectoriser import EmbeddingModel
 
+try:
+    from pyspark.sql import DataFrame as SparkFrame, Column as SparkColumn
+    from pyspark.sql.functions import col
+except ModuleNotFoundError:
+    pass
+
 if TYPE_CHECKING:
     from aligned.sources.s3 import AwsS3Config
 
@@ -79,6 +85,9 @@ class Transformation(Codable, SerializableType):
         raise NotImplementedError(type(self))
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr | pl.Expr:
+        raise NotImplementedError(type(self))
+
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
         raise NotImplementedError(type(self))
 
     def _serialize(self) -> dict:
@@ -428,6 +437,9 @@ class Equals(Transformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key) == pl.col(self.other_key)
 
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.key) == col(self.other_key)
+
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
@@ -458,6 +470,9 @@ class EqualsLiteral(Transformation):
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key) == self.value.python_value
+
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.key) == self.value.python_value
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -497,6 +512,9 @@ class And(Transformation):
             ).alias(alias)
         )
 
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.first_key) & col(self.second_key)
+
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
@@ -530,6 +548,9 @@ class Or(Transformation):
             transformation=lambda dfv: dfv[self.first_key] | dfv[self.second_key],
         )
 
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.first_key) | col(self.second_key)
+
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
@@ -559,6 +580,9 @@ class Inverse(Transformation):
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_columns((~pl.col(self.key)).alias(alias))
+
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return ~col(self.key)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -618,6 +642,9 @@ class NotEqualsLiteral(Transformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key) != self.value.python_value
 
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.key) != self.value.python_value
+
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
@@ -642,6 +669,9 @@ class GreaterThenValue(Transformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key) > self.value
 
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.key) > self.value
+
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
@@ -665,6 +695,9 @@ class GreaterThen(Transformation):
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.left_key) > pl.col(self.right_key)
+
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.left_key) > col(self.right_key)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -700,6 +733,9 @@ class GreaterThenOrEqual(Transformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_columns((pl.col(self.key) >= self.value).alias(alias))
 
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.key) >= self.value
+
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         from numpy import nan
@@ -734,6 +770,9 @@ class LowerThen(Transformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_columns((pl.col(self.key) < self.value).alias(alias))
 
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.key) < self.value
+
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         from numpy import nan
@@ -766,6 +805,9 @@ class LowerThenOrEqual(Transformation):
             transformation=lambda dfv: dfv[self.key] <= self.value,
         )
 
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.key) <= self.value
+
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         from numpy import nan
@@ -797,6 +839,9 @@ class SubtractionValue(Transformation, PsqlTransformation, RedshiftTransformatio
             is_valid_mask=~(df[self.front].isna()),
             transformation=lambda dfv: dfv[self.front] - self.behind.python_value,
         )
+
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.front) - self.behind.python_value
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -835,6 +880,9 @@ class Subtraction(Transformation, PsqlTransformation, RedshiftTransformation):
             transformation=lambda dfv: dfv[self.front] - dfv[self.behind],
         )
 
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.front) - col(self.behind)
+
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         from numpy import nan
@@ -863,6 +911,9 @@ class AdditionValue(Transformation):
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.feature) + pl.lit(self.value.python_value)
+
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.feature) + self.value.python_value
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -894,6 +945,9 @@ class Multiply(Transformation, PsqlTransformation, RedshiftTransformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.front) * pl.col(self.behind)
 
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.front) * col(self.behind)
+
     def as_psql(self) -> str:
         return f'{self.front} * {self.behind}'
 
@@ -916,6 +970,9 @@ class MultiplyValue(Transformation, PsqlTransformation, RedshiftTransformation):
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key] * self.value.python_value
+
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.key) * self.value.python_value
 
     def as_psql(self) -> str:
         return f"{self.key} * '{self.value.python_value}'"
@@ -943,6 +1000,9 @@ class Addition(Transformation, PsqlTransformation, RedshiftTransformation):
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.front) + pl.col(self.behind)
+
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.front) + col(self.behind)
 
     def as_psql(self) -> str:
         return f'{self.front} + {self.behind}'
@@ -982,6 +1042,9 @@ class TimeDifference(Transformation, PsqlTransformation, RedshiftTransformation)
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_columns((pl.col(self.front) - pl.col(self.behind)).dt.seconds().alias(alias))
+
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.front).cast('long') - col(self.behind).cast('long')
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -1035,6 +1098,11 @@ class Logarithm(Transformation):
             (pl.when(pl.col(self.key) > 0).then(pl.col(self.key).log()).otherwise(pl.lit(None))).alias(alias)
         )
 
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        from pyspark.sql.functions import log
+
+        return log(col(self.key))
+
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         from numpy import nan
@@ -1069,6 +1137,11 @@ class LogarithmOnePluss(Transformation):
             )
         )
 
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        from pyspark.sql.functions import log1p
+
+        return log1p(col(self.key))
+
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         from numpy import nan
@@ -1098,6 +1171,9 @@ class ToNumerical(Transformation):
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).cast(pl.Float64)
+
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        return col(self.key).cast('float')
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -1294,6 +1370,11 @@ class Contains(Transformation):
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).str.contains(self.value)
+
+    async def transform_spark(self, df: 'SparkFrame') -> 'SparkColumn':
+        from pyspark.sql.functions import array_contains
+
+        return array_contains(col(self.key), self.value)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:

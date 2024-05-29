@@ -141,7 +141,7 @@ class BatchDataSource(Codable, SerializableType):
             if inspect.iscoroutinefunction(method):
                 return await method(df)
             else:
-                return method(df)
+                return method(df)  # type: ignore
 
         async def all_between_dates(
             request: RetrivalRequest, start_date: datetime, end_date: datetime
@@ -153,7 +153,7 @@ class BatchDataSource(Codable, SerializableType):
             if inspect.iscoroutinefunction(method):
                 return await method(df)
             else:
-                return method(df)
+                return method(df)  # type: ignore
 
         async def features_for(entities: RetrivalJob, request: RetrivalRequest) -> pl.LazyFrame:
             import inspect
@@ -163,7 +163,7 @@ class BatchDataSource(Codable, SerializableType):
             if inspect.iscoroutinefunction(method):
                 return await method(df)
             else:
-                return method(df)
+                return method(df)  # type: ignore
 
         return CustomMethodDataSource.from_methods(
             all_data=all,
