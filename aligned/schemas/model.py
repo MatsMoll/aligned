@@ -261,5 +261,18 @@ class ModelSource(BatchDataSource):
     def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
         return self.source().features_for(facts, request)
 
+    @classmethod
+    def multi_source_features_for(
+        cls, facts: RetrivalJob, requests: list[tuple['ModelSource', RetrivalRequest]]
+    ) -> RetrivalJob:
+
+        if len(requests) != 1:
+            raise NotImplementedError(
+                f'Type: {cls} have not implemented how to load fact data with multiple sources.'
+            )
+
+        source, _ = requests[0]
+        return source.source().features_for(facts, requests[0][1])
+
     def depends_on(self) -> set[FeatureLocation]:
         return {FeatureLocation.model(self.pred_view.name)}

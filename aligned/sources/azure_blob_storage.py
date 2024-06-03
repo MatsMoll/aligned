@@ -32,17 +32,14 @@ try:
 
     logger = logging.getLogger(__name__)
 
-
     @dataclass
     class AzurePath:
         container: str
         blob_path: str
 
-
     def azure_container_blob(path: str) -> AzurePath:
         splits = path.split('/')
         return AzurePath(container=splits[0], blob_path='/'.join(splits[1:]))
-
 
     @dataclass
     class AzureBlobConfig(Directory):
@@ -80,7 +77,10 @@ You can choose between two ways of authenticating with Azure Blob Storage.
             date_formatter: DateFormatter | None = None,
         ) -> AzureBlobParquetDataSource:
             return AzureBlobParquetDataSource(
-                self, path, mapping_keys=mapping_keys or {}, date_formatter=date_formatter or DateFormatter.noop()
+                self,
+                path,
+                mapping_keys=mapping_keys or {},
+                date_formatter=date_formatter or DateFormatter.noop(),
             )
 
         def partitioned_parquet_at(
@@ -174,7 +174,6 @@ You can choose between two ways of authenticating with Azure Blob Storage.
         def storage(self) -> BlobStorage:
             return BlobStorage(self)
 
-
     @dataclass
     class AzureBlobDirectory(Directory):
 
@@ -240,7 +239,6 @@ You can choose between two ways of authenticating with Azure Blob Storage.
         def directory(self, path: str) -> AzureBlobDirectory:
             return AzureBlobDirectory(self.config, self.sub_path / path)
 
-
     @dataclass
     class BlobStorage(Storage):
         config: AzureBlobConfig
@@ -261,7 +259,6 @@ You can choose between two ways of authenticating with Azure Blob Storage.
             container = client.get_blob_client(azure_path.container, azure_path.blob_path)
             container.upload_blob(content, overwrite=True)
 
-
     @dataclass
     class AzureBlobDataSource(StorageFileReference, ColumnFeatureMappable):
         config: AzureBlobConfig
@@ -281,7 +278,6 @@ You can choose between two ways of authenticating with Azure Blob Storage.
 
         async def write(self, content: bytes) -> None:
             return await self.storage.write(self.path, content)
-
 
     @dataclass
     class AzureBlobCsvDataSource(
@@ -401,7 +397,6 @@ Path: *{self.path}*
                 date_formatter=self.date_formatter,
             )
 
-
     @dataclass
     class AzureBlobPartitionedParquetDataSource(BatchDataSource, DataFileReference, ColumnFeatureMappable):
         config: AzureBlobConfig
@@ -462,7 +457,9 @@ Partition Keys: *{self.partition_keys}*
         async def write_polars(self, df: pl.LazyFrame) -> None:
             url = f"az://{self.directory}"
             creds = self.config.read_creds()
-            df.collect().to_pandas().to_parquet(url, partition_cols=self.partition_keys, storage_options=creds)
+            df.collect().to_pandas().to_parquet(
+                url, partition_cols=self.partition_keys, storage_options=creds
+            )
 
         @classmethod
         def multi_source_features_for(
@@ -507,7 +504,6 @@ Partition Keys: *{self.partition_keys}*
             features = requests[0].all_returned_columns
             df = await job.select(features).to_lazy_polars()
             await self.write_polars(df)
-
 
     @dataclass
     class AzureBlobParquetDataSource(
@@ -623,7 +619,6 @@ Path: *{self.path}*
                 end_date=end_date,
                 date_formatter=self.date_formatter,
             )
-
 
     @dataclass
     class AzureBlobDeltaDataSource(
@@ -859,5 +854,6 @@ Path: *{self.path}*
                     storage_options=self.config.read_creds(),
                     delta_write_options={'schema': pa.schema(schema)},
                 )
+
 except ModuleNotFoundError:
     pass

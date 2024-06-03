@@ -54,10 +54,10 @@ class BatchDataSourceFactory:
         source_types = [
             PostgreSQLDataSource,
             # File Sources
-            ParquetFileSource,
-            PartitionedParquetFileSource,
             CsvFileSource,
             DeltaFileSource,
+            ParquetFileSource,
+            PartitionedParquetFileSource,
             # Aws Sources
             AwsS3CsvDataSource,
             AwsS3ParquetDataSource,
