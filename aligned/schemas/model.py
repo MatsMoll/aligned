@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import timedelta, datetime
 
-from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
+from aligned.request.retrival_request import EventTimestampRequest, FeatureRequest, RetrivalRequest
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import FeatureLocation, FeatureType
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureReference
@@ -91,7 +91,7 @@ class PredictionsView(Codable):
     @property
     def full_schema(self) -> set[Feature]:
 
-        schema = self.features.union(self.entities)
+        schema = self.features.union(self.entities).union(self.derived_features)
 
         for target in self.classification_targets or {}:
             schema.add(target.feature)
@@ -129,12 +129,22 @@ class PredictionsView(Codable):
         )
 
     def request_for(
-        self, features: set[str], name: str, model_version_as_entity: bool = False
+        self,
+        features: set[str],
+        name: str,
+        model_version_as_entity: bool = False,
+        event_timestamp_column: str | None = None,
     ) -> RetrivalRequest:
         entities = self.entities
 
         if model_version_as_entity and self.model_version_column:
             entities = entities.union({self.model_version_column})
+
+        event_timestamp_request = None
+        if self.event_timestamp:
+            event_timestamp_request = EventTimestampRequest(
+                event_timestamp=self.event_timestamp, entity_column=event_timestamp_column
+            )
 
         return RetrivalRequest(
             name=name,
@@ -142,7 +152,7 @@ class PredictionsView(Codable):
             entities=entities,
             features={feature for feature in self.features if feature.name in features},
             derived_features={feature for feature in self.derived_features if feature.name in features},
-            event_timestamp=self.event_timestamp,
+            event_timestamp_request=event_timestamp_request,
         )
 
     def labels_estimates_refs(self) -> set[FeatureReference]:

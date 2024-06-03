@@ -87,9 +87,6 @@ class BatchDataSourceFactory:
         return cls._shared
 
 
-T = TypeVar('T')
-
-
 class BatchSourceModification:
 
     source: BatchDataSource

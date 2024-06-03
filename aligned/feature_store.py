@@ -985,6 +985,11 @@ class ModelFeatureStore:
     def request(
         self, except_features: set[str] | None = None, event_timestamp_column: str | None = None
     ) -> FeatureRequest:
+        return self.input_request(except_features, event_timestamp_column)
+
+    def input_request(
+        self, except_features: set[str] | None = None, event_timestamp_column: str | None = None
+    ) -> FeatureRequest:
         feature_refs = self.raw_string_features(except_features or set())
         if not feature_refs:
             raise ValueError(f"No features to request for model '{self.model.name}'")
@@ -992,6 +997,25 @@ class ModelFeatureStore:
         return self.store.requests_for(
             RawStringFeatureRequest(feature_refs),
             event_timestamp_column,
+        )
+
+    def prediction_request(
+        self, exclude_features: set[str] | None = None, model_version_as_entity: bool = False
+    ) -> RetrivalRequest:
+        if not self.model.predictions_view:
+            raise ValueError(f'Model {self.model.name} has no predictions view')
+
+        if exclude_features is None:
+            exclude_features = set()
+
+        features = {
+            feature.name
+            for feature in self.model.predictions_view.full_schema
+            if feature.name not in exclude_features
+        }
+
+        return self.model.predictions_view.request_for(
+            features, self.model.name, model_version_as_entity=model_version_as_entity
         )
 
     def needed_entities(self) -> set[Feature]:

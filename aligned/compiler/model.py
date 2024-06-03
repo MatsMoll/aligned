@@ -9,7 +9,7 @@ from datetime import timedelta
 from uuid import uuid4
 
 from aligned.compiler.feature_factory import (
-    ClassificationLabel,
+    CanBeClassificationLabel,
     Entity,
     Bool,
     EventTimestamp,
@@ -39,6 +39,7 @@ from aligned.schemas.target import RegressionTarget as RegressionTargetSchema
 if TYPE_CHECKING:
     from aligned.sources.local import StorageFileReference
     from aligned.schemas.folder import DatasetStore
+    from aligned.feature_store import ModelFeatureStore
 
 logger = logging.getLogger(__name__)
 
@@ -97,16 +98,30 @@ class ModelContractWrapper(Generic[T]):
     def compile(self) -> ModelSchema:
         return compile_with_metadata(self.contract(), self.metadata)
 
+    def query(
+        self, needed_views: list[FeatureViewWrapper | ModelContractWrapper] | None = None
+    ) -> ModelFeatureStore:
+        from aligned import ContractStore
+
+        store = ContractStore.empty()
+        store.add_model(self)
+
+        for needed_data in needed_views or []:
+            if isinstance(needed_data, ModelContractWrapper):
+                store.add_compiled_model(needed_data.compile())
+            else:
+                store.add_compiled_view(needed_data.compile())
+
+        return store.model(self.metadata.name)
+
     def predict_over(
         self,
         values: ConvertableToRetrivalJob | RetrivalJob,
         needed_views: list[FeatureViewWrapper | ModelContractWrapper] | None = None,
     ) -> PredictionJob:
-        from aligned import ContractStore
         from aligned.retrival_job import RetrivalJob
 
         model = self.compile()
-        model.features.default_features
 
         if not model.exposed_model:
             raise ValueError(f"Model {model.name} does not have an `exposed_model` to use for predictions.")
@@ -122,17 +137,7 @@ class ModelContractWrapper(Generic[T]):
             )
             values = RetrivalJob.from_convertable(values, request)
 
-        store = ContractStore.empty()
-
-        for needed_data in needed_views or []:
-            if isinstance(needed_data, ModelContractWrapper):
-                store.add_compiled_model(needed_data.compile())
-            else:
-                store.add_compiled_view(needed_data.compile())
-
-        store.add_compiled_model(model)
-
-        return store.model(model.name).predict_over(values)
+        return self.query(needed_views).predict_over(values)
 
     def as_view(self) -> CompiledFeatureView | None:
 
@@ -367,14 +372,15 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
         unacceptable_freshness=metadata.unacceptable_freshness,
     )
     probability_features: dict[str, set[TargetProbability]] = {}
+    hidden_features = 0
 
     classification_targets: dict[str, ClassificationTargetSchema] = {}
     regression_targets: dict[str, RegressionTargetSchema] = {}
 
     for var_name in var_names:
         feature = getattr(model, var_name)
-
         if isinstance(feature, FeatureFactory):
+            assert feature._name
             feature._location = FeatureLocation.model(metadata.name)
 
         if isinstance(feature, ModelVersion):
@@ -388,11 +394,10 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
             compiled = feature.compile()
             inference_view.entities.update(compiled.predictions_view.entities)
 
-        elif isinstance(feature, ClassificationLabel):
-            assert feature._name
-            feature._location = FeatureLocation.model(metadata.name)
-            target_feature = feature.compile()
-
+        elif (
+            isinstance(feature, CanBeClassificationLabel)
+            and (target_feature := feature.compile_classification_target()) is not None
+        ):
             classification_targets[var_name] = target_feature
             inference_view.classification_targets.add(target_feature)
         elif isinstance(feature, RegressionLabel):
@@ -429,7 +434,56 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
         elif isinstance(feature, Entity):
             inference_view.entities.add(feature.feature())
         elif isinstance(feature, FeatureFactory):
-            inference_view.features.add(feature.feature())
+            if feature.transformation:
+                # Adding features that is not stored in the view
+                # e.g:
+                # class SomeView(FeatureView):
+                #     ...
+                #     x, y = Bool(), Bool()
+                #     z = (x & y) | x
+                #
+                # Here will (x & y)'s result be a 'hidden' feature
+                feature_deps = [(feat.depth(), feat) for feat in feature.feature_dependencies()]
+
+                # Sorting by key in order to instanciate the "core" features first
+                # And then making it possible for other features to reference them
+                def sort_key(x: tuple[int, FeatureFactory]) -> int:
+                    return x[0]
+
+                for depth, feature_dep in sorted(feature_deps, key=sort_key):
+
+                    if not feature_dep._location:
+                        feature_dep._location = FeatureLocation.feature_view(metadata.name)
+                    elif feature_dep._location.name != metadata.name:
+                        continue
+
+                    if feature_dep._name:
+                        feat_dep = feature_dep.feature()
+                        if feat_dep in inference_view.features or feat_dep in inference_view.entities:
+                            continue
+
+                    if depth == 0:
+                        if not feature_dep._name:
+                            feature_dep._name = var_name
+
+                        feat_dep = feature_dep.feature()
+                        inference_view.features.add(feat_dep)
+                        continue
+
+                    if not feature_dep._name:
+                        feature_dep._name = str(hidden_features)
+                        hidden_features += 1
+
+                    feature_graph = feature_dep.compile()  # Should decide on which payload to send
+                    if feature_graph in inference_view.derived_features:
+                        continue
+
+                    inference_view.derived_features.add(feature_dep.compile())
+
+                inference_view.derived_features.add(feature.compile())
+            else:
+                inference_view.features.add(feature.feature())
+
         if isinstance(feature, Bool) and feature._is_shadow_model_flag:
             inference_view.is_shadow_model_flag = feature.feature()
 

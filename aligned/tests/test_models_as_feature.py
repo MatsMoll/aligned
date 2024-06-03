@@ -39,6 +39,7 @@ other = OtherView()
 class First:
 
     target = other.is_true.as_classification_label()
+    test = target.is_not_null()
 
 
 first = First()
@@ -67,6 +68,18 @@ def test_model_referenced_as_feature() -> None:
     assert len(model.predictions_view.entities) == 2
 
 
+def test_model_pred_request() -> None:
+    store = ContractStore.experimental()
+    store.add_feature_view(View)  # type: ignore
+    store.add_feature_view(OtherView)  # type: ignore
+    store.add_model(First)
+
+    assert len(store.feature_views) == 2
+
+    model_request = store.model('test_model').prediction_request()
+    assert model_request.features_to_include == {'target', 'test'}
+
+
 def test_model_request() -> None:
     store = ContractStore.experimental()
     store.add_feature_view(View)  # type: ignore
@@ -75,7 +88,7 @@ def test_model_request() -> None:
 
     assert len(store.feature_views) == 2
 
-    model_request = store.model('test_model').request()
+    model_request = store.model('test_model').input_request()
     assert model_request.features_to_include == {'feature_a', 'feature_b', 'view_id', 'other_id'}
 
 

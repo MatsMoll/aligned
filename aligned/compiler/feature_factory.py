@@ -82,7 +82,7 @@ class EventTrigger:
 @dataclass
 class TargetProbability:
     of_value: Any
-    target: ClassificationLabel
+    target: CanBeClassificationLabel
     _name: str | None = None
 
     def __hash__(self) -> int:
@@ -92,6 +92,7 @@ class TargetProbability:
         self._name = name
 
     def compile(self) -> ClassTargetProbability:
+        assert self._name, 'Missing the name of the feature'
         return ClassTargetProbability(
             outcome=LiteralValue.from_value(self.of_value),
             feature=Feature(self._name, dtype=FeatureType.float()),
@@ -261,34 +262,43 @@ class RegressionLabel(FeatureReferencable):
 
 
 @dataclass
-class ClassificationLabel(FeatureReferencable):
-    feature: FeatureFactory
+class CanBeClassificationLabel:
+
+    ground_truth_feature: FeatureFactory | None = field(default=None)
     event_trigger: EventTrigger | None = field(default=None)
     ground_truth_event: StreamDataSource | None = field(default=None)
-    _name: str | None = field(default=None)
-    _location: FeatureLocation | None = field(default=None)
 
-    def __set_name__(self, owner, name):
-        self._name = name
+    def as_classification_label(self: T) -> T:
+        """
+        Tells Aligned that this feature is a classification target in a model_contract.
 
-    def feature_reference(self) -> FeatureReference:
-        if not self._name:
-            raise ValueError('Missing name, can not create reference')
-        if not self._location:
-            raise ValueError('Missing location, can not create reference')
-        return FeatureReference(self._name, self._location, self.feature.dtype)
+        This can simplify the process of creating training datasets,
+        as Aligned knows which features will be det ground truth.
+        """
+        assert isinstance(self, FeatureFactory)
+        assert isinstance(self, CanBeClassificationLabel)
 
-    def listen_to_ground_truth_event(self, stream: StreamDataSource) -> ClassificationLabel:
-        return ClassificationLabel(
-            feature=self.feature,
-            event_trigger=self.event_trigger,
-            ground_truth_event=stream,
-        )
+        new_value = self.copy_type()  # type: ignore
+        new_value.ground_truth_feature = self
+        return new_value
 
-    def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> ClassificationLabel:
+    def prediction_feature(self) -> Feature:
+        if isinstance(self, FeatureFactory):
+            return self.feature()
+        raise ValueError(f'{self} is not a feature factory, and can therefore not be a feature')
+
+    def listen_to_ground_truth_event(self: T, stream: StreamDataSource) -> T:
+        assert isinstance(self, CanBeClassificationLabel)
+
+        self.ground_truth_event = stream
+        return self
+
+    def send_ground_truth_event(self: T, when: Bool, sink_to: StreamDataSource) -> T:
         assert when.dtype == FeatureType.bool(), 'A trigger needs a boolean condition'
+        assert isinstance(self, CanBeClassificationLabel)
 
-        return ClassificationLabel(self.feature, EventTrigger(when, sink_to))
+        self.event_trigger = EventTrigger(when, sink_to)
+        return self
 
     def probability_of(self, value: Any) -> TargetProbability:
         """Define a value that will be the probability of a certain target class.
@@ -309,17 +319,24 @@ class ClassificationLabel(FeatureReferencable):
             TargetProbability: A feature that contains the probability of the target class.
         """
 
-        if not isinstance(value, self.feature.dtype.python_type):
+        assert self.ground_truth_feature is not None, 'Need to define the ground truth feature first'
+
+        if not isinstance(value, self.ground_truth_feature.dtype.python_type):
             raise ValueError(
                 (
                     'Probability of target is of incorrect data type. ',
-                    f'Target is {self.feature.dtype}, but value is {type(value)}.',
+                    f'Target is {self.ground_truth_feature.dtype}, but value is {type(value)}.',
                 )
             )
 
         return TargetProbability(value, self)
 
-    def compile(self) -> ClassificationTargetSchemas:
+    def compile_classification_target(self) -> ClassificationTargetSchemas | None:
+        if not self.ground_truth_feature:
+            return None
+
+        pred_feature = self.prediction_feature()
+
         on_ground_truth_event = self.ground_truth_event
         trigger = self.event_trigger
 
@@ -329,14 +346,14 @@ class ClassificationLabel(FeatureReferencable):
                 event.condition._name = '0'
 
             trigger = EventTriggerSchema(
-                event.condition.compile(), event=event.event, payload={self.feature.feature()}
+                event.condition.compile(), event=event.event, payload={self.ground_truth_feature.feature()}
             )
             if not on_ground_truth_event:
                 on_ground_truth_event = event.event
 
         return ClassificationTargetSchemas(
-            self.feature.feature_reference(),
-            feature=Feature(self._name, self.feature.dtype),
+            self.ground_truth_feature.feature_reference(),
+            feature=pred_feature,
             on_ground_truth_event=on_ground_truth_event,
             event_trigger=trigger,
         )
@@ -402,15 +419,6 @@ class FeatureFactory(FeatureReferencable):
             tags=None,
             constraints=self.constraints,
         )
-
-    def as_classification_label(self) -> ClassificationLabel:
-        """
-        Tells Aligned that this feature is a classification target in a model_contract.
-
-        This can simplify the process of creating training datasets,
-        as Aligned knows which features will be det ground truth.
-        """
-        return ClassificationLabel(self)
 
     def as_regression_label(self) -> RegressionLabel:
         """
@@ -910,7 +918,7 @@ class DateFeature(FeatureFactory):
         return self.date_component('ordinal_day')
 
 
-class Bool(EquatableFeature, LogicalOperatableFeature):
+class Bool(EquatableFeature, LogicalOperatableFeature, CanBeClassificationLabel):
 
     _is_shadow_model_flag: bool = field(default=False)
 
@@ -942,7 +950,13 @@ class Float(ArithmeticFeature, DecimalOperations):
         return ArithmeticAggregation(self)
 
 
-class UInt8(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
+class UInt8(
+    ArithmeticFeature,
+    CouldBeEntityFeature,
+    CouldBeModelVersion,
+    CategoricalEncodableFeature,
+    CanBeClassificationLabel,
+):
     def copy_type(self) -> UInt8:
         if self.constraints and Optional() in self.constraints:
             return UInt8().is_optional()
@@ -956,7 +970,13 @@ class UInt8(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, Catego
         return ArithmeticAggregation(self)
 
 
-class UInt16(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
+class UInt16(
+    ArithmeticFeature,
+    CouldBeEntityFeature,
+    CouldBeModelVersion,
+    CategoricalEncodableFeature,
+    CanBeClassificationLabel,
+):
     def copy_type(self) -> UInt16:
         if self.constraints and Optional() in self.constraints:
             return UInt16().is_optional()
@@ -970,7 +990,13 @@ class UInt16(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, Categ
         return ArithmeticAggregation(self)
 
 
-class UInt32(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
+class UInt32(
+    ArithmeticFeature,
+    CouldBeEntityFeature,
+    CouldBeModelVersion,
+    CategoricalEncodableFeature,
+    CanBeClassificationLabel,
+):
     def copy_type(self) -> UInt32:
         if self.constraints and Optional() in self.constraints:
             return UInt32().is_optional()
@@ -984,7 +1010,13 @@ class UInt32(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, Categ
         return ArithmeticAggregation(self)
 
 
-class UInt64(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
+class UInt64(
+    ArithmeticFeature,
+    CouldBeEntityFeature,
+    CouldBeModelVersion,
+    CategoricalEncodableFeature,
+    CanBeClassificationLabel,
+):
     def copy_type(self) -> UInt64:
         if self.constraints and Optional() in self.constraints:
             return UInt64().is_optional()
@@ -998,7 +1030,13 @@ class UInt64(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, Categ
         return ArithmeticAggregation(self)
 
 
-class Int8(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
+class Int8(
+    ArithmeticFeature,
+    CouldBeEntityFeature,
+    CouldBeModelVersion,
+    CategoricalEncodableFeature,
+    CanBeClassificationLabel,
+):
     def copy_type(self) -> Int8:
         if self.constraints and Optional() in self.constraints:
             return Int8().is_optional()
@@ -1012,7 +1050,13 @@ class Int8(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, Categor
         return ArithmeticAggregation(self)
 
 
-class Int16(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
+class Int16(
+    ArithmeticFeature,
+    CouldBeEntityFeature,
+    CouldBeModelVersion,
+    CategoricalEncodableFeature,
+    CanBeClassificationLabel,
+):
     def copy_type(self) -> Int16:
         if self.constraints and Optional() in self.constraints:
             return Int16().is_optional()
@@ -1026,7 +1070,13 @@ class Int16(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, Catego
         return ArithmeticAggregation(self)
 
 
-class Int32(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
+class Int32(
+    ArithmeticFeature,
+    CouldBeEntityFeature,
+    CouldBeModelVersion,
+    CategoricalEncodableFeature,
+    CanBeClassificationLabel,
+):
     def copy_type(self) -> Int32:
         if self.constraints and Optional() in self.constraints:
             return Int32().is_optional()
@@ -1040,7 +1090,13 @@ class Int32(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, Catego
         return ArithmeticAggregation(self)
 
 
-class Int64(ArithmeticFeature, CouldBeEntityFeature, CouldBeModelVersion, CategoricalEncodableFeature):
+class Int64(
+    ArithmeticFeature,
+    CouldBeEntityFeature,
+    CouldBeModelVersion,
+    CategoricalEncodableFeature,
+    CanBeClassificationLabel,
+):
     def copy_type(self) -> Int64:
         if self.constraints and Optional() in self.constraints:
             return Int64().is_optional()
@@ -1103,6 +1159,7 @@ class String(
     NumberConvertableFeature,
     CouldBeModelVersion,
     CouldBeEntityFeature,
+    CanBeClassificationLabel,
     LengthValidatable,
     StringValidatable,
 ):
