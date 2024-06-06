@@ -9,7 +9,7 @@ from mashumaro.types import SerializableType
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.request.retrival_request import RequestResult
 
-from aligned.sources.local import StorageFileSource
+from aligned.sources.local import Deletable, StorageFileSource
 from aligned.schemas.codable import Codable
 
 T = TypeVar('T')
@@ -281,9 +281,7 @@ class JsonDatasetStore(DatasetStore):
             if not (dataset.tags and tag in dataset.tags):
                 continue
 
-            if latest_dataset is None:
-                latest_dataset = dataset
-            elif dataset.created_at > latest_dataset.created_at:
+            if (latest_dataset is None) or (dataset.created_at > latest_dataset.created_at):
                 latest_dataset = dataset
 
         return latest_dataset
@@ -297,7 +295,31 @@ class JsonDatasetStore(DatasetStore):
 
     async def delete_metadata_for(self, dataset_id: str) -> DatasetMetadataInterface | None:
         datasets = await self.list_datasets()
-        index = self.index_of(dataset_id, datasets.all)
-        if index is None:
-            return None
-        return datasets.all[index]
+
+        async def delete_dataset(source: BatchDataSource):
+            if isinstance(source, Deletable):
+                await source.delete()
+
+        index = self.index_of(dataset_id, datasets.raw_data)
+        if index is not None:
+            dataset = datasets.raw_data.pop(index)
+            await delete_dataset(dataset.source)
+            return dataset
+
+        index = self.index_of(dataset_id, datasets.train_test)
+        if index is not None:
+            dataset = datasets.train_test.pop(index)
+            await delete_dataset(dataset.train_dataset)
+            await delete_dataset(dataset.test_dataset)
+            return dataset
+
+        index = self.index_of(dataset_id, datasets.train_test_validation)
+        if index is not None:
+            dataset = datasets.train_test_validation.pop(index)
+            await delete_dataset(dataset.train_dataset)
+            await delete_dataset(dataset.test_dataset)
+            if dataset.validation_dataset:
+                await delete_dataset(dataset.validation_dataset)
+            return dataset
+
+        return None

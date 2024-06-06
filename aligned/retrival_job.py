@@ -112,6 +112,14 @@ def split_polars(
         return data[start_index:end_index][row_name].to_pandas()
 
 
+def fraction_from_job(job: RetrivalJob) -> float | None:
+    if isinstance(job, SubsetJob):
+        return job.fraction
+    elif isinstance(job, InMemorySplitCacheJob):
+        return job.dataset_sizes[job.dataset_index]
+    return None
+
+
 @dataclass
 class TrainTestJob:
 
@@ -179,11 +187,11 @@ class TrainTestJob:
         else:
             raise ValueError(f'Unknown dataset store type: {type(dataset_store)}')
 
-        if isinstance(self.train_job, SubsetJob):
-            train_size = self.train_job.fraction
+        if train_size is None:
+            train_size = fraction_from_job(self.train_job)
 
-        if isinstance(self.test_job, SubsetJob):
-            test_size = self.test_job.fraction
+        if test_size is None:
+            test_size = fraction_from_job(self.test_job)
 
         if not isinstance(test_source, BatchDataSource):
             raise ValueError('test_source should be a BatchDataSource')
@@ -312,14 +320,14 @@ class TrainTestValidateJob:
 
         request_result = self.train_job.request_result
 
-        if isinstance(self.train_job, SubsetJob):
-            train_size = self.train_job.fraction
+        if train_size is None:
+            train_size = fraction_from_job(self.train_job)
 
-        if isinstance(self.test_job, SubsetJob):
-            test_size = self.test_job.fraction
+        if test_size is None:
+            test_size = fraction_from_job(self.test_job)
 
-        if isinstance(self.validate_job, SubsetJob):
-            validation_size = self.validate_job.fraction
+        if validation_size is None:
+            validation_size = fraction_from_job(self.validate_job)
 
         if not isinstance(test_source, BatchDataSource):
             raise ValueError('test_source should be a BatchDataSource')

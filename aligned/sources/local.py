@@ -33,6 +33,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+class Deletable:
+    async def delete(self) -> None:
+        raise NotImplementedError(type(self))
+
+
 class AsRepoDefinition:
     async def as_repo_definition(self) -> RepoDefinition:
         raise NotImplementedError()
@@ -98,6 +103,14 @@ def do_file_exist(path: str) -> bool:
     return Path(path).is_file()
 
 
+def delete_path(path: str) -> None:
+    path_obj = Path(path)
+    if path_obj.is_dir():
+        path_obj.rmdir()
+    else:
+        Path(path).unlink()
+
+
 @dataclass
 class CsvConfig(Codable):
     """
@@ -110,7 +123,9 @@ class CsvConfig(Codable):
 
 
 @dataclass
-class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource):
+class CsvFileSource(
+    BatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource, Deletable
+):
     """
     A source pointing to a CSV file
     """
@@ -142,6 +157,9 @@ class CsvFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, W
 
 [Go to file]({self.path})
 """  # noqa
+
+    async def delete(self) -> None:
+        delete_path(self.path)
 
     async def read_pandas(self) -> pd.DataFrame:
         try:
@@ -377,7 +395,7 @@ class ParquetConfig(Codable):
 
 @dataclass
 class PartitionedParquetFileSource(
-    BatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource
+    BatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource, Deletable
 ):
     """
     A source pointing to a Parquet file
@@ -407,6 +425,9 @@ class PartitionedParquetFileSource(
 
     def __hash__(self) -> int:
         return hash(self.job_group_key())
+
+    async def delete(self) -> None:
+        delete_path(self.directory)
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
@@ -492,7 +513,7 @@ class PartitionedParquetFileSource(
 
 
 @dataclass
-class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference):
+class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, Deletable):
     """
     A source pointing to a Parquet file
     """
@@ -518,6 +539,9 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
 
     def __hash__(self) -> int:
         return hash(self.job_group_key())
+
+    async def delete(self) -> None:
+        delete_path(self.path)
 
     async def read_pandas(self) -> pd.DataFrame:
         try:
@@ -608,7 +632,9 @@ class DeltaFileConfig(Codable):
 
 
 @dataclass
-class DeltaFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource):
+class DeltaFileSource(
+    BatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource, Deletable
+):
     """
     A source pointing to a Parquet file
     """
@@ -625,6 +651,9 @@ class DeltaFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference,
 
     def __hash__(self) -> int:
         return hash(self.job_group_key())
+
+    async def delete(self) -> None:
+        delete_path(self.path)
 
     async def read_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
