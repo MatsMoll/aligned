@@ -203,12 +203,7 @@ class CsvFileSource(
         except OSError:
             raise UnableToFindFileException(self.path)
 
-    async def upsert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
-        if len(requests) != 1:
-            raise ValueError('Csv files only support one write request as of now')
-
-        request = requests[0]
-
+    async def upsert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         data = (await job.to_lazy_polars()).select(request.all_returned_columns)
         potential_timestamps = request.all_features
 
@@ -233,12 +228,7 @@ class CsvFileSource(
 
         await self.write_polars(write_df)
 
-    async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
-        if len(requests) != 1:
-            raise ValueError('Csv files only support one write request as of now')
-
-        request = requests[0]
-
+    async def insert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         data = (await job.to_lazy_polars()).select(request.all_returned_columns)
         for feature in request.features:
             if feature.dtype.is_datetime:
@@ -256,12 +246,7 @@ class CsvFileSource(
 
         await self.write_polars(write_df)
 
-    async def overwrite(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
-
-        if len(requests) != 1:
-            raise ValueError('Csv files only support one write request as of now')
-
-        request = requests[0]
+    async def overwrite(self, job: RetrivalJob, request: RetrivalRequest) -> None:
 
         data = (await job.to_lazy_polars()).select(request.all_returned_columns)
         for feature in request.features:
@@ -497,19 +482,16 @@ class PartitionedParquetFileSource(
             schema, data_source_code, view_name, 'from aligned import FileSource'
         )
 
-    async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
-        if len(requests) != 1:
-            raise ValueError('Partitioned Parquet files only support one write request as of now')
-        request = requests[0]
+    async def insert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         job = job.select(request.all_returned_columns)
         df = await job.to_lazy_polars()
         await self.write_polars(df)
 
-    async def overwrite(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+    async def overwrite(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         import shutil
 
         shutil.rmtree(self.directory)
-        await self.insert(job, requests)
+        await self.insert(job, request)
 
 
 @dataclass
@@ -721,21 +703,11 @@ class DeltaFileSource(
             schema, data_source_code, view_name, 'from aligned import FileSource'
         )
 
-    async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
-        if len(requests) != 1:
-            raise ValueError('Delta files only support one write request as of now')
-
-        request = requests[0]
-
+    async def insert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         data = await job.to_lazy_polars()
         data.select(request.all_returned_columns).collect().write_delta(self.path, mode='append')
 
-    async def upsert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
-        if len(requests) != 1:
-            raise ValueError('Delta files only support one write request as of now')
-
-        request = requests[0]
-
+    async def upsert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         new_data = await job.to_lazy_polars()
         existing = await self.to_lazy_polars()
 

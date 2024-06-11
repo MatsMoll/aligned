@@ -113,6 +113,10 @@ class PredictionsView(Codable):
 
         return schema
 
+    def embeddings(self) -> list[Feature]:
+        embeds = [feat for feat in self.full_schema if feat.dtype.is_embedding]
+        return sorted(embeds, key=lambda feat: feat.name)
+
     def request(self, name: str, model_version_as_entity: bool = False) -> RetrivalRequest:
         entities = self.entities
 

@@ -211,7 +211,7 @@ class BatchDataSource(Codable, SerializableType):
         return data_class.from_dict(value)
 
     def all_columns(self, limit: int | None = None) -> RetrivalJob:
-        return self.all(RequestResult.empty(), limit=limit)
+        return self.all(RequestResult(set(), set(), None), limit=limit)
 
     def all(self, result: RequestResult, limit: int | None = None) -> RetrivalJob:
         return self.all_data(
@@ -228,7 +228,7 @@ class BatchDataSource(Codable, SerializableType):
 
             return FileFullJob(self, request=request, limit=limit)
 
-        raise NotImplementedError()
+        raise NotImplementedError(type(self))
 
     def all_between_dates(
         self,

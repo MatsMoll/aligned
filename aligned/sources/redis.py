@@ -170,58 +170,54 @@ class RedisSource(FeatureSource, WritableFeatureSource):
         combined = [req for req in request.needed_requests if req.location.location == 'combined_view']
         return FactualRedisJob(self.config, needed_requests, facts).combined_features(combined)
 
-    async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+    async def insert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
 
         redis = self.config.redis()
         data = await job.to_lazy_polars()
 
         async with redis.pipeline(transaction=True) as pipe:
+            # Run one query per row
+            filter_entity_query: pl.Expr = pl.lit(True)
+            for entity_name in request.entity_names:
+                filter_entity_query = filter_entity_query & (pl.col(entity_name).is_not_null())
 
-            for request in requests:
-                # Run one query per row
-                filter_entity_query: pl.Expr = pl.lit(True)
-                for entity_name in request.entity_names:
-                    filter_entity_query = filter_entity_query & (pl.col(entity_name).is_not_null())
+            request_data = data.filter(filter_entity_query).with_columns(
+                (
+                    pl.concat_str(
+                        [pl.lit(request.location.identifier), pl.lit(':')]
+                        + [pl.col(col) for col in sorted(request.entity_names)]
+                    )
+                ).alias('id')
+            )
 
-                request_data = data.filter(filter_entity_query).with_columns(
-                    (
-                        pl.concat_str(
-                            [pl.lit(request.location.identifier), pl.lit(':')]
-                            + [pl.col(col) for col in sorted(request.entity_names)]
-                        )
-                    ).alias('id')
-                )
+            features = ['id']
 
-                features = ['id']
+            for feature in request.returned_features:
 
-                for feature in request.returned_features:
+                expr = pl.col(feature.name).cast(pl.Utf8).alias(feature.name)
 
-                    expr = pl.col(feature.name).cast(pl.Utf8).alias(feature.name)
+                if feature.dtype == FeatureType.bool():
+                    # Redis do not support bools
+                    expr = pl.col(feature.name).cast(pl.Int8, strict=False).cast(pl.Utf8).alias(feature.name)
+                elif feature.dtype == FeatureType.datetime():
+                    expr = pl.col(feature.name).dt.timestamp('ms').cast(pl.Utf8).alias(feature.name)
+                elif feature.dtype.is_embedding or feature.dtype.is_array:
+                    expr = pl.col(feature.name).apply(lambda x: x.to_numpy().tobytes())
 
-                    if feature.dtype == FeatureType.bool():
-                        # Redis do not support bools
-                        expr = (
-                            pl.col(feature.name).cast(pl.Int8, strict=False).cast(pl.Utf8).alias(feature.name)
-                        )
-                    elif feature.dtype == FeatureType.datetime():
-                        expr = pl.col(feature.name).dt.timestamp('ms').cast(pl.Utf8).alias(feature.name)
-                    elif feature.dtype.is_embedding or feature.dtype.is_array:
-                        expr = pl.col(feature.name).apply(lambda x: x.to_numpy().tobytes())
+                request_data = request_data.with_columns(expr)
+                features.append(feature.name)
 
-                    request_data = request_data.with_columns(expr)
-                    features.append(feature.name)
+            redis_frame = request_data.select(features).collect()
 
-                redis_frame = request_data.select(features).collect()
+            for record in redis_frame.to_dicts():
+                pipe.hset(record['id'], mapping={key: value for key, value in record.items() if value})
+                for key, value in record.items():
+                    if value is None:
+                        pipe.hdel(record['id'], key)
+            await pipe.execute()
 
-                for record in redis_frame.to_dicts():
-                    pipe.hset(record['id'], mapping={key: value for key, value in record.items() if value})
-                    for key, value in record.items():
-                        if value is None:
-                            pipe.hdel(record['id'], key)
-                await pipe.execute()
-
-    async def upsert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
-        await self.insert(job, requests)
+    async def upsert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
+        await self.insert(job, request)
 
 
 @dataclass

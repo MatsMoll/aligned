@@ -958,6 +958,12 @@ class RetrivalJob(ABC):
         return LiteralRetrivalJob(df.lazy(), request)
 
     @staticmethod
+    def from_lazy_function(
+        callable: Callable[[], Coroutine[None, None, pl.LazyFrame]], request: RetrivalRequest
+    ) -> RetrivalJob:
+        return CustomLazyPolarsJob(request=request, method=callable)
+
+    @staticmethod
     def from_convertable(
         data: ConvertableToRetrivalJob, request: list[RetrivalRequest] | RetrivalRequest | FeatureRequest
     ) -> RetrivalJob:
@@ -2630,7 +2636,7 @@ class PredictionJob(RetrivalJob):
             raise ValueError('Source for predictions view is not writable')
 
         req = self.model.predictions_view.request('preds')
-        await pred_source.insert(self, [req])
+        await pred_source.insert(self, req)
 
     async def upsert_into_output_source(self) -> None:
         from aligned.feature_source import WritableFeatureSource
@@ -2643,7 +2649,7 @@ class PredictionJob(RetrivalJob):
             raise ValueError('Source for predictions view is not writable')
 
         req = self.model.predictions_view.request('preds')
-        await pred_source.upsert(self, [req])
+        await pred_source.upsert(self, req)
 
     async def overwrite_output_source(self) -> None:
         from aligned.feature_source import WritableFeatureSource
@@ -2656,4 +2662,4 @@ class PredictionJob(RetrivalJob):
             raise ValueError('Source for predictions view is not writable')
 
         req = self.model.predictions_view.request('preds')
-        await pred_source.overwrite(self, [req])
+        await pred_source.overwrite(self, req)

@@ -30,13 +30,13 @@ class FeatureSource:
 
 
 class WritableFeatureSource:
-    async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+    async def insert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         raise NotImplementedError(f'Append is not implemented for {type(self)}.')
 
-    async def upsert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+    async def upsert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         raise NotImplementedError(f'Upsert write is not implemented for {type(self)}.')
 
-    async def overwrite(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+    async def overwrite(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         raise NotImplementedError(f'Overwrite write is not implemented for {type(self)}.')
 
 

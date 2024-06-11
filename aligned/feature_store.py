@@ -42,6 +42,7 @@ from aligned.schemas.folder import DatasetStore
 from aligned.schemas.model import EventTrigger
 from aligned.schemas.model import Model as ModelSchema
 from aligned.schemas.repo_definition import EnricherReference, RepoDefinition, RepoMetadata
+from aligned.sources.vector_index import VectorIndex
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +105,7 @@ class ContractStore:
     feature_views: dict[str, CompiledFeatureView]
     combined_feature_views: dict[str, CompiledCombinedFeatureView]
     models: dict[str, ModelSchema]
+    vector_indexes: dict[str, ModelSchema]
 
     @property
     def all_models(self) -> list[str]:
@@ -115,11 +117,13 @@ class ContractStore:
         combined_feature_views: dict[str, CompiledCombinedFeatureView],
         models: dict[str, ModelSchema],
         feature_source: FeatureSource,
+        vector_indexes: dict[str, ModelSchema] | None = None,
     ) -> None:
         self.feature_source = feature_source
         self.combined_feature_views = combined_feature_views
         self.feature_views = feature_views
         self.models = models
+        self.vector_indexes = vector_indexes or {}
 
     @staticmethod
     def empty() -> ContractStore:
@@ -458,11 +462,19 @@ class ContractStore:
         """
         Selects a model for easy of use.
 
+        ```python
+        entities = {"trip_id": [1, 2, 3, ...]}
+        preds = await store.model("my_model").predict_over(entities).to_polars()
+        ```
+
         Returns:
             ModelFeatureStore: A new store that containes the selected model
         """
         model = self.models[name]
         return ModelFeatureStore(model, self)
+
+    def vector_index(self, name: str) -> VectorIndexStore:
+        return VectorIndexStore(self, self.vector_indexes[name])
 
     def event_triggers_for(self, feature_view: str) -> set[EventTrigger]:
         triggers = self.feature_views[feature_view].event_triggers or set()
@@ -607,7 +619,7 @@ class ContractStore:
         feature_view = self.feature_views[view]
         return FeatureViewStore(self, feature_view, self.event_triggers_for(view))
 
-    def add_view(self, view: CompiledFeatureView) -> None:
+    def add_view(self, view: CompiledFeatureView | FeatureView | FeatureViewWrapper) -> None:
         """
         Compiles and adds the feature view to the store
 
@@ -625,7 +637,7 @@ class ContractStore:
         Args:
             view (CompiledFeatureView): The feature view to add
         """
-        self.add_compiled_view(view)
+        self.add_feature_view(view)
 
     def add_compiled_view(self, view: CompiledFeatureView) -> None:
         """
@@ -654,11 +666,13 @@ class ContractStore:
                 view.materialized_source or view.source
             )
 
-    def add_feature_view(self, feature_view: FeatureView | FeatureViewWrapper) -> None:
+    def add_feature_view(self, feature_view: FeatureView | FeatureViewWrapper | CompiledFeatureView) -> None:
         if isinstance(feature_view, FeatureViewWrapper):
             self.add_compiled_view(feature_view.compile())
-        else:
+        elif isinstance(feature_view, FeatureView):
             self.add_compiled_view(feature_view.compile_instance())
+        else:
+            self.add_compiled_view(feature_view)
 
     def add_combined_feature_view(self, feature_view: CombinedFeatureView) -> None:
         compiled_view = type(feature_view).compile()
@@ -690,6 +704,10 @@ class ContractStore:
             from aligned.data_source.model_predictor import PredictModelSource
 
             source = PredictModelSource(self.model(model.name))
+
+        if isinstance(model.predictions_view.source, VectorIndex):
+            index_name = model.predictions_view.source.vector_index_name() or model.name
+            self.vector_indexes[index_name] = model
 
         if isinstance(self.feature_source, BatchFeatureSource) and source is not None:
             self.feature_source.sources[FeatureLocation.model(model.name).identifier] = source
@@ -863,7 +881,7 @@ class ContractStore:
             values = RetrivalJob.from_convertable(values, write_request)
 
         if isinstance(source, WritableFeatureSource):
-            await source.insert(values, [write_request])
+            await source.insert(values, write_request)
         elif isinstance(source, DataFileReference):
             import polars as pl
 
@@ -908,7 +926,7 @@ class ContractStore:
             values = RetrivalJob.from_convertable(values, write_request)
 
         if isinstance(source, WritableFeatureSource):
-            await source.upsert(values, [write_request])
+            await source.upsert(values, write_request)
         elif isinstance(source, DataFileReference):
             new_df = (await values.to_lazy_polars()).select(write_request.all_returned_columns)
             entities = list(write_request.entity_names)
@@ -942,7 +960,7 @@ class ContractStore:
             values = RetrivalJob.from_convertable(values, write_request)
 
         if isinstance(source, WritableFeatureSource):
-            await source.overwrite(values, [write_request])
+            await source.overwrite(values, write_request)
         elif isinstance(source, DataFileReference):
             df = (await values.to_lazy_polars()).select(write_request.all_returned_columns)
             await source.write_polars(df)
@@ -1781,3 +1799,61 @@ class FeatureViewStore:
         location = FeatureLocation.feature_view(view.name)
 
         return (await self.source.freshness_for({location: view.event_timestamp}))[location]
+
+
+class VectorIndexStore:
+
+    store: ContractStore
+    model: ModelSchema
+
+    def __init__(self, store: ContractStore, model: ModelSchema):
+        if model.predictions_view.source is None:
+            raise ValueError(f"An output source on the model {model.name} is needed")
+
+        if not isinstance(model.predictions_view.source, VectorIndex):
+            message = (
+                f"An output source on the model {model.name} needs to be of type VectorIndex,"
+                f"got {type(model.predictions_view.source)}"
+            )
+            raise ValueError(message)
+
+        self.store = store
+        self.model = model
+
+    def nearest_n_to(
+        self, entities: RetrivalJob | ConvertableToRetrivalJob, number_of_records: int
+    ) -> RetrivalJob:
+        source = self.model.predictions_view.source
+        assert isinstance(source, VectorIndex)
+
+        embeddings = self.model.predictions_view.embeddings()
+        n_embeddings = len(embeddings)
+
+        if n_embeddings == 0:
+            raise ValueError(f"Need at least one embedding to search. Got {n_embeddings}")
+        if n_embeddings > 1:
+            raise ValueError('Got more than one embedding, it is therefore unclear which to use.')
+
+        embedding = embeddings[0]
+        response = self.model.predictions_view.request(self.model.name)
+
+        def contains_embedding() -> bool:
+            if isinstance(entities, RetrivalJob):
+                return embedding.name in entities.loaded_columns
+            elif isinstance(entities, dict):
+                return embedding.name in entities
+            elif isinstance(entities, (pl.DataFrame, pd.DataFrame, pl.LazyFrame)):
+                return embedding.name in entities.columns
+            raise ValueError('Unable to determine if the entities contains the embedding')
+
+        if self.model.exposed_model and not contains_embedding():
+            model_store = self.store.model(self.model.name)
+            features: RetrivalJob = model_store.predict_over(entities)
+        else:
+            # Assumes that we can lookup the embeddings from the source
+            feature_ref = FeatureReference(
+                embedding.name, FeatureLocation.model(self.model.name), dtype=embedding.dtype
+            )
+            features: RetrivalJob = self.store.features_for(entities, features=[feature_ref.identifier])
+
+        return source.nearest_n_to(features, number_of_records, response)

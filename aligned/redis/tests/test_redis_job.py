@@ -146,7 +146,7 @@ async def test_write_job(mocker, retrival_request: RetrivalRequest) -> None:  # 
     config = RedisConfig.localhost()
     source = RedisSource(config)
 
-    await source.insert(insert_facts, [retrival_request])
+    await source.insert(insert_facts, retrival_request)
 
     job = FactualRedisJob(RedisConfig.localhost(), requests=[retrival_request], facts=facts)
     data = await job.to_lazy_polars()

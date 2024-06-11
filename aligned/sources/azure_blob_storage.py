@@ -498,10 +498,8 @@ Partition Keys: *{self.partition_keys}*
                 date_formatter=self.date_formatter,
             )
 
-        async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
-            if len(requests) != 1:
-                raise ValueError(f"Only support writing on request, got {len(requests)}.")
-            features = requests[0].all_returned_columns
+        async def insert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
+            features = request.all_returned_columns
             df = await job.select(features).to_lazy_polars()
             await self.write_polars(df)
 
@@ -729,7 +727,7 @@ Path: *{self.path}*
             )
 
         def df_to_deltalake_compatible(
-            self, df: pl.DataFrame, requests: list[RetrivalRequest]
+            self, df: pl.DataFrame, request: RetrivalRequest
         ) -> tuple[pl.DataFrame, dict]:
             import pyarrow as pa
             from aligned.schemas.constraints import Optional
@@ -776,31 +774,29 @@ Path: *{self.path}*
             dtypes = dict(zip(df.columns, df.dtypes, strict=False))
             schemas = {}
 
-            for request in requests:
+            features = request.all_features.union(request.entities)
+            if request.event_timestamp:
+                features.add(request.event_timestamp.as_feature())
 
-                features = request.all_features.union(request.entities)
-                if request.event_timestamp:
-                    features.add(request.event_timestamp.as_feature())
+            for feature in features:
+                schemas[feature.name] = pa_field(feature)
 
-                for feature in features:
-                    schemas[feature.name] = pa_field(feature)
-
-                    if dtypes[feature.name] == pl.Null:
-                        df = df.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type))
-                    elif feature.dtype.is_datetime:
-                        df = df.with_columns(self.date_formatter.encode_polars(feature.name))
-                    else:
-                        df = df.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type))
+                if dtypes[feature.name] == pl.Null:
+                    df = df.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type))
+                elif feature.dtype.is_datetime:
+                    df = df.with_columns(self.date_formatter.encode_polars(feature.name))
+                else:
+                    df = df.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type))
 
             return df, schemas
 
-        async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+        async def insert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
             import pyarrow as pa
 
             df = await job.to_polars()
             url = f"az://{self.path}"
 
-            df, schemas = self.df_to_deltalake_compatible(df, requests)
+            df, schemas = self.df_to_deltalake_compatible(df, request)
 
             orderd_schema = OrderedDict(sorted(schemas.items()))
             schema = list(orderd_schema.values())
@@ -811,19 +807,16 @@ Path: *{self.path}*
                 delta_write_options={'schema': pa.schema(schema)},
             )
 
-        async def upsert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+        async def upsert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
             import pyarrow as pa
             from deltalake.exceptions import TableNotFoundError
 
             df = await job.to_polars()
 
             url = f"az://{self.path}"
-            merge_on = set()
+            merge_on = request.entity_names
 
-            for request in requests:
-                merge_on.update(request.entity_names)
-
-            df, schemas = self.df_to_deltalake_compatible(df, requests)
+            df, schemas = self.df_to_deltalake_compatible(df, request)
 
             orderd_schema = OrderedDict(sorted(schemas.items()))
             schema = list(orderd_schema.values())

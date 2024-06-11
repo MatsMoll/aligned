@@ -167,25 +167,15 @@ WHERE table_schema = '{schema}'
         else:
             return None
 
-    async def insert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
-
-        if len(requests) != 1:
-            raise ValueError(f'Only support writing for one request, got {len(requests)}.')
-
-        request = requests[0]
-
+    async def insert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         data = await job.to_lazy_polars()
         data.select(request.all_returned_columns).collect().write_database(
             self.table, connection=self.config.url, if_exists='append'
         )
 
-    async def upsert(self, job: RetrivalJob, requests: list[RetrivalRequest]) -> None:
+    async def upsert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         import asyncpg
 
-        if len(requests) != 1:
-            raise ValueError(f'Only support writing one request as of now, got {len(requests)}.')
-
-        request = requests[0]
         all_columns = request.all_returned_columns
         entities = list(request.entity_names)
 

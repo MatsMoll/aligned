@@ -1376,8 +1376,10 @@ class Embedding(FeatureFactory):
         if self.indexes is None:
             self.indexes = []
 
-        if not self.embedding_size:
-            assert embedding_size, 'An embedding size is needed in order to create a vector index'
+        if not embedding_size:
+            embedding_size = self.embedding_size
+
+        assert embedding_size, 'An embedding size is needed in order to create a vector index'
 
         self.indexes.append(
             VectorIndexFactory(

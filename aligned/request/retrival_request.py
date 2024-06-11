@@ -1,6 +1,8 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 
+import pyarrow as pa
+
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, DerivedFeature
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
@@ -29,12 +31,11 @@ class RetrivalRequest(Codable):
     derived_features: set[DerivedFeature]
     aggregated_features: set[AggregatedFeature] = field(default_factory=set)
     event_timestamp_request: EventTimestampRequest | None = field(default=None)
+    features_to_include: set[str] = field(default_factory=set)
 
     @property
     def event_timestamp(self) -> EventTimestamp | None:
         return self.event_timestamp_request.event_timestamp if self.event_timestamp_request else None
-
-    features_to_include: set[str] = field(default_factory=set)
 
     def __init__(
         self,
@@ -76,19 +77,19 @@ class RetrivalRequest(Codable):
         )
 
     @property
-    def all_returned_columns(self) -> list[str]:
-
-        result = self.entity_names
+    def all_returned_features(self) -> list[Feature]:
+        result = self.entities
 
         if self.event_timestamp and (
             all(agg.aggregate_over.window is not None for agg in self.aggregated_features)
             or len(self.aggregated_features) == 0
         ):
-            result = result.union({self.event_timestamp.name})
+            result = result.union({self.event_timestamp.as_feature()})
 
         if self.aggregated_features:
-            agg_names = [feat.name for feat in self.aggregated_features]
-            derived_after_aggs_name: set[str] = set()
+            agg_features = [feat.derived_feature for feat in self.aggregated_features]
+            agg_names = list(self.aggregated_features)
+            derived_after_aggs: set[Feature] = set()
             derived_features = {der.name: der for der in self.derived_features}
 
             def is_dependent_on_agg_feature(feature: DerivedFeature) -> bool:
@@ -104,11 +105,15 @@ class RetrivalRequest(Codable):
 
             for feat in self.derived_features:
                 if is_dependent_on_agg_feature(feat):
-                    derived_after_aggs_name.add(feat.name)
+                    derived_after_aggs.add(feat)
 
-            return agg_names + list(derived_after_aggs_name) + list(result)
+            return agg_features + list(derived_after_aggs) + list(result)
 
-        return list(result.union(self.all_feature_names))
+        return list(result.union(self.all_features))
+
+    @property
+    def all_returned_columns(self) -> list[str]:
+        return [feature.name for feature in self.all_returned_features]
 
     @property
     def returned_features(self) -> set[Feature]:
@@ -181,6 +186,12 @@ class RetrivalRequest(Codable):
             feature_orders[depth].add(feature_map[feature.name])
 
         return feature_orders
+
+    def pyarrow_schema(self) -> pa.Schema:
+        from aligned.schemas.vector_storage import pyarrow_schema
+
+        sorted_features = sorted(self.all_returned_features, key=lambda feature: feature.name)
+        return pyarrow_schema(sorted_features)
 
     def aggregate_over(self) -> dict[AggregateOver, set[AggregatedFeature]]:
         features = defaultdict(set)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import polars as pl
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Coroutine
 from dataclasses import dataclass
 from aligned.retrival_job import RetrivalJob
 from aligned.schemas.codable import Codable
@@ -94,6 +94,18 @@ class ExposedModel(Codable, SerializableType):
         return data_class.from_dict(value)
 
     @staticmethod
+    def polars_predictor(
+        callable: Callable[[pl.DataFrame, ModelFeatureStore], Coroutine[None, None, pl.DataFrame]]
+    ) -> 'ExposedModel':
+        import dill
+
+        async def function_wrapper(values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+            features = await store.features_for(values).to_polars()
+            return await callable(features, store)
+
+        return DillPredictor(function=dill.dumps(function_wrapper))
+
+    @staticmethod
     def ollama_generate(
         endpoint: str,
         model: str,
@@ -158,6 +170,39 @@ class ExposedModel(Codable, SerializableType):
             model_contract_version_tag=model_contract_version_tag,
             timeout=timeout,
         )
+
+
+@dataclass
+class DillPredictor(ExposedModel):
+
+    function: bytes
+
+    model_type: str = 'dill_predictor'
+
+    @property
+    def exposed_at_url(self) -> str | None:
+        return None
+
+    @property
+    def as_markdown(self) -> str:
+        return 'A function stored in a dill file.'
+
+    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
+        default = store.model.features.default_version
+        return store.feature_references_for(store.selected_version or default)
+
+    async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
+        return store.request().request_result.entities
+
+    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+        import dill
+        import inspect
+
+        function = dill.loads(self.function)
+        if inspect.iscoroutinefunction(function):
+            return await function(values, store)
+        else:
+            return function(values, store)
 
 
 @dataclass
