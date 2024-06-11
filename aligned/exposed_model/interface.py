@@ -35,6 +35,7 @@ class PredictorFactory:
             InMemMLFlowAlias,
             ShadowModel,
             ABTestModel,
+            DillPredictor,
         ]
         for predictor in types:
             self.supported_predictors[predictor.model_type] = predictor

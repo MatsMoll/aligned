@@ -39,6 +39,9 @@ class BatchDataSourceFactory:
             DeltaFileSource,
             PartitionedParquetFileSource,
         )
+        from aligned.schemas.feature_view import FeatureViewReferenceSource
+        from aligned.schemas.model import ModelSource
+
         from aligned.sources.psql import PostgreSQLDataSource
         from aligned.sources.redshift import RedshiftSQLDataSource
         from aligned.sources.s3 import AwsS3CsvDataSource, AwsS3ParquetDataSource
@@ -48,8 +51,7 @@ class BatchDataSourceFactory:
             AzureBlobParquetDataSource,
             AzureBlobPartitionedParquetDataSource,
         )
-        from aligned.schemas.feature_view import FeatureViewReferenceSource
-        from aligned.schemas.model import ModelSource
+        from aligned.sources.lancedb import LanceDbTable
 
         source_types = [
             PostgreSQLDataSource,
@@ -67,6 +69,8 @@ class BatchDataSourceFactory:
             AzureBlobDeltaDataSource,
             AzureBlobParquetDataSource,
             AzureBlobPartitionedParquetDataSource,
+            # LanceDB
+            LanceDbTable,
             # Aligned Related Sources
             JoinDataSource,
             JoinAsofDataSource,

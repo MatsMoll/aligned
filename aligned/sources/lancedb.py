@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
-import lancedb
 import polars as pl
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.feature_source import WritableFeatureSource
@@ -14,15 +13,21 @@ if TYPE_CHECKING:
     from aligned.retrival_job import RetrivalJob
 
 
+try:
+    import lancedb
+except ImportError:
+    lancedb = None
+
+
 @dataclass
 class LanceDBConfig:
 
     path: str
 
-    async def connect(self) -> lancedb.AsyncConnection:
+    async def connect(self) -> 'lancedb.AsyncConnection':
         return await lancedb.connect_async(self.path)
 
-    async def connect_to_table(self, table: str) -> lancedb.AsyncTable:
+    async def connect_to_table(self, table: str) -> 'lancedb.AsyncTable':
         conn = await self.connect()
         return await conn.open_table(table)
 
