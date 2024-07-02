@@ -293,8 +293,10 @@ class FeatureType(Codable):
         return FeatureType(name='json')
 
     @staticmethod
-    def array() -> FeatureType:
-        return FeatureType(name='array')
+    def array(sub_type: FeatureType | None = None) -> FeatureType:
+        if sub_type is None:
+            return FeatureType(name='array')
+        return FeatureType(name=f'array-{sub_type.name}')
 
     @staticmethod
     def embedding(size: int) -> FeatureType:

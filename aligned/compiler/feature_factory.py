@@ -1308,6 +1308,15 @@ class Entity(FeatureFactory):
     def aggregate(self) -> CategoricalAggregation:
         return CategoricalAggregation(self)
 
+    def feature(self) -> Feature:
+        return Feature(
+            name=self.name,
+            dtype=self.dtype,
+            description=self._description,
+            tags=None,
+            constraints=self._dtype.constraints,
+        )
+
 
 class Timestamp(DateFeature, ArithmeticFeature):
 
@@ -1407,6 +1416,24 @@ class List(FeatureFactory, Generic[GenericFeature]):
     @property
     def dtype(self) -> FeatureType:
         return FeatureType.array()
+
+    def feature(self) -> Feature:
+        from aligned.schemas.constraints import ListConstraint
+
+        feat = super().feature()
+        if self.sub_type.constraints:
+            feat.constraints = (feat.constraints or set()).union(
+                {ListConstraint(list(self.sub_type.constraints))}
+            )
+        return feat
+
+    def max_length(self, value: int) -> List:
+        self._add_constraint(MaxLength(value))
+        return self
+
+    def min_length(self, value: int) -> List:
+        self._add_constraint(MinLength(value))
+        return self
 
     def contains(self, value: Any) -> Bool:
         from aligned.compiler.transformation_factory import ArrayContainsFactory

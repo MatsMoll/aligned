@@ -474,7 +474,7 @@ class ContractStore:
         return ModelFeatureStore(model, self)
 
     def vector_index(self, name: str) -> VectorIndexStore:
-        return VectorIndexStore(self, self.vector_indexes[name])
+        return VectorIndexStore(self, self.vector_indexes[name], index_name=name)
 
     def event_triggers_for(self, feature_view: str) -> set[EventTrigger]:
         triggers = self.feature_views[feature_view].event_triggers or set()
@@ -1621,6 +1621,9 @@ class FeatureViewStore:
     def all(self, limit: int | None = None) -> RetrivalJob:
         return self.all_columns(limit)
 
+    def filter(self, filter: pl.Expr | str) -> RetrivalJob:
+        return self.all().filter(filter)
+
     def all_columns(self, limit: int | None = None) -> RetrivalJob:
         if not isinstance(self.source, RangeFeatureSource):
             raise ValueError(f'The source ({self.source}) needs to conform to RangeFeatureSource')
@@ -1805,8 +1808,9 @@ class VectorIndexStore:
 
     store: ContractStore
     model: ModelSchema
+    index_name: str
 
-    def __init__(self, store: ContractStore, model: ModelSchema):
+    def __init__(self, store: ContractStore, model: ModelSchema, index_name: str):
         if model.predictions_view.source is None:
             raise ValueError(f"An output source on the model {model.name} is needed")
 
@@ -1819,6 +1823,7 @@ class VectorIndexStore:
 
         self.store = store
         self.model = model
+        self.index_name = index_name
 
     def nearest_n_to(
         self, entities: RetrivalJob | ConvertableToRetrivalJob, number_of_records: int
@@ -1857,3 +1862,8 @@ class VectorIndexStore:
             features: RetrivalJob = self.store.features_for(entities, features=[feature_ref.identifier])
 
         return source.nearest_n_to(features, number_of_records, response)
+
+    def as_langchain_retriver(self, number_of_docs: int = 5):
+        from aligned.exposed_model.langchain import AlignedRetriver
+
+        return AlignedRetriver(store=self.store, index_name=self.index_name, number_of_docs=number_of_docs)

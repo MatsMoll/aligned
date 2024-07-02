@@ -415,6 +415,23 @@ class CustomMethodDataSource(BatchDataSource):
         return source.features_for(facts, request)  # type: ignore
 
     @staticmethod
+    def from_load(
+        method: Callable[[RetrivalRequest], Coroutine[None, None, pl.LazyFrame]],
+        depends_on: set[FeatureLocation] | None = None,
+    ) -> 'CustomMethodDataSource':
+        async def all(request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+            return await method(request)
+
+        async def all_between(
+            request: RetrivalRequest, start_date: datetime, end_date: datetime
+        ) -> RetrivalJob:
+            return await method(request)
+
+        return CustomMethodDataSource.from_methods(
+            all_data=all, all_between_dates=all_between, depends_on_sources=depends_on
+        )
+
+    @staticmethod
     def from_methods(
         all_data: Callable[[RetrivalRequest, int | None], Coroutine[None, None, pl.LazyFrame]] | None = None,
         all_between_dates: Callable[
@@ -1036,7 +1053,7 @@ class ColumnFeatureMappable:
         return [reverse_map.get(column, column) for column in columns]
 
 
-def data_for_request(request: RetrivalRequest, size: int) -> pl.DataFrame:
+def random_values_for(feature: Feature, size: int) -> pl.Series:
     from aligned.schemas.constraints import (
         InDomain,
         LowerBound,
@@ -1045,70 +1062,99 @@ def data_for_request(request: RetrivalRequest, size: int) -> pl.DataFrame:
         UpperBound,
         UpperBoundInclusive,
         Optional,
+        ListConstraint,
     )
     import numpy as np
 
+    dtype = feature.dtype
+
+    choices: list[Any] | None = None
+    max_value: float | None = None
+    min_value: float | None = None
+
+    is_optional = False
+    is_unique = False
+
+    for constraints in feature.constraints or set():
+        if isinstance(constraints, InDomain):
+            choices = constraints.values
+        elif isinstance(constraints, LowerBound):
+            min_value = constraints.value
+        elif isinstance(constraints, LowerBoundInclusive):
+            min_value = constraints.value
+        elif isinstance(constraints, UpperBound):
+            max_value = constraints.value
+        elif isinstance(constraints, UpperBoundInclusive):
+            max_value = constraints.value
+        elif isinstance(constraints, Unique):
+            is_unique = True
+        elif isinstance(constraints, Optional):
+            is_optional = True
+
+    if dtype == FeatureType.bool():
+        values = np.random.choice([True, False], size=size)
+    elif dtype.is_numeric:
+        if is_unique:
+            values = np.arange(0, size, dtype=dtype.pandas_type)
+        else:
+            values = np.random.random(size)
+
+        if max_value and min_value:
+            values = values * (max_value - min_value) + min_value
+        elif max_value is not None:
+            values = values * max_value
+        elif min_value is not None:
+            values = values * 1000 + min_value
+
+        if 'float' not in dtype.name:
+            values = np.round(values)
+
+    elif dtype.is_datetime:
+        values = [
+            datetime.now(tz=timezone.utc) - np.random.random() * timedelta(days=365) for _ in range(size)
+        ]
+    elif dtype.is_array:
+        subtype = dtype.array_subtype()
+        _sub_constraints: list[ListConstraint] = [
+            constraint
+            for constraint in feature.constraints or set()
+            if isinstance(constraint, ListConstraint)
+        ]
+        sub_constraints = None
+        if _sub_constraints:
+            sub_constraints = set(_sub_constraints[0].constraints)
+
+        if subtype is None:
+            values = np.random.random((size, 4))
+        else:
+            values = [
+                random_values_for(Feature('dd', dtype=subtype, constraints=sub_constraints), 4)
+                for _ in range(size)
+            ]
+    elif dtype.is_embedding:
+        embedding_size = dtype.embedding_size() or 10
+        values = np.random.random((size, embedding_size))
+    else:
+        if choices:
+            values = np.random.choice(choices, size=size)
+        else:
+            values = np.random.choice(list('abcde'), size=size)
+
+    if is_optional:
+        values = np.where(np.random.random(size) > 0.5, values, np.NaN)
+
+    return values
+
+
+def data_for_request(request: RetrivalRequest, size: int) -> pl.DataFrame:
     needed_features = request.features.union(request.entities)
     schema = {feature.name: feature.dtype.polars_type for feature in needed_features}
 
     exprs = {}
 
-    for feature in needed_features:
-        dtype = feature.dtype
-
-        choices: list[Any] | None = None
-        max_value: float | None = None
-        min_value: float | None = None
-
-        is_optional = False
-        is_unique = False
-
-        for constraints in feature.constraints or set():
-            if isinstance(constraints, InDomain):
-                choices = constraints.values
-            elif isinstance(constraints, LowerBound):
-                min_value = constraints.value
-            elif isinstance(constraints, LowerBoundInclusive):
-                min_value = constraints.value
-            elif isinstance(constraints, UpperBound):
-                max_value = constraints.value
-            elif isinstance(constraints, UpperBoundInclusive):
-                max_value = constraints.value
-            elif isinstance(constraints, Unique):
-                is_unique = True
-            elif isinstance(constraints, Optional):
-                is_optional = True
-
-        if dtype == FeatureType.bool():
-            values = np.random.choice([True, False], size=size)
-        elif dtype.is_numeric:
-            if is_unique:
-                values = np.arange(0, size, dtype=dtype.pandas_type)
-            else:
-                values = np.random.random(size) * 1000
-
-                if max_value is not None:
-                    values = values * max_value
-
-            if min_value is not None:
-                values = values - min_value
-        elif dtype.is_datetime:
-            values = [
-                datetime.now(tz=timezone.utc) - np.random.random() * timedelta(days=365) for _ in range(size)
-            ]
-        elif dtype.is_embedding:
-            embedding_size = dtype.embedding_size() or 10
-            values = np.random.random((size, embedding_size))
-        else:
-            if choices:
-                values = np.random.choice(choices, size=size)
-            else:
-                values = np.random.choice(list('abcde'), size=size)
-
-        if is_optional:
-            values = np.where(np.random.random(size) > 0.5, values, np.NaN)
-
-        exprs[feature.name] = values
+    for feature in sorted(needed_features, key=lambda f: f.name):
+        print(f"Generating data for {feature.name}")
+        exprs[feature.name] = random_values_for(feature, size)
 
     return pl.DataFrame(exprs, schema=schema)
 

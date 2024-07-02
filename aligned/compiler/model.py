@@ -98,6 +98,24 @@ class ModelContractWrapper(Generic[T]):
     def compile(self) -> ModelSchema:
         return compile_with_metadata(self.contract(), self.metadata)
 
+    def as_langchain_retriver(
+        self,
+        number_of_docs: int = 5,
+        needed_views: list[FeatureViewWrapper | ModelContractWrapper] | None = None,
+    ):
+        from aligned.exposed_model.langchain import AlignedRetriver
+        from aligned.sources.vector_index import VectorIndex
+
+        source = self.metadata.output_source
+        if not isinstance(source, VectorIndex):
+            raise ValueError(f"Found no vector index in source: {source}")
+
+        store = self.query(needed_views)
+
+        index_name = source.vector_index_name() or self.metadata.name
+
+        return AlignedRetriver(store=store.store, index_name=index_name, number_of_docs=number_of_docs)
+
     def query(
         self, needed_views: list[FeatureViewWrapper | ModelContractWrapper] | None = None
     ) -> ModelFeatureStore:

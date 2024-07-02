@@ -19,6 +19,7 @@ from aligned.schemas.feature import FeatureType, EventTimestamp
 from aligned.sources.local import (
     CsvConfig,
     DataFileReference,
+    Deletable,
     ParquetConfig,
     StorageFileReference,
     Directory,
@@ -408,7 +409,9 @@ Path: *{self.path}*
 
 
 @dataclass
-class AzureBlobPartitionedParquetDataSource(BatchDataSource, DataFileReference, ColumnFeatureMappable):
+class AzureBlobPartitionedParquetDataSource(
+    BatchDataSource, DataFileReference, ColumnFeatureMappable, Deletable
+):
     config: AzureBlobConfig
     directory: str
     partition_keys: list[str]
@@ -510,6 +513,28 @@ Partition Keys: *{self.partition_keys}*
         features = request.all_returned_columns
         df = await job.select(features).to_lazy_polars()
         await self.write_polars(df)
+
+    async def delete(self) -> None:
+        from adlfs import AzureBlobFileSystem
+
+        fs = AzureBlobFileSystem(**self.config.read_creds())
+
+        def delete_directory_recursively(directory_path):
+            paths = fs.find(directory_path)
+
+            for path in paths:
+                if fs.info(path)['type'] == 'directory':
+                    delete_directory_recursively(path)
+                else:
+                    fs.rm(path)
+
+            fs.rmdir(directory_path)
+
+        delete_directory_recursively(self.directory)
+
+    async def overwrite(self, job: RetrivalJob, request: RetrivalRequest) -> None:
+        await self.delete()
+        await self.insert(job, request)
 
 
 @dataclass
@@ -630,10 +655,7 @@ Path: *{self.path}*
 
 @dataclass
 class AzureBlobDeltaDataSource(
-    BatchDataSource,
-    DataFileReference,
-    ColumnFeatureMappable,
-    WritableFeatureSource,
+    BatchDataSource, DataFileReference, ColumnFeatureMappable, WritableFeatureSource, Deletable
 ):
     config: AzureBlobConfig
     path: str
@@ -857,3 +879,14 @@ Path: *{self.path}*
                 storage_options=self.config.read_creds(),
                 delta_write_options={'schema': pa.schema(schema)},
             )
+
+    async def delete(self) -> None:
+        from deltalake import DeltaTable
+
+        url = f"az://{self.path}"
+        table = DeltaTable(url, storage_options=self.config.read_creds())
+        table.delete()
+
+    async def overwrite(self, job: RetrivalJob, request: RetrivalRequest) -> None:
+        await self.delete()
+        await self.insert(job, request)

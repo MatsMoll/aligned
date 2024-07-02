@@ -36,7 +36,6 @@ async def test_lancedb() -> None:
         embedding = Embedding(embedding_size=2)
 
     schema = MyEmbedding.compile().predictions_view.request('').pyarrow_schema()
-
     conn = await config.connect()
     await conn.create_table(table, schema=schema, mode='overwrite')
 

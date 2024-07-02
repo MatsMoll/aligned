@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import polars as pl
-from typing import TYPE_CHECKING, Callable, Coroutine
+from typing import TYPE_CHECKING, Any, AsyncIterable, Callable, Coroutine
 from dataclasses import dataclass
 from aligned.retrival_job import RetrivalJob
 from aligned.schemas.codable import Codable
@@ -159,7 +159,6 @@ class ExposedModel(Codable, SerializableType):
         host: str,
         model_alias: str | None = None,
         model_name: str | None = None,
-        model_contract_version_tag: str | None = None,
         timeout: int = 30,
     ):
         from aligned.exposed_model.mlflow import mlflow_server
@@ -168,9 +167,13 @@ class ExposedModel(Codable, SerializableType):
             host=host,
             model_name=model_name,
             model_alias=model_alias,
-            model_contract_version_tag=model_contract_version_tag,
             timeout=timeout,
         )
+
+
+class StreamablePredictor:
+    async def stream_predict(self, input: dict[str, Any]) -> AsyncIterable[dict[str, Any]]:
+        raise NotImplementedError(type(self))
 
 
 @dataclass

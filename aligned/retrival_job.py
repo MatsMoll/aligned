@@ -768,7 +768,10 @@ class RetrivalJob(ABC):
     def on_load(self, on_load: Callable[[], Coroutine[Any, Any, None]]) -> RetrivalJob:
         return OnLoadJob(self, on_load)
 
-    def filter(self, condition: str | Feature | DerivedFeature) -> RetrivalJob:
+    def filter(self, condition: str | Feature | DerivedFeature | pl.Expr) -> RetrivalJob:
+        """
+        Filters based on a condition referencing either a feature, a feature name, or an polars expression to filter on.
+        """
         if isinstance(self, ModificationJob):
             return self.copy_with(self.job.filter(condition))
         return FilteredJob(self, condition)
@@ -1528,13 +1531,15 @@ class JoinJobs(RetrivalJob):
 class FilteredJob(RetrivalJob, ModificationJob):
 
     job: RetrivalJob
-    condition: DerivedFeature | Feature | str
+    condition: Feature | str | pl.Expr | DerivedFeature
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         df = await self.job.to_lazy_polars()
 
         if isinstance(self.condition, str):
             col = pl.col(self.condition)
+        elif isinstance(self.condition, pl.Expr):
+            col = self.condition
         elif isinstance(self.condition, DerivedFeature):
             expr = await self.condition.transformation.transform_polars(df, self.condition.name)
             if isinstance(expr, pl.Expr):
@@ -1551,6 +1556,8 @@ class FilteredJob(RetrivalJob, ModificationJob):
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.job.to_pandas()
 
+        if isinstance(self.condition, pl.Expr):
+            return (await self.to_polars()).to_pandas()
         if isinstance(self.condition, str):
             mask = df[self.condition]
         elif isinstance(self.condition, DerivedFeature):
