@@ -514,10 +514,10 @@ class FilteredDataSource(BatchDataSource):
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime
     ) -> RetrivalJob:
 
-        if isinstance(self.condition, Feature):
-            request.features.add(self.condition)
-        else:
+        if isinstance(self.condition, DerivedFeature):
             request.derived_features.add(self.condition)
+        elif isinstance(self.condition, Feature):
+            request.features.add(self.condition)
 
         return (
             self.source.all_between_dates(request, start_date, end_date)
@@ -530,7 +530,7 @@ class FilteredDataSource(BatchDataSource):
 
         if isinstance(self.condition, DerivedFeature):
             request.derived_features.add(self.condition)
-        else:
+        elif isinstance(self.condition, Feature):
             request.features.add(self.condition)
 
         return (
