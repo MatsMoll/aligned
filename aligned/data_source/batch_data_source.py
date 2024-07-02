@@ -472,7 +472,7 @@ class CustomMethodDataSource(BatchDataSource):
 class FilteredDataSource(BatchDataSource):
 
     source: BatchDataSource
-    condition: DerivedFeature | Feature
+    condition: DerivedFeature | Feature | str
 
     type_name: str = 'subset'
 
@@ -498,10 +498,14 @@ class FilteredDataSource(BatchDataSource):
 
         if isinstance(source.condition, DerivedFeature):
             request.derived_features.add(source.condition)
-        else:
+            condition = source.condition
+        elif isinstance(source.condition, Feature):
             request.features.add(source.condition)
+            condition = source.condition
+        else:
+            condition = pl.Expr.deserialize(source.condition)
 
-        return source.source.features_for(facts, request).filter(source.condition)
+        return source.source.features_for(facts, request).filter(condition)
 
     async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
         return await self.source.freshness(event_timestamp)
