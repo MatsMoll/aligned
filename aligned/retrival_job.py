@@ -1537,7 +1537,10 @@ class FilteredJob(RetrivalJob, ModificationJob):
         df = await self.job.to_lazy_polars()
 
         if isinstance(self.condition, str):
-            col = pl.col(self.condition)
+            try:
+                col = pl.Expr.deserialize(self.condition)
+            except Exception:
+                col = pl.col(self.condition)
         elif isinstance(self.condition, pl.Expr):
             col = self.condition
         elif isinstance(self.condition, DerivedFeature):
