@@ -125,6 +125,34 @@ def feature_store() -> ContractStore:
     return store
 
 
+def test_with_schema() -> None:
+
+    Test = Transaction.with_schema(
+        name='test',
+        source=FileSource.parquet_at('test_data/transactions.parquet'),
+        entities=dict(  # noqa: C408
+            other_id=String(),
+        ),
+        additional_features=dict(  # noqa: C408
+            other=Float(),
+        ),
+    )
+    transaction = Transaction.compile()
+
+    assert len(transaction.derived_features) > 1
+
+    view = Test.compile()
+    assert len(view.entities) == 1
+
+    assert len(view.derived_features) == 0
+    assert len(view.aggregated_features) == 0
+    assert (
+        len(view.features) == len({feat.name for feat in transaction.full_schema - transaction.entities}) + 1
+    )
+
+    assert list(view.entities)[0].name == 'other_id'
+
+
 @pytest.mark.asyncio
 async def test_aggregate_over_derived() -> None:
 

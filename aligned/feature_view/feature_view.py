@@ -240,6 +240,52 @@ class FeatureViewWrapper(Generic[T]):
             right_on=right_on,
         )
 
+    def with_schema(
+        self,
+        name: str,
+        source: BatchDataSource | FeatureViewWrapper,
+        materialized_source: BatchDataSource | None = None,
+        entities: dict[str, FeatureFactory] | None = None,
+        additional_features: dict[str, FeatureFactory] | None = None,
+    ) -> FeatureViewWrapper[T]:
+
+        meta = copy.deepcopy(self.metadata)
+        meta.name = name
+        meta.source = resolve_source(source)
+        meta.materialized_source = None
+
+        if materialized_source:
+            meta.materialized_source = resolve_source(materialized_source)
+
+        view = copy.deepcopy(self.view)
+        compiled = self.compile()
+
+        for agg_feature in compiled.aggregated_features:
+            feature = getattr(view, agg_feature.derived_feature.name).copy_type()
+            feature.transformation = None
+            setattr(view, agg_feature.derived_feature.name, feature)
+
+        for derived_feature in compiled.derived_features:
+            feature = getattr(view, derived_feature.name).copy_type()
+            feature.transformation = None
+            setattr(view, derived_feature.name, feature)
+
+        if entities is not None:
+            for name, feature in entities.items():
+                setattr(view, name, feature.as_entity())
+
+            for entity in compiled.entities:
+                if entity.name in entities:
+                    continue
+
+                setattr(view, entity.name, None)
+
+        if additional_features is not None:
+            for name, feature in additional_features.items():
+                setattr(view, name, feature)
+
+        return FeatureViewWrapper(meta, view)
+
     def with_source(
         self,
         named: str,
@@ -247,15 +293,7 @@ class FeatureViewWrapper(Generic[T]):
         materialized_source: BatchDataSource | None = None,
     ) -> FeatureViewWrapper[T]:
 
-        meta = copy.deepcopy(self.metadata)
-        meta.name = named
-        meta.source = resolve_source(source)
-        meta.materialized_source = None
-
-        if materialized_source:
-            meta.materialized_source = resolve_source(materialized_source)
-
-        return FeatureViewWrapper(meta, self.view)
+        return self.with_schema(named, source, materialized_source)
 
     def with_entity_renaming(self, named: str, renames: dict[str, str] | str) -> FeatureViewWrapper[T]:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
