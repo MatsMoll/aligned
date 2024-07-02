@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 import pandas as pd
+import polars as pl
 import pytest
 
 from aligned import feature_view, Float, String, FileSource
@@ -151,6 +152,17 @@ def test_with_schema() -> None:
     )
 
     assert list(view.entities)[0].name == 'other_id'
+
+
+@pytest.mark.asyncio
+async def test_polars_filter_source() -> None:
+
+    Expences = Transaction.filter(name='expence', where=pl.col('amount') > 0)  # type: ignore
+    data = await Expences.query().all().to_lazy_polars()
+
+    df = data.collect()
+
+    assert df.height == 4
 
 
 @pytest.mark.asyncio

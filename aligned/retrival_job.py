@@ -1,4 +1,5 @@
 from __future__ import annotations
+from io import StringIO
 from aligned.schemas.date_formatter import DateFormatter
 
 import asyncio
@@ -1538,7 +1539,7 @@ class FilteredJob(RetrivalJob, ModificationJob):
 
         if isinstance(self.condition, str):
             try:
-                col = pl.Expr.deserialize(self.condition)
+                col = pl.Expr.deserialize(StringIO(self.condition))
             except Exception:
                 col = pl.col(self.condition)
         elif isinstance(self.condition, pl.Expr):

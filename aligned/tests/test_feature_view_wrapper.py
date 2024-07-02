@@ -24,7 +24,7 @@ class TestDerived:
 
 def test_feature_view_wrapper_feature_references() -> None:
 
-    NewTest = Test.filter('new_test', where=lambda view: view.feature == 'test')  # type: ignore
+    NewTest = Test.filter('new_test', lambda view: view.feature == 'test')  # type: ignore
 
     new_test = NewTest()
     test = Test()
