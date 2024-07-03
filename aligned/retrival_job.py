@@ -2,6 +2,7 @@ from __future__ import annotations
 from io import StringIO
 from aligned.schemas.date_formatter import DateFormatter
 
+from pytz import timezone
 import asyncio
 import logging
 import timeit
@@ -2138,6 +2139,50 @@ class RawFileCachedJob(RetrivalJob, ModificationJob):
 
     def remove_derived_features(self) -> RetrivalJob:
         return self.job.remove_derived_features()
+
+
+@dataclass
+class LoadedAtJob(RetrivalJob, ModificationJob):
+
+    job: RetrivalJob
+    request: RetrivalRequest
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.job.request_result
+
+    @property
+    def retrival_requests(self) -> list[RetrivalRequest]:
+        return self.job.retrival_requests
+
+    async def to_pandas(self) -> pd.DataFrame:
+        df = await self.job.to_pandas()
+        if not self.request.event_timestamp:
+            return df
+
+        name = self.request.event_timestamp.name
+        timezone_name = self.request.event_timestamp.dtype.datetime_timezone
+        if timezone_name:
+            tz = timezone(timezone_name)
+            df[name] = datetime.now(tz=tz)
+        else:
+            df[name] = datetime.now()
+        return df
+
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+
+        df = await self.job.to_lazy_polars()
+        if not self.request.event_timestamp:
+            return df
+
+        name = self.request.event_timestamp.name
+        timezone_name = self.request.event_timestamp.dtype.datetime_timezone
+        if timezone_name:
+            tz = timezone(timezone_name)
+            col = pl.lit(datetime.now(tz=tz))
+        else:
+            col = pl.lit(datetime.now())
+        return df.with_columns(col.alias(name))
 
 
 @dataclass

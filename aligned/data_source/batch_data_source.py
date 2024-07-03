@@ -79,6 +79,7 @@ class BatchDataSourceFactory:
             CustomMethodDataSource,
             ModelSource,
             StackSource,
+            LoadedAtSource,
         ]
 
         self.supported_data_sources = {source.type_name: source for source in source_types}
@@ -359,6 +360,9 @@ class BatchDataSource(Codable, SerializableType):
 
     def tags(self) -> list[str]:
         return [self.type_name]
+
+    def with_loaded_at(self) -> BatchDataSource:
+        return LoadedAtSource(self)
 
 
 @dataclass
@@ -936,6 +940,57 @@ class StackSource(BatchDataSource):
 
     def depends_on(self) -> set[FeatureLocation]:
         return self.top.depends_on().union(self.bottom.depends_on())
+
+
+@dataclass
+class LoadedAtSource(BatchDataSource):
+
+    source: BatchDataSource
+    type_name: str = 'loaded_at'
+
+    def to_markdown(self) -> str:
+        source_markdown = (
+            self.source.to_markdown() if hasattr(self.source, 'to_markdown') else str(self.source)
+        )
+
+        return f"""### Loaded At Source
+
+Adding a loaded at timestamp to the source:
+{source_markdown}
+"""  # noqa
+
+    def job_group_key(self) -> str:
+        return self.source.job_group_key()
+
+    async def schema(self) -> dict[str, FeatureType]:
+        return await self.source.schema()
+
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+        from aligned.retrival_job import LoadedAtJob
+
+        return LoadedAtJob(self.source.all_data(request, limit), request)
+
+    def all_between_dates(
+        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrivalJob:
+        from aligned.retrival_job import LoadedAtJob
+
+        return LoadedAtJob(self.source.all_between_dates(request, start_date, end_date), request)
+
+    def depends_on(self) -> set[FeatureLocation]:
+        return self.source.depends_on()
+
+    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+        return None
+
+    @classmethod
+    def multi_source_features_for(
+        cls: type[BatchDataSource],
+        facts: RetrivalJob,
+        requests: list[tuple[BatchDataSource, RetrivalRequest]],
+    ) -> RetrivalJob:
+
+        return type(requests[0][0]).multi_source_features_for(facts, requests)
 
 
 @dataclass
