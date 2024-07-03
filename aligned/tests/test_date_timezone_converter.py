@@ -43,11 +43,13 @@ async def test_datetime_timezone_conversion(scan_with_datetime: CsvFileSource) -
         created_at = Timestamp(time_zone=None)
 
     data_utc = await TestFeatureUtc.query().all().to_polars()
-    data_none = await TestFeatureNone.query().all().to_polars()
-    data_utc_timestamp = await TestFeatureUtcTimestamp.query().all().to_polars()
-    data_none_timestamp = await TestFeatureNoneTimestamp.query().all().to_polars()
-
     assert data_utc['created_at'].dtype.time_zone == 'UTC'
+
+    data_none = await TestFeatureNone.query().all().to_polars()
     assert data_none['created_at'].dtype.time_zone is None
+
+    data_utc_timestamp = await TestFeatureUtcTimestamp.query().all().to_polars()
     assert data_utc_timestamp['created_at'].dtype.time_zone == 'UTC'
+
+    data_none_timestamp = await TestFeatureNoneTimestamp.query().all().to_polars()
     assert data_none_timestamp['created_at'].dtype.time_zone is None

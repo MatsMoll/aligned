@@ -85,7 +85,11 @@ class CompiledFeatureView(Codable):
 
     @property
     def full_schema(self) -> set[Feature]:
-        return self.entities.union(self.features).union(self.derived_features)
+        schema = self.entities.union(self.features).union(self.derived_features)
+        if self.event_timestamp:
+            schema.add(self.event_timestamp.as_feature())
+        schema.update({feature.derived_feature for feature in self.aggregated_features})
+        return schema
 
     @property
     def entitiy_names(self) -> set[str]:
@@ -105,6 +109,7 @@ class CompiledFeatureView(Codable):
                     derived_features=self.derived_features,
                     aggregated_features=self.aggregated_features,
                     event_timestamp=self.event_timestamp,
+                    features_to_include={feature.name for feature in self.full_schema},
                 )
             ],
         )

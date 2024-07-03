@@ -659,7 +659,6 @@ class FeatureView(ABC):
                         ' FeatureViewDefinition. Check that this is the case for'
                         f' {type(view).__name__}'
                     )
-                view.features.add(compiled_feature)
                 view.event_timestamp = feature.event_timestamp()
             else:
                 view.features.add(compiled_feature)

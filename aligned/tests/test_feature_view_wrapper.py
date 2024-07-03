@@ -1,6 +1,7 @@
 # type: ignore
 import pytest
 from aligned import feature_view, String, Int32, FileSource
+from aligned.compiler.feature_factory import EventTimestamp
 from aligned.schemas.feature import FeatureLocation
 
 
@@ -20,6 +21,22 @@ class TestDerived:
     feature = String()
 
     contains_hello = feature.contains('Hello')
+
+
+@feature_view(name='test', source=FileSource.csv_at('some_file.csv'))
+class TestEventTimestamp:
+    some_id = Int32().as_entity()
+    feature = String()
+    loaded_at = EventTimestamp()
+    contains_hello = feature.contains('Hello')
+
+
+def test_event_timestamp() -> None:
+    view = TestEventTimestamp.compile()
+    assert len(view.entities) == 1
+    assert view.event_timestamp is not None
+    assert len(view.features) == 1
+    assert len(view.derived_features) == 1
 
 
 def test_feature_view_wrapper_feature_references() -> None:

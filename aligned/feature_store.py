@@ -433,7 +433,7 @@ class ContractStore:
             else:
                 for request in requests.needed_requests:
                     if view.name == request.location.name:
-                        feature_names.update(request.all_feature_names)
+                        feature_names.update(request.all_returned_columns)
 
         if not isinstance(entities, RetrivalJob):
             entities = RetrivalJob.from_convertable(entities, requests)
