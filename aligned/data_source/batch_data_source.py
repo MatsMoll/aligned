@@ -948,10 +948,9 @@ class LoadedAtSource(BatchDataSource):
     source: BatchDataSource
     type_name: str = 'loaded_at'
 
+    @property
     def to_markdown(self) -> str:
-        source_markdown = (
-            self.source.to_markdown() if hasattr(self.source, 'to_markdown') else str(self.source)
-        )
+        source_markdown = self.source.to_markdown if hasattr(self.source, 'to_markdown') else str(self.source)
 
         return f"""### Loaded At Source
 
@@ -968,14 +967,16 @@ Adding a loaded at timestamp to the source:
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         from aligned.retrival_job import LoadedAtJob
 
-        return LoadedAtJob(self.source.all_data(request, limit), request)
+        return LoadedAtJob(self.source.all_data(request.without_event_timestamp(), limit), request)
 
     def all_between_dates(
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime
     ) -> RetrivalJob:
         from aligned.retrival_job import LoadedAtJob
 
-        return LoadedAtJob(self.source.all_between_dates(request, start_date, end_date), request)
+        return LoadedAtJob(
+            self.source.all_between_dates(request.without_event_timestamp(), start_date, end_date), request
+        )
 
     def depends_on(self) -> set[FeatureLocation]:
         return self.source.depends_on()
