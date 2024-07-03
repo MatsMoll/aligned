@@ -942,6 +942,19 @@ class StackSource(BatchDataSource):
         return self.top.depends_on().union(self.bottom.depends_on())
 
 
+def request_without_event_timestamp(request: RetrivalRequest) -> RetrivalRequest:
+    return RetrivalRequest(
+        request.name,
+        location=request.location,
+        features=request.features,
+        entities=request.entities,
+        derived_features=request.derived_features,
+        aggregated_features=request.aggregated_features,
+        features_to_include=request.features_to_include,
+        event_timestamp_request=None,
+    )
+
+
 @dataclass
 class LoadedAtSource(BatchDataSource):
 
@@ -967,7 +980,7 @@ Adding a loaded at timestamp to the source:
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         from aligned.retrival_job import LoadedAtJob
 
-        return LoadedAtJob(self.source.all_data(request.without_event_timestamp(), limit), request)
+        return LoadedAtJob(self.source.all_data(request_without_event_timestamp(request), limit), request)
 
     def all_between_dates(
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime
@@ -975,7 +988,8 @@ Adding a loaded at timestamp to the source:
         from aligned.retrival_job import LoadedAtJob
 
         return LoadedAtJob(
-            self.source.all_between_dates(request.without_event_timestamp(), start_date, end_date), request
+            self.source.all_between_dates(request_without_event_timestamp(request), start_date, end_date),
+            request,
         )
 
     def depends_on(self) -> set[FeatureLocation]:
