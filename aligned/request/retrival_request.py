@@ -113,7 +113,7 @@ class RetrivalRequest(Codable):
 
     @property
     def all_returned_columns(self) -> list[str]:
-        return [feature.name for feature in self.all_returned_features]
+        return sorted([feature.name for feature in self.all_returned_features])
 
     @property
     def returned_features(self) -> set[Feature]:

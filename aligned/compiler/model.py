@@ -20,9 +20,9 @@ from aligned.compiler.feature_factory import (
     TargetProbability,
     ModelVersion,
 )
-from aligned.data_source.batch_data_source import BatchDataSource
+from aligned.data_source.batch_data_source import BatchDataSource, DummyDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
-from aligned.feature_view.feature_view import FeatureView, FeatureViewWrapper
+from aligned.feature_view.feature_view import FeatureView, FeatureViewMetadata, FeatureViewWrapper, resolve_source
 from aligned.exposed_model.interface import ExposedModel
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import ConvertableToRetrivalJob, PredictionJob, RetrivalJob
@@ -70,6 +70,18 @@ class ModelMetadata:
     dataset_store: DatasetStore | None = field(default=None)
 
 
+    def as_view_meatadata(self) -> FeatureViewMetadata:
+        return FeatureViewMetadata(
+            name=self.name,
+            source=self.output_source or DummyDataSource(),
+            contacts=self.contacts,
+            tags=self.tags,
+            description=self.description,
+            acceptable_freshness=self.acceptable_freshness,
+            unacceptable_freshness=self.unacceptable_freshness
+        )
+
+
 @dataclass
 class ModelContractWrapper(Generic[T]):
 
@@ -97,6 +109,30 @@ class ModelContractWrapper(Generic[T]):
 
     def compile(self) -> ModelSchema:
         return compile_with_metadata(self.contract(), self.metadata)
+
+    def as_view_wrapper(self) -> FeatureViewWrapper[T]:
+
+        return FeatureViewWrapper(
+            self.metadata.as_view_meatadata(),
+            self.contract()
+        )
+
+    def with_schema(
+        self,
+        name: str,
+        source: BatchDataSource | FeatureViewWrapper,
+        materialized_source: BatchDataSource | None = None,
+        entities: dict[str, FeatureFactory] | None = None,
+        additional_features: dict[str, FeatureFactory] | None = None,
+    ) -> FeatureViewWrapper[T]:
+
+        self.as_view_wrapper().with_schema(
+            name=name,
+            source=source,
+            materialized_source=materialized_source,
+            entities=entities,
+            additional_features=additional_features
+        )
 
     def as_langchain_retriver(
         self,
