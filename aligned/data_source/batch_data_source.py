@@ -379,7 +379,7 @@ class CustomMethodDataSource(BatchDataSource):
         return 'custom_method'
 
     @property
-    def as_markdown(self) -> str:
+    def to_markdown(self) -> str:
         return "### Custom method\n\nThis uses dill which can be unsafe in some scenarios."
 
 
