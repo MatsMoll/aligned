@@ -890,8 +890,8 @@ class ContractStore:
 
             try:
                 existing_df = await source.to_lazy_polars()
-                write_df = pl.concat([new_df, existing_df.select(columns)], how='vertical_relaxed')
-            except UnableToFindFileException:
+                write_df = pl.concat([new_df, existing_df.select(columns)], how='vertical_relaxed').collect().lazy()
+            except (UnableToFindFileException, pl.ComputeError):
                 write_df = new_df
 
             if isinstance(source, ColumnFeatureMappable):
@@ -933,8 +933,9 @@ class ContractStore:
             try:
                 existing_df = await source.to_lazy_polars()
                 write_df = upsert_on_column(entities, new_df, existing_df)
-            except UnableToFindFileException:
+            except (UnableToFindFileException, pl.ComputeError):
                 write_df = new_df
+
             await source.write_polars(write_df)
         else:
             raise ValueError(f'The source {type(source)} do not support writes')

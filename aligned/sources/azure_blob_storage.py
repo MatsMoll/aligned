@@ -24,6 +24,7 @@ from aligned.sources.local import (
     StorageFileReference,
     Directory,
     data_file_freshness,
+    upsert_on_column
 )
 from aligned.storage import Storage
 from httpx import HTTPStatusError
@@ -410,7 +411,7 @@ Path: *{self.path}*
 
 @dataclass
 class AzureBlobPartitionedParquetDataSource(
-    BatchDataSource, DataFileReference, ColumnFeatureMappable, Deletable
+    BatchDataSource, DataFileReference, ColumnFeatureMappable, Deletable, WritableFeatureSource
 ):
     config: AzureBlobConfig
     directory: str
@@ -468,9 +469,23 @@ Partition Keys: *{self.partition_keys}*
         await self.write_polars(pl.from_pandas(df).lazy())
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
-        url = f"az://{self.directory}"
-        creds = self.config.read_creds()
-        df.collect().to_pandas().to_parquet(url, partition_cols=self.partition_keys, storage_options=creds)
+        from adlfs import AzureBlobFileSystem
+        from pyarrow.parquet import write_to_dataset
+
+        fs = AzureBlobFileSystem(**self.config.read_creds())
+
+        pyarrow_options = {
+            "partition_cols": self.partition_keys,
+            "filesystem": fs,
+            "compression": "zstd",
+        }
+
+        write_to_dataset(
+            table=df.collect().to_arrow(),
+            root_path=self.directory,
+            **(pyarrow_options or {}),
+        )
+
 
     @classmethod
     def multi_source_features_for(
@@ -513,6 +528,18 @@ Partition Keys: *{self.partition_keys}*
         features = request.all_returned_columns
         df = await job.select(features).to_lazy_polars()
         await self.write_polars(df)
+
+    async def upsert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
+
+        new_df = (await job.to_lazy_polars()).select(request.all_returned_columns)
+        entities = list(request.entity_names)
+        try:
+            existing_df = await self.to_lazy_polars()
+            write_df = upsert_on_column(entities, new_df, existing_df)
+        except (UnableToFindFileException, pl.ComputeError):
+            write_df = new_df
+
+        await self.write_polars(write_df)
 
     async def delete(self) -> None:
         from adlfs import AzureBlobFileSystem
