@@ -1225,17 +1225,19 @@ def random_values_for(feature: Feature, size: int) -> pl.Series:
     return values
 
 
-def data_for_request(request: RetrivalRequest, size: int) -> pl.DataFrame:
+async def data_for_request(request: RetrivalRequest, size: int) -> pl.DataFrame:
+    from aligned.retrival_job import RetrivalJob
+
     needed_features = request.features.union(request.entities)
     schema = {feature.name: feature.dtype.polars_type for feature in needed_features}
 
     exprs = {}
 
     for feature in sorted(needed_features, key=lambda f: f.name):
-        print(f"Generating data for {feature.name}")
         exprs[feature.name] = random_values_for(feature, size)
 
-    return pl.DataFrame(exprs, schema=schema)
+    job = RetrivalJob.from_polars_df(pl.DataFrame(exprs, schema=schema), request=[request])
+    return await job.derive_features().to_polars()
 
 
 class DummyDataSource(BatchDataSource):
@@ -1260,6 +1262,7 @@ class DummyDataSource(BatchDataSource):
     ```
     """
 
+    default_data_size: int = 10_000
     type_name: str = 'dummy_data'
 
     def job_group_key(self) -> str:
@@ -1271,7 +1274,7 @@ class DummyDataSource(BatchDataSource):
     ) -> RetrivalJob:
         async def random_features_for(facts: RetrivalJob, request: RetrivalRequest) -> pl.LazyFrame:
             df = await facts.to_polars()
-            random = data_for_request(request, df.height).lazy()
+            random = (await data_for_request(request, df.height)).lazy()
             join_columns = set(request.all_returned_columns) - set(df.columns)
             return df.hstack(random.select(pl.col(join_columns)).collect()).lazy()
 
@@ -1284,7 +1287,7 @@ class DummyDataSource(BatchDataSource):
         from aligned import CustomMethodDataSource
 
         async def all_data(request: RetrivalRequest, limit: int | None = None) -> pl.LazyFrame:
-            return data_for_request(request, limit or 100).lazy()
+            return (await data_for_request(request, limit or self.default_data_size)).lazy()
 
         return CustomMethodDataSource.from_methods(all_data=all_data).all_data(request, limit)
 
@@ -1296,7 +1299,7 @@ class DummyDataSource(BatchDataSource):
         async def between_date(
             request: RetrivalRequest, start_date: datetime, end_date: datetime
         ) -> pl.LazyFrame:
-            return data_for_request(request, 100).lazy()
+            return (await data_for_request(request, self.default_data_size)).lazy()
 
         return CustomMethodDataSource.from_methods(all_between_dates=between_date).all_between_dates(
             request, start_date, end_date
