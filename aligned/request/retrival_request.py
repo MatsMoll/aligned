@@ -146,9 +146,13 @@ class RetrivalRequest(Codable):
 
     @property
     def all_features(self) -> set[Feature]:
-        return self.features.union(self.derived_features).union(
-            {feature.derived_feature for feature in self.aggregated_features}
-        )
+        return self.features.union({
+            feat for feat in self.derived_features if not feat.name.isnumeric()
+
+        }).union({
+            feature.derived_feature for feature in self.aggregated_features
+            if not feature.name.isnumeric()
+        })
 
     @property
     def all_feature_names(self) -> set[str]:
