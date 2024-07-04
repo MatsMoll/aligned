@@ -378,6 +378,11 @@ class CustomMethodDataSource(BatchDataSource):
     def job_group_key(self) -> str:
         return 'custom_method'
 
+    @property
+    def as_markdown(self) -> str:
+        return "### Custom method\n\nThis uses dill which can be unsafe in some scenarios."
+
+
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         from aligned.retrival_job import CustomLazyPolarsJob
         import dill
