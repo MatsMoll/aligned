@@ -23,6 +23,7 @@ from aligned.compiler.model import model_contract, ModelContractWrapper
 from aligned.feature_store import ContractStore
 from aligned.feature_view.combined_view import CombinedFeatureView, CombinedFeatureViewMetadata
 from aligned.retrival_job import DerivedFeatureJob, RetrivalJob, RetrivalRequest
+from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference, FeatureType
 from aligned.schemas.record_coders import JsonRecordCoder
@@ -220,7 +221,10 @@ def breast_scan_without_timestamp_feature_store(
 
 @pytest.fixture
 def scan_with_datetime() -> CsvFileSource:
-    return FileSource.csv_at(path='test_data/data-with-datetime.csv')
+    return FileSource.csv_at(
+        path='test_data/data-with-datetime.csv',
+        date_formatter=DateFormatter.string_format('%Y-%m-%d %H:%M:%S'),
+    )
 
 
 @pytest.fixture
@@ -233,7 +237,7 @@ def breast_scan_feature_view_with_datetime(scan_with_datetime: CsvFileSource) ->
             source=scan_with_datetime,
         )
 
-        scan_id = Entity(dtype=Int32())
+        scan_id = Int32().as_entity()
 
         created_at = EventTimestamp()
 

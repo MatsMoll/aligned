@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 import polars as pl
+from datetime import datetime
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.feature_source import WritableFeatureSource
 from aligned.request.retrival_request import RetrivalRequest
-from aligned.schemas.feature import Feature
+from aligned.schemas.feature import Feature, EventTimestamp
 from aligned.sources.local import Deletable
+import logging
 
 from aligned.sources.vector_index import VectorIndex
 
@@ -18,6 +20,8 @@ try:
 except ImportError:
     lancedb = None
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class LanceDBConfig:
@@ -25,6 +29,7 @@ class LanceDBConfig:
     path: str
 
     async def connect(self) -> 'lancedb.AsyncConnection':
+        assert lancedb is not None, '`lancedb` is not installed'
         return await lancedb.connect_async(self.path)
 
     async def connect_to_table(self, table: str) -> 'lancedb.AsyncTable':
@@ -55,10 +60,58 @@ class LanceDbTable(VectorIndex, BatchDataSource, WritableFeatureSource, Deletabl
         self._vector_index_name = name
         return self
 
+    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+        from lancedb import AsyncTable
+
+        lance_table: AsyncTable = await self.config.connect_to_table(self.table_name)
+        table = await lance_table.query().select([event_timestamp.name]).to_arrow()
+        df = pl.from_arrow(table)
+        if isinstance(df, pl.Series):
+            col = df
+        else:
+            col = df.get_column(event_timestamp.name)
+        return col.max()
+
+    async def create(self, request: RetrivalRequest) -> None:
+        from aligned.schemas.vector_storage import pyarrow_schema
+
+        db = await self.config.connect()
+        schema = pyarrow_schema(list(request.all_returned_features))
+
+        await db.create_table(self.table_name, schema=schema)
+
+    async def upsert(self, job: 'RetrivalJob', request: RetrivalRequest) -> None:
+        import lancedb
+
+        upsert_keys = list(request.entity_names)
+
+        conn = lancedb.connect(self.config.path)
+        table = conn.open_table(self.table_name)
+
+        arrow_table = (await job.to_polars()).to_arrow()
+
+        # Is a bug when passing in an iterator
+        # As lancedb trys to access the .iter() which do not always exist I guess
+        (
+            table.merge_insert(upsert_keys[0] if len(upsert_keys) == 1 else upsert_keys)
+            .when_matched_update_all()
+            .when_not_matched_insert_all()
+            .execute(arrow_table)
+        )
+
     async def insert(self, job: 'RetrivalJob', request: RetrivalRequest) -> None:
-        table = await self.config.connect_to_table(self.table_name)
+        try:
+            table = await self.config.connect_to_table(self.table_name)
+        except ValueError:
+            await self.create(request)
+            table = await self.config.connect_to_table(self.table_name)
+
         df = (await job.to_polars()).to_arrow()
         await table.add(df)
+
+    async def overwrite(self, job: 'RetrivalJob', request: RetrivalRequest) -> None:
+        await self.delete()
+        await self.insert(job, request)
 
     async def delete(self) -> None:
         conn = await self.config.connect()
@@ -99,9 +152,8 @@ class LanceDbTable(VectorIndex, BatchDataSource, WritableFeatureSource, Deletabl
             result: pl.DataFrame | None = None
 
             embedding = first_embedding(data.request_result.features)
-
             assert embedding, 'Expected to a least find one embedding in the input data'
-
+            org_columns = df.columns
             df_cols = len(df.columns)
 
             for item in df.iter_rows(named=True):
@@ -114,8 +166,11 @@ class LanceDbTable(VectorIndex, BatchDataSource, WritableFeatureSource, Deletabl
 
                 polars_df = polars_df.select(pl.exclude('_distance'))
                 if df_cols > 1:
+                    logger.info(f"Stacking {polars_df.columns} and {item.keys()}")
                     polars_df = polars_df.hstack(
-                        pl.DataFrame([item] * polars_df.height).select(pl.exclude(embedding.name))
+                        pl.DataFrame([item] * polars_df.height)
+                        .select(org_columns)
+                        .select(pl.exclude(embedding.name))
                     )
 
                 if result is None:

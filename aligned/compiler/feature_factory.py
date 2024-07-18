@@ -385,7 +385,8 @@ class FeatureFactory(FeatureReferencable):
     constraints: set[Constraint] | None = None
 
     def __set_name__(self, owner, name):
-        self._name = name
+        if self._name is None:
+            self._name = name
 
     @property
     def dtype(self) -> FeatureType:
@@ -594,7 +595,11 @@ class FeatureFactory(FeatureReferencable):
         instance.transformation = NotNullFactory(self)
         return instance
 
-    def referencing(self, entity: FeatureFactory) -> FeatureFactory:
+    def with_name(self: T, name: str) -> T:
+        self._name = name
+        return self
+
+    def referencing(self: T, entity: FeatureFactory) -> T:
         from aligned.schemas.constraint_types import ReferencingColumn
 
         self._add_constraint(ReferencingColumn(entity.feature_reference()))

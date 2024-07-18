@@ -8,7 +8,7 @@ from aligned.schemas.codable import Codable
 from mashumaro.types import SerializableType
 import logging
 
-from aligned.schemas.feature import Feature, FeatureReference
+from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference
 
 if TYPE_CHECKING:
     from aligned.feature_store import ModelFeatureStore
@@ -48,6 +48,19 @@ class PredictorFactory:
         return cls._shared
 
 
+class PromptModel:
+    @property
+    def precomputed_prompt_key(self) -> str | None:
+        """
+        This is the property that contains the fully compiled prompt.
+        Meaning a user can bypass the prompt templating step.
+
+        This is usefull in some scanarios where we want to do similarity search
+        when the prompt components do not make sense to provide.
+        """
+        return None
+
+
 class ExposedModel(Codable, SerializableType):
 
     model_type: str
@@ -59,6 +72,14 @@ class ExposedModel(Codable, SerializableType):
     @property
     def as_markdown(self) -> str:
         raise NotImplementedError(type(self))
+
+    async def depends_on(self) -> list[FeatureLocation]:
+        """
+        The data artefacts that the model depends on. Which is not the input features.
+        This is useful for e.g. RAG systems, as we can describe which documents a model depends on
+        Or something like a vector database that we assume to be up to date.
+        """
+        return []
 
     async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
         raise NotImplementedError(type(self))
@@ -129,6 +150,7 @@ class ExposedModel(Codable, SerializableType):
         input_features_versions: str,
         prompt_template: str,
         embedding_name: str | None = None,
+        precomputed_prompt_key: str = 'full_prompt',
     ) -> 'ExposedModel':
         from aligned.exposed_model.ollama import OllamaEmbeddingPredictor
 
@@ -138,6 +160,7 @@ class ExposedModel(Codable, SerializableType):
             prompt_template=prompt_template,
             input_features_versions=input_features_versions,
             embedding_name=embedding_name or 'embedding',
+            precomputed_prompt_key_overwrite=precomputed_prompt_key,
         )
 
     @staticmethod
@@ -386,13 +409,10 @@ def python_function(function: Callable[[pl.DataFrame], pl.Series]) -> DillFuncti
         if len(pred_columns) != 1:
             raise ValueError(f"Expected exactly one prediction column, got {len(pred_columns)} columns.")
 
-        feature_request = store.features_for(values).log_each_job()
-        input_features = feature_request.request_result.feature_columns
+        feature_request = store.features_for(values)
         features = await feature_request.to_polars()
 
-        result = features.with_columns(
-            function(features.select(input_features)).alias(list(pred_columns)[0].name)
-        )
+        result = features.with_columns(function(features).alias(next(iter(pred_columns)).name))
         return result
 
     return DillFunction(function=dill.dumps(function_wrapper))

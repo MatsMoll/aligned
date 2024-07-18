@@ -319,8 +319,8 @@ class FileDateJob(RetrivalJob):
             end_date = self.end_date.replace(tzinfo=None)
         else:
             tz = timezone(time_zone)
-            start_date = tz.localize(self.start_date)
-            end_date = tz.localize(self.end_date)
+            start_date = self.start_date.astimezone(tz)
+            end_date = self.end_date.astimezone(tz)
 
         return df.filter(pl.col(event_timestamp_column).is_between(start_date, end_date))
 
@@ -401,8 +401,15 @@ class FileFactualJob(RetrivalJob):
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
 
         all_features: set[Feature] = set()
+        date_features: set[str] = set()
+
         for request in self.requests:
             all_features.update(request.all_required_features)
+            if request.event_timestamp:
+                date_features.add(request.event_timestamp.name)
+            for feature in request.features:
+                if feature.dtype.is_datetime:
+                    date_features.add(feature.name)
 
         result = await self.facts.to_lazy_polars()
         event_timestamp_col = 'aligned_event_timestamp'
@@ -422,6 +429,7 @@ class FileFactualJob(RetrivalJob):
 
         row_id_name = 'row_id'
         result = result.with_row_index(row_id_name)
+
         for request in self.requests:
 
             entity_names = request.entity_names
@@ -475,7 +483,6 @@ class FileFactualJob(RetrivalJob):
                 if isinstance(self.source, ColumnFeatureMappable):
                     request_features = self.source.feature_identifier_for(all_names)
 
-                df = decode_timestamps(df, request, self.date_formatter)
                 feature_df = df.select(request_features)
 
                 renames = {
@@ -485,6 +492,8 @@ class FileFactualJob(RetrivalJob):
                 }
                 if renames:
                     feature_df = feature_df.rename(renames)
+
+                feature_df = decode_timestamps(feature_df, request, self.date_formatter)
 
                 for entity in request.entities:
                     feature_df = feature_df.with_columns(pl.col(entity.name).cast(entity.dtype.polars_type))
@@ -519,7 +528,9 @@ class FileFactualJob(RetrivalJob):
                     new_result = new_result.filter(
                         pl.col(field).is_null() | (pl.col(field) <= pl.col(event_timestamp_col))
                     )
-                new_result = new_result.sort(field, descending=True).select(pl.exclude(field))
+                new_result = new_result.sort(field, descending=True, nulls_last=True).select(
+                    pl.exclude(field)
+                )
             elif request.event_timestamp:
                 new_result = new_result.sort([row_id_name, request.event_timestamp.name], descending=True)
 

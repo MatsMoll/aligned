@@ -546,7 +546,7 @@ Partition Keys: *{self.partition_keys}*
 
         fs = AzureBlobFileSystem(**self.config.read_creds())
 
-        def delete_directory_recursively(directory_path):
+        def delete_directory_recursively(directory_path) -> None:
             paths = fs.find(directory_path)
 
             for path in paths:

@@ -205,6 +205,13 @@ class RepoDefinition(Codable):
         dir_path = Path.cwd() if path == '.' else Path(path).absolute()
         return await RepoReader.definition_from_path(dir_path)
 
+    @staticmethod
+    async def from_glob(glob: str, root_dir: Path | None = None) -> RepoDefinition:
+        from aligned.compiler.repo_reader import RepoReader
+
+        dir_path = Path.cwd() if root_dir is None else root_dir
+        return await RepoReader.definition_from_glob(dir_path, glob=glob)
+
     # def add_old_version(self, old_version: "RepoDefinition") -> "RepoDefinition":
 
     #     views: dict[str, VersionedData[CompiledFeatureView]] = {}

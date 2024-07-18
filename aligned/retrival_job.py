@@ -772,7 +772,8 @@ class RetrivalJob(ABC):
 
     def filter(self, condition: str | Feature | DerivedFeature | pl.Expr) -> RetrivalJob:
         """
-        Filters based on a condition referencing either a feature, a feature name, or an polars expression to filter on.
+        Filters based on a condition referencing either a feature,
+        a feature name, or an polars expression to filter on.
         """
         if isinstance(self, ModificationJob):
             return self.copy_with(self.job.filter(condition))
@@ -2595,6 +2596,9 @@ class CustomLazyPolarsJob(RetrivalJob):
     def retrival_requests(self) -> list[RetrivalRequest]:
         return [self.request]
 
+    def describe(self) -> str:
+        return f"Custom Lazy Polars Job returning {self.request.all_returned_columns}"
+
     @property
     def request_result(self) -> RequestResult:
         return RequestResult.from_request(self.request)
@@ -2658,8 +2662,10 @@ class PredictionJob(RetrivalJob):
     def describe(self) -> str:
         added = self.added_features()
         feature_names = {feat.name for feat in added}
-        return f"""{self.job.describe()}
-        -> predicting using model {self.model.name} with {feature_names} added features"""
+        return (
+            f"{self.job.describe()} \n"
+            f"-> predicting using model {self.model.name} with {feature_names} added features"
+        )
 
     async def to_pandas(self) -> pd.DataFrame:
         return await self.job.to_pandas()
@@ -2675,7 +2681,7 @@ class PredictionJob(RetrivalJob):
         )
         return df.lazy()
 
-    def filter(self, condition: str | Feature | DerivedFeature) -> RetrivalJob:
+    def filter(self, condition: str | Feature | DerivedFeature | pl.Expr) -> RetrivalJob:
         return PredictionJob(self.job.filter(condition), self.model, self.store)
 
     def remove_derived_features(self) -> RetrivalJob:

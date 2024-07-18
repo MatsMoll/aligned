@@ -148,6 +148,10 @@ class FeatureViewWrapper(Generic[T]):
     metadata: FeatureViewMetadata
     view: T
 
+    @property
+    def location(self) -> FeatureLocation:
+        return FeatureLocation.feature_view(self.metadata.name)
+
     def __call__(self) -> T:
         view = copy.deepcopy(self.view)
         view = set_location_for_features_in(view, FeatureLocation.feature_view(self.metadata.name))

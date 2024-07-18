@@ -125,6 +125,9 @@ class CompiledFeatureView(Codable):
         }
         derived_aggregated_feautres = {feature.derived_feature for feature in self.aggregated_features}
 
+        if self.event_timestamp and self.event_timestamp.name in feature_names:
+            features.add(self.event_timestamp.as_feature())
+
         def dependent_features_for(
             feature: DerivedFeature,
         ) -> tuple[set[Feature], set[Feature], set[AggregatedFeature]]:

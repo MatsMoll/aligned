@@ -55,7 +55,7 @@ class DateFormatter(Codable, SerializableType):
 
     @staticmethod
     def iso_8601() -> StringDateFormatter:
-        return StringDateFormatter('%Y-%m-%dT%H:%M:%S%.f+%Z')
+        return StringDateFormatter('%Y-%m-%dT%H:%M:%S%.f%Z', time_zone='UTC')
 
     @staticmethod
     def unix_timestamp(time_unit: TimeUnit = 'us', time_zone: str | None = 'UTC') -> Timestamp:

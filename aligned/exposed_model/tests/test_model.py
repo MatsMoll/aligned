@@ -92,9 +92,9 @@ async def test_model() -> None:
 
     entities = {'entity_id': ['a', 'b'], 'x': [1, 2]}
     pred_job = MyModelContract2.predict_over(entities, needed_views=[InputFeatureView, MyModelContract])
-    preds = await pred_job.to_polars()
-
     assert set(pred_job.request_result.feature_columns) == {'x', 'prediction', 'other_pred'}
+
+    preds = await pred_job.to_polars()
     assert preds['other_pred'].to_list() == [6, 12]
 
 

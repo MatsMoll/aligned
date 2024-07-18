@@ -84,7 +84,7 @@ def pyarrow_schema(features: list[Feature]) -> pa.Schema:
             return pa_types[dtype.name]
 
         if dtype.is_datetime:
-            return pa.float64()
+            return pa.timestamp('us', tz=dtype.datetime_timezone)
 
         if dtype.is_embedding:
             embedding_size = dtype.embedding_size()

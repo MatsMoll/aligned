@@ -273,6 +273,22 @@ class ContractStore:
         return ContractStore.from_definition(repo_def)
 
     @staticmethod
+    async def from_glob(glob: str) -> ContractStore:
+        """Reads and generates a feature store based on the given glob path.
+
+        This will read the feature views, services etc in a given repo and generate a feature store.
+        This can be used for fast development purposes.
+
+        Args:
+            glob (str): the files to read. E.g. `src/**/*.py`
+
+        Returns:
+            ContractStore: The generated contract store
+        """
+        definition = await RepoDefinition.from_glob(glob)
+        return ContractStore.from_definition(definition)
+
+    @staticmethod
     async def from_dir(path: str = '.') -> ContractStore:
         """Reads and generates a feature store based on the given directory's content.
 
@@ -987,6 +1003,19 @@ class ModelFeatureStore:
     def dataset_store(self) -> DatasetStore | None:
         return self.model.dataset_store
 
+    def has_one_source_for_input_features(self) -> bool:
+        """
+        If the input features are from the same source.
+
+        This can be interesting to know in order to automatically predict over
+        the input.
+        E.g. predict over all data in the source.
+        """
+        version = self.selected_version or self.model.features.default_version
+        features = self.model.features.features_for(version)
+        locations = {feature.location for feature in features}
+        return len(locations) == 1
+
     def raw_string_features(self, except_features: set[str]) -> set[str]:
 
         version = self.selected_version or self.model.features.default_version
@@ -1098,9 +1127,7 @@ class ModelFeatureStore:
         else:
             features = self.raw_string_features(set())
 
-        job = self.store.features_for(
-            entities, list(features), event_timestamp_column=event_timestamp_column
-        ).with_request(request.needed_requests)
+        job = self.store.features_for(entities, list(features), event_timestamp_column=event_timestamp_column)
 
         if isinstance(entities, (dict, pl.DataFrame, pd.DataFrame)):
 
@@ -1126,6 +1153,9 @@ class ModelFeatureStore:
         return job
 
     async def freshness(self) -> dict[FeatureLocation, datetime | None]:
+        return await self.input_freshness()
+
+    async def input_freshness(self) -> dict[FeatureLocation, datetime | None]:
         from aligned.schemas.feature import EventTimestamp
 
         locs: dict[FeatureLocation, EventTimestamp] = {}
@@ -1134,7 +1164,28 @@ class ModelFeatureStore:
             if req.event_timestamp:
                 locs[req.location] = req.event_timestamp
 
+        if self.model.exposed_model:
+            additional_model_deps = await self.model.exposed_model.depends_on()
+            for loc in additional_model_deps:
+                if loc in locs:
+                    continue
+
+                if loc.location == 'model':
+                    event_timestamp = self.store.model(loc.name).prediction_request().event_timestamp
+                else:
+                    event_timestamp = self.store.feature_view(loc.name).request.event_timestamp
+
+                if event_timestamp:
+                    locs[loc] = event_timestamp
+
         return await self.store.feature_source.freshness_for(locs)
+
+    async def prediction_freshness(self) -> datetime | None:
+        pred_req = self.prediction_request()
+        if not pred_req.event_timestamp:
+            return None
+        freshness = await self.store.feature_source.freshness_for({self.location: pred_req.event_timestamp})
+        return freshness[self.location]
 
     def with_labels(self, label_refs: set[FeatureReference] | None = None) -> SupervisedModelFeatureStore:
         """Will also load the labels for the model

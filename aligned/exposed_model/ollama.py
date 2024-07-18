@@ -1,11 +1,14 @@
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from aligned.compiler.model import ModelContractWrapper
 from aligned.compiler.feature_factory import (
+    CouldBeModelVersion,
     Embedding,
     Entity,
     FeatureFactory,
     FeatureReferencable,
     Int32,
+    ModelVersion,
     String,
     List,
     Int64,
@@ -14,7 +17,7 @@ from aligned.compiler.feature_factory import (
 import logging
 
 from aligned.data_source.batch_data_source import BatchDataSource
-from aligned.exposed_model.interface import ExposedModel
+from aligned.exposed_model.interface import ExposedModel, PromptModel
 from aligned.schemas.feature import Feature, FeatureReference
 from aligned.retrival_job import RetrivalJob
 import polars as pl
@@ -99,7 +102,7 @@ And use the prompt template:
 
 
 @dataclass
-class OllamaEmbeddingPredictor(ExposedModel):
+class OllamaEmbeddingPredictor(ExposedModel, PromptModel):
 
     endpoint: str
     model_name: str
@@ -108,7 +111,12 @@ class OllamaEmbeddingPredictor(ExposedModel):
     prompt_template: str
     input_features_versions: str
 
+    precomputed_prompt_key_overwrite: str
     model_type: str = 'ollama_embedding'
+
+    @property
+    def precomputed_prompt_key(self) -> str | None:
+        return self.precomputed_prompt_key_overwrite
 
     @property
     def exposed_at_url(self) -> str | None:
@@ -164,21 +172,31 @@ This will use the model: `{self.model_name}` to generate the embeddings."""
         expected_cols = [feat.name for feat in store.feature_references_for(self.input_features_versions)]
 
         entities = await values.to_polars()
-        missing_cols = set(expected_cols) - set(entities.columns)
-        if missing_cols:
-            entities = (
-                await store.using_version(self.input_features_versions).features_for(values).to_polars()
-            )
 
-        prompts = entities
+        prompts = []
+
+        if self.precomputed_prompt_key_overwrite in entities.columns:
+            prompts = entities[self.precomputed_prompt_key_overwrite].to_list()
+        else:
+            missing_cols = set(expected_cols) - set(entities.columns)
+            if missing_cols:
+                entities = (
+                    await store.using_version(self.input_features_versions).features_for(values).to_polars()
+                )
+
+            for index, value in enumerate(entities.iter_rows(named=True)):
+                logger.info(f"Processing row {index + 1}/{len(prompts)}")
+
+                prompt = self.prompt_template.format(**value)
+                prompts.append(prompt)
+
+            entities = entities.with_columns(
+                pl.Series(name=self.precomputed_prompt_key_overwrite, values=prompts)
+            )
 
         ret_vals = []
 
-        for index, value in enumerate(prompts.iter_rows(named=True)):
-            logger.info(f"Processing row {index + 1}/{len(prompts)}")
-
-            prompt = self.prompt_template.format(**value)
-
+        for prompt in prompts:
             response = await client.embeddings(self.model_name, prompt)
 
             if isinstance(response, dict):
@@ -188,10 +206,27 @@ This will use the model: `{self.model_name}` to generate the embeddings."""
 
             ret_vals.append(embedding)
 
-        model_version = f"{self.prompt_template_hash()} -> {self.model_name}"
-        return prompts.hstack([pl.Series(name=self.embedding_name, values=ret_vals)]).with_columns(
-            pl.lit(model_version).alias('model_version')
-        )
+        pred_view = store.model.predictions_view
+        if pred_view.model_version_column:
+            model_version = f"{self.prompt_template_hash()} -> {self.model_name}"
+            model_version_name = pred_view.model_version_column.name
+            entities = entities.with_columns(pl.lit(model_version).alias(model_version_name))
+
+        if pred_view.event_timestamp:
+            new_et = pred_view.event_timestamp.name
+            existing_et = values.request_result.event_timestamp
+            need_to_add_et = new_et not in entities.columns
+
+            if existing_et and need_to_add_et and existing_et in entities.columns:
+                logger.info(f"Using existing event timestamp `{existing_et}` as new timestamp.")
+                entities = entities.with_columns(pl.col(existing_et).alias(new_et))
+            elif need_to_add_et:
+                logger.info('No event timestamp using now as the timestamp.')
+                entities = entities.with_columns(
+                    pl.lit(datetime.now(tz=timezone.utc)).alias(pred_view.event_timestamp.name)
+                )
+
+        return entities.hstack([pl.Series(name=self.embedding_name, values=ret_vals)])
 
 
 def ollama_generate(
@@ -215,6 +250,7 @@ def ollama_embedding(
     input_features_versions: str,
     prompt_template: str,
     embedding_name: str | None = None,
+    precomputed_prompt_key: str = 'full_prompt',
 ) -> 'OllamaEmbeddingPredictor':
 
     return OllamaEmbeddingPredictor(
@@ -223,6 +259,7 @@ def ollama_embedding(
         prompt_template=prompt_template,
         input_features_versions=input_features_versions,
         embedding_name=embedding_name or 'embedding',
+        precomputed_prompt_key_overwrite=precomputed_prompt_key,
     )
 
 
@@ -320,6 +357,11 @@ def ollama_embedding_contract(
     embedding_size: int | None = None,
     contacts: list[str] | None = None,
     tags: list[str] | None = None,
+    precomputed_prompt_key: str = 'full_prompt',
+    model_version_field: FeatureFactory | None = None,
+    additional_metadata: list[FeatureFactory] | None = None,
+    acceptable_freshness: timedelta | None = None,
+    unacceptable_freshness: timedelta | None = None,
 ):
     from aligned import model_contract, FeatureInputVersions
 
@@ -359,14 +401,18 @@ def ollama_embedding_contract(
             input_features_versions='default',
             prompt_template=prompt_template,
             embedding_name='embedding',
+            precomputed_prompt_key=precomputed_prompt_key,
         ),
         output_source=output_source,
         contacts=contacts,
         tags=tags,
+        acceptable_freshness=acceptable_freshness,
+        unacceptable_freshness=unacceptable_freshness,
     )
     class OllamaEmbedding:
-
+        updated_at = EventTimestamp()
         embedding = Embedding(embedding_size=emb_size)
+        full_prompt = String().with_name(precomputed_prompt_key)
 
     if not isinstance(entities, list):
         entities = [entities]
@@ -383,6 +429,32 @@ def ollama_embedding_contract(
         new_entity._name = entity.name
 
         setattr(OllamaEmbedding.contract, entity.name, new_entity)
+
+    def add_feature(feature: FeatureFactory) -> None:
+
+        assert feature._name, (
+            'Trying to add a feature without any name. '
+            'Consider using the `.with_name(...)` to manually set it.'
+        )
+        if feature._location is None:
+            setattr(OllamaEmbedding.contract, feature.name, feature)
+            return
+
+        feature_copy = feature.copy_type()
+        feature_copy._name = feature._name
+        feature_copy.constraints = feature.constraints.copy() if feature.constraints else None
+        setattr(OllamaEmbedding.contract, feature_copy.name, feature_copy)
+
+    if model_version_field is not None:
+        if isinstance(model_version_field, ModelVersion):
+            add_feature(model_version_field)
+        elif isinstance(model_version_field, CouldBeModelVersion):
+            add_feature(model_version_field.as_model_version().with_name(model_version_field.name))
+        else:
+            raise ValueError(f"Feature {model_version_field} can not be a model version.")
+
+    for feature in additional_metadata or []:
+        add_feature(feature)
 
     return OllamaEmbedding  # type: ignore
 

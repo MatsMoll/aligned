@@ -88,6 +88,10 @@ class ModelContractWrapper(Generic[T]):
     metadata: ModelMetadata
     contract: Type[T]
 
+    @property
+    def location(self) -> FeatureLocation:
+        return FeatureLocation.model(self.metadata.name)
+
     def __call__(self) -> T:
         # Needs to compiile the model to set the location for the view features
         _ = self.compile()
@@ -101,7 +105,7 @@ class ModelContractWrapper(Generic[T]):
 
             value = getattr(contract, attribute)
             if isinstance(value, FeatureFactory):
-                value._location = FeatureLocation.model(self.metadata.name)
+                value._location = self.location
                 setattr(contract, attribute, copy.deepcopy(value))
 
         setattr(contract, '__model_wrapper__', self)
@@ -434,7 +438,9 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
     for var_name in var_names:
         feature = getattr(model, var_name)
         if isinstance(feature, FeatureFactory):
-            assert feature._name
+            assert (
+                feature._name
+            ), f"Expected name but found none in model: {metadata.name} for feature {var_name}"
             feature._location = FeatureLocation.model(metadata.name)
 
         if isinstance(feature, ModelVersion):

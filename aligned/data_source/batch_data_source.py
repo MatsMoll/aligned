@@ -922,8 +922,8 @@ class StackSource(BatchDataSource):
         if config:
             sub_request = self.sub_request(request, config)
 
-        top = self.top.features_for(facts, sub_request)
-        bottom = self.bottom.features_for(facts, sub_request)
+        top = self.top.features_for(facts, sub_request).drop_invalid()
+        bottom = self.bottom.features_for(facts, sub_request).drop_invalid()
 
         stack_job = StackJob(top=top, bottom=bottom, source_column=config)
 
@@ -1234,6 +1234,7 @@ async def data_for_request(request: RetrivalRequest, size: int) -> pl.DataFrame:
     exprs = {}
 
     for feature in sorted(needed_features, key=lambda f: f.name):
+        logger.info(f"Generating data for {feature.name}")
         exprs[feature.name] = random_values_for(feature, size)
 
     job = RetrivalJob.from_polars_df(pl.DataFrame(exprs, schema=schema), request=[request])

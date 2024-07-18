@@ -71,15 +71,18 @@ class StorageFileReference(AsRepoDefinition):
         return RepoDefinition.from_json(file)
 
 
-async def data_file_freshness(reference: DataFileReference, column_name: str) -> datetime | None:
+async def data_file_freshness(
+    reference: DataFileReference, column_name: str, formatter: DateFormatter | None = None
+) -> datetime | None:
     try:
+        formatter = formatter or DateFormatter.unix_timestamp()
         file = await reference.to_lazy_polars()
         if isinstance(reference, ColumnFeatureMappable):
             source_column = reference.feature_identifier_for([column_name])[0]
         else:
             source_column = column_name
 
-        return file.select(source_column).max().collect()[0, source_column]
+        return file.select(formatter.decode_polars(source_column)).max().collect()[0, source_column]
     except UnableToFindFileException:
         return None
 
@@ -179,7 +182,7 @@ class CsvFileSource(
             buffer = await HttpStorage().read(self.path)
             io_buffer = BytesIO(buffer)
             io_buffer.seek(0)
-            return pl.read_csv(io_buffer, separator=self.csv_config.seperator, try_parse_dates=True).lazy()
+            return pl.read_csv(io_buffer, separator=self.csv_config.seperator).lazy()
 
         if not do_file_exist(self.path):
             raise UnableToFindFileException(self.path)
@@ -197,9 +200,7 @@ class CsvFileSource(
                     reverse_mapping = {v: k for k, v in self.mapping_keys.items()}
                     schema = {reverse_mapping.get(name, name): dtype for name, dtype in schema.items()}
 
-            return pl.scan_csv(
-                self.path, dtypes=schema, separator=self.csv_config.seperator, try_parse_dates=True
-            )
+            return pl.scan_csv(self.path, dtypes=schema, separator=self.csv_config.seperator)
         except OSError:
             raise UnableToFindFileException(self.path)
 
@@ -234,6 +235,9 @@ class CsvFileSource(
             if feature.dtype.is_datetime:
                 data = data.with_columns(self.formatter.encode_polars(feature.name))
 
+        if request.event_timestamp:
+            data = data.with_columns(self.formatter.encode_polars(request.event_timestamp.name))
+
         if self.mapping_keys:
             columns = self.feature_identifier_for(data.columns)
             data = data.rename(dict(zip(data.columns, columns)))
@@ -252,6 +256,9 @@ class CsvFileSource(
         for feature in request.features:
             if feature.dtype.is_datetime:
                 data = data.with_columns(self.formatter.encode_polars(feature.name))
+
+        if request.event_timestamp:
+            data = data.with_columns(self.formatter.encode_polars(request.event_timestamp.name))
 
         if self.mapping_keys:
             columns = self.feature_identifier_for(data.columns)
@@ -364,7 +371,7 @@ class CsvFileSource(
         )
 
     async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
-        return await data_file_freshness(self, event_timestamp.name)
+        return await data_file_freshness(self, event_timestamp.name, self.formatter)
 
 
 @dataclass
