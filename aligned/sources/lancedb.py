@@ -167,7 +167,7 @@ class LanceDbTable(VectorIndex, BatchDataSource, WritableFeatureSource, Deletabl
                 polars_df = polars_df.select(pl.exclude('_distance'))
                 if df_cols > 1:
                     logger.info(f"Stacking {polars_df.columns} and {item.keys()}")
-                    polars_df = polars_df.hstack(
+                    polars_df = polars_df.select(pl.exclude(org_columns)).hstack(
                         pl.DataFrame([item] * polars_df.height)
                         .select(org_columns)
                         .select(pl.exclude(embedding.name))
