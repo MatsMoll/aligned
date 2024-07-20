@@ -63,14 +63,18 @@ class LanceDbTable(VectorIndex, BatchDataSource, WritableFeatureSource, Deletabl
     async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
         from lancedb import AsyncTable
 
-        lance_table: AsyncTable = await self.config.connect_to_table(self.table_name)
-        table = await lance_table.query().select([event_timestamp.name]).to_arrow()
-        df = pl.from_arrow(table)
-        if isinstance(df, pl.Series):
-            col = df
-        else:
-            col = df.get_column(event_timestamp.name)
-        return col.max()
+        try:
+            lance_table: AsyncTable = await self.config.connect_to_table(self.table_name)
+            table = await lance_table.query().select([event_timestamp.name]).to_arrow()
+            df = pl.from_arrow(table)
+            if isinstance(df, pl.Series):
+                col = df
+            else:
+                col = df.get_column(event_timestamp.name)
+            return col.max()
+        except ValueError:
+            logger.info(f"Unable to load freshness. Assumes that it do not exist for '{self.table_name}'")
+            return None
 
     async def create(self, request: RetrivalRequest) -> None:
         from aligned.schemas.vector_storage import pyarrow_schema
