@@ -1,5 +1,5 @@
 class ReadableStream:
-    async def read(self, max_records: int = None, max_wait: float = None) -> list[dict]:
+    async def read(self, max_records: int | None = None, max_wait: float | None = None) -> list[dict]:
         """Reads a stream of data
 
         ```python

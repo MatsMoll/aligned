@@ -18,7 +18,16 @@ class SupportedLiteralValues:
 
     def __init__(self) -> None:
         self.values = {}
-        for lit in [IntValue, FloatValue, BoolValue, DateValue, DatetimeValue, StringValue, ArrayValue]:
+        lits: list[type[LiteralValue]] = [
+            IntValue,
+            FloatValue,
+            BoolValue,
+            DateValue,
+            DatetimeValue,
+            StringValue,
+            ArrayValue,
+        ]
+        for lit in lits:
             self.values[lit.name] = lit
 
     @classmethod

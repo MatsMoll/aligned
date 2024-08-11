@@ -1,8 +1,7 @@
-import math
 from typing import Generic, TypeVar
 
 import polars as pl
-from pandas import DataFrame, Index, concat
+from pandas import Index
 
 DatasetType = TypeVar('DatasetType')
 
@@ -262,60 +261,3 @@ class SplitDataSet(Generic[DatasetType]):
         self.develop_target = develop_target
         self.test_input = test_input
         self.test_target = test_target
-
-
-class SplitStrategy:
-    def split_pandas(self, data: DataFrame, target_column: str) -> SplitDataSet[DataFrame]:
-        pass
-
-
-class StrategicSplitStrategy(SplitStrategy):
-
-    train_size_percentage: float
-    test_size_percentage: float
-
-    def __init__(self, train_size_percentage: float, test_size_percentage: float):
-        assert train_size_percentage + test_size_percentage <= 1
-        self.train_size_percentage = train_size_percentage
-        self.test_size_percentage = test_size_percentage
-
-    def split_pandas(self, data: DataFrame, target_column: str) -> SplitDataSet[DataFrame]:
-        train = DataFrame(columns=data.columns)
-        test = DataFrame(columns=data.columns)
-        develop = DataFrame(columns=data.columns)
-
-        target_data = data[target_column]
-
-        def split(data: DataFrame, start_ratio: float, end_ratio: float) -> DataFrame:
-            group_size = data.shape[0]
-            start_index = math.floor(group_size * start_ratio)
-            end_index = math.floor(group_size * end_ratio)
-            return data.iloc[start_index:end_index]
-
-        for target in target_data.unique():
-            sub_group = data.loc[target_data == target]
-
-            train = concat([train, split(sub_group, 0, self.train_size_percentage)], axis=0)
-            test = concat(
-                [
-                    test,
-                    split(
-                        sub_group,
-                        self.train_size_percentage,
-                        self.train_size_percentage + self.test_size_percentage,
-                    ),
-                ],
-                axis=0,
-            )
-            develop = concat(
-                [develop, split(sub_group, self.train_size_percentage + self.test_size_percentage, 1)], axis=0
-            )
-
-        return SplitDataSet(  # type: ignore
-            train_input=train.drop(columns=[target_column]),
-            train_target=train[target_column],
-            develop_input=develop.drop(columns=[target_column]),
-            develop_target=develop[target_column],
-            test_input=test.drop(columns=[target_column]),
-            test_target=test[target_column],
-        )

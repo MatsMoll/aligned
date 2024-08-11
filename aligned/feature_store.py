@@ -378,10 +378,10 @@ class ContractStore:
 
             for req in feature_request.needed_requests:
 
-                if req.location.location == 'feature_view':
+                if req.location.location_type == 'feature_view':
                     view = self.feature_view(req.location.name).select(req.all_feature_names).all()
                     dfs[req.location.name] = await view.to_lazy_polars()
-                elif req.location.location == 'model':
+                elif req.location.location_type == 'model':
                     model = (
                         self.model(req.location.name).all_predictions().select_columns(req.all_feature_names)
                     )
@@ -496,7 +496,7 @@ class ContractStore:
         triggers = self.feature_views[feature_view].event_triggers or set()
         for model in self.models.values():
             for target in model.predictions_view.classification_targets or set():
-                if target.event_trigger and target.estimating.location.location == feature_view:
+                if target.event_trigger and target.estimating.location.location_type == feature_view:
                     triggers.add(target.event_trigger)
         return triggers
 
@@ -517,7 +517,7 @@ class ContractStore:
         for location in feature_request.locations:
             location_name = location.name
 
-            if location.location == 'model':
+            if location.location_type == 'model':
                 model = models[location_name]
                 view = model.predictions_view
                 if len(features[location]) == 1 and list(features[location])[0] == '*':
@@ -863,11 +863,11 @@ class ContractStore:
 
     def write_request_for(self, location: FeatureLocation) -> RetrivalRequest:
 
-        if location.location == 'feature_view':
+        if location.location_type == 'feature_view':
             return self.feature_views[location.name].request_all.needed_requests[0]
-        elif location.location == 'model':
+        elif location.location_type == 'model':
             return self.models[location.name].predictions_view.request('write', model_version_as_entity=True)
-        elif location.location == 'combined_view':
+        elif location.location_type == 'combined_view':
             raise NotImplementedError(
                 'Have not implemented write requests for combined views. '
                 'Please consider contributing and add a PR.'
@@ -906,7 +906,9 @@ class ContractStore:
 
             try:
                 existing_df = await source.to_lazy_polars()
-                write_df = pl.concat([new_df, existing_df.select(columns)], how='vertical_relaxed').collect().lazy()
+                write_df = (
+                    pl.concat([new_df, existing_df.select(columns)], how='vertical_relaxed').collect().lazy()
+                )
             except (UnableToFindFileException, pl.ComputeError):
                 write_df = new_df
 
@@ -1170,7 +1172,7 @@ class ModelFeatureStore:
                 if loc in locs:
                     continue
 
-                if loc.location == 'model':
+                if loc.location_type == 'model':
                     event_timestamp = self.store.model(loc.name).prediction_request().event_timestamp
                 else:
                     event_timestamp = self.store.feature_view(loc.name).request.event_timestamp

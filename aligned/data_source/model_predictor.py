@@ -39,7 +39,7 @@ class PredictModelSource:
             )
 
         location = reqs.needed_requests[0].location
-        if location.location != 'feature_view':
+        if location.location_type != 'feature_view':
             raise NotImplementedError(
                 f'Type: {type(self)} have not implemented how to load fact data with multiple sources.'
             )
@@ -57,7 +57,7 @@ class PredictModelSource:
             )
 
         location = reqs.needed_requests[0].location
-        if location.location != 'feature_view':
+        if location.location_type != 'feature_view':
             raise NotImplementedError(
                 f'Type: {type(self)} have not implemented how to load fact data with multiple sources.'
             )

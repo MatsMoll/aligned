@@ -8,6 +8,7 @@ from datetime import datetime
 
 from aligned.exposed_model.interface import ExposedModel, PromptModel, StreamablePredictor, RetrivalJob
 from aligned.feature_store import ContractStore, ModelFeatureStore
+from aligned.request.retrival_request import RetrivalRequest
 from aligned.schemas.feature import FeatureLocation
 
 try:
@@ -165,7 +166,7 @@ class LangChain(ExposedModel, StreamablePredictor):
 
 
 def web_chunks_source(pages: list[str]) -> BatchDataSource:
-    async def load(request) -> pl.LazyFrame:
+    async def load(request: RetrivalRequest) -> pl.LazyFrame:
         import polars as pl
         from datetime import timezone, datetime
         from langchain_community.document_loaders import WebBaseLoader
@@ -193,7 +194,7 @@ def web_chunks_source(pages: list[str]) -> BatchDataSource:
 
 
 def file_chunks_source(directory: str, glob: str = '**') -> BatchDataSource:
-    async def load(request) -> pl.LazyFrame:
+    async def load(request: RetrivalRequest) -> pl.LazyFrame:
         import polars as pl
         from datetime import timezone, datetime
         from langchain_community.document_loaders import DirectoryLoader, TextLoader, PythonLoader

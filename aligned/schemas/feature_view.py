@@ -20,6 +20,16 @@ if TYPE_CHECKING:
 
 
 @dataclass
+class AnnotatedView(Codable):
+    name: str
+
+    annotated_view: FeatureLocation
+    annotated_by: Feature | None
+
+    view: CompiledFeatureView
+
+
+@dataclass
 class CompiledFeatureView(Codable):
     name: str
     source: BatchDataSource

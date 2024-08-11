@@ -92,7 +92,11 @@ class LanceDbTable(VectorIndex, BatchDataSource, WritableFeatureSource, Deletabl
         conn = lancedb.connect(self.config.path)
         table = conn.open_table(self.table_name)
 
-        arrow_table = (await job.to_polars()).to_arrow()
+        df = await job.to_polars()
+        if df.is_empty():
+            return
+
+        arrow_table = df.to_arrow()
 
         # Is a bug when passing in an iterator
         # As lancedb trys to access the .iter() which do not always exist I guess
@@ -110,8 +114,12 @@ class LanceDbTable(VectorIndex, BatchDataSource, WritableFeatureSource, Deletabl
             await self.create(request)
             table = await self.config.connect_to_table(self.table_name)
 
-        df = (await job.to_polars()).to_arrow()
-        await table.add(df)
+        df = await job.to_polars()
+        if df.is_empty():
+            return
+
+        arrow_table = df.to_arrow()
+        await table.add(arrow_table)
 
     async def overwrite(self, job: 'RetrivalJob', request: RetrivalRequest) -> None:
         await self.delete()

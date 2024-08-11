@@ -195,7 +195,7 @@ class GreaterThenOrEqualFactory(TransformationFactory):
 @dataclass
 class LowerThenFactory(TransformationFactory):
 
-    value: float
+    value: Any
     in_feature: FeatureFactory
 
     @property
@@ -204,14 +204,18 @@ class LowerThenFactory(TransformationFactory):
 
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import LowerThen as LTTransformation
+        from aligned.schemas.transformation import LowerThenCol
 
-        return LTTransformation(self.in_feature.name, self.value)
+        if isinstance(self.value, FeatureFactory):
+            return LowerThenCol(self.in_feature.name, self.value.name)
+        else:
+            return LTTransformation(self.in_feature.name, self.value)
 
 
 @dataclass
 class LowerThenOrEqualFactory(TransformationFactory):
 
-    value: float
+    value: Any
     in_feature: FeatureFactory
 
     @property
@@ -220,6 +224,10 @@ class LowerThenOrEqualFactory(TransformationFactory):
 
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import LowerThenOrEqual as LTETransformation
+        from aligned.schemas.transformation import LowerThenOrEqualCol
+
+        if isinstance(self.value, FeatureFactory):
+            return LowerThenOrEqualCol(self.in_feature.name, self.value.name)
 
         return LTETransformation(self.in_feature.name, self.value)
 
@@ -672,7 +680,10 @@ class PolarsTransformationFactory(TransformationFactory):
         from aligned.schemas.transformation import PolarsFunctionTransformation, PolarsLambdaTransformation
 
         if isinstance(self.method, pl.Expr):
-            method = lambda df, alias: self.method  # type: ignore
+
+            def method(df: pl.DataFrame, alias: str) -> pl.Expr:
+                return self.method  # type: ignore
+
             return PolarsLambdaTransformation(method=dill.dumps(method), code='', dtype=self.dtype.dtype)
         else:
             code = inspect.getsource(self.method)

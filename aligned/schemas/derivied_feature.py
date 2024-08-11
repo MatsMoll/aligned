@@ -22,7 +22,7 @@ class DerivedFeature(Feature):
         transformation: Transformation,
         depth: int,
         description: str | None = None,
-        tags: dict[str, str] | None = None,
+        tags: list[str] | None = None,
         constraints: set[Constraint] | None = None,
     ):
         self.name = name

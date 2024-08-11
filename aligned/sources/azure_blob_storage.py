@@ -24,7 +24,7 @@ from aligned.sources.local import (
     StorageFileReference,
     Directory,
     data_file_freshness,
-    upsert_on_column
+    upsert_on_column,
 )
 from aligned.storage import Storage
 from httpx import HTTPStatusError
@@ -475,9 +475,9 @@ Partition Keys: *{self.partition_keys}*
         fs = AzureBlobFileSystem(**self.config.read_creds())
 
         pyarrow_options = {
-            "partition_cols": self.partition_keys,
-            "filesystem": fs,
-            "compression": "zstd",
+            'partition_cols': self.partition_keys,
+            'filesystem': fs,
+            'compression': 'zstd',
         }
 
         write_to_dataset(
@@ -485,7 +485,6 @@ Partition Keys: *{self.partition_keys}*
             root_path=self.directory,
             **(pyarrow_options or {}),
         )
-
 
     @classmethod
     def multi_source_features_for(
@@ -530,23 +529,62 @@ Partition Keys: *{self.partition_keys}*
         await self.write_polars(df)
 
     async def upsert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
+        from adlfs import AzureBlobFileSystem
 
-        new_df = (await job.to_lazy_polars()).select(request.all_returned_columns)
-        entities = list(request.entity_names)
+        fs = AzureBlobFileSystem(**self.config.read_creds())  # type: ignore
+
+        def delete_directory_recursively(directory_path: str) -> None:
+            paths = fs.find(directory_path)
+
+            for path in paths:
+                if fs.info(path)['type'] == 'directory':
+                    delete_directory_recursively(path)
+                else:
+                    fs.rm(path)
+
+            fs.rmdir(directory_path)
+
+        upsert_on = sorted(request.entity_names)
+
+        df = await job.select(request.all_returned_columns).to_polars()
+        unique_partitions = df.select(self.partition_keys).unique()
+
+        filters: list[pl.Expr] = []
+        for row in unique_partitions.iter_rows(named=True):
+            current: pl.Expr | None = None
+
+            for key, value in row.items():
+                if current is not None:
+                    current = current & (pl.col(key) == value)
+                else:
+                    current = pl.col(key) == value
+
+            if current is not None:
+                filters.append(current)
+
         try:
-            existing_df = await self.to_lazy_polars()
-            write_df = upsert_on_column(entities, new_df, existing_df)
+            existing_df = (await self.to_lazy_polars()).filter(*filters)
+            write_df = upsert_on_column(upsert_on, df.lazy(), existing_df).collect()
         except (UnableToFindFileException, pl.ComputeError):
-            write_df = new_df
+            write_df = df.lazy()
 
-        await self.write_polars(write_df)
+        for row in unique_partitions.iter_rows(named=True):
+
+            dir = Path(self.directory)
+            for partition_key in self.partition_keys:
+                dir = dir / f"{partition_key}={row[partition_key]}"
+
+            if fs.exists(dir.as_posix()):
+                delete_directory_recursively(dir.as_posix())
+
+        await self.write_polars(write_df.lazy())
 
     async def delete(self) -> None:
         from adlfs import AzureBlobFileSystem
 
-        fs = AzureBlobFileSystem(**self.config.read_creds())
+        fs = AzureBlobFileSystem(**self.config.read_creds())  # type: ignore
 
-        def delete_directory_recursively(directory_path) -> None:
+        def delete_directory_recursively(directory_path: str) -> None:
             paths = fs.find(directory_path)
 
             for path in paths:

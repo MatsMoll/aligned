@@ -15,7 +15,7 @@ class KafkaReadableStream(ReadableStream):
 
     client: KafkaConsumer
 
-    async def read(self, max_records: int = None, max_wait: float = None) -> list[dict]:
+    async def read(self, max_records: int | None = None, max_wait: float | None = None) -> list[dict]:
         values: list[dict] = []
 
         raw_values = self.client.poll(timeout_ms=1000)

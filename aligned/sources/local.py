@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Protocol
@@ -108,8 +109,12 @@ def do_file_exist(path: str) -> bool:
 
 def delete_path(path: str) -> None:
     path_obj = Path(path)
+
+    if not path_obj.exists():
+        return
+
     if path_obj.is_dir():
-        path_obj.rmdir()
+        shutil.rmtree(path)
     else:
         Path(path).unlink()
 
@@ -200,7 +205,7 @@ class CsvFileSource(
                     reverse_mapping = {v: k for k, v in self.mapping_keys.items()}
                     schema = {reverse_mapping.get(name, name): dtype for name, dtype in schema.items()}
 
-            return pl.scan_csv(self.path, dtypes=schema, separator=self.csv_config.seperator)
+            return pl.scan_csv(self.path, schema_overrides=schema, separator=self.csv_config.seperator)
         except OSError:
             raise UnableToFindFileException(self.path)
 
@@ -425,11 +430,10 @@ class PartitionedParquetFileSource(
         return (await self.to_lazy_polars()).collect().to_pandas()
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
-
         glob_path = f'{self.directory}/**/*.parquet'
         try:
             return pl.scan_parquet(glob_path, retries=3)
-        except OSError:
+        except (OSError, FileNotFoundError):
             raise UnableToFindFileException(self.directory)
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
@@ -494,10 +498,49 @@ class PartitionedParquetFileSource(
         df = await job.to_lazy_polars()
         await self.write_polars(df)
 
+    async def upsert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
+        import shutil
+
+        upsert_on = sorted(request.entity_names)
+
+        df = await job.select(request.all_returned_columns).to_polars()
+        unique_partitions = df.select(self.partition_keys).unique()
+
+        filters: list[pl.Expr] = []
+        for row in unique_partitions.iter_rows(named=True):
+            current: pl.Expr | None = None
+
+            for key, value in row.items():
+                if current is not None:
+                    current = current & (pl.col(key) == value)
+                else:
+                    current = pl.col(key) == value
+
+            if current is not None:
+                filters.append(current)
+
+        try:
+            existing_df = (await self.to_lazy_polars()).filter(*filters)
+            write_df = upsert_on_column(upsert_on, df.lazy(), existing_df).collect()
+        except (UnableToFindFileException, pl.ComputeError):
+            write_df = df.lazy()
+
+        for row in unique_partitions.iter_rows(named=True):
+            dir = Path(self.directory)
+            for partition_key in self.partition_keys:
+                dir = dir / f"{partition_key}={row[partition_key]}"
+
+            if dir.exists():
+                shutil.rmtree(dir.as_posix())
+
+        await self.write_polars(write_df.lazy())
+
     async def overwrite(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         import shutil
 
-        shutil.rmtree(self.directory)
+        if Path(self.directory).exists():
+            shutil.rmtree(self.directory)
+
         await self.insert(job, request)
 
 

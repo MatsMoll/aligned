@@ -21,7 +21,7 @@ class PredictorFactory:
     supported_predictors: dict[str, type[ExposedModel]]
     _shared: PredictorFactory | None = None
 
-    def __init__(self):
+    def __init__(self) -> None:
         from aligned.exposed_model.mlflow import MLFlowServer, InMemMLFlowAlias
         from aligned.exposed_model.ollama import OllamaGeneratePredictor, OllamaEmbeddingPredictor
 
@@ -59,6 +59,11 @@ class PromptModel:
         when the prompt components do not make sense to provide.
         """
         return None
+
+
+class VersionedModel:
+    async def model_version(self) -> str:
+        raise NotImplementedError(type(self))
 
 
 class ExposedModel(Codable, SerializableType):
@@ -168,7 +173,7 @@ class ExposedModel(Codable, SerializableType):
         model_name: str,
         model_alias: str,
         model_contract_version_tag: str | None = None,
-    ):
+    ) -> 'ExposedModel':
         from aligned.exposed_model.mlflow import in_memory_mlflow
 
         return in_memory_mlflow(
@@ -183,7 +188,7 @@ class ExposedModel(Codable, SerializableType):
         model_alias: str | None = None,
         model_name: str | None = None,
         timeout: int = 30,
-    ):
+    ) -> 'ExposedModel':
         from aligned.exposed_model.mlflow import mlflow_server
 
         return mlflow_server(
@@ -342,7 +347,7 @@ class ABTestModel(ExposedModel):
         return features
 
     async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
-        entities = set()
+        entities: set[Feature] = set()
         for model, _ in self.models:
             entities = entities.union(await model.needed_entities(store))
         return entities
@@ -351,7 +356,7 @@ class ABTestModel(ExposedModel):
         import random
 
         total_weight = sum([weight for _, weight in self.models])
-        total_sum = 0
+        total_sum: float = 0.0
 
         random_value = random.random()
 

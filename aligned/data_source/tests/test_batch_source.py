@@ -11,7 +11,7 @@ async def test_custom_transformation_as_lambda(scan_without_datetime: CsvFileSou
 
     new_source = scan_without_datetime.transform_with_polars(
         lambda df: df.with_columns(bucket=pl.col('id').mod(3))
-        .groupby('bucket')
+        .group_by('bucket')
         .agg(
             pl.col('radius_mean').sum().alias('sum_radius_mean'),
         )
@@ -32,7 +32,7 @@ async def test_custom_transformation_as_function(scan_without_datetime: CsvFileS
     async def custom_function(df: pl.LazyFrame) -> pl.LazyFrame:
         return (
             df.with_columns(bucket=pl.col('id').mod(3))
-            .groupby('bucket')
+            .group_by('bucket')
             .agg(
                 pl.col('radius_mean').sum().alias('sum_radius_mean'),
             )

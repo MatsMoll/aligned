@@ -380,8 +380,7 @@ class CustomMethodDataSource(BatchDataSource):
 
     @property
     def to_markdown(self) -> str:
-        return "### Custom method\n\nThis uses dill which can be unsafe in some scenarios."
-
+        return '### Custom method\n\nThis uses dill which can be unsafe in some scenarios.'
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         from aligned.retrival_job import CustomLazyPolarsJob
@@ -1170,7 +1169,7 @@ def random_values_for(feature: Feature, size: int) -> pl.Series:
         elif isinstance(constraints, Optional):
             is_optional = True
 
-    if dtype == FeatureType.bool():
+    if dtype == FeatureType.boolean():
         values = np.random.choice([True, False], size=size)
     elif dtype.is_numeric:
         if is_unique:

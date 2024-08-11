@@ -69,7 +69,7 @@ class FactualRedisJob(RetrivalJob):
             ).select(pl.exclude(redis_combine_id))
 
             for feature in request.returned_features:
-                if feature.dtype == FeatureType.bool():
+                if feature.dtype == FeatureType.boolean():
                     reqs = reqs.with_columns(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
                 elif reqs[feature.name].dtype == pl.Utf8 and (
                     feature.dtype == FeatureType.int32() or feature.dtype == FeatureType.int64()

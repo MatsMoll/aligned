@@ -16,7 +16,7 @@ class VectorStorageFactory:
 
     _shared: VectorStorageFactory | None = None
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.supported_storages = {}
 
         for storage in VectorStorage.__subclasses__():

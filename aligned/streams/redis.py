@@ -24,7 +24,7 @@ class RedisStream(ReadableStream, SinakableStream):
     mappings: dict[str, str] = field(default_factory=dict)
     record_coder: RecordCoder = field(default_factory=lambda: PassthroughRecordCoder())
 
-    async def read(self, max_records: int = None, max_wait: float = None) -> list[dict]:
+    async def read(self, max_records: int | None = None, max_wait: float | None = None) -> list[dict]:
 
         stream_values = await self.client.xread(
             streams={self.stream_name: self.read_timestamp}, count=max_records, block=max_wait or 1000

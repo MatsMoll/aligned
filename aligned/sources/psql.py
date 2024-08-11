@@ -141,12 +141,12 @@ WHERE table_schema = '{schema}'
             'character varying': FeatureType.string(),
             'text': FeatureType.string(),
             'integer': FeatureType.int32(),
-            'float': FeatureType.float(),
+            'float': FeatureType.floating_point(),
             'date': FeatureType.date(),
-            'boolean': FeatureType.bool(),
+            'boolean': FeatureType.boolean(),
             'jsonb': FeatureType.json(),
             'smallint': FeatureType.int16(),
-            'numeric': FeatureType.float(),
+            'numeric': FeatureType.floating_point(),
         }
         values = df.select(['column_name', 'data_type']).to_dicts()
         return {value['column_name']: psql_types[value['data_type']] for value in values}
@@ -170,7 +170,7 @@ WHERE table_schema = '{schema}'
     async def insert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         data = await job.to_lazy_polars()
         data.select(request.all_returned_columns).collect().write_database(
-            self.table, connection=self.config.url, if_exists='append'
+            self.table, connection=self.config.url, if_table_exists='append'
         )
 
     async def upsert(self, job: RetrivalJob, request: RetrivalRequest) -> None:

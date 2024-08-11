@@ -25,7 +25,7 @@ from aligned.schemas.constraints import (
 from aligned.schemas.derivied_feature import DerivedFeature, AggregateOver
 from aligned.schemas.event_trigger import EventTrigger as EventTriggerSchema
 from aligned.schemas.feature import EventTimestamp as EventTimestampFeature
-from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference, FeatureType
+from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference, FeatureType, StaticFeatureTags
 from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.target import ClassificationTarget as ClassificationTargetSchemas
 from aligned.schemas.target import ClassTargetProbability
@@ -70,7 +70,7 @@ class AggregationTransformationFactory:
         raise NotImplementedError(type(self))
 
 
-T = TypeVar('T')
+T = TypeVar('T', bound='FeatureFactory')
 
 
 @dataclass
@@ -88,14 +88,14 @@ class TargetProbability:
     def __hash__(self) -> int:
         return self._name.__hash__()
 
-    def __set_name__(self, owner, name):
+    def __set_name__(self, owner: str, name: str) -> None:
         self._name = name
 
     def compile(self) -> ClassTargetProbability:
         assert self._name, 'Missing the name of the feature'
         return ClassTargetProbability(
             outcome=LiteralValue.from_value(self.of_value),
-            feature=Feature(self._name, dtype=FeatureType.float()),
+            feature=Feature(self._name, dtype=FeatureType.floating_point()),
         )
 
 
@@ -110,11 +110,11 @@ def compile_hidden_features(
     hidden_features: int,
     var_name: str,
     entities: set[Feature],
-):
+) -> tuple[set[Feature], set[DerivedFeature]]:
     aggregations = []
 
-    features = set()
-    derived_features = set()
+    features: set[Feature] = set()
+    derived_features: set[DerivedFeature] = set()
 
     if feature.transformation:
         # Adding features that is not stored in the view
@@ -182,7 +182,7 @@ class RecommendationTarget(FeatureReferencable):
     _name: str | None = field(default=None)
     _location: FeatureLocation | None = field(default=None)
 
-    def __set_name__(self, owner, name):
+    def __set_name__(self, owner: str, name: str) -> None:
         self._name = name
 
     def feature_reference(self) -> FeatureReference:
@@ -214,7 +214,7 @@ class RegressionLabel(FeatureReferencable):
     _name: str | None = field(default=None)
     _location: FeatureLocation | None = field(default=None)
 
-    def __set_name__(self, owner, name):
+    def __set_name__(self, owner: str, name: str) -> None:
         self._name = name
 
     def feature_reference(self) -> FeatureReference:
@@ -232,15 +232,18 @@ class RegressionLabel(FeatureReferencable):
         )
 
     def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> RegressionLabel:
-        assert when.dtype == FeatureType.bool(), 'A trigger needs a boolean condition'
+        assert when.dtype == FeatureType.boolean(), 'A trigger needs a boolean condition'
 
         return RegressionLabel(
             self.feature, EventTrigger(when, sink_to), ground_truth_event=self.ground_truth_event
         )
 
     def compile(self) -> RegressionTargetSchemas:
+
+        assert self._name
+
         on_ground_truth_event = self.ground_truth_event
-        trigger = self.event_trigger
+        trigger = None
 
         if self.event_trigger:
             event = self.event_trigger
@@ -278,7 +281,7 @@ class CanBeClassificationLabel:
         assert isinstance(self, FeatureFactory)
         assert isinstance(self, CanBeClassificationLabel)
 
-        new_value = self.copy_type()  # type: ignore
+        new_value: T = self.copy_type()  # type: ignore
         new_value.ground_truth_feature = self
         return new_value
 
@@ -294,7 +297,7 @@ class CanBeClassificationLabel:
         return self
 
     def send_ground_truth_event(self: T, when: Bool, sink_to: StreamDataSource) -> T:
-        assert when.dtype == FeatureType.bool(), 'A trigger needs a boolean condition'
+        assert when.dtype == FeatureType.boolean(), 'A trigger needs a boolean condition'
         assert isinstance(self, CanBeClassificationLabel)
 
         self.event_trigger = EventTrigger(when, sink_to)
@@ -381,10 +384,11 @@ class FeatureFactory(FeatureReferencable):
     _location: FeatureLocation | None = None
     _description: str | None = None
 
+    tags: set[str] | None = None
     transformation: TransformationFactory | None = None
     constraints: set[Constraint] | None = None
 
-    def __set_name__(self, owner, name):
+    def __set_name__(self, owner: str, name: str) -> None:
         if self._name is None:
             self._name = name
 
@@ -412,12 +416,18 @@ class FeatureFactory(FeatureReferencable):
             )
         return FeatureReference(self.name, self._location, self.dtype)
 
+    def with_tag(self: T, key: str) -> T:
+        if self.tags is None:
+            self.tags = set()
+        self.tags.add(key)
+        return self
+
     def feature(self) -> Feature:
         return Feature(
             name=self.name,
             dtype=self.dtype,
             description=self._description,
-            tags=None,
+            tags=list(self.tags) if self.tags else None,
             constraints=self.constraints,
         )
 
@@ -441,6 +451,9 @@ class FeatureFactory(FeatureReferencable):
 
     def as_recommendation_target(self) -> RecommendationTarget:
         return RecommendationTarget(self)
+
+    def as_annotated_by(self: T) -> T:
+        return self.with_tag(StaticFeatureTags.is_annotated_by)
 
     def compile(self) -> DerivedFeature:
 
@@ -490,7 +503,7 @@ class FeatureFactory(FeatureReferencable):
         return values
 
     def copy_type(self: T) -> T:
-        raise NotImplementedError()
+        raise NotImplementedError(type(self))
 
     def fill_na(self: T, value: FeatureFactory | Any) -> T:
         from aligned.compiler.transformation_factory import FillMissingFactory
@@ -507,7 +520,7 @@ class FeatureFactory(FeatureReferencable):
         return instance  # type: ignore [return-value]
 
     def transformed_using_features_pandas(
-        self: T, using_features: list[FeatureFactory], transformation: Callable[[pd.DataFrame, pd.Series]]
+        self: T, using_features: list[FeatureFactory], transformation: Callable[[pd.DataFrame], pd.Series]
     ) -> T:
         from aligned.compiler.transformation_factory import PandasTransformationFactory
 
@@ -609,7 +622,7 @@ class FeatureFactory(FeatureReferencable):
 class CouldBeModelVersion:
     def as_model_version(self) -> ModelVersion:
         if isinstance(self, FeatureFactory):
-            return ModelVersion(self)
+            return ModelVersion(self).with_tag(StaticFeatureTags.is_model_version)
 
         raise ValueError(f'{self} is not a feature factory, and can therefore not be a model version')
 
@@ -617,7 +630,7 @@ class CouldBeModelVersion:
 class CouldBeEntityFeature:
     def as_entity(self) -> Entity:
         if isinstance(self, FeatureFactory):
-            return Entity(self)
+            return Entity(self).with_tag(StaticFeatureTags.is_entity)
 
         raise ValueError(f'{self} is not a feature factory, and can therefore not be an entity')
 
@@ -654,7 +667,7 @@ class EquatableFeature(FeatureFactory):
 
 
 class ComparableFeature(EquatableFeature):
-    def __lt__(self, right: object) -> Bool:
+    def __lt__(self, right: float) -> Bool:
         from aligned.compiler.transformation_factory import LowerThenFactory
 
         instance = Bool()
@@ -924,21 +937,17 @@ class DateFeature(FeatureFactory):
 
 
 class Bool(EquatableFeature, LogicalOperatableFeature, CanBeClassificationLabel):
-
-    _is_shadow_model_flag: bool = field(default=False)
-
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType.bool()
+        return FeatureType.boolean()
 
     def copy_type(self) -> Bool:
         if self.constraints and Optional() in self.constraints:
             return Bool().is_optional()
         return Bool()
 
-    def is_shadow_model_flag(self: Bool, is_shadow: bool = True) -> Bool:
-        self._is_shadow_model_flag = is_shadow
-        return self
+    def is_shadow_model_flag(self: Bool) -> Bool:
+        return self.with_tag(StaticFeatureTags.is_shadow_model)
 
 
 class Float(ArithmeticFeature, DecimalOperations):
@@ -949,7 +958,7 @@ class Float(ArithmeticFeature, DecimalOperations):
 
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType.float()
+        return FeatureType.floating_point()
 
     def aggregate(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
@@ -1264,6 +1273,9 @@ class Json(FeatureFactory):
         if self.constraints and Optional() in self.constraints:
             return Json().is_optional()
         return Json()
+
+    def as_input_features(self) -> Json:
+        return self.with_tag(StaticFeatureTags.is_input_features)
 
     @property
     def dtype(self) -> FeatureType:

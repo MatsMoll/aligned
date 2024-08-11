@@ -16,7 +16,7 @@ class AllDateFormatters:
     @classmethod
     def shared(cls) -> AllDateFormatters:
         if cls._shared is None:
-            formatters = [Timestamp, StringDateFormatter, NoopFormatter]
+            formatters: list[type[DateFormatter]] = [Timestamp, StringDateFormatter, NoopFormatter]
             cls._shared = AllDateFormatters({formatter.name(): formatter for formatter in formatters})
         return cls._shared
 

@@ -67,7 +67,7 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
                 raise ValueError(f'Aggregation needs to be an expression, got {tran}')
             exprs.append(tran.alias(feat.name))
 
-        return core_data.groupby(first_over.group_by_names).agg(exprs)
+        return core_data.group_by(first_over.group_by_names).agg(exprs)
 
     group_by_names = first_over.group_by_names
 
@@ -93,18 +93,18 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
 
         if over.window.every_interval:
             sub = (
-                sorted_data.groupby_dynamic(
+                sorted_data.group_by_dynamic(
                     time_name,
                     every=over.window.every_interval,
                     period=over.window.time_window,
-                    by=over.group_by_names,
+                    group_by=over.group_by_names,
                     offset=-over.window.time_window,
                 )
                 .agg(exprs)
                 .with_columns(pl.col(time_name) + over.window.time_window)
             ).filter(pl.col(time_name) <= sorted_data.select(pl.col(time_name).max()).collect()[0, 0])
         else:
-            sub = sorted_data.groupby_rolling(
+            sub = sorted_data.group_by_rolling(
                 time_name,
                 period=over.window.time_window,
                 by=over.group_by_names,
@@ -363,7 +363,7 @@ async def aggregate_over(
         else:
             raise NotImplementedError('Only expressions are supported for file data source')
 
-    return subset.groupby(group_by).agg(transformations)
+    return subset.group_by(group_by).agg(transformations)
 
 
 @dataclass
@@ -536,7 +536,9 @@ class FileFactualJob(RetrivalJob):
 
             unique = new_result.unique(subset=row_id_name, keep='first')
             column_selects.remove('row_id')
-            result = result.join(unique.select(pl.exclude(column_selects)), on=row_id_name, how='left')
+            result = result.join(
+                unique.select(pl.exclude(column_selects)), on=row_id_name, how='left', coalesce=True
+            )
             result = result.select(pl.exclude('.*_right'))
 
         if did_rename_event_timestamp:

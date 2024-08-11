@@ -1561,7 +1561,7 @@ files = [
 name = "jinja2"
 version = "3.1.4"
 description = "A very fast and expressive template engine."
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "jinja2-3.1.4-py3-none-any.whl", hash = "sha256:bc5dd2abb727a5319567b7a813e6a2e7318c39f4f487cfe6c89c6f9c7d25197d"},
@@ -1786,7 +1786,7 @@ testing = ["coverage", "pyyaml"]
 name = "markupsafe"
 version = "2.1.5"
 description = "Safely add untrusted strings to HTML/XML markup."
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "MarkupSafe-2.1.5-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:a17a92de5231666cfbe003f0e4b9b3a7ae3afb1ec2845aadc2bacc93ff85febc"},
@@ -2136,14 +2136,14 @@ files = [
 ]
 
 [[package]]
-name = "nest-asyncio"
-version = "1.6.0"
-description = "Patch asyncio to allow nested event loops"
+name = "nodeenv"
+version = "1.9.1"
+description = "Node.js virtual environment builder"
 optional = false
-python-versions = ">=3.5"
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
 files = [
-    {file = "nest_asyncio-1.6.0-py3-none-any.whl", hash = "sha256:87af6efd6b5e897c81050477ef65c62e2b2f35d51703cae01aff2905b1852e1c"},
-    {file = "nest_asyncio-1.6.0.tar.gz", hash = "sha256:6f172d5449aca15afd6c646851f4e31e02c598d553a667e38cafa997cfec55fe"},
+    {file = "nodeenv-1.9.1-py2.py3-none-any.whl", hash = "sha256:ba11c9782d29c27c70ffbdda2d7415098754709be8a7056d79a737cd901155c9"},
+    {file = "nodeenv-1.9.1.tar.gz", hash = "sha256:6ec12890a2dab7946721edbfbcd91f3319c6ccc9aec47be7c7e6b7011ee6645f"},
 ]
 
 [[package]]
@@ -2276,7 +2276,7 @@ files = [
 name = "pandas"
 version = "2.2.2"
 description = "Powerful data structures for data analysis, time series, and statistics"
-optional = false
+optional = true
 python-versions = ">=3.9"
 files = [
     {file = "pandas-2.2.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:90c6fca2acf139569e74e8781709dccb6fe25940488755716d1d354d6bc58bce"},
@@ -2893,6 +2893,24 @@ files = [
 diagrams = ["jinja2", "railroad-diagrams"]
 
 [[package]]
+name = "pyright"
+version = "1.1.375"
+description = "Command line wrapper for pyright"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "pyright-1.1.375-py3-none-any.whl", hash = "sha256:4c5e27eddeaee8b41cc3120736a1dda6ae120edf8523bb2446b6073a52f286e3"},
+    {file = "pyright-1.1.375.tar.gz", hash = "sha256:7765557b0d6782b2fadabff455da2014476404c9e9214f49977a4e49dec19a0f"},
+]
+
+[package.dependencies]
+nodeenv = ">=1.6.0"
+
+[package.extras]
+all = ["twine (>=3.4.1)"]
+dev = ["twine (>=3.4.1)"]
+
+[[package]]
 name = "pytest"
 version = "8.2.2"
 description = "pytest: simple powerful testing with Python"
@@ -2981,7 +2999,7 @@ cli = ["click (>=5.0)"]
 name = "pytz"
 version = "2024.1"
 description = "World timezone definitions, modern and historical"
-optional = false
+optional = true
 python-versions = "*"
 files = [
     {file = "pytz-2024.1-py2.py3-none-any.whl", hash = "sha256:328171f4e3623139da4983451950b28e95ac706e13f3f2630a879749e7a8b319"},
@@ -3562,7 +3580,7 @@ typing-extensions = ">=3.7.4"
 name = "tzdata"
 version = "2024.1"
 description = "Provider of IANA time zone data"
-optional = false
+optional = true
 python-versions = ">=2"
 files = [
     {file = "tzdata-2024.1-py2.py3-none-any.whl", hash = "sha256:9068bc196136463f5245e51efda838afa15aaeca9903f49050dfa2679db4d252"},
@@ -3843,6 +3861,7 @@ kafka = ["kafka-python"]
 lancedb = ["lancedb"]
 mlflow = ["mlflow"]
 ollama = ["ollama"]
+pandas = ["pandas"]
 pandera = ["pandera"]
 psql = ["asyncpg", "connectorx"]
 redis = ["redis"]
@@ -3852,4 +3871,4 @@ sql = ["sqlglot"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "cb57822f641f649b42147f3d375ae174a0c4c04d3a0086141d91e164cb4b51b3"
+content-hash = "b5ee04763913e5ebf2a7d25dd319fd92bc97b88a8435153bf6ee530add3bdbdb"

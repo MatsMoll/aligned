@@ -12,8 +12,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Collection, Union, TypeVar, Coroutine, Any
 
-import pandas as pd
 import polars as pl
+from polars.dependencies import pandas as pd
+
 from polars.type_aliases import TimeUnit
 from prometheus_client import Histogram
 
@@ -24,8 +25,6 @@ from aligned.schemas.feature import Feature, FeatureType
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.vector_storage import VectorIndex
 from aligned.split_strategy import (
-    SplitDataSet,
-    SplitStrategy,
     SupervisedDataSet,
     TrainTestSet,
     TrainTestValidateSet,
@@ -144,6 +143,7 @@ class TrainTestJob:
         dataset_store: DatasetStore | StorageFileReference,
         metadata: DatasetMetadata | None = None,
         id: str | None = None,
+        tags: list[str] | None = None,
     ) -> TrainTestJob:
         from uuid import uuid4
         from aligned.schemas.folder import DatasetMetadata
@@ -153,6 +153,7 @@ class TrainTestJob:
                 id=id or str(uuid4()),
                 name='train_test - ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 description='A train and test dataset.',
+                tags=tags,
             )
 
         run_dir = directory.sub_directory(metadata.id)
@@ -265,6 +266,7 @@ class TrainTestValidateJob:
         dataset_store: DatasetStore | StorageFileReference,
         metadata: DatasetMetadata | None = None,
         id: str | None = None,
+        tags: list[str] | None = None,
     ) -> TrainTestValidateJob:
         from uuid import uuid4
         from aligned.schemas.folder import DatasetMetadata
@@ -274,6 +276,7 @@ class TrainTestValidateJob:
                 id=id or str(uuid4()),
                 name='train_test_validate - ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 description='A train, test and validation dataset.',
+                tags=tags,
             )
 
         run_dir = directory.sub_directory(metadata.id)
@@ -1016,7 +1019,13 @@ class RetrivalJob(ABC):
         if isinstance(source, DataFileReference):
             await source.write_polars(await self.to_lazy_polars())
         else:
-            await source.insert(self, self.retrival_requests)
+            requests = self.retrival_requests
+            if len(requests) > 1:
+                request = RetrivalRequest.unsafe_combine(requests)
+            else:
+                assert len(requests) == 1, 'No requests. this should not happen and is a but'
+                request = requests[0]
+            await source.insert(self, request)
 
 
 JobType = TypeVar('JobType')
@@ -1136,7 +1145,7 @@ class ReturnInvalidJob(RetrivalJob, ModificationJob):
 
     def describe(self) -> str:
         expressions = [
-            expr.is_not().alias(f"not {name}")
+            expr.not_().alias(f"not {name}")
             for expr, name in polars_filter_expressions_from(list(self.request_result.features))
         ]
 
@@ -1144,7 +1153,7 @@ class ReturnInvalidJob(RetrivalJob, ModificationJob):
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         raw_exprs = polars_filter_expressions_from(list(self.request_result.features))
-        expressions = [expr.is_not().alias(f"not {name}") for expr, name in raw_exprs]
+        expressions = [expr.not_().alias(f"not {name}") for expr, name in raw_exprs]
 
         if self.should_return_validation:
             condition_cols = [f"not {name}" for _, name in raw_exprs]
@@ -1169,17 +1178,17 @@ CustomPolarsTransform = (
 class CustomPolarsJob(RetrivalJob, ModificationJob):
 
     job: RetrivalJob
-    polars_method: CustomPolarsTransform
+    polars_function: CustomPolarsTransform
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         import inspect
 
         df = await self.job.to_lazy_polars()
 
-        if inspect.iscoroutinefunction(self.polars_method):
-            return await self.polars_method(df)
+        if inspect.iscoroutinefunction(self.polars_function):
+            return await self.polars_function(df)
         else:
-            return self.polars_method(df)  # type: ignore
+            return self.polars_function(df)  # type: ignore
 
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.job.to_lazy_polars()
@@ -1486,15 +1495,15 @@ class JoinJobs(RetrivalJob):
 
         # Need to ensure that the data types are the same. Otherwise will the join fail
         for left_col, right_col in zip(self.left_on, self.right_on):
-            polars_type = [
+            polars_types = [
                 feature
                 for feature in return_request.features.union(return_request.entities)
                 if feature.name == left_col
             ]
-            if not polars_type:
+            if not polars_types:
                 raise ValueError(f'Unable to find {left_col} in left request {return_request}.')
 
-            polars_type = polars_type[0].dtype.polars_type
+            polars_type = polars_types[0].dtype.polars_type
 
             left_column_dtypes = dict(zip(left.columns, left.dtypes))
             right_column_dtypes = dict(zip(right.columns, right.dtypes))
@@ -2034,6 +2043,7 @@ class StreamAggregationJob(RetrivalJob, ModificationJob):
 
             aggregations = self.aggregated_features[window]
 
+            assert window.window is not None
             required_features = set(window.group_by).union([window.window.time_column])
             for agg in aggregations:
                 required_features.update(agg.derived_feature.depending_on)
@@ -2235,29 +2245,6 @@ class FileCachedJob(RetrivalJob, ModificationJob):
 
 
 @dataclass
-class SplitJob:
-
-    job: RetrivalJob
-    target_column: str
-    strategy: SplitStrategy
-
-    @property
-    def request_result(self) -> RequestResult:
-        return self.job.request_result
-
-    @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return self.job.retrival_requests
-
-    async def use_pandas(self) -> SplitDataSet[pd.DataFrame]:
-        data = await self.job.to_pandas()
-        return self.strategy.split_pandas(data, self.target_column)
-
-    def remove_derived_features(self) -> RetrivalJob:
-        return self.job.remove_derived_features()
-
-
-@dataclass
 class WithRequests(RetrivalJob, ModificationJob):
 
     job: RetrivalJob
@@ -2350,7 +2337,7 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
                     logger.debug(f'Skipping feature {feature.name}, already correct type')
                     continue
 
-                if feature.dtype == FeatureType.bool():
+                if feature.dtype == FeatureType.boolean():
                     df = df.with_columns(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
                 elif (feature.dtype.is_array) or (feature.dtype.is_embedding):
                     dtype = df.select(feature.name).dtypes[0]
@@ -2671,15 +2658,37 @@ class PredictionJob(RetrivalJob):
         return await self.job.to_pandas()
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
+        from aligned.exposed_model.interface import VersionedModel
+        from datetime import datetime, timezone
+
         predictor = self.model.exposed_model
         if not predictor:
             raise ValueError('No predictor defined for model')
+
+        output = self.model.predictions_view
+        model_version_column = output.model_version_column
 
         df = await predictor.run_polars(
             self.job,
             self.store.model(self.model.name),
         )
+        if output.event_timestamp and output.event_timestamp.name not in df.columns:
+            df = df.with_columns(
+                pl.lit(datetime.now(timezone.utc)).alias(output.event_timestamp.name),
+            )
+
+        if (
+            model_version_column
+            and isinstance(predictor, VersionedModel)
+            and model_version_column.name not in df.columns
+        ):
+            df = df.with_columns(
+                pl.lit(await predictor.model_version()).alias(model_version_column.name),
+            )
         return df.lazy()
+
+    def log_each_job(self, logger_func: Callable[[object], None] | None = None) -> RetrivalJob:
+        return PredictionJob(self.job.log_each_job(logger_func), self.model, self.store)
 
     def filter(self, condition: str | Feature | DerivedFeature | pl.Expr) -> RetrivalJob:
         return PredictionJob(self.job.filter(condition), self.model, self.store)
