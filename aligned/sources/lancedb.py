@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 import polars as pl
 from datetime import datetime
-from aligned.data_source.batch_data_source import BatchDataSource
+from aligned.data_source.batch_data_source import CodableBatchDataSource
 from aligned.feature_source import WritableFeatureSource
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.schemas.feature import Feature, EventTimestamp
@@ -28,11 +28,11 @@ class LanceDBConfig:
 
     path: str
 
-    async def connect(self) -> 'lancedb.AsyncConnection':
+    async def connect(self) -> 'lancedb.AsyncConnection':  # type: ignore
         assert lancedb is not None, '`lancedb` is not installed'
         return await lancedb.connect_async(self.path)
 
-    async def connect_to_table(self, table: str) -> 'lancedb.AsyncTable':
+    async def connect_to_table(self, table: str) -> 'lancedb.AsyncTable':  # type: ignore
         conn = await self.connect()
         return await conn.open_table(table)
 
@@ -41,7 +41,7 @@ class LanceDBConfig:
 
 
 @dataclass
-class LanceDbTable(VectorIndex, BatchDataSource, WritableFeatureSource, Deletable):
+class LanceDbTable(VectorIndex, CodableBatchDataSource, WritableFeatureSource, Deletable):
 
     table_name: str
     config: LanceDBConfig
@@ -71,7 +71,12 @@ class LanceDbTable(VectorIndex, BatchDataSource, WritableFeatureSource, Deletabl
                 col = df
             else:
                 col = df.get_column(event_timestamp.name)
-            return col.max()
+
+            max_value = col.max()
+            if max_value is not None:
+                assert isinstance(max_value, datetime)
+
+            return max_value
         except ValueError:
             logger.info(f"Unable to load freshness. Assumes that it do not exist for '{self.table_name}'")
             return None
@@ -147,7 +152,7 @@ class LanceDbTable(VectorIndex, BatchDataSource, WritableFeatureSource, Deletabl
         return RetrivalJob.from_lazy_function(load, request)
 
     def nearest_n_to(
-        self, data: 'RetrivalJob', number_of_records: int, retrival_request: RetrivalRequest
+        self, data: 'RetrivalJob', number_of_records: int, request: RetrivalRequest
     ) -> 'RetrivalJob':
         from aligned.retrival_job import RetrivalJob
 
@@ -195,10 +200,10 @@ class LanceDbTable(VectorIndex, BatchDataSource, WritableFeatureSource, Deletabl
             else:
                 return result.lazy()
 
-        return RetrivalJob.from_lazy_function(load, retrival_request)
+        return RetrivalJob.from_lazy_function(load, request)
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: 'RetrivalJob', requests: list[tuple['LanceDbTable', RetrivalRequest]]
     ) -> 'RetrivalJob':
         from aligned.retrival_job import RetrivalJob

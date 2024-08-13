@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 
 
-from aligned.data_source.batch_data_source import BatchDataSource
+from aligned.data_source.batch_data_source import CodableBatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.schemas.codable import Codable
@@ -32,7 +32,7 @@ class AnnotatedView(Codable):
 @dataclass
 class CompiledFeatureView(Codable):
     name: str
-    source: BatchDataSource
+    source: CodableBatchDataSource
 
     entities: set[Feature]
     features: set[Feature]
@@ -44,8 +44,8 @@ class CompiledFeatureView(Codable):
 
     event_timestamp: EventTimestamp | None = field(default=None)
     stream_data_source: StreamDataSource | None = field(default=None)
-    application_source: BatchDataSource | None = field(default=None)
-    materialized_source: BatchDataSource | None = field(default=None)
+    application_source: CodableBatchDataSource | None = field(default=None)
+    materialized_source: CodableBatchDataSource | None = field(default=None)
 
     materialize_from: datetime | None = field(default=None)
 
@@ -59,7 +59,7 @@ class CompiledFeatureView(Codable):
 
     def __pre_serialize__(self) -> CompiledFeatureView:
         assert isinstance(self.name, str)
-        assert isinstance(self.source, BatchDataSource)
+        assert isinstance(self.source, CodableBatchDataSource)
 
         for entity in self.entities:
             assert isinstance(entity, Feature)
@@ -79,7 +79,7 @@ class CompiledFeatureView(Codable):
         if self.stream_data_source is not None:
             assert isinstance(self.stream_data_source, StreamDataSource)
         if self.application_source is not None:
-            assert isinstance(self.application_source, BatchDataSource)
+            assert isinstance(self.application_source, CodableBatchDataSource)
         if self.event_triggers is not None:
             for event_trigger in self.event_triggers:
                 assert isinstance(event_trigger, EventTrigger)
@@ -140,7 +140,7 @@ class CompiledFeatureView(Codable):
 
         def dependent_features_for(
             feature: DerivedFeature,
-        ) -> tuple[set[Feature], set[Feature], set[AggregatedFeature]]:
+        ) -> tuple[set[Feature], set[DerivedFeature], set[AggregatedFeature]]:
             core_features = set()
             derived_features = set()
             aggregated_features = set()
@@ -236,109 +236,7 @@ Transformed features:
 
 
 @dataclass
-class CompiledCombinedFeatureView(Codable):
-    name: str
-    features: set[DerivedFeature]  # FIXME: Should combine this and feature_referances into one class.
-    feature_referances: dict[str, list[RetrivalRequest]]
-    event_triggers: set[EventTrigger] | None = field(default=None)
-
-    @property
-    def entity_features(self) -> set[Feature]:
-        values = set()
-        for requests in self.feature_referances.values():
-            for request in requests:
-                values.update(request.entities)
-        return values
-
-    @property
-    def entity_names(self) -> set[str]:
-        return {feature.name for feature in self.entity_features}
-
-    @property
-    def request_all(self) -> FeatureRequest:
-        requests: dict[str, RetrivalRequest] = {}
-        entities = set()
-        for sub_requests in self.feature_referances.values():
-            for request in sub_requests:
-                entities.update(request.entities)
-                if request.location not in requests:
-                    requests[request.location] = RetrivalRequest(
-                        name=request.name,
-                        location=request.location,
-                        entities=request.entities,
-                        features=set(),
-                        derived_features=set(),
-                        event_timestamp=request.event_timestamp,
-                    )
-                requests[request.location].derived_features.update(request.derived_features)
-                requests[request.location].features.update(request.features)
-                requests[request.location].entities.update(request.entities)
-
-        requests[self.name] = RetrivalRequest(
-            name=self.name,
-            location=FeatureLocation.combined_view(self.name),
-            entities=entities,
-            features=set(),
-            derived_features=self.features,
-            event_timestamp=None,
-        )
-
-        return FeatureRequest(
-            self.name,
-            features_to_include={feature.name for feature in self.features.union(entities)},
-            needed_requests=RetrivalRequest.combine(list(requests.values())),
-        )
-
-    def requests_for(self, feature_names: set[str]) -> FeatureRequest:
-        entities = self.entity_names
-        dependent_views: dict[str, RetrivalRequest] = {}
-        for feature in feature_names:
-            if feature in entities:
-                continue
-
-            if feature not in self.feature_referances.keys():
-                raise ValueError(f'Invalid feature {feature} in {self.name}')
-
-            requests = self.feature_referances[feature]
-            for request in requests:
-                if request.location not in dependent_views:
-                    dependent_views[request.location] = RetrivalRequest(
-                        name=request.name,
-                        location=request.location,
-                        entities=request.entities,
-                        features=set(),
-                        derived_features=set(),
-                        aggregated_features=set(),
-                        event_timestamp=request.event_timestamp,
-                    )
-                current = dependent_views[request.location]
-                current.derived_features = current.derived_features.union(request.derived_features)
-                current.features = current.features.union(request.features)
-                current.aggregated_features = current.aggregated_features.union(request.aggregated_features)
-                dependent_views[request.location] = current
-
-        dependent_views[self.name] = RetrivalRequest(  # Add the request we want
-            name=self.name,
-            location=FeatureLocation.combined_view(self.name),
-            entities=self.entity_features,
-            features=set(),
-            derived_features={feature for feature in self.features if feature.name in feature_names},
-            aggregated_features=set(),
-            event_timestamp=None,
-        )
-
-        return FeatureRequest(
-            FeatureLocation.combined_view(self.name),
-            features_to_include=feature_names,
-            needed_requests=list(dependent_views.values()),
-        )
-
-    def __hash__(self) -> int:
-        return hash(self.name)
-
-
-@dataclass
-class FeatureViewReferenceSource(BatchDataSource):
+class FeatureViewReferenceSource(CodableBatchDataSource):
 
     view: CompiledFeatureView
     location: FeatureLocation
@@ -384,14 +282,16 @@ class FeatureViewReferenceSource(BatchDataSource):
         return sub_request.needed_requests[0]
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls: type[FeatureViewReferenceSource],
         facts: RetrivalJob,
         requests: list[tuple[FeatureViewReferenceSource, RetrivalRequest]],
     ) -> RetrivalJob:
         from aligned.local.job import FileFactualJob
 
-        sources = {source.job_group_key() for source, _ in requests if isinstance(source, BatchDataSource)}
+        sources = {
+            source.job_group_key() for source, _ in requests if isinstance(source, CodableBatchDataSource)
+        }
         if len(sources) != 1:
             raise NotImplementedError(
                 f'Type: {cls} have not implemented how to load fact data with multiple sources.'

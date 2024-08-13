@@ -15,20 +15,19 @@ logger = logging.getLogger(__name__)
 class PanderaValidator(Validator):
 
     check_map: dict[str, Callable[[Constraint], Check]] = {
-        'lower_bound': lambda constraint: Check.greater_than(constraint.value),
-        'lower_bound_inc': lambda constraint: Check.greater_than_or_equal_to(constraint.value),
-        'upper_bound': lambda constraint: Check.less_than(constraint.value),
-        'upper_bound_inc': lambda constraint: Check.less_than_or_equal_to(constraint.value),
-        'in_domain': lambda domain: Check.isin(domain.values),
-        'min_length': lambda constraint: Check.str_length(min_value=constraint.value),
-        'max_length': lambda constraint: Check.str_length(max_value=constraint.value),
-        'regex': lambda constraint: Check.str_matches(constraint.value),
-        'ends_with': lambda constraint: Check.str_endswith(constraint.value),
-        'starts_with': lambda constraint: Check.str_startswith(constraint.value),
+        'lower_bound': lambda constraint: Check.greater_than(constraint.value),  # type: ignore
+        'lower_bound_inc': lambda constraint: Check.greater_than_or_equal_to(constraint.value),  # type: ignore
+        'upper_bound': lambda constraint: Check.less_than(constraint.value),  # type: ignore
+        'upper_bound_inc': lambda constraint: Check.less_than_or_equal_to(constraint.value),  # type: ignore
+        'in_domain': lambda domain: Check.isin(domain.values),  # type: ignore
+        'min_length': lambda constraint: Check.str_length(min_value=constraint.value),  # type: ignore
+        'max_length': lambda constraint: Check.str_length(max_value=constraint.value),  # type: ignore
+        'regex': lambda constraint: Check.str_matches(constraint.value),  # type: ignore
+        'ends_with': lambda constraint: Check.str_endswith(constraint.value),  # type: ignore
+        'starts_with': lambda constraint: Check.str_startswith(constraint.value),  # type: ignore
     }
 
     datatype_check = {
-        # FeatureType.bool(),
         FeatureType.string(),
         FeatureType.uuid(),
         FeatureType.date(),

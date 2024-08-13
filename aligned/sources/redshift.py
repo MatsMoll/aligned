@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from typing import Any, TYPE_CHECKING
 
 from aligned import RedisConfig
-from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
+from aligned.data_source.batch_data_source import CodableBatchDataSource, ColumnFeatureMappable
 from aligned.enricher import Enricher
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import RetrivalJob
@@ -87,7 +87,7 @@ class RedshiftSQLConfig(Codable):
 
 
 @dataclass
-class RedshiftSQLDataSource(BatchDataSource, ColumnFeatureMappable):
+class RedshiftSQLDataSource(CodableBatchDataSource, ColumnFeatureMappable):
 
     config: RedshiftSQLConfig
     table: str

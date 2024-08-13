@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterable
 from aligned.compiler.model import ModelContractWrapper
-from aligned.data_source.batch_data_source import BatchDataSource, CustomMethodDataSource
+from aligned.data_source.batch_data_source import CodableBatchDataSource, CustomMethodDataSource
 from aligned.feature_view.feature_view import FeatureViewWrapper
 import polars as pl
 from datetime import datetime
@@ -165,7 +165,7 @@ class LangChain(ExposedModel, StreamablePredictor):
             yield value
 
 
-def web_chunks_source(pages: list[str]) -> BatchDataSource:
+def web_chunks_source(pages: list[str]) -> CodableBatchDataSource:
     async def load(request: RetrivalRequest) -> pl.LazyFrame:
         import polars as pl
         from datetime import timezone, datetime
@@ -193,7 +193,7 @@ def web_chunks_source(pages: list[str]) -> BatchDataSource:
     return CustomMethodDataSource.from_load(load)
 
 
-def file_chunks_source(directory: str, glob: str = '**') -> BatchDataSource:
+def file_chunks_source(directory: str, glob: str = '**') -> CodableBatchDataSource:
     async def load(request: RetrivalRequest) -> pl.LazyFrame:
         import polars as pl
         from datetime import timezone, datetime

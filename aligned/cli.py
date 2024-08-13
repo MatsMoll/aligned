@@ -152,7 +152,12 @@ async def compile(repo_path: str, reference_file: str, env_file: str, ignore_fil
 
         repo_def = await RepoReader.definition_from_path(dir, excludes)
 
-        await file.write(repo_def.to_json(omit_none=True).encode('utf-8'))
+        data = repo_def.to_json(omit_none=True)
+        if isinstance(data, str):
+            data_bytes = data.encode('utf-8')
+        else:
+            data_bytes = data
+        await file.write(data_bytes)
     else:
         click.echo(f'No repo file found at {dir}')
 

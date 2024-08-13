@@ -16,7 +16,7 @@ from aligned.compiler.feature_factory import (
 )
 import logging
 
-from aligned.data_source.batch_data_source import BatchDataSource
+from aligned.data_source.batch_data_source import CodableBatchDataSource
 from aligned.exposed_model.interface import ExposedModel, PromptModel
 from aligned.schemas.feature import Feature, FeatureReference
 from aligned.retrival_job import RetrivalJob
@@ -288,7 +288,7 @@ def ollama_generate_contract(
     endpoint: str,
     model: str,
     entities: list[FeatureFactory] | FeatureFactory,
-    output_source: BatchDataSource | None = None,
+    output_source: CodableBatchDataSource | None = None,
     contacts: list[str] | None = None,
     tags: list[str] | None = None,
 ) -> ModelContractWrapper[OllamaGeneration]:
@@ -352,7 +352,7 @@ def ollama_embedding_contract(
     endpoint: str,
     model: str,
     entities: list[FeatureFactory] | FeatureFactory,
-    output_source: BatchDataSource | None = None,
+    output_source: CodableBatchDataSource | None = None,
     prompt_template: str | None = None,
     embedding_size: int | None = None,
     contacts: list[str] | None = None,
@@ -466,7 +466,7 @@ def ollama_classification_contract(
     model: str,
     entities: list[FeatureFactory] | FeatureFactory,
     ground_truth: FeatureFactory,
-    output_source: BatchDataSource | None = None,
+    output_source: CodableBatchDataSource | None = None,
     prompt_template: str | None = None,
     contacts: list[str] | None = None,
     tags: list[str] | None = None,

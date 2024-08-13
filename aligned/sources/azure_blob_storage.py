@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pandas as pd
 import polars as pl
-from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
+from aligned.data_source.batch_data_source import CodableBatchDataSource, ColumnFeatureMappable
 from aligned.exceptions import UnableToFindFileException
 from aligned.feature_source import WritableFeatureSource
 from aligned.local.job import FileDateJob, FileFactualJob, FileFullJob
@@ -20,6 +20,7 @@ from aligned.sources.local import (
     CsvConfig,
     DataFileReference,
     Deletable,
+    DeltaFileConfig,
     ParquetConfig,
     StorageFileReference,
     Directory,
@@ -30,9 +31,12 @@ from aligned.storage import Storage
 from httpx import HTTPStatusError
 
 try:
-    from azure.storage.blob import BlobServiceClient
+    from azure.storage.blob import BlobServiceClient  # type: ignore
 except ModuleNotFoundError:
-    BlobServiceClient = None
+
+    class BlobServiceClient:
+        pass
+
 
 logger = logging.getLogger(__name__)
 
@@ -81,12 +85,14 @@ You can choose between two ways of authenticating with Azure Blob Storage.
         self,
         path: str,
         mapping_keys: dict[str, str] | None = None,
+        config: ParquetConfig | None = None,
         date_formatter: DateFormatter | None = None,
     ) -> AzureBlobParquetDataSource:
         return AzureBlobParquetDataSource(
             self,
             path,
             mapping_keys=mapping_keys or {},
+            parquet_config=config or ParquetConfig(),
             date_formatter=date_formatter or DateFormatter.noop(),
         )
 
@@ -111,6 +117,7 @@ You can choose between two ways of authenticating with Azure Blob Storage.
         self,
         path: str,
         mapping_keys: dict[str, str] | None = None,
+        csv_config: CsvConfig | None = None,
         date_formatter: DateFormatter | None = None,
     ) -> AzureBlobCsvDataSource:
         return AzureBlobCsvDataSource(
@@ -118,12 +125,14 @@ You can choose between two ways of authenticating with Azure Blob Storage.
             path,
             mapping_keys=mapping_keys or {},
             date_formatter=date_formatter or DateFormatter.unix_timestamp(),
+            csv_config=csv_config or CsvConfig(),
         )
 
     def delta_at(
         self,
         path: str,
         mapping_keys: dict[str, str] | None = None,
+        config: DeltaFileConfig | None = None,
         date_formatter: DateFormatter | None = None,
     ) -> AzureBlobDeltaDataSource:
         return AzureBlobDeltaDataSource(
@@ -195,12 +204,14 @@ class AzureBlobDirectory(Directory):
         self,
         path: str,
         mapping_keys: dict[str, str] | None = None,
+        config: ParquetConfig | None = None,
         date_formatter: DateFormatter | None = None,
     ) -> AzureBlobParquetDataSource:
         sub_path = self.sub_path / path
         return self.config.parquet_at(
             sub_path.as_posix(),
             mapping_keys=mapping_keys,
+            config=config,
             date_formatter=date_formatter or DateFormatter.noop(),
         )
 
@@ -225,21 +236,28 @@ class AzureBlobDirectory(Directory):
         self,
         path: str,
         mapping_keys: dict[str, str] | None = None,
+        csv_config: CsvConfig | None = None,
         date_formatter: DateFormatter | None = None,
     ) -> AzureBlobCsvDataSource:
         sub_path = self.sub_path / path
         return self.config.csv_at(
-            sub_path.as_posix(), date_formatter=date_formatter or DateFormatter.unix_timestamp()
+            sub_path.as_posix(),
+            mapping_keys=mapping_keys,
+            date_formatter=date_formatter or DateFormatter.unix_timestamp(),
+            csv_config=csv_config or CsvConfig(),
         )
 
     def delta_at(
         self,
         path: str,
         mapping_keys: dict[str, str] | None = None,
+        config: DeltaFileConfig | None = None,
         date_formatter: DateFormatter | None = None,
     ) -> AzureBlobDeltaDataSource:
         sub_path = self.sub_path / path
-        return self.config.delta_at(sub_path.as_posix(), mapping_keys, date_formatter=date_formatter)
+        return self.config.delta_at(
+            sub_path.as_posix(), mapping_keys, config=config, date_formatter=date_formatter
+        )
 
     def sub_directory(self, path: str) -> AzureBlobDirectory:
         return AzureBlobDirectory(self.config, self.sub_path / path)
@@ -292,7 +310,7 @@ class AzureBlobDataSource(StorageFileReference, ColumnFeatureMappable):
 
 @dataclass
 class AzureBlobCsvDataSource(
-    BatchDataSource,
+    CodableBatchDataSource,
     DataFileReference,
     ColumnFeatureMappable,
 ):
@@ -372,7 +390,7 @@ Path: *{self.path}*
         await self.write_polars(df.select(features))
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple[AzureBlobCsvDataSource, RetrivalRequest]]
     ) -> RetrivalJob:
 
@@ -411,7 +429,7 @@ Path: *{self.path}*
 
 @dataclass
 class AzureBlobPartitionedParquetDataSource(
-    BatchDataSource, DataFileReference, ColumnFeatureMappable, Deletable, WritableFeatureSource
+    CodableBatchDataSource, DataFileReference, ColumnFeatureMappable, Deletable, WritableFeatureSource
 ):
     config: AzureBlobConfig
     directory: str
@@ -472,7 +490,7 @@ Partition Keys: *{self.partition_keys}*
         from adlfs import AzureBlobFileSystem
         from pyarrow.parquet import write_to_dataset
 
-        fs = AzureBlobFileSystem(**self.config.read_creds())
+        fs = AzureBlobFileSystem(**self.config.read_creds())  # type: ignore
 
         pyarrow_options = {
             'partition_cols': self.partition_keys,
@@ -487,7 +505,7 @@ Partition Keys: *{self.partition_keys}*
         )
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple[AzureBlobParquetDataSource, RetrivalRequest]]
     ) -> RetrivalJob:
 
@@ -604,7 +622,7 @@ Partition Keys: *{self.partition_keys}*
 
 @dataclass
 class AzureBlobParquetDataSource(
-    BatchDataSource,
+    CodableBatchDataSource,
     DataFileReference,
     ColumnFeatureMappable,
 ):
@@ -681,7 +699,7 @@ Path: *{self.path}*
         df.collect().to_pandas().to_parquet(url, storage_options=creds)
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple[AzureBlobParquetDataSource, RetrivalRequest]]
     ) -> RetrivalJob:
 
@@ -720,7 +738,7 @@ Path: *{self.path}*
 
 @dataclass
 class AzureBlobDeltaDataSource(
-    BatchDataSource, DataFileReference, ColumnFeatureMappable, WritableFeatureSource, Deletable
+    CodableBatchDataSource, DataFileReference, ColumnFeatureMappable, WritableFeatureSource, Deletable
 ):
     config: AzureBlobConfig
     path: str
@@ -774,7 +792,7 @@ Path: *{self.path}*
             raise UnableToFindFileException() from error
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple[AzureBlobDeltaDataSource, RetrivalRequest]]
     ) -> RetrivalJob:
 

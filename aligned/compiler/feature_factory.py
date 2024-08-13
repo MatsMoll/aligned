@@ -65,7 +65,7 @@ class TransformationFactory:
 
 class AggregationTransformationFactory:
     def aggregate_over(
-        self, group_by: list[FeatureReference], time_columns: FeatureReference | None
+        self, group_by: list[FeatureReference], time_column: FeatureReference | None
     ) -> AggregateOver:
         raise NotImplementedError(type(self))
 
@@ -264,6 +264,9 @@ class RegressionLabel(FeatureReferencable):
         )
 
 
+GenericClassificationT = TypeVar('GenericClassificationT', bound='CanBeClassificationLabel')
+
+
 @dataclass
 class CanBeClassificationLabel:
 
@@ -271,7 +274,7 @@ class CanBeClassificationLabel:
     event_trigger: EventTrigger | None = field(default=None)
     ground_truth_event: StreamDataSource | None = field(default=None)
 
-    def as_classification_label(self: T) -> T:
+    def as_classification_label(self: GenericClassificationT) -> GenericClassificationT:
         """
         Tells Aligned that this feature is a classification target in a model_contract.
 
@@ -290,13 +293,15 @@ class CanBeClassificationLabel:
             return self.feature()
         raise ValueError(f'{self} is not a feature factory, and can therefore not be a feature')
 
-    def listen_to_ground_truth_event(self: T, stream: StreamDataSource) -> T:
-        assert isinstance(self, CanBeClassificationLabel)
-
+    def listen_to_ground_truth_event(
+        self: GenericClassificationT, stream: StreamDataSource
+    ) -> GenericClassificationT:
         self.ground_truth_event = stream
         return self
 
-    def send_ground_truth_event(self: T, when: Bool, sink_to: StreamDataSource) -> T:
+    def send_ground_truth_event(
+        self: GenericClassificationT, when: Bool, sink_to: StreamDataSource
+    ) -> GenericClassificationT:
         assert when.dtype == FeatureType.boolean(), 'A trigger needs a boolean condition'
         assert isinstance(self, CanBeClassificationLabel)
 
@@ -341,7 +346,7 @@ class CanBeClassificationLabel:
         pred_feature = self.prediction_feature()
 
         on_ground_truth_event = self.ground_truth_event
-        trigger = self.event_trigger
+        trigger = None
 
         if self.event_trigger:
             event = self.event_trigger
@@ -1199,7 +1204,7 @@ class String(
     def ollama_generate(self, model: str, system: str | None = None, host_env: str | None = None) -> String:
         from aligned.compiler.transformation_factory import OllamaGenerate
 
-        feature = Json()
+        feature = String()
         feature.transformation = OllamaGenerate(model, system or '', self, host_env)
         return feature
 

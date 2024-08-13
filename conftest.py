@@ -21,7 +21,6 @@ from aligned import (
 from aligned.feature_view.feature_view import FeatureView, FeatureViewMetadata
 from aligned.compiler.model import model_contract, ModelContractWrapper
 from aligned.feature_store import ContractStore
-from aligned.feature_view.combined_view import CombinedFeatureView, CombinedFeatureViewMetadata
 from aligned.retrival_job import DerivedFeatureJob, RetrivalJob, RetrivalRequest
 from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.derivied_feature import DerivedFeature
@@ -550,34 +549,13 @@ def alot_of_transforation_feature_store(
 
 
 @pytest.fixture
-def combined_view(
-    titanic_feature_view: FeatureView, breast_scan_feature_viewout_with_datetime: FeatureView
-) -> CombinedFeatureView:
-    class SomeCombinedView(CombinedFeatureView):
-
-        metadata = CombinedFeatureViewMetadata(
-            name='combined', description='Some features that depend on multiple view'
-        )
-
-        titanic = titanic_feature_view
-        cancer_scan = breast_scan_feature_viewout_with_datetime
-
-        some_feature = titanic.age + cancer_scan.radius_mean  # type: ignore
-        other_feature = titanic.sibsp + cancer_scan.radius_mean  # type: ignore
-
-    return SomeCombinedView()
-
-
-@pytest.fixture
 def combined_feature_store(
     titanic_feature_view: FeatureView,
     breast_scan_feature_viewout_with_datetime: FeatureView,
-    combined_view: CombinedFeatureView,
 ) -> ContractStore:
     feature_store = ContractStore.empty()
     feature_store.add_feature_view(titanic_feature_view)
     feature_store.add_feature_view(breast_scan_feature_viewout_with_datetime)
-    feature_store.add_combined_feature_view(combined_view)
     return feature_store
 
 

@@ -6,7 +6,7 @@ import pandas as pd
 import polars as pl
 from httpx import HTTPStatusError
 
-from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
+from aligned.data_source.batch_data_source import CodableBatchDataSource, ColumnFeatureMappable
 from aligned.exceptions import UnableToFindFileException
 from aligned.local.job import FileDateJob, FileFullJob
 from aligned.retrival_job import RetrivalRequest, RetrivalJob
@@ -25,11 +25,15 @@ from aligned.sources.local import (
 from aligned.storage import Storage
 
 try:
-    from aioaws.s3 import S3Config
+    from aioaws.s3 import S3Config  # type: ignore
 except ModuleNotFoundError:
 
+    @dataclass
     class S3Config:  # type: ignore[no-redef]
-        pass
+        aws_access_key: str
+        aws_secret_key: str
+        aws_region: str
+        aws_s3_bucket: str
 
 
 @dataclass
@@ -128,7 +132,7 @@ class AwsS3Directory(Directory):
 
     def delta_at(
         self, path: str, mapping_keys: dict[str, str] | None = None, config: DeltaFileConfig | None = None
-    ) -> BatchDataSource:
+    ) -> CodableBatchDataSource:
         raise NotImplementedError(type(self))
 
     def sub_directory(self, path: str) -> 'AwsS3Directory':
@@ -165,7 +169,7 @@ class AwsS3DataSource(StorageFileReference, ColumnFeatureMappable):
 
 
 @dataclass
-class AwsS3CsvDataSource(BatchDataSource, DataFileReference, ColumnFeatureMappable):
+class AwsS3CsvDataSource(CodableBatchDataSource, DataFileReference, ColumnFeatureMappable):
 
     config: AwsS3Config
     path: str
@@ -225,7 +229,7 @@ class AwsS3CsvDataSource(BatchDataSource, DataFileReference, ColumnFeatureMappab
 
 
 @dataclass
-class AwsS3ParquetDataSource(BatchDataSource, DataFileReference, ColumnFeatureMappable):
+class AwsS3ParquetDataSource(CodableBatchDataSource, DataFileReference, ColumnFeatureMappable):
 
     config: AwsS3Config
     path: str

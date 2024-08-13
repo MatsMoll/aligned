@@ -19,7 +19,7 @@ from aligned.compiler.feature_factory import (
     Bool,
 )
 from aligned.data_source.batch_data_source import (
-    BatchDataSource,
+    CodableBatchDataSource,
     JoinAsofDataSource,
     JoinDataSource,
     join_asof_source,
@@ -52,11 +52,11 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FeatureViewMetadata:
     name: str
-    source: BatchDataSource
+    source: CodableBatchDataSource
     description: str | None = field(default=None)
     stream_source: StreamDataSource | None = field(default=None)
-    application_source: BatchDataSource | None = field(default=None)
-    materialized_source: BatchDataSource | None = field(default=None)
+    application_source: CodableBatchDataSource | None = field(default=None)
+    materialized_source: CodableBatchDataSource | None = field(default=None)
     materialize_from: datetime | None = field(default=None)
     contacts: list[str] | None = field(default=None)
     tags: list[str] | None = field(default=None)
@@ -79,26 +79,26 @@ class FeatureViewMetadata:
         )
 
 
-def resolve_source(source: BatchDataSource | FeatureViewWrapper) -> BatchDataSource:
+def resolve_source(source: CodableBatchDataSource | FeatureViewWrapper) -> CodableBatchDataSource:
     if isinstance(source, FeatureViewWrapper):
         from aligned.schemas.feature_view import FeatureViewReferenceSource
 
         compiled = source.compile()
         return FeatureViewReferenceSource(compiled, FeatureLocation.feature_view(compiled.name))
 
-    elif isinstance(source, BatchDataSource):
+    elif isinstance(source, CodableBatchDataSource):
         return source
     else:
         raise ValueError(f'Unable to use source: {type(source)} - {source}')
 
 
 def feature_view(
-    source: BatchDataSource | FeatureViewWrapper,
+    source: CodableBatchDataSource | FeatureViewWrapper,
     name: str | None = None,
     description: str | None = None,
     stream_source: StreamDataSource | None = None,
-    application_source: BatchDataSource | None = None,
-    materialized_source: BatchDataSource | None = None,
+    application_source: CodableBatchDataSource | None = None,
+    materialized_source: CodableBatchDataSource | None = None,
     materialize_from: datetime | None = None,
     contacts: list[str] | None = None,
     tags: list[str] | None = None,
@@ -130,7 +130,7 @@ def feature_view(
 
 def annotated_feature_view(
     annotation_source: FeatureLocation,
-    annotated_source: BatchDataSource | FeatureViewWrapper,
+    annotated_source: CodableBatchDataSource | FeatureViewWrapper,
     name: str | None = None,
     description: str | None = None,
     contacts: list[str] | None = None,
@@ -204,8 +204,8 @@ class FeatureViewWrapper(Generic[T]):
         return FeatureView.compile_with_metadata(view, self.metadata)
 
     def vstack(
-        self, source: BatchDataSource | FeatureViewWrapper, source_column: str | None = None
-    ) -> BatchDataSource:
+        self, source: CodableBatchDataSource | FeatureViewWrapper, source_column: str | None = None
+    ) -> CodableBatchDataSource:
         from aligned.data_source.batch_data_source import StackSource
 
         return StackSource(
@@ -216,7 +216,7 @@ class FeatureViewWrapper(Generic[T]):
         self,
         name: str,
         where: Callable[[T], Bool] | pl.Expr,
-        materialize_source: BatchDataSource | None = None,
+        materialize_source: CodableBatchDataSource | None = None,
     ) -> FeatureViewWrapper[T]:
 
         from aligned.data_source.batch_data_source import FilteredDataSource
@@ -292,8 +292,8 @@ class FeatureViewWrapper(Generic[T]):
     def with_schema(
         self,
         name: str,
-        source: BatchDataSource | FeatureViewWrapper,
-        materialized_source: BatchDataSource | None = None,
+        source: CodableBatchDataSource | FeatureViewWrapper,
+        materialized_source: CodableBatchDataSource | None = None,
         entities: dict[str, FeatureFactory] | None = None,
         additional_features: dict[str, FeatureFactory] | None = None,
     ) -> FeatureViewWrapper[T]:
@@ -338,8 +338,8 @@ class FeatureViewWrapper(Generic[T]):
     def with_source(
         self,
         named: str,
-        source: BatchDataSource | FeatureViewWrapper,
-        materialized_source: BatchDataSource | None = None,
+        source: CodableBatchDataSource | FeatureViewWrapper,
+        materialized_source: CodableBatchDataSource | None = None,
     ) -> FeatureViewWrapper[T]:
         meta = copy.deepcopy(self.metadata)
         meta.name = named
@@ -427,7 +427,7 @@ class FeatureViewWrapper(Generic[T]):
         df = await self.query().process_input(data).to_lazy_polars()
         return df.collect().to_dicts()
 
-    async def freshness_in_source(self, source: BatchDataSource) -> datetime | None:
+    async def freshness_in_source(self, source: CodableBatchDataSource) -> datetime | None:
         """
         Returns the freshest datetime for a provided source
 
@@ -516,7 +516,7 @@ class FeatureViewWrapper(Generic[T]):
         else:
             raise ValueError(f'Invalid data type: {type(data)}')
 
-    def as_source(self, renames: dict[str, str] | None = None) -> BatchDataSource:
+    def as_source(self, renames: dict[str, str] | None = None) -> CodableBatchDataSource:
         from aligned.schemas.feature_view import FeatureViewReferenceSource
 
         return FeatureViewReferenceSource(
@@ -538,11 +538,11 @@ class FeatureView(ABC):
     @staticmethod
     def metadata_with(
         name: str,
-        batch_source: BatchDataSource,
+        batch_source: CodableBatchDataSource,
         description: str | None = None,
         stream_source: StreamDataSource | None = None,
-        application_source: BatchDataSource | None = None,
-        staging_source: BatchDataSource | None = None,
+        application_source: CodableBatchDataSource | None = None,
+        staging_source: CodableBatchDataSource | None = None,
         contacts: list[str] | None = None,
         tags: list[str] | None = None,
     ) -> FeatureViewMetadata:
@@ -575,7 +575,9 @@ class FeatureView(ABC):
         return await FeatureView.freshness_in_source(compiled, compiled.source)
 
     @staticmethod
-    async def freshness_in_source(view: CompiledFeatureView, source: BatchDataSource) -> datetime | None:
+    async def freshness_in_source(
+        view: CompiledFeatureView, source: CodableBatchDataSource
+    ) -> datetime | None:
         if not view.event_timestamp:
             raise ValueError(
                 f'The feature view: {view.name}, needs an event timestamp',

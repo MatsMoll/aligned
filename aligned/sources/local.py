@@ -12,7 +12,7 @@ import polars as pl
 from httpx import HTTPStatusError
 
 from aligned.data_file import DataFileReference, upsert_on_column
-from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
+from aligned.data_source.batch_data_source import CodableBatchDataSource, ColumnFeatureMappable
 from aligned.enricher import CsvFileEnricher, Enricher, LoadedStatEnricher, TimespanSelector
 from aligned.exceptions import UnableToFindFileException
 from aligned.local.job import FileDateJob, FileFactualJob, FileFullJob
@@ -132,7 +132,7 @@ class CsvConfig(Codable):
 
 @dataclass
 class CsvFileSource(
-    BatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource, Deletable
+    CodableBatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource, Deletable
 ):
     """
     A source pointing to a CSV file
@@ -339,7 +339,7 @@ class CsvFileSource(
         )
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple[CsvFileSource, RetrivalRequest]]
     ) -> RetrivalJob:
         sources = {source for source, _ in requests}
@@ -386,13 +386,12 @@ class ParquetConfig(Codable):
     """
 
     engine: Literal['auto', 'pyarrow', 'fastparquet'] = field(default='auto')
-    compression: Literal['snappy', 'gzip', 'brotli', None] = field(default='snappy')
-    should_write_index: bool = field(default=False)
+    compression: Literal['snappy', 'gzip', 'brotli'] = field(default='snappy')
 
 
 @dataclass
 class PartitionedParquetFileSource(
-    BatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource, Deletable
+    CodableBatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource, Deletable
 ):
     """
     A source pointing to a Parquet file
@@ -462,7 +461,7 @@ class PartitionedParquetFileSource(
         )
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple[ParquetFileSource, RetrivalRequest]]
     ) -> RetrivalJob:
 
@@ -545,7 +544,7 @@ class PartitionedParquetFileSource(
 
 
 @dataclass
-class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, Deletable):
+class ParquetFileSource(CodableBatchDataSource, ColumnFeatureMappable, DataFileReference, Deletable):
     """
     A source pointing to a Parquet file
     """
@@ -585,12 +584,7 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
         create_parent_dir(self.path)
-        df.to_parquet(
-            self.path,
-            engine=self.config.engine,
-            compression=self.config.compression,
-            index=self.config.should_write_index,
-        )
+        df.to_parquet(self.path, engine=self.config.engine, compression=self.config.compression, index=False)
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
 
@@ -621,7 +615,7 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
         )
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple[ParquetFileSource, RetrivalRequest]]
     ) -> RetrivalJob:
 
@@ -665,7 +659,7 @@ class DeltaFileConfig(Codable):
 
 @dataclass
 class DeltaFileSource(
-    BatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource, Deletable
+    CodableBatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource, Deletable
 ):
     """
     A source pointing to a Parquet file
@@ -723,7 +717,7 @@ class DeltaFileSource(
         )
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple[DeltaFileSource, RetrivalRequest]]
     ) -> RetrivalJob:
 
@@ -806,7 +800,7 @@ class Directory(Protocol):
 
     def csv_at(
         self, path: str, mapping_keys: dict[str, str] | None = None, csv_config: CsvConfig | None = None
-    ) -> BatchDataSource:
+    ) -> CodableBatchDataSource:
         ...
 
     def partitioned_parquet_at(
@@ -816,17 +810,21 @@ class Directory(Protocol):
         mapping_keys: dict[str, str] | None = None,
         config: ParquetConfig | None = None,
         date_formatter: DateFormatter | None = None,
-    ) -> PartitionedParquetFileSource:
+    ) -> CodableBatchDataSource:
         ...
 
     def parquet_at(
-        self, path: str, mapping_keys: dict[str, str] | None = None, config: ParquetConfig | None = None
-    ) -> BatchDataSource:
+        self,
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        config: ParquetConfig | None = None,
+        date_formatter: DateFormatter | None = None,
+    ) -> CodableBatchDataSource:
         ...
 
     def delta_at(
         self, path: str, mapping_keys: dict[str, str] | None = None, config: DeltaFileConfig | None = None
-    ) -> BatchDataSource:
+    ) -> CodableBatchDataSource:
         ...
 
     def sub_directory(self, path: str) -> Directory:
@@ -859,10 +857,17 @@ class FileDirectory(Codable, Directory):
         )
 
     def parquet_at(
-        self, path: str, mapping_keys: dict[str, str] | None = None, config: ParquetConfig | None = None
+        self,
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        config: ParquetConfig | None = None,
+        date_formatter: DateFormatter | None = None,
     ) -> ParquetFileSource:
         return ParquetFileSource(
-            path=self.path_string(path), mapping_keys=mapping_keys or {}, config=config or ParquetConfig()
+            path=self.path_string(path),
+            mapping_keys=mapping_keys or {},
+            config=config or ParquetConfig(),
+            date_formatter=date_formatter or DateFormatter.noop(),
         )
 
     def partitioned_parquet_at(

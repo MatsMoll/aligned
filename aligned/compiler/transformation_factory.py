@@ -653,9 +653,11 @@ class PandasTransformationFactory(TransformationFactory):
                 dtype=self.dtype.dtype,
             )
         else:
+            function_name = (dill.source.getname(self.method),)
+            assert isinstance(function_name, str), f"Expected string got {type(function_name)}"
             return PandasFunctionTransformation(
                 code=inspect.getsource(self.method),
-                function_name=dill.source.getname(self.method),
+                function_name=function_name,
                 dtype=self.dtype.dtype,
             )
 
@@ -693,9 +695,11 @@ class PolarsTransformationFactory(TransformationFactory):
                 method=dill.dumps(self.method), code=code.strip(), dtype=self.dtype.dtype
             )
         else:
+            function_name = (dill.source.getname(self.method),)
+            assert isinstance(function_name, str), f"Expected string got {type(function_name)}"
             return PolarsFunctionTransformation(
                 code=code,
-                function_name=dill.source.getname(self.method),
+                function_name=function_name,
                 dtype=self.dtype.dtype,
             )
 
@@ -720,11 +724,9 @@ class MeanTransfomrationFactory(TransformationFactory, AggregatableTransformatio
             return [self.feature]
 
     def compile(self) -> Transformation:
-        from aligned.schemas.transformation import Mean
+        from aligned.schemas.transformation import MeanAggregation
 
-        return Mean(
-            key=self.feature.name, group_keys=[feat.name for feat in self.group_by] if self.group_by else None
-        )
+        return MeanAggregation(key=self.feature.name)
 
     def copy(self) -> 'MeanTransfomrationFactory':
         return MeanTransfomrationFactory(self.feature, self.over, self.group_by)
@@ -794,7 +796,7 @@ class AppendStrings(TransformationFactory):
         from aligned.schemas.transformation import AppendConstString, AppendStrings
 
         if isinstance(self.second_feature, LiteralValue):
-            return AppendConstString(self.first_feature.name, self.second_feature.value)
+            return AppendConstString(self.first_feature.name, self.second_feature.python_value)
         else:
             return AppendStrings(self.first_feature.name, self.second_feature.name, self.separator)
 

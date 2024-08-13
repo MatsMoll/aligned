@@ -39,15 +39,15 @@ class DateFormatter(Codable, SerializableType):
         return data
 
     @classmethod
-    def _deserialize(cls, data: dict) -> DateFormatter:
-        formatter_name = data.pop('name')
+    def _deserialize(cls, value: dict) -> DateFormatter:
+        formatter_name = value.pop('name')
         formatters = AllDateFormatters.shared().supported_formatters
         if formatter_name not in formatters:
             raise ValueError(
                 f"Unknown formatter name: {formatter_name}. Supported formatters: {formatters.keys()}"
             )
         formatter_class = formatters[formatter_name]
-        return formatter_class.from_dict(data)
+        return formatter_class.from_dict(value)
 
     @staticmethod
     def string_format(format: str) -> StringDateFormatter:

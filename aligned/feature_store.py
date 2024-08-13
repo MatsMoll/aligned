@@ -8,13 +8,17 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from importlib import import_module
-from typing import Any, Union
+from typing import Union
 
 from prometheus_client import Histogram
 
 from aligned.compiler.model import ModelContractWrapper
 from aligned.data_file import DataFileReference, upsert_on_column
-from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
+from aligned.data_source.batch_data_source import (
+    CodableBatchDataSource,
+    ColumnFeatureMappable,
+    BatchDataSource,
+)
 from aligned.enricher import Enricher
 from aligned.exceptions import UnableToFindFileException
 from aligned.feature_source import (
@@ -24,7 +28,6 @@ from aligned.feature_source import (
     RangeFeatureSource,
     WritableFeatureSource,
 )
-from aligned.feature_view.combined_view import CombinedFeatureView, CompiledCombinedFeatureView
 from aligned.feature_view.feature_view import FeatureView, FeatureViewWrapper
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import (
@@ -63,7 +66,7 @@ class SourceRequest:
     """
 
     location: FeatureLocation
-    source: BatchDataSource
+    source: CodableBatchDataSource
     request: RetrivalRequest
 
 
@@ -103,7 +106,6 @@ class ContractStore:
 
     feature_source: FeatureSource
     feature_views: dict[str, CompiledFeatureView]
-    combined_feature_views: dict[str, CompiledCombinedFeatureView]
     models: dict[str, ModelSchema]
     vector_indexes: dict[str, ModelSchema]
 
@@ -114,13 +116,11 @@ class ContractStore:
     def __init__(
         self,
         feature_views: dict[str, CompiledFeatureView],
-        combined_feature_views: dict[str, CompiledCombinedFeatureView],
         models: dict[str, ModelSchema],
         feature_source: FeatureSource,
         vector_indexes: dict[str, ModelSchema] | None = None,
     ) -> None:
         self.feature_source = feature_source
-        self.combined_feature_views = combined_feature_views
         self.feature_views = feature_views
         self.models = models
         self.vector_indexes = vector_indexes or {}
@@ -203,13 +203,10 @@ class ContractStore:
         Returns:
             FeatureStore: A ready to use feature store
         """
-        combined_feature_views = {fv.name: fv for fv in repo.combined_feature_views}
-
         ContractStore.register_enrichers(repo.enrichers)
 
         store = ContractStore(
             feature_views={},
-            combined_feature_views=combined_feature_views,
             models={},
             feature_source=BatchFeatureSource({}),
         )
@@ -226,7 +223,6 @@ class ContractStore:
         return RepoDefinition(
             metadata=RepoMetadata(datetime.utcnow(), name='feature_store_location.py'),
             feature_views=set(self.feature_views.values()),
-            combined_feature_views=set(self.combined_feature_views.values()),
             models=set(self.models.values()),
             enrichers=[],
         )
@@ -311,9 +307,10 @@ class ContractStore:
     def execute_sql(self, query: str) -> RetrivalJob:
         import polars as pl
         import sqlglot
+        import sqlglot.expressions as exp
 
         expr = sqlglot.parse_one(query)
-        select_expr = expr.find_all(sqlglot.exp.Select)
+        select_expr = expr.find_all(exp.Select)
 
         tables = set()
         table_alias: dict[str, str] = {}
@@ -331,7 +328,7 @@ class ContractStore:
 
         for expr in select_expr:
 
-            for table in expr.find_all(sqlglot.exp.Table):
+            for table in expr.find_all(exp.Table):
                 tables.add(table.name)
                 table_alias[table.alias_or_name] = table.name
 
@@ -344,13 +341,13 @@ class ContractStore:
                     else:
                         unique_column_table_lookup[column] = table.name
 
-            if expr.find(sqlglot.exp.Star):
+            if expr.find(exp.Star):
                 for table in tables:
                     table_columns[table].update(
                         all_table_columns.get(table, set()).union(all_model_columns.get(table, set()))
                     )
             else:
-                for column in expr.find_all(sqlglot.exp.Column):
+                for column in expr.find_all(exp.Column):
                     source_table = table_alias.get(column.table)
 
                     if source_table:
@@ -504,7 +501,6 @@ class ContractStore:
     def _requests_for(
         feature_request: RawStringFeatureRequest,
         feature_views: dict[str, CompiledFeatureView],
-        combined_feature_views: dict[str, CompiledCombinedFeatureView],
         models: dict[str, ModelSchema],
         event_timestamp_column: str | None = None,
         model_version_as_entity: bool | None = None,
@@ -528,16 +524,6 @@ class ContractStore:
                     )
                 requests.append(request)
                 entity_names.update(request.entity_names)
-
-            elif location_name in combined_feature_views:
-                cfv = combined_feature_views[location_name]
-                if len(features[location]) == 1 and list(features[location])[0] == '*':
-                    sub_requests = cfv.request_all
-                else:
-                    sub_requests = cfv.requests_for(features[location])
-                requests.extend(sub_requests.needed_requests)
-                for request in sub_requests.needed_requests:
-                    entity_names.update(request.entity_names)
 
             elif location_name in feature_views:
                 feature_view = feature_views[location_name]
@@ -567,8 +553,7 @@ class ContractStore:
                 entity_names.update(sub_request.entity_names)
             else:
                 raise ValueError(
-                    f'Unable to find: {location_name}, '
-                    f'availible views are: {combined_feature_views.keys()}, and: {feature_views.keys()}'
+                    f'Unable to find: {location_name}, ' f'availible views are: {feature_views.keys()}'
                 )
 
         if event_timestamp_column:
@@ -605,7 +590,6 @@ class ContractStore:
         return ContractStore._requests_for(
             feature_request,
             self.feature_views,
-            self.combined_feature_views,
             self.models,
             event_timestamp_column=event_timestamp_column,
             model_version_as_entity=model_version_as_entity,
@@ -624,14 +608,9 @@ class ContractStore:
         Args:
             view (str): The name of the feature view
 
-        Raises:
-            CombinedFeatureViewQuerying: If the name is a combined feature view
-
         Returns:
             FeatureViewStore: The selected feature view ready for querying
         """
-        if view in self.combined_feature_views:
-            return FeatureViewStore(self, self.combined_feature_views[view], set())
         feature_view = self.feature_views[view]
         return FeatureViewStore(self, feature_view, self.event_triggers_for(view))
 
@@ -678,6 +657,7 @@ class ContractStore:
 
         self.feature_views[view.name] = view
         if isinstance(self.feature_source, BatchFeatureSource):
+            assert isinstance(self.feature_source.sources, dict)
             self.feature_source.sources[FeatureLocation.feature_view(view.name).identifier] = (
                 view.materialized_source or view.source
             )
@@ -689,13 +669,6 @@ class ContractStore:
             self.add_compiled_view(feature_view.compile_instance())
         else:
             self.add_compiled_view(feature_view)
-
-    def add_combined_feature_view(self, feature_view: CombinedFeatureView) -> None:
-        compiled_view = type(feature_view).compile()
-        self.combined_feature_views[compiled_view.name] = compiled_view
-
-    def add_combined_view(self, compiled_view: CompiledCombinedFeatureView) -> None:
-        self.combined_feature_views[compiled_view.name] = compiled_view
 
     def add_model(self, model: ModelContractWrapper) -> None:
         """
@@ -726,6 +699,7 @@ class ContractStore:
             self.vector_indexes[index_name] = model
 
         if isinstance(self.feature_source, BatchFeatureSource) and source is not None:
+            assert isinstance(self.feature_source.sources, dict)
             self.feature_source.sources[FeatureLocation.model(model.name).identifier] = source
 
     def with_source(self, source: FeatureSourceable = None) -> ContractStore:
@@ -766,12 +740,13 @@ class ContractStore:
 
         return ContractStore(
             feature_views=self.feature_views,
-            combined_feature_views=self.combined_feature_views,
             models=self.models,
             feature_source=feature_source,
         )
 
-    def update_source_for(self, location: FeatureLocation | str, source: BatchDataSource) -> ContractStore:
+    def update_source_for(
+        self, location: FeatureLocation | str, source: CodableBatchDataSource
+    ) -> ContractStore:
         if not isinstance(self.feature_source, BatchFeatureSource):
             raise ValueError(
                 f'.update_source_for(...) needs a `BatchFeatureSource`, got {type(self.feature_source)}'
@@ -781,11 +756,11 @@ class ContractStore:
             location = FeatureLocation.from_string(location)
 
         new_source = self.feature_source
+        assert isinstance(new_source.sources, dict)
         new_source.sources[location.identifier] = source
 
         return ContractStore(
             feature_views=self.feature_views,
-            combined_feature_views=self.combined_feature_views,
             models=self.models,
             feature_source=new_source,
         )
@@ -817,7 +792,6 @@ class ContractStore:
         }
         return ContractStore(
             feature_views=self.feature_views,
-            combined_feature_views=self.combined_feature_views,
             models=self.models,
             feature_source=BatchFeatureSource(sources=sources),
         )
@@ -834,44 +808,12 @@ class ContractStore:
             )
         return all_model_features
 
-    def views_with_config(self, config: Any) -> list[SourceRequest]:
-        """
-        Returns the feature views where the config match.
-
-        ```python
-        source = PostgreSQLConfig(env_var='SOURCE_URL')
-        store.views_with_conifg(source)
-        ```
-
-        Args:
-            config (Any): The config to find views for
-
-        Returns:
-            list[SourceRequest]: A list of data sources, the request and it's location
-        """
-        views: list[SourceRequest] = []
-        for view in self.feature_views.values():
-            request = view.request_all.needed_requests[0]
-            if view.source.contains_config(config):
-                views.append(SourceRequest(FeatureLocation.feature_view(view.name), view.source, request))
-
-            if view.application_source and view.application_source.contains_config(config):
-                views.append(
-                    SourceRequest(FeatureLocation.feature_view(view.name), view.application_source, request)
-                )
-        return views
-
     def write_request_for(self, location: FeatureLocation) -> RetrivalRequest:
 
         if location.location_type == 'feature_view':
             return self.feature_views[location.name].request_all.needed_requests[0]
         elif location.location_type == 'model':
             return self.models[location.name].predictions_view.request('write', model_version_as_entity=True)
-        elif location.location_type == 'combined_view':
-            raise NotImplementedError(
-                'Have not implemented write requests for combined views. '
-                'Please consider contributing and add a PR.'
-            )
         else:
             raise ValueError(f"Unable to write to location: '{location}'.")
 
@@ -1337,11 +1279,11 @@ class ModelFeatureStore:
 
         return source.all_data(request, limit=limit).select_columns(set(request.all_returned_columns))
 
-    def using_source(self, source: FeatureSourceable | BatchDataSource) -> ModelFeatureStore:
+    def using_source(self, source: FeatureSourceable | CodableBatchDataSource) -> ModelFeatureStore:
 
         model_source: FeatureSourceable
 
-        if isinstance(source, BatchDataSource):
+        if isinstance(source, CodableBatchDataSource):
             model_source = BatchFeatureSource({FeatureLocation.model(self.model.name).identifier: source})
         else:
             model_source = source
@@ -1628,7 +1570,7 @@ class FeatureViewStore:
     def source(self) -> FeatureSource:
         return self.store.feature_source
 
-    def using_source(self, source: FeatureSourceable | BatchDataSource) -> FeatureViewStore:
+    def using_source(self, source: FeatureSourceable | CodableBatchDataSource) -> FeatureViewStore:
         """
         Sets the source to load features from.
 
@@ -1651,7 +1593,7 @@ class FeatureViewStore:
         """
         view_source: FeatureSourceable
 
-        if isinstance(source, BatchDataSource):
+        if isinstance(source, CodableBatchDataSource):
             view_source = BatchFeatureSource(
                 {FeatureLocation.feature_view(self.view.name).identifier: source}
             )
@@ -1843,7 +1785,7 @@ class FeatureViewStore:
         #     job = job.filter(self.feature_filter)
 
         with feature_view_write_time.labels(self.view.name).time():
-            await self.source.insert(job, job.retrival_requests)
+            await self.source.insert(job, job.retrival_requests[0])
 
     async def freshness(self) -> datetime | None:
 

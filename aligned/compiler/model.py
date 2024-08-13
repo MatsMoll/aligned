@@ -19,7 +19,7 @@ from aligned.compiler.feature_factory import (
     RegressionLabel,
     TargetProbability,
 )
-from aligned.data_source.batch_data_source import BatchDataSource, DummyDataSource
+from aligned.data_source.batch_data_source import CodableBatchDataSource, DummyDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.feature_view.feature_view import (
     FeatureView,
@@ -59,10 +59,10 @@ class ModelMetadata:
     tags: list[str] | None = field(default=None)
     description: str | None = field(default=None)
 
-    output_source: BatchDataSource | None = field(default=None)
+    output_source: CodableBatchDataSource | None = field(default=None)
     output_stream: StreamDataSource | None = field(default=None)
 
-    application_source: BatchDataSource | None = field(default=None)
+    application_source: CodableBatchDataSource | None = field(default=None)
 
     acceptable_freshness: timedelta | None = field(default=None)
     unacceptable_freshness: timedelta | None = field(default=None)
@@ -123,8 +123,8 @@ class ModelContractWrapper(Generic[T]):
     def with_schema(
         self,
         name: str,
-        source: BatchDataSource | FeatureViewWrapper,
-        materialized_source: BatchDataSource | None = None,
+        source: CodableBatchDataSource | FeatureViewWrapper,
+        materialized_source: CodableBatchDataSource | None = None,
         entities: dict[str, FeatureFactory] | None = None,
         additional_features: dict[str, FeatureFactory] | None = None,
     ) -> FeatureViewWrapper[T]:
@@ -204,7 +204,7 @@ class ModelContractWrapper(Generic[T]):
         return view.as_view(self.metadata.name)
 
     def filter(
-        self, name: str, where: Callable[[T], Bool], application_source: BatchDataSource | None = None
+        self, name: str, where: Callable[[T], Bool], application_source: CodableBatchDataSource | None = None
     ) -> ModelContractWrapper[T]:
         from aligned.data_source.batch_data_source import FilteredDataSource
 
@@ -233,7 +233,7 @@ class ModelContractWrapper(Generic[T]):
 
         return ModelContractWrapper(metadata=meta, contract=self.contract)
 
-    def as_source(self) -> BatchDataSource:
+    def as_source(self) -> CodableBatchDataSource:
         from aligned.schemas.model import ModelSource
 
         compiled_model = self.compile()
@@ -250,7 +250,7 @@ class ModelContractWrapper(Generic[T]):
         on_left: str | FeatureFactory | list[str] | list[FeatureFactory],
         on_right: str | FeatureFactory | list[str] | list[FeatureFactory],
         how: str = 'inner',
-    ) -> BatchDataSource:
+    ) -> CodableBatchDataSource:
         from aligned.data_source.batch_data_source import join_source
         from aligned.schemas.model import ModelSource
 
@@ -271,7 +271,9 @@ class ModelContractWrapper(Generic[T]):
             how=how,
         )
 
-    def join_asof(self, view: FeatureViewWrapper, on_left: list[str], on_right: list[str]) -> BatchDataSource:
+    def join_asof(
+        self, view: FeatureViewWrapper, on_left: list[str], on_right: list[str]
+    ) -> CodableBatchDataSource:
         from aligned.data_source.batch_data_source import join_asof_source
         from aligned.schemas.model import ModelSource
 
@@ -324,9 +326,9 @@ def model_contract(
     contacts: list[str] | None = None,
     tags: list[str] | None = None,
     description: str | None = None,
-    output_source: BatchDataSource | None = None,
+    output_source: CodableBatchDataSource | None = None,
     output_stream: StreamDataSource | None = None,
-    application_source: BatchDataSource | None = None,
+    application_source: CodableBatchDataSource | None = None,
     dataset_store: DatasetStore | StorageFileReference | None = None,
     exposed_at_url: str | None = None,
     exposed_model: ExposedModel | None = None,
@@ -428,9 +430,9 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
         unacceptable_freshness=metadata.unacceptable_freshness,
     )
 
-    assert inference_view.classification_targets
-    assert inference_view.regression_targets
-    assert inference_view.recommendation_targets
+    assert inference_view.classification_targets is not None
+    assert inference_view.regression_targets is not None
+    assert inference_view.recommendation_targets is not None
 
     probability_features: dict[str, set[TargetProbability]] = {}
     hidden_features = 0

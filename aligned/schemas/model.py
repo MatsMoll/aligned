@@ -13,7 +13,7 @@ from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.folder import DatasetStore
 from aligned.exposed_model.interface import ExposedModel
 from aligned.data_source.stream_data_source import StreamDataSource
-from aligned.data_source.batch_data_source import BatchDataSource
+from aligned.data_source.batch_data_source import CodableBatchDataSource
 from aligned.retrival_job import RetrivalJob
 
 logger = logging.getLogger(__name__)
@@ -61,8 +61,8 @@ class PredictionsView(Codable):
     derived_features: set[DerivedFeature]
     event_timestamp: EventTimestamp | None = field(default=None)
 
-    source: BatchDataSource | None = field(default=None)
-    application_source: BatchDataSource | None = field(default=None)
+    source: CodableBatchDataSource | None = field(default=None)
+    application_source: CodableBatchDataSource | None = field(default=None)
     stream_source: StreamDataSource | None = field(default=None)
 
     regression_targets: set[RegressionTarget] | None = field(default=None)
@@ -235,7 +235,7 @@ class Model(Codable):
 
 
 @dataclass
-class ModelSource(BatchDataSource):
+class ModelSource(CodableBatchDataSource):
 
     model: Model
     pred_view: CompiledFeatureView
@@ -284,7 +284,7 @@ class ModelSource(BatchDataSource):
         return self.source().features_for(facts, request)
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple['ModelSource', RetrivalRequest]]
     ) -> RetrivalJob:
 

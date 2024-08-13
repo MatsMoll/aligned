@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Callable, Collection, Union, TypeVar, Coroutine, Any
+from typing import TYPE_CHECKING, Callable, Collection, Literal, Union, TypeVar, Coroutine, Any
 
 import polars as pl
 from polars.dependencies import pandas as pd
@@ -24,11 +24,7 @@ from aligned.request.retrival_request import FeatureRequest, RequestResult, Retr
 from aligned.schemas.feature import Feature, FeatureType
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.vector_storage import VectorIndex
-from aligned.split_strategy import (
-    SupervisedDataSet,
-    TrainTestSet,
-    TrainTestValidateSet,
-)
+from aligned.split_strategy import SupervisedDataSet
 from aligned.validation.interface import Validator, PolarsValidator
 
 if TYPE_CHECKING:
@@ -54,7 +50,7 @@ def split(
         column = data[event_timestamp_column]
         if column.dtype != 'datetime64[ns]':
             column = pd.to_datetime(data[event_timestamp_column])
-        data = data.iloc[column.sort_values().index]
+        data = data.iloc[column.sort_values().index]  # type: ignore
 
     group_size = data.shape[0]
     start_index = round(group_size * start_ratio)
@@ -82,35 +78,6 @@ def subset_polars(
         return data[start_index:]
     else:
         return data[start_index:end_index]
-
-
-def split_polars(
-    data: pl.DataFrame, start_ratio: float, end_ratio: float, event_timestamp_column: str | None = None
-) -> pd.Series:
-
-    row_name = 'row_nr'
-    data = data.with_row_count(row_name)
-
-    if event_timestamp_column:
-        data = data.sort(event_timestamp_column)
-        # values = data.select(
-        #     [
-        #         pl.col(event_timestamp_column).quantile(start_ratio).alias('start_value'),
-        #         pl.col(event_timestamp_column).quantile(end_ratio).alias('end_value'),
-        #     ]
-        # )
-        # return data.filter(
-        #     pl.col(event_timestamp_column).is_between(values[0, 'start_value'], values[0, 'end_value'])
-        # ).collect()
-
-    group_size = data.shape[0]
-    start_index = round(group_size * start_ratio)
-    end_index = round(group_size * end_ratio)
-
-    if end_index >= group_size:
-        return data[start_index:][row_name].to_pandas()
-    else:
-        return data[start_index:end_index][row_name].to_pandas()
 
 
 def fraction_from_job(job: RetrivalJob) -> float | None:
@@ -179,7 +146,7 @@ class TrainTestJob:
             StorageFileSource,
             DatasetStore,
         )
-        from aligned.data_source.batch_data_source import BatchDataSource
+        from aligned.data_source.batch_data_source import CodableBatchDataSource
 
         request_result = self.train_job.request_result
 
@@ -196,16 +163,16 @@ class TrainTestJob:
         if test_size is None:
             test_size = fraction_from_job(self.test_job)
 
-        if not isinstance(test_source, BatchDataSource):
+        if not isinstance(test_source, CodableBatchDataSource):
             raise ValueError('test_source should be a BatchDataSource')
 
-        if not isinstance(train_source, BatchDataSource):
+        if not isinstance(train_source, CodableBatchDataSource):
             raise ValueError('train_source should be a BatchDataSource')
 
         test_metadata = TrainDatasetMetadata(
             id=metadata.id,
             name=metadata.name,
-            request_result=request_result,
+            content=request_result,
             description=metadata.description,
             train_size_fraction=train_size,
             test_size_fraction=test_size,
@@ -305,7 +272,7 @@ class TrainTestValidateJob:
             DatasetMetadata,
             DatasetStore,
         )
-        from aligned.data_source.batch_data_source import BatchDataSource
+        from aligned.data_source.batch_data_source import CodableBatchDataSource
         from aligned.sources.local import StorageFileSource
         from uuid import uuid4
 
@@ -334,19 +301,19 @@ class TrainTestValidateJob:
         if validation_size is None:
             validation_size = fraction_from_job(self.validate_job)
 
-        if not isinstance(test_source, BatchDataSource):
+        if not isinstance(test_source, CodableBatchDataSource):
             raise ValueError('test_source should be a BatchDataSource')
 
-        if not isinstance(train_source, BatchDataSource):
+        if not isinstance(train_source, CodableBatchDataSource):
             raise ValueError('train_source should be a BatchDataSource')
 
-        if not isinstance(validate_source, BatchDataSource):
+        if not isinstance(validate_source, CodableBatchDataSource):
             raise ValueError('validation_source should be a BatchDataSource')
 
         test_metadata = TrainDatasetMetadata(
             id=metadata.id,
             name=metadata.name,
-            request_result=request_result,
+            content=request_result,
             description=metadata.description,
             train_size_fraction=train_size,
             test_size_fraction=test_size,
@@ -443,9 +410,6 @@ class SupervisedJob:
     @property
     def request_result(self) -> RequestResult:
         return self.job.request_result
-
-    def train_set(self, train_size: float) -> SupervisedTrainJob:
-        return SupervisedTrainJob(self, train_size)
 
     def train_test(
         self, train_size: float, splitter_factory: Callable[[SplitConfig], SplitterCallable] | None = None
@@ -572,87 +536,6 @@ class SupervisedJob:
 
     def describe(self) -> str:
         return f'{self.job.describe()} with target columns {self.target_columns}'
-
-
-@dataclass
-class SupervisedTrainJob:
-
-    job: SupervisedJob
-    train_size: float
-
-    async def to_pandas(self) -> TrainTestSet[pd.DataFrame]:
-        core_data = await self.job.to_lazy_polars()
-        data = core_data.data.collect()
-        data = data.to_pandas()
-
-        test_ratio_start = self.train_size
-        return TrainTestSet(
-            data=data,
-            entity_columns=core_data.entity_columns,
-            features=core_data.feature_columns,
-            target_columns=core_data.target_columns,
-            train_index=split(data, 0, test_ratio_start, core_data.event_timestamp_column),
-            test_index=split(data, test_ratio_start, 1, core_data.event_timestamp_column),
-            event_timestamp_column=core_data.event_timestamp_column,
-        )
-
-    async def to_polars(self) -> TrainTestSet[pl.DataFrame]:
-        # Use the pandas method, as the split is not created for polars yet
-        # A but unsure if I should use the same index concept for polars
-        core_data = await self.job.to_lazy_polars()
-
-        data = core_data.data.collect()
-
-        return TrainTestSet(
-            data=data,
-            entity_columns=core_data.entity_columns,
-            features=core_data.feature_columns,
-            target_columns=core_data.target_columns,
-            train_index=split_polars(data, 0, self.train_size, core_data.event_timestamp_column),
-            test_index=split_polars(data, self.train_size, 1, core_data.event_timestamp_column),
-            event_timestamp_column=core_data.event_timestamp_column,
-        )
-
-    def validation_set(self, validation_size: float) -> SupervisedValidationJob:
-        return SupervisedValidationJob(self, validation_size)
-
-
-@dataclass
-class SupervisedValidationJob:
-
-    job: SupervisedTrainJob
-    validation_size: float
-
-    async def to_pandas(self) -> TrainTestValidateSet[pd.DataFrame]:
-        data = await self.job.to_pandas()
-
-        test_start = self.job.train_size
-        validate_start = test_start + self.validation_size
-
-        return TrainTestValidateSet(
-            data=data.data,
-            entity_columns=set(data.entity_columns),
-            features=data.features,
-            target=data.target_columns,
-            train_index=split(data.data, 0, test_start, data.event_timestamp_column),
-            test_index=split(data.data, test_start, validate_start, data.event_timestamp_column),
-            validate_index=split(data.data, validate_start, 1, data.event_timestamp_column),
-            event_timestamp_column=data.event_timestamp_column,
-        )
-
-    async def to_polars(self) -> TrainTestValidateSet[pl.DataFrame]:
-        data = await self.to_pandas()
-
-        return TrainTestValidateSet(
-            data=pl.from_pandas(data.data),
-            entity_columns=data.entity_columns,
-            features=data.feature_columns,
-            target=data.labels,
-            train_index=data.train_index,
-            test_index=data.test_index,
-            validate_index=data.validate_index,
-            event_timestamp_column=data.event_timestamp_column,
-        )
 
 
 ConvertableToRetrivalJob = Union[dict[str, list], pd.DataFrame, pl.DataFrame, pl.LazyFrame]
@@ -802,12 +685,6 @@ class RetrivalJob(ABC):
             return FileCachedJob(ParquetFileSource(location), self).derive_features()
         else:
             return FileCachedJob(location, self).derive_features()
-
-    def test_size(self, test_size: float, target_column: str) -> SupervisedTrainJob:
-        return SupervisedJob(self, {target_column}).train_set(train_size=1 - test_size)
-
-    def train_set(self, train_size: float, target_column: str) -> SupervisedTrainJob:
-        return SupervisedJob(self, {target_column}).train_set(train_size=train_size)
 
     def train_test(self, train_size: float, target_column: str) -> TrainTestJob:
         cached = InMemoryCacheJob(self)
@@ -1462,7 +1339,7 @@ class JoinAsofJob(RetrivalJob):
 @dataclass
 class JoinJobs(RetrivalJob):
 
-    method: str
+    method: Literal['inner', 'left', 'outer']
     left_job: RetrivalJob
     right_job: RetrivalJob
 
@@ -1803,7 +1680,7 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
     def retrival_requests(self) -> list[RetrivalRequest]:
         return self.job.retrival_requests
 
-    def filter(self, condition: str | Feature | DerivedFeature) -> RetrivalJob:
+    def filter(self, condition: str | Feature | DerivedFeature | pl.Expr) -> RetrivalJob:
 
         if isinstance(condition, str):
             column_name = condition
@@ -2114,7 +1991,7 @@ class DataLoaderJob:
 class RawFileCachedJob(RetrivalJob, ModificationJob):
 
     location: DataFileReference
-    job: DerivedFeatureJob
+    job: RetrivalJob
 
     @property
     def request_result(self) -> RequestResult:
@@ -2128,6 +2005,7 @@ class RawFileCachedJob(RetrivalJob, ModificationJob):
         from aligned.local.job import FileFullJob
         from aligned.sources.local import LiteralReference
 
+        assert isinstance(self.job, DerivedFeatureJob)
         try:
             logger.debug('Trying to read cache file')
             df = await self.location.read_pandas()

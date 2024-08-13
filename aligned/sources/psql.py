@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
+from aligned.data_source.batch_data_source import CodableBatchDataSource, ColumnFeatureMappable
 from aligned.feature_source import WritableFeatureSource
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import RetrivalJob
@@ -57,7 +57,7 @@ class PostgreSQLConfig(Codable):
 
 
 @dataclass
-class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, WritableFeatureSource):
+class PostgreSQLDataSource(CodableBatchDataSource, ColumnFeatureMappable, WritableFeatureSource):
 
     config: PostgreSQLConfig
     table: str

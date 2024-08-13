@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Protocol, TypeVar
+from typing import Protocol, Sequence, TypeVar
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, timezone
 
 from mashumaro.types import SerializableType
-from aligned.data_source.batch_data_source import BatchDataSource
+from aligned.data_source.batch_data_source import CodableBatchDataSource
 from aligned.request.retrival_request import RequestResult
 
 from aligned.sources.local import Deletable, StorageFileSource
@@ -56,7 +56,7 @@ class DatasetMetadata(Codable):
 
 @dataclass
 class SingleDatasetMetadata(Codable):
-    source: BatchDataSource
+    source: CodableBatchDataSource
     content: RequestResult
     created_at: datetime = field(default_factory=datetime.utcnow)
     id: str = field(default_factory=lambda: str(uuid4()))
@@ -80,23 +80,19 @@ class SingleDatasetMetadata(Codable):
 
 
 @dataclass
-class TrainDatasetMetadata(Codable):
+class TrainDatasetMetadata(Codable, DatasetMetadataInterface):
 
     name: str | None
 
-    request_result: RequestResult
+    content: RequestResult
 
-    @property
-    def content(self) -> RequestResult:
-        return self.request_result
+    train_dataset: CodableBatchDataSource
+    test_dataset: CodableBatchDataSource
 
-    train_dataset: BatchDataSource
-    test_dataset: BatchDataSource
-
-    validation_dataset: BatchDataSource | None = field(default=None)
+    validation_dataset: CodableBatchDataSource | None = field(default=None)
 
     id: str = field(default_factory=lambda: str(uuid4()))
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     train_size_fraction: float | None = field(default=None)
     test_size_fraction: float | None = field(default=None)
@@ -121,7 +117,7 @@ class TrainDatasetMetadata(Codable):
             datasets.append(
                 SingleDatasetMetadata(
                     source=source,
-                    content=self.request_result,
+                    content=self.content,
                     created_at=self.created_at,
                     id=self.id,
                     name=self.name,
@@ -150,7 +146,7 @@ class GroupedDatasetList(Codable):
         return datasets
 
     @property
-    def all(self) -> list[DatasetMetadataInterface]:
+    def all(self) -> Sequence[DatasetMetadataInterface]:
         return self.raw_data + self.train_test + self.train_test_validation
 
 
@@ -219,7 +215,7 @@ class JsonDatasetStore(DatasetStore):
                 train_test_validation=[],
             )
 
-    def index_of(self, metadata_id: str, array: list[DatasetMetadataInterface]) -> int | None:
+    def index_of(self, metadata_id: str, array: Sequence[DatasetMetadataInterface]) -> int | None:
 
         for i, dataset in enumerate(array):
             if dataset.id == metadata_id:
@@ -296,7 +292,7 @@ class JsonDatasetStore(DatasetStore):
     async def delete_metadata_for(self, dataset_id: str) -> DatasetMetadataInterface | None:
         datasets = await self.list_datasets()
 
-        async def delete_dataset(source: BatchDataSource):
+        async def delete_dataset(source: CodableBatchDataSource):
             if isinstance(source, Deletable):
                 await source.delete()
 

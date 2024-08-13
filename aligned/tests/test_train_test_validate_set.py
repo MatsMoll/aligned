@@ -34,27 +34,29 @@ async def test_train_test_validate_set(titanic_feature_store: ContractStore) -> 
     test_size = int(round(dataset_size * (1 - train_fraction - validation_fraction)))
     validate_size = int(round(dataset_size * validation_fraction))
 
-    dataset = (
-        await titanic_feature_store.feature_view('titanic')
+    datasets = (
+        titanic_feature_store.feature_view('titanic')
         .all(limit=dataset_size)
-        .train_set(train_fraction, target_column='survived')
-        .validation_set(validation_fraction)
-        .to_pandas()
+        .train_test_validate(train_fraction, validation_fraction, target_column='survived')
     )
+    train = await datasets.train.to_pandas()
+    test = await datasets.test.to_pandas()
+    validate = await datasets.validate.to_pandas()
 
-    assert dataset.train.data.shape[0] == train_size
-    assert dataset.test.data.shape[0] == test_size
-    assert dataset.validate.data.shape[0] == validate_size
+    assert train.data.shape[0] == train_size
+    assert test.data.shape[0] == test_size
+    assert validate.data.shape[0] == validate_size
 
-    assert 'passenger_id' in dataset.data.columns
-    assert 'survived' in dataset.data.columns
+    assert 'passenger_id' in train.data.columns
+    assert 'survived' in train.data.columns
 
-    assert 'passenger_id' not in dataset.train_input.columns
-    assert 'survived' not in dataset.train_input.columns
+    assert 'passenger_id' not in train.input.columns
+    assert 'survived' not in train.input.columns
 
 
 @pytest.mark.asyncio
 async def test_train_test_validate_set_new(titanic_feature_store: ContractStore) -> None:
+    from pathlib import Path
     from aligned.schemas.folder import JsonDatasetStore
 
     dataset_size = 100
@@ -66,6 +68,17 @@ async def test_train_test_validate_set_new(titanic_feature_store: ContractStore)
     validate_size = int(round(dataset_size * validation_fraction))
 
     dataset_store = FileSource.json_at('test_data/temp/titanic-sets.json')
+    train_source = FileSource.csv_at('test_data/temp/titanic-train.csv')
+    test_source = FileSource.csv_at('test_data/temp/titanic-test.csv')
+    validate_source = FileSource.csv_at('test_data/temp/titanic-validate.csv')
+
+    delete_files = [dataset_store.path, train_source.path, test_source.path, validate_source.path]
+
+    for file in delete_files:
+        path = Path(file)
+        if path.exists():
+            path.unlink()
+
     dataset = await (
         titanic_feature_store.feature_view('titanic')
         .all(limit=dataset_size)
@@ -75,9 +88,9 @@ async def test_train_test_validate_set_new(titanic_feature_store: ContractStore)
             metadata=DatasetMetadata(
                 id='titanic_test',
             ),
-            train_source=FileSource.csv_at('test_data/temp/titanic-train.csv'),
-            test_source=FileSource.csv_at('test_data/temp/titanic-test.csv'),
-            validate_source=FileSource.csv_at('test_data/temp/titanic-validate.csv'),
+            train_source=train_source,
+            test_source=test_source,
+            validate_source=validate_source,
         )
     )
 

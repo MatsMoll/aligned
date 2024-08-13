@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from aligned.enricher import Enricher
 from aligned.feature_source import FeatureSource, FeatureSourceFactory
 from aligned.schemas.codable import Codable
-from aligned.schemas.feature_view import CompiledCombinedFeatureView, CompiledFeatureView
+from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.model import Model
 
 if TYPE_CHECKING:
@@ -61,14 +61,7 @@ class RepoReference:
         if not (selected_file := self.selected_file):
             raise ValueError('No selected file to serve features from')
 
-        try:
-            feature_store = asyncio.get_event_loop().run_until_complete(selected_file.feature_store())
-        except RuntimeError:
-            import nest_asyncio
-
-            nest_asyncio.apply()
-            feature_store = asyncio.new_event_loop().run_until_complete(selected_file.feature_store())
-
+        feature_store = asyncio.get_event_loop().run_until_complete(selected_file.feature_store())
         return FastAPIServer.app(feature_store)
 
     @staticmethod
@@ -123,14 +116,7 @@ class FeatureServer:
 
         from aligned.server import FastAPIServer
 
-        try:
-            feature_store = asyncio.get_event_loop().run_until_complete(reference.feature_store())
-        except RuntimeError:
-            import nest_asyncio
-
-            nest_asyncio.apply()
-            feature_store = asyncio.new_event_loop().run_until_complete(reference.feature_store())
-
+        feature_store = asyncio.get_event_loop().run_until_complete(reference.feature_store())
         return FastAPIServer.app(feature_store.with_source(online_source))
 
 
@@ -155,16 +141,12 @@ class RepoDefinition(Codable):
     metadata: RepoMetadata
 
     feature_views: set[CompiledFeatureView] = field(default_factory=set)
-    combined_feature_views: set[CompiledCombinedFeatureView] = field(default_factory=set)
     models: set[Model] = field(default_factory=set)
     enrichers: list[EnricherReference] = field(default_factory=list)
 
-    def to_dict(self, **kwargs: dict) -> dict:
+    def to_dict(self, **kwargs: dict) -> dict:  # type: ignore
         for view in self.feature_views:
             assert isinstance(view, CompiledFeatureView)
-
-        for view in self.combined_feature_views:
-            assert isinstance(view, CompiledCombinedFeatureView)
 
         for model in self.models:
             assert isinstance(model, Model)
