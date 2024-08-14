@@ -126,6 +126,21 @@ def feature_store() -> ContractStore:
     return store
 
 
+@pytest.mark.asyncio
+async def test_without_derived_features():
+    df = await Transaction.query().all().to_polars()
+
+    assert 'is_expence' in df.columns
+
+    without_job = Transaction.query().all().remove_derived_features()
+    without_df = await without_job.to_polars()
+
+    assert 'is_expence' not in without_df.columns
+
+    feature_columns = without_job.request_result.feature_columns
+    assert 'is_expence' not in feature_columns
+
+
 def test_with_schema() -> None:
 
     Test = Transaction.with_schema(

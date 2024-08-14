@@ -577,6 +577,9 @@ class RetrivalJob(ABC):
         raise NotImplementedError(f'Describe not implemented for {self.__class__.__name__}')
 
     def remove_derived_features(self) -> RetrivalJob:
+        return self.without_derived_features()
+
+    def without_derived_features(self) -> RetrivalJob:
         if isinstance(self, ModificationJob):
             return self.copy_with(self.job.remove_derived_features())
         return self
@@ -642,7 +645,11 @@ class RetrivalJob(ABC):
         return (job, job.with_dataset_index(1))
 
     def join(
-        self, job: RetrivalJob, method: str, left_on: str | list[str], right_on: str | list[str]
+        self,
+        job: RetrivalJob,
+        method: Literal['inner', 'left', 'outer'],
+        left_on: str | list[str],
+        right_on: str | list[str],
     ) -> RetrivalJob:
 
         if isinstance(left_on, str):
@@ -1465,11 +1472,6 @@ class FilteredJob(RetrivalJob, ModificationJob):
         return f'{self.job.describe()} -> Filter based on {self.condition}'
 
 
-class JoinBuilder:
-
-    joins: list[str]
-
-
 @dataclass
 class RenameJob(RetrivalJob, ModificationJob):
 
@@ -1761,7 +1763,20 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
         return DropInvalidJob(self, validator or PolarsValidator())
 
     def remove_derived_features(self) -> RetrivalJob:
-        return self.job.remove_derived_features()
+        new_requests = []
+        for req in self.job.retrival_requests:
+            new_requests.append(
+                RetrivalRequest(
+                    req.name,
+                    location=req.location,
+                    features=req.features,
+                    entities=req.entities,
+                    derived_features=set(),
+                    aggregated_features=req.aggregated_features,
+                    event_timestamp_request=req.event_timestamp_request,
+                )
+            )
+        return self.job.without_derived_features().with_request(new_requests)
 
 
 @dataclass
