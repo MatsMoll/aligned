@@ -296,6 +296,7 @@ class FeatureViewWrapper(Generic[T]):
         materialized_source: CodableBatchDataSource | None = None,
         entities: dict[str, FeatureFactory] | None = None,
         additional_features: dict[str, FeatureFactory] | None = None,
+        copy_default_values: bool = False,
     ) -> FeatureViewWrapper[T]:
 
         meta = copy.deepcopy(self.metadata)
@@ -310,18 +311,24 @@ class FeatureViewWrapper(Generic[T]):
         compiled = self.compile()
 
         for agg_feature in compiled.aggregated_features:
-            feature = getattr(view, agg_feature.derived_feature.name).copy_type()
+            org_feature: FeatureFactory = getattr(view, agg_feature.derived_feature.name)
+            feature = org_feature.copy_type()
             feature.transformation = None
+            if copy_default_values:
+                feature._default_value = org_feature._default_value
             setattr(view, agg_feature.derived_feature.name, feature)
 
         for derived_feature in compiled.derived_features:
-            feature = getattr(view, derived_feature.name).copy_type()
+            org_feature: FeatureFactory = getattr(view, derived_feature.name)
+            feature = org_feature.copy_type()
             feature.transformation = None
+            if copy_default_values:
+                feature._default_value = org_feature._default_value
             setattr(view, derived_feature.name, feature)
 
         if entities is not None:
             for name, feature in entities.items():
-                setattr(view, name, feature.as_entity())
+                setattr(view, name, feature.as_entity())  # type: ignore
 
             for entity in compiled.entities:
                 if entity.name in entities:
