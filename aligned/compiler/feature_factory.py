@@ -474,7 +474,7 @@ class FeatureFactory(FeatureReferencable):
             transformation=self.transformation.compile(),
             depth=self.depth(),
             description=self._description,
-            tags=None,
+            tags=list(self.tags) if self.tags else None,
             constraints=self.constraints,
         )
 
