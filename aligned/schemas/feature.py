@@ -8,6 +8,7 @@ import polars as pl
 
 from aligned.schemas.codable import Codable
 from aligned.schemas.constraints import Constraint
+from aligned.schemas.literal_value import LiteralValue
 
 if TYPE_CHECKING:
     from aligned.compiler.feature_factory import FeatureFactory
@@ -330,12 +331,14 @@ class Feature(Codable):
     tags: list[str] | None = None
 
     constraints: set[Constraint] | None = None
+    default_value: LiteralValue | None = None
 
     def __pre_serialize__(self) -> Feature:
         assert isinstance(self.name, str)
         assert isinstance(self.dtype, FeatureType)
         assert isinstance(self.description, str) or self.description is None
         assert isinstance(self.tags, list) or self.tags is None
+        assert isinstance(self.default_value, LiteralValue) or self.default_value is None
         if self.constraints:
             for constraint in self.constraints:
                 assert isinstance(constraint, Constraint)
@@ -349,6 +352,7 @@ class Feature(Codable):
             description=self.description,
             tags=self.tags,
             constraints=self.constraints,
+            default_value=self.default_value,
         )
 
     def as_reference(self, location: FeatureLocation) -> FeatureReference:

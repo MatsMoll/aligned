@@ -1,8 +1,21 @@
 # type: ignore
 import pytest
-from aligned import feature_view, String, Int32, FileSource
+from aligned import feature_view, String, Int32, FileSource, Float
 from aligned.compiler.feature_factory import EventTimestamp
 from aligned.schemas.feature import FeatureLocation
+
+
+@feature_view(name='test', source=FileSource.csv_at('test_data/test.csv'))
+class DefaultValueTest:
+
+    some_id = Int32().as_entity()
+
+    feature = Int32()
+
+    other_value = String().default_value('Hello')
+    optional_value = Int32().is_optional()
+
+    other_default = Float().default_value(0)
 
 
 @feature_view(name='test', source=FileSource.csv_at('some_file.csv'))
@@ -74,3 +87,12 @@ async def test_feature_view_wrapper_from_data() -> None:
 
     # Returns two as the int can be casted to a str, but a str can not be casted to int
     assert len(test_invalid_result['some_id']) == 2
+
+
+@pytest.mark.asyncio
+async def test_fill_missing_features() -> None:
+    df = await DefaultValueTest.query().all().to_polars()
+
+    fill_columns = ['other_default', 'other_value', 'optional_value']
+    for col in fill_columns:
+        assert col in df.columns

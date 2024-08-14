@@ -33,6 +33,7 @@ class DerivedFeature(Feature):
         self.description = description
         self.tags = tags
         self.constraints = constraints
+        self.default_value = None
 
     def __pre_serialize__(self) -> DerivedFeature:
         from aligned.schemas.transformation import SupportedTransformations

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
@@ -7,7 +8,9 @@ from typing import Any
 from mashumaro.types import SerializableType
 
 from aligned.schemas.codable import Codable
-from aligned.schemas.feature import FeatureType
+
+if TYPE_CHECKING:
+    from aligned.schemas.feature import FeatureType
 
 
 class SupportedLiteralValues:
@@ -26,6 +29,7 @@ class SupportedLiteralValues:
             DatetimeValue,
             StringValue,
             ArrayValue,
+            NullValue,
         ]
         for lit in lits:
             self.values[lit.name] = lit
@@ -47,6 +51,8 @@ class LiteralValue(Codable, SerializableType):
 
     @property
     def dtype(self) -> FeatureType:
+        from aligned.schemas.feature import FeatureType
+
         return FeatureType(self.name)
 
     def _serialize(self) -> dict:
@@ -75,6 +81,8 @@ class LiteralValue(Codable, SerializableType):
             return StringValue(value)
         elif isinstance(value, list):
             return ArrayValue([LiteralValue.from_value(val) for val in value])
+        elif value is None:
+            return NullValue()
         raise ValueError(f'Unable to find literal value for type {type(value)}')
 
 
@@ -136,6 +144,15 @@ class StringValue(LiteralValue):
     @property
     def python_value(self) -> Any:
         return self.value
+
+
+@dataclass
+class NullValue(LiteralValue):
+    name = 'null'
+
+    @property
+    def python_value(self) -> Any:
+        return None
 
 
 @dataclass

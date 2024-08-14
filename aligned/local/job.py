@@ -11,8 +11,7 @@ from aligned.request.retrival_request import AggregatedFeature, AggregateOver, R
 from aligned.retrival_job import RequestResult, RetrivalJob
 from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.feature import Feature
-from aligned.sources.local import DataFileReference
-from aligned.schemas.constraints import Optional
+from aligned.data_file import DataFileReference
 import logging
 
 logger = logging.getLogger(__name__)
@@ -202,6 +201,7 @@ class FileFullJob(RetrivalJob):
 
     async def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
+        from aligned.sources.local import fill_missing_in_request
 
         if not self.request.features_to_include:
             return df
@@ -221,25 +221,12 @@ class FileFullJob(RetrivalJob):
             request_features = self.source.feature_identifier_for(all_names)
             feature_column_map = dict(zip(all_names, request_features))
 
+        df = fill_missing_in_request(self.request, df, feature_column_map)
         renames = {
             org_name: wanted_name
             for org_name, wanted_name in zip(request_features, all_names)
             if org_name != wanted_name
         }
-
-        optional_constraint = Optional()
-        optional_features = [
-            feature
-            for feature in self.request.features
-            if (
-                feature.constraints
-                and optional_constraint in feature.constraints
-                and feature_column_map.get(feature.name, feature.name) not in df.columns
-            )
-        ]
-        if optional_features:
-            df = df.with_columns([pl.lit(None).alias(feature.name) for feature in optional_features])
-
         if renames:
             df = df.rename(mapping=renames)
 
@@ -280,6 +267,7 @@ class FileDateJob(RetrivalJob):
 
     def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
+        from aligned.sources.local import fill_missing_in_request
 
         if not self.request.features_to_include:
             return df
@@ -296,18 +284,7 @@ class FileDateJob(RetrivalJob):
             request_features = self.source.feature_identifier_for(all_names)
             feature_column_map = dict(zip(all_names, request_features))
 
-        optional_constraint = Optional()
-        optional_features = [
-            feature
-            for feature in self.request.features
-            if (
-                feature.constraints
-                and optional_constraint in feature.constraints
-                and feature_column_map.get(feature.name, feature.name) not in df.columns
-            )
-        ]
-        if optional_features:
-            df = df.with_columns([pl.lit(None).alias(feature.name) for feature in optional_features])
+        df = fill_missing_in_request(self.request, df, feature_column_map)
 
         df = df.rename(mapping=dict(zip(request_features, all_names)))
         event_timestamp_column = self.request.event_timestamp.name
@@ -399,6 +376,7 @@ class FileFactualJob(RetrivalJob):
             pl.LazyFrame: The subset of the source which is needed for the request
         """
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
+        from aligned.sources.local import fill_missing_in_request
 
         all_features: set[Feature] = set()
         date_features: set[str] = set()
@@ -441,17 +419,7 @@ class FileFactualJob(RetrivalJob):
                 request_features = self.source.feature_identifier_for(list(all_names))
                 feature_column_map = dict(zip(all_names, request_features))
 
-            optional_constraint = Optional()
-            optional_features = [
-                feature
-                for feature in request.features
-                if feature.constraints is not None
-                and optional_constraint in feature.constraints
-                and feature_column_map.get(feature.name, feature.name) not in df.columns
-            ]
-            if optional_features:
-                df = df.with_columns([pl.lit(None).alias(feature.name) for feature in optional_features])
-
+            df = fill_missing_in_request(request, df, feature_column_map)
             for derived_feature in request.derived_features:
                 if derived_feature.name in df.columns:
                     all_names.add(derived_feature.name)

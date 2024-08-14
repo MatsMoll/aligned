@@ -388,6 +388,7 @@ class FeatureFactory(FeatureReferencable):
     _name: str | None = None
     _location: FeatureLocation | None = None
     _description: str | None = None
+    _default_value: LiteralValue | None = None
 
     tags: set[str] | None = None
     transformation: TransformationFactory | None = None
@@ -434,6 +435,7 @@ class FeatureFactory(FeatureReferencable):
             description=self._description,
             tags=list(self.tags) if self.tags else None,
             constraints=self.constraints,
+            default_value=self._default_value,
         )
 
     def as_regression_label(self) -> RegressionLabel:
@@ -593,6 +595,11 @@ class FeatureFactory(FeatureReferencable):
 
     def is_optional(self: T) -> T:
         self._add_constraint(Optional())  # type: ignore[attr-defined]
+        self._default_value = LiteralValue.from_value(None)
+        return self
+
+    def default_value(self: T, value: Any) -> T:
+        self._default_value = LiteralValue.from_value(value)
         return self
 
     def _add_constraint(self, constraint: Constraint) -> None:

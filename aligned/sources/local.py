@@ -20,7 +20,7 @@ from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import RetrivalJob
 from aligned.s3.storage import FileStorage, HttpStorage
 from aligned.schemas.codable import Codable
-from aligned.schemas.feature import EventTimestamp, FeatureType
+from aligned.schemas.feature import EventTimestamp, FeatureType, Feature
 from aligned.storage import Storage
 from aligned.feature_source import WritableFeatureSource
 from aligned.schemas.date_formatter import DateFormatter
@@ -86,6 +86,39 @@ async def data_file_freshness(
         return file.select(formatter.decode_polars(source_column)).max().collect()[0, source_column]
     except UnableToFindFileException:
         return None
+
+
+def fill_missing_in_request(
+    request: RetrivalRequest, df: pl.LazyFrame, feature_rename: dict[str, str]
+) -> pl.LazyFrame:
+    existing_columns = df.columns
+
+    missing_features = [
+        feature
+        for feature in request.features
+        if feature_rename.get(feature.name, feature.name) not in existing_columns
+    ]
+
+    if missing_features:
+        return fill_with_default(missing_features, df, feature_rename)
+    else:
+        return df
+
+
+def fill_with_default(
+    features: list[Feature], df: pl.LazyFrame, feature_rename: dict[str, str]
+) -> pl.LazyFrame:
+
+    default_values = [
+        (feature_rename.get(feature.name, feature.name), feature.default_value.python_value)
+        for feature in features
+        if feature.default_value is not None
+    ]
+
+    if not default_values:
+        return df
+
+    return df.with_columns([pl.lit(value).alias(feature_name) for feature_name, value in default_values])
 
 
 def create_parent_dir(path: str) -> None:
@@ -309,10 +342,6 @@ class CsvFileSource(
         return CsvFileEnricher(file=self.path)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
-        from aligned.schemas.constraints import Optional
-
-        optional_constraint = Optional()
-
         with_schema = CsvFileSource(
             path=self.path,
             mapping_keys=self.mapping_keys,
@@ -321,8 +350,7 @@ class CsvFileSource(
             expected_schema={
                 feat.name: feat.dtype
                 for feat in request.features.union(request.entities)
-                if not (feat.constraints and optional_constraint in feat.constraints)
-                and not feat.name.isdigit()
+                if (feat.default_value is None) and not feat.name.isdigit()
             },
         )
         return FileFullJob(with_schema, request, limit, date_formatter=self.formatter)
