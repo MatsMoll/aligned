@@ -471,7 +471,7 @@ class ContractStore:
         new_request = FeatureRequest(requests.location, requests.features_to_include, loaded_requests)
         return self.features_for_request(new_request, entities, feature_names)
 
-    def model(self, name: str) -> ModelFeatureStore:
+    def model(self, model: str | ModelContractWrapper) -> ModelFeatureStore:
         """
         Selects a model for easy of use.
 
@@ -483,8 +483,12 @@ class ContractStore:
         Returns:
             ModelFeatureStore: A new store that containes the selected model
         """
-        model = self.models[name]
-        return ModelFeatureStore(model, self)
+        if isinstance(model, ModelContractWrapper):
+            name = model.location.name
+        else:
+            name = model
+
+        return ModelFeatureStore(self.models[name], self)
 
     def vector_index(self, name: str) -> VectorIndexStore:
         return VectorIndexStore(self, self.vector_indexes[name], index_name=name)
@@ -595,7 +599,7 @@ class ContractStore:
             model_version_as_entity=model_version_as_entity,
         )
 
-    def feature_view(self, view: str) -> FeatureViewStore:
+    def feature_view(self, view: str | FeatureViewWrapper) -> FeatureViewStore:
         """
         Selects a feature view based on a name.
 
@@ -611,8 +615,13 @@ class ContractStore:
         Returns:
             FeatureViewStore: The selected feature view ready for querying
         """
-        feature_view = self.feature_views[view]
-        return FeatureViewStore(self, feature_view, self.event_triggers_for(view))
+        if isinstance(view, FeatureViewWrapper):
+            view_name = view.location.name
+        else:
+            view_name = view
+
+        feature_view = self.feature_views[view_name]
+        return FeatureViewStore(self, feature_view, self.event_triggers_for(view_name))
 
     def add_view(self, view: CompiledFeatureView | FeatureView | FeatureViewWrapper) -> None:
         """
