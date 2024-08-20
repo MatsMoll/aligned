@@ -744,9 +744,7 @@ class ContractStore:
             feature_source=feature_source,
         )
 
-    def update_source_for(
-        self, location: FeatureLocation | str, source: CodableBatchDataSource
-    ) -> ContractStore:
+    def update_source_for(self, location: FeatureLocation | str, source: BatchDataSource) -> ContractStore:
         if not isinstance(self.feature_source, BatchFeatureSource):
             raise ValueError(
                 f'.update_source_for(...) needs a `BatchFeatureSource`, got {type(self.feature_source)}'
@@ -1279,11 +1277,11 @@ class ModelFeatureStore:
 
         return source.all_data(request, limit=limit).select_columns(set(request.all_returned_columns))
 
-    def using_source(self, source: FeatureSourceable | CodableBatchDataSource) -> ModelFeatureStore:
+    def using_source(self, source: FeatureSourceable | BatchDataSource) -> ModelFeatureStore:
 
         model_source: FeatureSourceable
 
-        if isinstance(source, CodableBatchDataSource):
+        if isinstance(source, BatchDataSource):
             model_source = BatchFeatureSource({FeatureLocation.model(self.model.name).identifier: source})
         else:
             model_source = source
@@ -1570,7 +1568,7 @@ class FeatureViewStore:
     def source(self) -> FeatureSource:
         return self.store.feature_source
 
-    def using_source(self, source: FeatureSourceable | CodableBatchDataSource) -> FeatureViewStore:
+    def using_source(self, source: FeatureSourceable | BatchDataSource) -> FeatureViewStore:
         """
         Sets the source to load features from.
 
@@ -1593,7 +1591,7 @@ class FeatureViewStore:
         """
         view_source: FeatureSourceable
 
-        if isinstance(source, CodableBatchDataSource):
+        if isinstance(source, BatchDataSource):
             view_source = BatchFeatureSource(
                 {FeatureLocation.feature_view(self.view.name).identifier: source}
             )
