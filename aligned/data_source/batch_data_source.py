@@ -978,7 +978,7 @@ Adding a loaded at timestamp to the source:
         from aligned.retrival_job import LoadedAtJob
 
         return LoadedAtJob(
-            self.source.all_between_dates(request_without_event_timestamp(request), start_date, end_date),
+            self.all_data(request, limit=None),
             request,
         )
 

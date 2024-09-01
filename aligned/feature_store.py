@@ -729,6 +729,8 @@ class ContractStore:
         """
         if isinstance(source, FeatureSourceFactory):
             feature_source = source.feature_source()
+        elif isinstance(source, FeatureSource):
+            feature_source = source
         elif source is None:
             sources = {
                 FeatureLocation.feature_view(view.name).identifier: view.source
@@ -739,8 +741,6 @@ class ContractStore:
                 if model.predictions_view.source is not None
             }
             feature_source = source or BatchFeatureSource(sources=sources)
-        elif isinstance(source, FeatureSource):
-            feature_source = source
         else:
             raise ValueError(
                 'Setting a dedicated source needs to be either a FeatureSource, '
