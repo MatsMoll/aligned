@@ -8,7 +8,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from importlib import import_module
-from typing import Union
+from typing import Union, TypeVar, Callable
 
 from prometheus_client import Histogram
 
@@ -56,6 +56,7 @@ feature_view_write_time = Histogram(
 )
 
 FeatureSourceable = Union[FeatureSource, FeatureSourceFactory, None]
+T = TypeVar('T')
 
 
 @dataclass
@@ -752,6 +753,22 @@ class ContractStore:
             models=self.models,
             feature_source=feature_source,
         )
+
+    def sources_of_type(self, source_type: type[T], function: Callable[[T, FeatureLocation], None]) -> None:
+
+        if not isinstance(self.feature_source, BatchFeatureSource):
+            raise ValueError(
+                f'.update_source_for(...) needs a `BatchFeatureSource`, got {type(self.feature_source)}'
+            )
+
+        assert isinstance(self.feature_source.sources, dict), 'Can only operate on a dict'
+
+        for location, source in self.feature_source.sources.items():
+            if not isinstance(source, source_type):
+                continue
+
+            loc = FeatureLocation.from_string(location)
+            function(source, loc)
 
     def update_source_for(self, location: FeatureLocation | str, source: BatchDataSource) -> ContractStore:
         if not isinstance(self.feature_source, BatchFeatureSource):
