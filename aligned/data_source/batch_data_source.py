@@ -1117,7 +1117,7 @@ class ColumnFeatureMappable:
         return [reverse_map.get(column, column) for column in columns]
 
 
-def random_values_for(feature: Feature, size: int) -> pl.Series:
+def random_values_for(feature: Feature, size: int, seed: int | None = None) -> pl.Series:
     from aligned.schemas.constraints import (
         InDomain,
         LowerBound,
@@ -1129,6 +1129,9 @@ def random_values_for(feature: Feature, size: int) -> pl.Series:
         ListConstraint,
     )
     import numpy as np
+
+    if seed:
+        np.random.seed(seed)
 
     dtype = feature.dtype
 
@@ -1204,13 +1207,14 @@ def random_values_for(feature: Feature, size: int) -> pl.Series:
         else:
             values = np.random.choice(list('abcde'), size=size)
 
+    pl_vals = pl.Series(values=values)
     if is_optional:
-        values = np.where(np.random.random(size) > 0.5, values, np.NaN)
+        pl_vals = pl_vals.set(pl.Series(values=np.random.random(size) > 0.5), value=None)
 
-    return values
+    return pl_vals
 
 
-async def data_for_request(request: RetrivalRequest, size: int) -> pl.DataFrame:
+async def data_for_request(request: RetrivalRequest, size: int, seed: int | None = None) -> pl.DataFrame:
     from aligned.retrival_job import RetrivalJob
 
     needed_features = request.features.union(request.entities)
@@ -1223,7 +1227,7 @@ async def data_for_request(request: RetrivalRequest, size: int) -> pl.DataFrame:
 
     for feature in sorted(needed_features, key=lambda f: f.name):
         logger.info(f"Generating data for {feature.name}")
-        exprs[feature.name] = random_values_for(feature, size)
+        exprs[feature.name] = random_values_for(feature, size, seed)
 
     job = RetrivalJob.from_polars_df(pl.DataFrame(exprs, schema=schema), request=[request])
     return await job.derive_features().to_polars()
@@ -1251,8 +1255,13 @@ class DummyDataSource(CodableBatchDataSource):
     ```
     """
 
-    default_data_size: int = 10_000
+    default_data_size: int
+    seed: int | None
     type_name: str = 'dummy_data'
+
+    def __init__(self, default_data_size: int = 10_000, seed: int | None = None):
+        self.default_data_size = default_data_size
+        self.seed = seed
 
     def job_group_key(self) -> str:
         return self.type_name

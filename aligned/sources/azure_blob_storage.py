@@ -191,6 +191,11 @@ You can choose between two ways of authenticating with Azure Blob Storage.
         return BlobStorage(self)
 
 
+class AzureConfigurable:
+    'Something that contains an azure config'
+    config: AzureBlobConfig
+
+
 @dataclass
 class AzureBlobDirectory(Directory):
 
@@ -310,9 +315,7 @@ class AzureBlobDataSource(StorageFileReference, ColumnFeatureMappable):
 
 @dataclass
 class AzureBlobCsvDataSource(
-    CodableBatchDataSource,
-    DataFileReference,
-    ColumnFeatureMappable,
+    CodableBatchDataSource, DataFileReference, ColumnFeatureMappable, AzureConfigurable
 ):
     config: AzureBlobConfig
     path: str
@@ -429,7 +432,12 @@ Path: *{self.path}*
 
 @dataclass
 class AzureBlobPartitionedParquetDataSource(
-    CodableBatchDataSource, DataFileReference, ColumnFeatureMappable, Deletable, WritableFeatureSource
+    CodableBatchDataSource,
+    DataFileReference,
+    ColumnFeatureMappable,
+    Deletable,
+    WritableFeatureSource,
+    AzureConfigurable,
 ):
     config: AzureBlobConfig
     directory: str
@@ -622,9 +630,7 @@ Partition Keys: *{self.partition_keys}*
 
 @dataclass
 class AzureBlobParquetDataSource(
-    CodableBatchDataSource,
-    DataFileReference,
-    ColumnFeatureMappable,
+    CodableBatchDataSource, DataFileReference, ColumnFeatureMappable, AzureConfigurable
 ):
     config: AzureBlobConfig
     path: str
@@ -738,7 +744,12 @@ Path: *{self.path}*
 
 @dataclass
 class AzureBlobDeltaDataSource(
-    CodableBatchDataSource, DataFileReference, ColumnFeatureMappable, WritableFeatureSource, Deletable
+    CodableBatchDataSource,
+    DataFileReference,
+    ColumnFeatureMappable,
+    WritableFeatureSource,
+    Deletable,
+    AzureConfigurable,
 ):
     config: AzureBlobConfig
     path: str
