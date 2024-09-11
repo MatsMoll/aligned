@@ -297,6 +297,7 @@ class FeatureViewWrapper(Generic[T]):
         entities: dict[str, FeatureFactory] | None = None,
         additional_features: dict[str, FeatureFactory] | None = None,
         copy_default_values: bool = False,
+        copy_transformations: bool = False,
     ) -> FeatureViewWrapper[T]:
 
         meta = copy.deepcopy(self.metadata)
@@ -315,6 +316,8 @@ class FeatureViewWrapper(Generic[T]):
             feature = org_feature.copy_type()
             feature.transformation = None
             feature.tags = set(agg_feature.derived_feature.tags or [])
+            if copy_transformations:
+                feature.transformation = copy.deepcopy(org_feature.transformation)
             if copy_default_values:
                 feature._default_value = org_feature._default_value
             setattr(view, agg_feature.derived_feature.name, feature)
@@ -323,6 +326,8 @@ class FeatureViewWrapper(Generic[T]):
             org_feature: FeatureFactory = getattr(view, derived_feature.name)
             feature = org_feature.copy_type()
             feature.transformation = None
+            if copy_transformations:
+                feature.transformation = copy.deepcopy(org_feature.transformation)
             feature.tags = set(derived_feature.tags or [])
             if copy_default_values:
                 feature._default_value = org_feature._default_value

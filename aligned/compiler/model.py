@@ -127,6 +127,8 @@ class ModelContractWrapper(Generic[T]):
         materialized_source: CodableBatchDataSource | None = None,
         entities: dict[str, FeatureFactory] | None = None,
         additional_features: dict[str, FeatureFactory] | None = None,
+        copy_default_values: bool = False,
+        copy_transformations: bool = False,
     ) -> FeatureViewWrapper[T]:
 
         return self.as_view_wrapper().with_schema(
@@ -135,6 +137,8 @@ class ModelContractWrapper(Generic[T]):
             materialized_source=materialized_source,
             entities=entities,
             additional_features=additional_features,
+            copy_default_values=copy_default_values,
+            copy_transformations=copy_transformations,
         )
 
     def as_langchain_retriver(
