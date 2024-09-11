@@ -27,7 +27,7 @@ class LiteralRetrivalJob(RetrivalJob):
         self.requests = requests
         if isinstance(df, pl.DataFrame):
             self.df = df.lazy()
-        elif isinstance(df, pd.DataFrame):
+        elif isinstance(df, pl.LazyFrame):
             self.df = df
         elif isinstance(df, pd.DataFrame):
             self.df = pl.from_pandas(df).lazy()
