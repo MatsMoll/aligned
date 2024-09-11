@@ -1,6 +1,8 @@
-import pandas as pd
+from __future__ import annotations
+
 import pytest
 
+from aligned.lazy_imports import pandas as pd
 from aligned import ContractStore, FileSource
 from aligned.local.job import FileFullJob
 from aligned.retrival_job import RetrivalRequest

@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Collection, Literal, Union, TypeVar, Coroutine, Any
 
 import polars as pl
-from polars.dependencies import pandas as pd
+from aligned.lazy_imports import pandas as pd
 
 from polars.type_aliases import TimeUnit
 from prometheus_client import Histogram
@@ -538,7 +538,7 @@ class SupervisedJob:
         return f'{self.job.describe()} with target columns {self.target_columns}'
 
 
-ConvertableToRetrivalJob = Union[dict[str, list], pd.DataFrame, pl.DataFrame, pl.LazyFrame]
+ConvertableToRetrivalJob = Union[dict[str, list], 'pd.DataFrame', pl.DataFrame, pl.LazyFrame]
 
 
 class RetrivalJob(ABC):

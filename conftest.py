@@ -46,10 +46,9 @@ def retrival_request_without_derived() -> RetrivalRequest:
 
 @pytest.fixture
 def retrival_job(retrival_request_without_derived: RetrivalRequest) -> RetrivalJob:
-    import pandas as pd
 
     return FileFullJob(
-        LiteralReference(pd.DataFrame({'id': [1, 2, 3, 4, 5], 'a': [3, 4, 2, 3, 4], 'b': [1, 1, 1, 2, 4]})),
+        LiteralReference(pl.DataFrame({'id': [1, 2, 3, 4, 5], 'a': [3, 4, 2, 3, 4], 'b': [1, 1, 1, 2, 4]})),
         request=retrival_request_without_derived,
     )
 
@@ -95,14 +94,12 @@ def retrival_request_with_derived() -> RetrivalRequest:
 def retrival_job_with_timestamp(retrival_request_with_derived: RetrivalRequest) -> RetrivalJob:
     from datetime import datetime, timedelta
 
-    import pandas as pd
-
     date = datetime(year=2022, month=1, day=1)
     one_day = timedelta(days=1)
     return DerivedFeatureJob(
         job=FileFullJob(
             LiteralReference(
-                pd.DataFrame(
+                pl.DataFrame(
                     {
                         'id': [1, 2, 3, 4, 5],
                         'c': [3, 4, 2, 3, 4],

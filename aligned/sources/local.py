@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Protocol
 from uuid import uuid4
 
-import pandas as pd
+from aligned.lazy_imports import pandas as pd
 import polars as pl
 from httpx import HTTPStatusError
 

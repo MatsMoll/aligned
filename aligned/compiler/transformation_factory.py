@@ -1,12 +1,14 @@
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass, field
 from datetime import timedelta  # noqa: TC003
 from typing import Any, Callable
 
-import pandas as pd
 import polars as pl
 
 from aligned import AwsS3Config
+from aligned.lazy_imports import pandas as pd
 from aligned.compiler.feature_factory import FeatureFactory, Transformation, TransformationFactory
 from aligned.schemas.transformation import FillNaValuesColumns, LiteralValue, EmbeddingModel
 

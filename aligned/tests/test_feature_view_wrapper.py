@@ -1,4 +1,3 @@
-# type: ignore
 import pytest
 from aligned import feature_view, String, Int32, FileSource, Float
 from aligned.compiler.feature_factory import EventTimestamp

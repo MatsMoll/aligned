@@ -1,12 +1,13 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable
 
 from pytz import timezone
 from datetime import datetime
 
-import pandas as pd
 import polars as pl
 
+from aligned.lazy_imports import pandas as pd
 from aligned.request.retrival_request import AggregatedFeature, AggregateOver, RetrivalRequest
 from aligned.retrival_job import RequestResult, RetrivalJob
 from aligned.schemas.date_formatter import DateFormatter
@@ -24,10 +25,14 @@ class LiteralRetrivalJob(RetrivalJob):
 
     def __init__(self, df: pl.LazyFrame | pd.DataFrame, requests: list[RetrivalRequest]) -> None:
         self.requests = requests
-        if isinstance(df, pd.DataFrame):
+        if isinstance(df, pl.DataFrame):
+            self.df = df.lazy()
+        elif isinstance(df, pd.DataFrame):
+            self.df = df
+        elif isinstance(df, pd.DataFrame):
             self.df = pl.from_pandas(df).lazy()
         else:
-            self.df = df
+            raise ValueError(f"Unsupported type {type(df)}")
 
     @property
     def loaded_columns(self) -> list[str]:

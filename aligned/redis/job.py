@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
-import pandas as pd
 import polars as pl
 
+from aligned.lazy_imports import pandas as pd
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import RequestResult, RetrivalJob
 from aligned.schemas.feature import FeatureType

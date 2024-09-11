@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import polars as pl
-import pandas as pd
+from aligned.lazy_imports import pandas as pd
 
 import logging
 from collections import defaultdict

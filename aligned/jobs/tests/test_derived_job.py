@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 from datetime import datetime, timedelta
 
-import pandas as pd
 import polars as pl
 import pytest
 
+from aligned.lazy_imports import pandas as pd
 from aligned import feature_view, Float, String, FileSource
 from aligned.compiler.model import model_contract
 from aligned.feature_store import ContractStore

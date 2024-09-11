@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING
 import logging
 from dataclasses import dataclass, field
 
-import pandas as pd
 import polars as pl
 
+from aligned.lazy_imports import pandas as pd
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.retrival_job import RetrivalJob
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, DerivedFeature

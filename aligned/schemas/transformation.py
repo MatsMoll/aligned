@@ -7,10 +7,10 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
-import pandas as pd
 import polars as pl
 from mashumaro.types import SerializableType
 
+from aligned.lazy_imports import pandas as pd
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import FeatureType
 from aligned.schemas.literal_value import LiteralValue

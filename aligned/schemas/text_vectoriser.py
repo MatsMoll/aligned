@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
-import pandas as pd
 import polars as pl
+from aligned.lazy_imports import pandas as pd
 from mashumaro.types import SerializableType
 from pydantic import BaseModel, ValidationError
 

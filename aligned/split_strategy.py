@@ -1,7 +1,8 @@
+from __future__ import annotations
 from typing import Generic, TypeVar
 
 import polars as pl
-from pandas import Index
+from aligned.lazy_imports import pandas as pd
 
 DatasetType = TypeVar('DatasetType')
 
@@ -59,9 +60,9 @@ class TrainTestValidateSet(Generic[DatasetType]):
     feature_columns: set[str]
     target_columns: set[str]
 
-    train_index: Index
-    test_index: Index
-    validate_index: Index
+    train_index: 'pd.Index'
+    test_index: 'pd.Index'
+    validate_index: 'pd.Index'
     event_timestamp_column: str | None
 
     def __init__(
@@ -70,9 +71,9 @@ class TrainTestValidateSet(Generic[DatasetType]):
         entity_columns: set[str],
         features: set[str],
         target: set[str],
-        train_index: Index,
-        test_index: Index,
-        validate_index: Index,
+        train_index: 'pd.Index',
+        test_index: 'pd.Index',
+        validate_index: 'pd.Index',
         event_timestamp_column: str | None,
     ):
         self.data = data

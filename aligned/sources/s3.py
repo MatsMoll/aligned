@@ -1,11 +1,12 @@
+from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from io import BytesIO
 
-import pandas as pd
 import polars as pl
 from httpx import HTTPStatusError
 
+from aligned.lazy_imports import pandas as pd
 from aligned.data_source.batch_data_source import CodableBatchDataSource, ColumnFeatureMappable
 from aligned.exceptions import UnableToFindFileException
 from aligned.local.job import FileDateJob, FileFullJob

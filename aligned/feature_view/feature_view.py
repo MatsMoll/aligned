@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 import logging
 import polars as pl
-import pandas as pd
 
 from datetime import timedelta
 from abc import ABC, abstractproperty
@@ -11,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, TypeVar, Generic, Type, Callable
 from uuid import uuid4
 
+from aligned.lazy_imports import pandas as pd
 from aligned.compiler.feature_factory import (
     AggregationTransformationFactory,
     Embedding,
@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 # Enables code compleation in the select method
 T = TypeVar('T')
 
-ConvertableData = TypeVar('ConvertableData', dict, pl.DataFrame, pd.DataFrame)
+ConvertableData = TypeVar('ConvertableData', dict, pl.DataFrame, 'pd.DataFrame')
 
 
 logger = logging.getLogger(__name__)
@@ -869,7 +869,7 @@ def check_schema() -> Callable:
             from typing import _AnnotatedAlias  # type: ignore
 
             params_to_check = {
-                name: value for name, value in func.__annotations__.items() if type(value) == _AnnotatedAlias
+                name: value for name, value in func.__annotations__.items() if type(value) is _AnnotatedAlias
             }
 
             function_args = func.__code__.co_varnames

@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 from datetime import timedelta
 
-import pandas as pd
 import pytest
 from freezegun import freeze_time
 
+from aligned.lazy_imports import pandas as pd
 from aligned.enricher import TimespanSelector
 from aligned.sources.local import CsvFileSource
 

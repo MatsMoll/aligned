@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import pandas as pd
+from aligned.lazy_imports import pandas as pd
 from mashumaro.types import SerializableType
 
 from aligned.schemas.codable import Codable

@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
-import pandas as pd
+from aligned.lazy_imports import pandas as pd
 import polars as pl
 
 from aligned.compiler.vector_index_factory import VectorIndexFactory
