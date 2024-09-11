@@ -88,7 +88,6 @@ class RepoReader:
             metadata=metadata,
             feature_views=set(),
             models=set(),
-            enrichers=[],
         )
 
         for py_file in files:

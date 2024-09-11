@@ -1,26 +1,8 @@
 import pytest
 
 from aligned.feature_store import ContractStore
-from aligned.retrival_job import split
 from aligned.schemas.folder import DatasetMetadata
-from aligned.sources.local import CsvFileSource, FileSource
-
-
-@pytest.mark.asyncio
-async def test_split(scan_with_datetime: CsvFileSource) -> None:
-
-    data_set_size = 10
-    end_ratio = 0.8
-    result_size = data_set_size * end_ratio
-
-    dataset = await scan_with_datetime.enricher().as_df()
-    subset = dataset[:data_set_size]
-
-    split_set = split(subset, event_timestamp_column='created_at', start_ratio=0, end_ratio=end_ratio)
-    other_set = split(subset, event_timestamp_column='created_at', start_ratio=end_ratio, end_ratio=1)
-
-    assert split_set.shape[0] == result_size
-    assert other_set.shape[0] == (data_set_size - result_size)
+from aligned.sources.local import FileSource
 
 
 @pytest.mark.asyncio

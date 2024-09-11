@@ -185,7 +185,6 @@ class ContractStore:
             metadata=RepoMetadata(datetime.utcnow(), name='feature_store_location.py'),
             feature_views=set(self.feature_views.values()),
             models=set(self.models.values()),
-            enrichers=[],
         )
 
     def combined_with(self, other: ContractStore) -> ContractStore:
