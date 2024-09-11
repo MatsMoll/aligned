@@ -13,7 +13,6 @@ from datetime import datetime
 from aligned.schemas.feature import FeatureType
 
 if TYPE_CHECKING:
-    from aligned.enricher import Enricher
     from aligned.schemas.feature import EventTimestamp
 
 
@@ -44,11 +43,6 @@ class PostgreSQLConfig(Codable):
 
     def table(self, table: str, mapping_keys: dict[str, str] | None = None) -> PostgreSQLDataSource:
         return PostgreSQLDataSource(config=self, table=table, mapping_keys=mapping_keys or {})
-
-    def data_enricher(self, sql: str, values: dict | None = None) -> Enricher:
-        from aligned.enricher import SqlDatabaseEnricher
-
-        return SqlDatabaseEnricher(self.env_var, sql, values)
 
     def fetch(self, query: str) -> RetrivalJob:
         from aligned.psql.jobs import PostgreSqlJob

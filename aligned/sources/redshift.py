@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, TYPE_CHECKING
 
-from aligned import RedisConfig
 from aligned.data_source.batch_data_source import CodableBatchDataSource, ColumnFeatureMappable
-from aligned.enricher import Enricher
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import RetrivalJob
 from aligned.schemas.codable import Codable
@@ -62,19 +60,6 @@ class RedshiftSQLConfig(Codable):
     ) -> RedshiftSQLDataSource:
         return RedshiftSQLDataSource(
             config=self, table=table, mapping_keys=mapping_keys or {}, list_references=list_references or {}
-        )
-
-    def data_enricher(
-        self, name: str, sql: str, redis: RedisConfig, values: dict | None = None, lock_timeout: int = 60
-    ) -> Enricher:
-        from aligned.enricher import FileCacheEnricher, RedisLockEnricher, SqlDatabaseEnricher
-
-        return FileCacheEnricher(
-            timedelta(days=1),
-            file_path=f'./cache/{name}.parquet',
-            enricher=RedisLockEnricher(
-                name, SqlDatabaseEnricher(self.url, sql, values), redis, timeout=lock_timeout
-            ),
         )
 
     def with_schema(self, name: str) -> RedshiftSQLConfig:

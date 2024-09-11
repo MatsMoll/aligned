@@ -13,7 +13,6 @@ from httpx import HTTPStatusError
 
 from aligned.data_file import DataFileReference, upsert_on_column
 from aligned.data_source.batch_data_source import CodableBatchDataSource, ColumnFeatureMappable
-from aligned.enricher import CsvFileEnricher, Enricher, LoadedStatEnricher, TimespanSelector
 from aligned.exceptions import UnableToFindFileException
 from aligned.local.job import FileDateJob, FileFactualJob, FileFullJob
 from aligned.request.retrival_request import RetrivalRequest
@@ -317,29 +316,6 @@ class CsvFileSource(
     async def write_polars(self, df: pl.LazyFrame) -> None:
         create_parent_dir(self.path)
         await self.write_pandas(df.collect().to_pandas())
-
-    def std(
-        self, columns: set[str], time: TimespanSelector | None = None, limit: int | None = None
-    ) -> Enricher:
-        return LoadedStatEnricher(
-            stat='std',
-            columns=list(columns),
-            enricher=self.enricher().selector(time, limit),
-            mapping_keys=self.mapping_keys,
-        )
-
-    def mean(
-        self, columns: set[str], time: TimespanSelector | None = None, limit: int | None = None
-    ) -> Enricher:
-        return LoadedStatEnricher(
-            stat='mean',
-            columns=list(columns),
-            enricher=self.enricher().selector(time, limit),
-            mapping_keys=self.mapping_keys,
-        )
-
-    def enricher(self) -> CsvFileEnricher:
-        return CsvFileEnricher(file=self.path)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         with_schema = CsvFileSource(
@@ -1020,11 +996,15 @@ class LiteralReference(DataFileReference):
 
     file: pl.LazyFrame
 
-    def __init__(self, file: pl.LazyFrame | pd.DataFrame) -> None:
-        if isinstance(file, pd.DataFrame):
+    def __init__(self, file: pl.LazyFrame | pd.DataFrame | pl.DataFrame) -> None:
+        if isinstance(file, pl.DataFrame):
+            self.file = file.lazy()
+        elif isinstance(file, pl.LazyFrame):
+            self.file = file
+        elif isinstance(file, pd.DataFrame):
             self.file = pl.from_pandas(file).lazy()
         else:
-            self.file = file
+            raise ValueError(f"Unsupported type {type(file)}")
 
     def job_group_key(self) -> str:
         return str(uuid4())

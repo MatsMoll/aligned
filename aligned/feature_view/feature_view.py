@@ -874,7 +874,9 @@ def check_schema() -> Callable:
             from typing import _AnnotatedAlias  # type: ignore
 
             params_to_check = {
-                name: value for name, value in func.__annotations__.items() if type(value) is _AnnotatedAlias
+                name: value
+                for name, value in func.__annotations__.items()
+                if type(value) == _AnnotatedAlias  # noqa: E721
             }
 
             function_args = func.__code__.co_varnames

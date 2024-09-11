@@ -7,7 +7,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from aligned.enricher import Enricher
 from aligned.feature_source import FeatureSource, FeatureSourceFactory
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature_view import CompiledFeatureView
@@ -121,13 +120,6 @@ class FeatureServer:
 
 
 @dataclass
-class EnricherReference(Codable):
-    module: str
-    attribute_name: str
-    enricher: Enricher
-
-
-@dataclass
 class RepoMetadata(Codable):
     created_at: datetime
     name: str
@@ -142,7 +134,6 @@ class RepoDefinition(Codable):
 
     feature_views: set[CompiledFeatureView] = field(default_factory=set)
     models: set[Model] = field(default_factory=set)
-    enrichers: list[EnricherReference] = field(default_factory=list)
 
     def to_dict(self, **kwargs: dict) -> dict:  # type: ignore
         for view in self.feature_views:
@@ -151,8 +142,6 @@ class RepoDefinition(Codable):
         for model in self.models:
             assert isinstance(model, Model)
 
-        for enricher in self.enrichers:
-            assert isinstance(enricher, EnricherReference)
         return super().to_dict(**kwargs)
 
     @staticmethod

@@ -5,9 +5,8 @@ from inspect import getmro, isclass
 from typing import Any
 from aligned.compiler.model import ModelContractWrapper
 
-from aligned.enricher import Enricher
 from aligned.feature_view.feature_view import FeatureViewWrapper
-from aligned.schemas.repo_definition import EnricherReference, RepoDefinition, RepoMetadata, RepoReference
+from aligned.schemas.repo_definition import RepoDefinition, RepoMetadata, RepoReference
 from pathlib import Path
 
 
@@ -109,11 +108,7 @@ class RepoReader:
 
                 obj = getattr(module, attribute)
 
-                if isinstance(obj, Enricher):
-                    repo.enrichers.append(
-                        EnricherReference(module=module_path, attribute_name=attribute, enricher=obj)
-                    )
-                elif isinstance(obj, FeatureViewWrapper):
+                if isinstance(obj, FeatureViewWrapper):
                     repo.feature_views.add(obj.compile())
                 elif isinstance(obj, ModelContractWrapper):
                     repo.models.add(obj.compile())

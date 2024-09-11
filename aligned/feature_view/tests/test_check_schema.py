@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import pytest
 from aligned import Bool, Float, String, feature_view, FileSource
 from aligned.feature_view.feature_view import check_schema

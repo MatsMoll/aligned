@@ -7,7 +7,6 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from importlib import import_module
 from typing import Union, TypeVar, Callable
 
 from prometheus_client import Histogram
@@ -19,7 +18,6 @@ from aligned.data_source.batch_data_source import (
     ColumnFeatureMappable,
     BatchDataSource,
 )
-from aligned.enricher import Enricher
 from aligned.exceptions import UnableToFindFileException
 from aligned.feature_source import (
     BatchFeatureSource,
@@ -44,7 +42,7 @@ from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.folder import DatasetStore
 from aligned.schemas.model import EventTrigger
 from aligned.schemas.model import Model as ModelSchema
-from aligned.schemas.repo_definition import EnricherReference, RepoDefinition, RepoMetadata
+from aligned.schemas.repo_definition import RepoDefinition, RepoMetadata
 from aligned.sources.vector_index import VectorIndex
 
 logger = logging.getLogger(__name__)
@@ -151,42 +149,6 @@ class ContractStore:
         return ContractStore.empty()
 
     @staticmethod
-    def register_enrichers(enrichers: list[EnricherReference]) -> None:
-        from types import ModuleType
-
-        class DynamicEnricher(ModuleType):
-            def __init__(self, values: dict[str, Enricher]) -> None:
-                for key, item in values.items():
-                    self.__setattr__(key, item)
-
-        def set_module(path: str, module_class: DynamicEnricher) -> None:
-            import sys
-
-            components = path.split('.')
-            cum_path = ''
-
-            for component in components:
-                cum_path += f'.{component}'
-                if cum_path.startswith('.'):
-                    cum_path = cum_path[1:]
-
-                try:
-                    sys.modules[cum_path] = import_module(cum_path)
-                except Exception:
-                    logger.info(f'Setting enricher at {cum_path}')
-                    sys.modules[cum_path] = module_class
-
-        grouped_enrichers: dict[str, list[EnricherReference]] = defaultdict(list)
-
-        for enricher in enrichers:
-            grouped_enrichers[enricher.module].append(enricher)
-
-        for module, values in grouped_enrichers.items():
-            set_module(
-                module, DynamicEnricher({enricher.attribute_name: enricher.enricher for enricher in values})
-            )
-
-    @staticmethod
     def from_definition(repo: RepoDefinition) -> ContractStore:
         """Creates a feature store based on a repo definition
         A feature source can also be defined if wanted, otherwise will the batch source be used for reads
@@ -204,8 +166,6 @@ class ContractStore:
         Returns:
             FeatureStore: A ready to use feature store
         """
-        ContractStore.register_enrichers(repo.enrichers)
-
         store = ContractStore(
             feature_views={},
             models={},
