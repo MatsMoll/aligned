@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
+from aligned.data_source.batch_data_source import CodableBatchDataSource, ColumnFeatureMappable
 from aligned.feature_source import WritableFeatureSource
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import RetrivalJob
@@ -13,7 +13,6 @@ from datetime import datetime
 from aligned.schemas.feature import FeatureType
 
 if TYPE_CHECKING:
-    from aligned.enricher import Enricher
     from aligned.schemas.feature import EventTimestamp
 
 
@@ -45,11 +44,6 @@ class PostgreSQLConfig(Codable):
     def table(self, table: str, mapping_keys: dict[str, str] | None = None) -> PostgreSQLDataSource:
         return PostgreSQLDataSource(config=self, table=table, mapping_keys=mapping_keys or {})
 
-    def data_enricher(self, sql: str, values: dict | None = None) -> Enricher:
-        from aligned.enricher import SqlDatabaseEnricher
-
-        return SqlDatabaseEnricher(self.env_var, sql, values)
-
     def fetch(self, query: str) -> RetrivalJob:
         from aligned.psql.jobs import PostgreSqlJob
 
@@ -57,7 +51,7 @@ class PostgreSQLConfig(Codable):
 
 
 @dataclass
-class PostgreSQLDataSource(BatchDataSource, ColumnFeatureMappable, WritableFeatureSource):
+class PostgreSQLDataSource(CodableBatchDataSource, ColumnFeatureMappable, WritableFeatureSource):
 
     config: PostgreSQLConfig
     table: str
@@ -141,12 +135,12 @@ WHERE table_schema = '{schema}'
             'character varying': FeatureType.string(),
             'text': FeatureType.string(),
             'integer': FeatureType.int32(),
-            'float': FeatureType.float(),
+            'float': FeatureType.floating_point(),
             'date': FeatureType.date(),
-            'boolean': FeatureType.bool(),
+            'boolean': FeatureType.boolean(),
             'jsonb': FeatureType.json(),
             'smallint': FeatureType.int16(),
-            'numeric': FeatureType.float(),
+            'numeric': FeatureType.floating_point(),
         }
         values = df.select(['column_name', 'data_type']).to_dicts()
         return {value['column_name']: psql_types[value['data_type']] for value in values}
@@ -170,7 +164,7 @@ WHERE table_schema = '{schema}'
     async def insert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         data = await job.to_lazy_polars()
         data.select(request.all_returned_columns).collect().write_database(
-            self.table, connection=self.config.url, if_exists='append'
+            self.table, connection=self.config.url, if_table_exists='append'
         )
 
     async def upsert(self, job: RetrivalJob, request: RetrivalRequest) -> None:

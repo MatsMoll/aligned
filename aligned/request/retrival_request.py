@@ -113,7 +113,7 @@ class RetrivalRequest(Codable):
 
     @property
     def all_returned_columns(self) -> list[str]:
-        return [feature.name for feature in self.all_returned_features]
+        return sorted([feature.name for feature in self.all_returned_features])
 
     @property
     def returned_features(self) -> set[Feature]:
@@ -146,8 +146,10 @@ class RetrivalRequest(Codable):
 
     @property
     def all_features(self) -> set[Feature]:
-        return self.features.union(self.derived_features).union(
-            {feature.derived_feature for feature in self.aggregated_features}
+        return self.features.union(
+            {feat for feat in self.derived_features if not feat.name.isnumeric()}
+        ).union(
+            {feature.derived_feature for feature in self.aggregated_features if not feature.name.isnumeric()}
         )
 
     @property
@@ -308,25 +310,30 @@ class RetrivalRequest(Codable):
     @staticmethod
     def unsafe_combine(requests: list['RetrivalRequest']) -> 'RetrivalRequest':
 
-        result_request = RetrivalRequest(
+        entities = set()
+        features = set()
+        derived_features = set()
+        aggregated_features = set()
+        event_timestamp_request = None
+
+        for request in requests:
+            derived_features.update(request.derived_features)
+            features.update(request.features)
+            entities.update(request.entities)
+            aggregated_features.update(request.aggregated_features)
+
+            if event_timestamp_request is None:
+                event_timestamp_request = request.event_timestamp_request
+
+        return RetrivalRequest(
             name=requests[0].name,
             location=requests[0].location,
-            entities=set(),
-            features=set(),
-            derived_features=set(),
-            aggregated_features=set(),
-            event_timestamp_request=requests[0].event_timestamp_request,
+            entities=entities,
+            features=features,
+            derived_features=derived_features,
+            aggregated_features=aggregated_features,
+            event_timestamp_request=event_timestamp_request,
         )
-        for request in requests:
-            result_request.derived_features.update(request.derived_features)
-            result_request.features.update(request.features)
-            result_request.entities.update(request.entities)
-            result_request.aggregated_features.update(request.aggregated_features)
-
-            if result_request.event_timestamp_request is None:
-                result_request.event_timestamp_request = request.event_timestamp_request
-
-        return result_request
 
 
 @dataclass

@@ -28,7 +28,7 @@ T = TypeVar('T')
 
 class BatchDataSourceFactory:
 
-    supported_data_sources: dict[str, type[BatchDataSource]]
+    supported_data_sources: dict[str, type[CodableBatchDataSource]]
 
     _shared: BatchDataSourceFactory | None = None
 
@@ -79,6 +79,7 @@ class BatchDataSourceFactory:
             CustomMethodDataSource,
             ModelSource,
             StackSource,
+            LoadedAtSource,
         ]
 
         self.supported_data_sources = {source.type_name: source for source in source_types}
@@ -93,22 +94,13 @@ class BatchDataSourceFactory:
 
 class BatchSourceModification:
 
-    source: BatchDataSource
+    source: CodableBatchDataSource
 
     def wrap_job(self, job: RetrivalJob) -> RetrivalJob:
         raise NotImplementedError()
 
 
-class BatchDataSource(Codable, SerializableType):
-    """
-    A definition to where a specific pice of data can be found.
-    E.g: A database table, a file, a web service, etc.
-
-    Ths can thereafter be combined with other BatchDataSources in order to create a rich dataset.
-    """
-
-    type_name: str
-
+class BatchDataSource:
     def job_group_key(self) -> str:
         """
         A key defining which sources can be grouped together in one request.
@@ -121,107 +113,8 @@ class BatchDataSource(Codable, SerializableType):
         """
         return self.job_group_key()
 
-    def _serialize(self) -> dict:
-        assert (
-            self.type_name in BatchDataSourceFactory.shared().supported_data_sources
-        ), f'Unknown type_name: {self.type_name}'
-        return self.to_dict()
-
     def __hash__(self) -> int:
         return hash(self.job_group_key())
-
-    def transform_with_polars(
-        self,
-        method: Callable[[pl.LazyFrame], Awaitable[pl.LazyFrame]] | Callable[[pl.LazyFrame], pl.LazyFrame],
-    ) -> BatchDataSource:
-        async def all(request: RetrivalRequest, limit: int | None) -> pl.LazyFrame:
-            import inspect
-
-            df = await self.all_data(request, limit).to_lazy_polars()
-
-            if inspect.iscoroutinefunction(method):
-                return await method(df)
-            else:
-                return method(df)
-
-        async def all_between_dates(
-            request: RetrivalRequest, start_date: datetime, end_date: datetime
-        ) -> pl.LazyFrame:
-            import inspect
-
-            df = await self.all_between_dates(request, start_date, end_date).to_lazy_polars()
-
-            if inspect.iscoroutinefunction(method):
-                return await method(df)
-            else:
-                return method(df)
-
-        async def features_for(entities: RetrivalJob, request: RetrivalRequest) -> pl.LazyFrame:
-            import inspect
-
-            df = await self.features_for(entities, request).to_lazy_polars()
-
-            if inspect.iscoroutinefunction(method):
-                return await method(df)
-            else:
-                return method(df)
-
-        return CustomMethodDataSource.from_methods(
-            all_data=all,
-            all_between_dates=all_between_dates,
-            features_for=features_for,
-            depends_on_sources=self.location_id(),
-        )
-
-    def contains_config(self, config: Any) -> bool:
-        """
-        Checks if a data source contains a source config.
-        This can be used to select different sources based on the data sources to connect to.
-
-        ```
-        config = PostgreSQLConfig(env_var='MY_APP_DB_URL')
-        source = config.table('my_table')
-
-        print(source.contains_config(config))
-        >> True
-
-        store = await FileSource.json_at("features.json").feature_store()
-        views = store.views_with_config(config)
-        print(len(views))
-        >> 3
-        ```
-
-        Args:
-            config: The config to check for
-
-        Returns:
-            bool: If the config is contained in the source
-        """
-        if isinstance(config, BatchDataSource):
-            return config.to_dict() == self.to_dict()
-        return False
-
-    @classmethod
-    def _deserialize(cls, value: dict) -> BatchDataSource:
-        name_type = value['type_name']
-        if name_type not in BatchDataSourceFactory.shared().supported_data_sources:
-            raise ValueError(
-                f"Unknown batch data source id: '{name_type}'.\nRemember to add the"
-                ' data source to the BatchDataSourceFactory.supported_data_sources if'
-                ' it is a custom type.'
-            )
-        del value['type_name']
-        data_class = BatchDataSourceFactory.shared().supported_data_sources[name_type]
-        return data_class.from_dict(value)
-
-    def all_columns(self, limit: int | None = None) -> RetrivalJob:
-        return self.all(RequestResult(set(), set(), None), limit=limit)
-
-    def all(self, result: RequestResult, limit: int | None = None) -> RetrivalJob:
-        return self.all_data(
-            result.as_retrival_request('read_all', location=FeatureLocation.feature_view('read_all')),
-            limit=limit,
-        )
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         if isinstance(self, BatchSourceModification):
@@ -256,7 +149,9 @@ class BatchDataSource(Codable, SerializableType):
         cls: type[T], facts: RetrivalJob, requests: list[tuple[T, RetrivalRequest]]
     ) -> RetrivalJob:
 
-        sources = {source.job_group_key() for source, _ in requests if isinstance(source, BatchDataSource)}
+        sources = {
+            source.job_group_key() for source, _ in requests if isinstance(source, CodableBatchDataSource)
+        }
         if len(sources) != 1:
             raise NotImplementedError(
                 f'Type: {cls} have not implemented how to load fact data with multiple sources.'
@@ -291,7 +186,17 @@ class BatchDataSource(Codable, SerializableType):
         """
         if isinstance(self, BatchSourceModification):
             return await self.source.schema()
+
         raise NotImplementedError(f'`schema()` is not implemented for {type(self)}.')
+
+    def all_columns(self, limit: int | None = None) -> RetrivalJob:
+        return self.all(RequestResult(set(), set(), None), limit=limit)
+
+    def all(self, result: RequestResult, limit: int | None = None) -> RetrivalJob:
+        return self.all_data(
+            result.as_retrival_request('read_all', location=FeatureLocation.feature_view('read_all')),
+            limit=limit,
+        )
 
     async def feature_view_code(self, view_name: str) -> str:
         """Setup the code needed to represent the data source as a feature view
@@ -348,7 +253,8 @@ class BatchDataSource(Codable, SerializableType):
 
         raise NotImplementedError(f'Freshness is not implemented for {type(self)}.')
 
-    def filter(self, condition: DerivedFeature | Feature) -> BatchDataSource:
+    def filter(self, condition: DerivedFeature | Feature) -> CodableBatchDataSource:
+        assert isinstance(self, CodableBatchDataSource)
         return FilteredDataSource(self, condition)
 
     def location_id(self) -> set[FeatureLocation]:
@@ -358,11 +264,91 @@ class BatchDataSource(Codable, SerializableType):
         return set()
 
     def tags(self) -> list[str]:
-        return [self.type_name]
+        if isinstance(self, CodableBatchDataSource):
+            return [self.type_name]
+        return []
+
+    def with_loaded_at(self) -> CodableBatchDataSource:
+        if isinstance(self, CodableBatchDataSource):
+            return LoadedAtSource(self)
+        raise NotImplementedError(type(self))
+
+    def transform_with_polars(
+        self,
+        method: Callable[[pl.LazyFrame], Awaitable[pl.LazyFrame]] | Callable[[pl.LazyFrame], pl.LazyFrame],
+    ) -> CodableBatchDataSource:
+        async def all(request: RetrivalRequest, limit: int | None) -> pl.LazyFrame:
+            import inspect
+
+            df = await self.all_data(request, limit).to_lazy_polars()
+
+            if inspect.iscoroutinefunction(method):
+                return await method(df)
+            else:
+                return method(df)  # type: ignore
+
+        async def all_between_dates(
+            request: RetrivalRequest, start_date: datetime, end_date: datetime
+        ) -> pl.LazyFrame:
+            import inspect
+
+            df = await self.all_between_dates(request, start_date, end_date).to_lazy_polars()
+
+            if inspect.iscoroutinefunction(method):
+                return await method(df)
+            else:
+                return method(df)  # type: ignore
+
+        async def features_for(entities: RetrivalJob, request: RetrivalRequest) -> pl.LazyFrame:
+            import inspect
+
+            df = await self.features_for(entities, request).to_lazy_polars()
+
+            if inspect.iscoroutinefunction(method):
+                return await method(df)
+            else:
+                return method(df)  # type: ignore
+
+        return CustomMethodDataSource.from_methods(
+            all_data=all,
+            all_between_dates=all_between_dates,
+            features_for=features_for,
+            depends_on_sources=self.location_id(),
+        )
+
+
+class CodableBatchDataSource(Codable, SerializableType, BatchDataSource):
+    """
+    A definition to where a specific pice of data can be found.
+    E.g: A database table, a file, a web service, etc.
+
+    Ths can thereafter be combined with other BatchDataSources in order to create a rich dataset.
+    """
+
+    type_name: str
+
+    def _serialize(self) -> dict:
+        assert (
+            self.type_name in BatchDataSourceFactory.shared().supported_data_sources
+        ), f'Unknown type_name: {self.type_name}'
+        return self.to_dict()
+
+    @classmethod
+    def _deserialize(cls, value: dict) -> CodableBatchDataSource:
+        name_type = value['type_name']
+        if name_type not in BatchDataSourceFactory.shared().supported_data_sources:
+            raise ValueError(
+                f"Unknown batch data source id: '{name_type}'.\nRemember to add the"
+                ' data source to the BatchDataSourceFactory.supported_data_sources if'
+                ' it is a custom type.'
+            )
+        del value['type_name']
+        data_class = BatchDataSourceFactory.shared().supported_data_sources[name_type]
+        return data_class.from_dict(value)
 
 
 @dataclass
-class CustomMethodDataSource(BatchDataSource):
+class CustomMethodDataSource(CodableBatchDataSource):
 
     all_data_method: bytes
     all_between_dates_method: bytes
@@ -373,6 +359,10 @@ class CustomMethodDataSource(BatchDataSource):
 
     def job_group_key(self) -> str:
         return 'custom_method'
+
+    @property
+    def to_markdown(self) -> str:
+        return '### Custom method\n\nThis uses dill which can be unsafe in some scenarios.'
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         from aligned.retrival_job import CustomLazyPolarsJob
@@ -415,6 +405,23 @@ class CustomMethodDataSource(BatchDataSource):
         return source.features_for(facts, request)  # type: ignore
 
     @staticmethod
+    def from_load(
+        method: Callable[[RetrivalRequest], Coroutine[None, None, pl.LazyFrame]],
+        depends_on: set[FeatureLocation] | None = None,
+    ) -> 'CustomMethodDataSource':
+        async def all(request: RetrivalRequest, limit: int | None) -> pl.LazyFrame:
+            return await method(request)
+
+        async def all_between(
+            request: RetrivalRequest, start_date: datetime, end_date: datetime
+        ) -> pl.LazyFrame:
+            return await method(request)
+
+        return CustomMethodDataSource.from_methods(
+            all_data=all, all_between_dates=all_between, depends_on_sources=depends_on
+        )
+
+    @staticmethod
     def from_methods(
         all_data: Callable[[RetrivalRequest, int | None], Coroutine[None, None, pl.LazyFrame]] | None = None,
         all_between_dates: Callable[
@@ -452,10 +459,10 @@ class CustomMethodDataSource(BatchDataSource):
 
 
 @dataclass
-class FilteredDataSource(BatchDataSource):
+class FilteredDataSource(CodableBatchDataSource):
 
-    source: BatchDataSource
-    condition: DerivedFeature | Feature
+    source: CodableBatchDataSource
+    condition: DerivedFeature | Feature | str
 
     type_name: str = 'subset'
 
@@ -466,13 +473,15 @@ class FilteredDataSource(BatchDataSource):
         return await self.source.schema()
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls: type[FilteredDataSource],
         facts: RetrivalJob,
         requests: list[tuple[FilteredDataSource, RetrivalRequest]],
     ) -> RetrivalJob:
 
-        sources = {source.job_group_key() for source, _ in requests if isinstance(source, BatchDataSource)}
+        sources = {
+            source.job_group_key() for source, _ in requests if isinstance(source, CodableBatchDataSource)
+        }
         if len(sources) != 1:
             raise NotImplementedError(
                 f'Type: {cls} have not implemented how to load fact data with multiple sources.'
@@ -481,10 +490,14 @@ class FilteredDataSource(BatchDataSource):
 
         if isinstance(source.condition, DerivedFeature):
             request.derived_features.add(source.condition)
-        else:
+            condition = source.condition
+        elif isinstance(source.condition, Feature):
             request.features.add(source.condition)
+            condition = source.condition
+        else:
+            condition = pl.Expr.deserialize(source.condition)
 
-        return source.source.features_for(facts, request).filter(source.condition)
+        return source.source.features_for(facts, request).filter(condition)
 
     async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
         return await self.source.freshness(event_timestamp)
@@ -493,10 +506,10 @@ class FilteredDataSource(BatchDataSource):
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime
     ) -> RetrivalJob:
 
-        if isinstance(self.condition, Feature):
-            request.features.add(self.condition)
-        else:
+        if isinstance(self.condition, DerivedFeature):
             request.derived_features.add(self.condition)
+        elif isinstance(self.condition, Feature):
+            request.features.add(self.condition)
 
         return (
             self.source.all_between_dates(request, start_date, end_date)
@@ -509,7 +522,7 @@ class FilteredDataSource(BatchDataSource):
 
         if isinstance(self.condition, DerivedFeature):
             request.derived_features.add(self.condition)
-        else:
+        elif isinstance(self.condition, Feature):
             request.features.add(self.condition)
 
         return (
@@ -537,7 +550,9 @@ def resolve_keys(keys: str | FeatureFactory | list[str] | list[FeatureFactory]) 
     return keys  # type: ignore
 
 
-def model_prediction_instance_source(model: Any) -> tuple[BatchDataSource, RetrivalRequest] | Exception:
+def model_prediction_instance_source(
+    model: Any,
+) -> tuple[CodableBatchDataSource, RetrivalRequest] | Exception:
     from aligned.schemas.feature_view import FeatureViewReferenceSource
     from aligned.compiler.model import ModelContractWrapper
 
@@ -560,7 +575,7 @@ def model_prediction_instance_source(model: Any) -> tuple[BatchDataSource, Retri
     )
 
 
-def view_wrapper_instance_source(view: Any) -> tuple[BatchDataSource, RetrivalRequest] | Exception:
+def view_wrapper_instance_source(view: Any) -> tuple[CodableBatchDataSource, RetrivalRequest] | Exception:
     from aligned.feature_view.feature_view import FeatureViewWrapper
     from aligned.schemas.feature_view import FeatureViewReferenceSource
 
@@ -582,7 +597,7 @@ def view_wrapper_instance_source(view: Any) -> tuple[BatchDataSource, RetrivalRe
 
 
 def join_asof_source(
-    source: BatchDataSource,
+    source: CodableBatchDataSource,
     left_request: RetrivalRequest,
     view: Any,
     left_on: list[str] | None = None,
@@ -619,7 +634,7 @@ def join_asof_source(
 
 
 def join_source(
-    source: BatchDataSource,
+    source: CodableBatchDataSource,
     view: Any,
     on_left: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
     on_right: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
@@ -669,11 +684,11 @@ def join_source(
 
 
 @dataclass
-class JoinAsofDataSource(BatchDataSource):
+class JoinAsofDataSource(CodableBatchDataSource):
 
-    source: BatchDataSource
+    source: CodableBatchDataSource
     left_request: RetrivalRequest
-    right_source: BatchDataSource
+    right_source: CodableBatchDataSource
     right_request: RetrivalRequest
 
     left_event_timestamp: str
@@ -801,10 +816,10 @@ class JoinAsofDataSource(BatchDataSource):
 
 
 @dataclass
-class StackSource(BatchDataSource):
+class StackSource(CodableBatchDataSource):
 
-    top: BatchDataSource
-    bottom: BatchDataSource
+    top: CodableBatchDataSource
+    bottom: CodableBatchDataSource
 
     source_column: str | None = None
 
@@ -869,7 +884,7 @@ class StackSource(BatchDataSource):
         )
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple[StackSource, RetrivalRequest]]
     ) -> RetrivalJob:
         sources = {source.job_group_key() for source, _ in requests}
@@ -892,8 +907,8 @@ class StackSource(BatchDataSource):
         if config:
             sub_request = self.sub_request(request, config)
 
-        top = self.top.features_for(facts, sub_request)
-        bottom = self.bottom.features_for(facts, sub_request)
+        top = self.top.features_for(facts, sub_request).drop_invalid()
+        bottom = self.bottom.features_for(facts, sub_request).drop_invalid()
 
         stack_job = StackJob(top=top, bottom=bottom, source_column=config)
 
@@ -917,12 +932,78 @@ class StackSource(BatchDataSource):
         return self.top.depends_on().union(self.bottom.depends_on())
 
 
-@dataclass
-class JoinDataSource(BatchDataSource):
+def request_without_event_timestamp(request: RetrivalRequest) -> RetrivalRequest:
+    return RetrivalRequest(
+        request.name,
+        location=request.location,
+        features=request.features,
+        entities=request.entities,
+        derived_features=request.derived_features,
+        aggregated_features=request.aggregated_features,
+        features_to_include=request.features_to_include,
+        event_timestamp_request=None,
+    )
 
-    source: BatchDataSource
+
+@dataclass
+class LoadedAtSource(CodableBatchDataSource):
+
+    source: CodableBatchDataSource
+    type_name: str = 'loaded_at'
+
+    @property
+    def to_markdown(self) -> str:
+        source_markdown = self.source.to_markdown if hasattr(self.source, 'to_markdown') else str(self.source)
+
+        return f"""### Loaded At Source
+
+Adding a loaded at timestamp to the source:
+{source_markdown}
+"""  # noqa
+
+    def job_group_key(self) -> str:
+        return self.source.job_group_key()
+
+    async def schema(self) -> dict[str, FeatureType]:
+        return await self.source.schema()
+
+    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+        from aligned.retrival_job import LoadedAtJob
+
+        return LoadedAtJob(self.source.all_data(request_without_event_timestamp(request), limit), request)
+
+    def all_between_dates(
+        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrivalJob:
+        from aligned.retrival_job import LoadedAtJob
+
+        return LoadedAtJob(
+            self.all_data(request, limit=None),
+            request,
+        )
+
+    def depends_on(self) -> set[FeatureLocation]:
+        return self.source.depends_on()
+
+    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+        return None
+
+    @classmethod
+    def multi_source_features_for(  # type: ignore
+        cls: type[CodableBatchDataSource],
+        facts: RetrivalJob,
+        requests: list[tuple[CodableBatchDataSource, RetrivalRequest]],
+    ) -> RetrivalJob:
+
+        return type(requests[0][0]).multi_source_features_for(facts, requests)
+
+
+@dataclass
+class JoinDataSource(CodableBatchDataSource):
+
+    source: CodableBatchDataSource
     left_request: RetrivalRequest
-    right_source: BatchDataSource
+    right_source: CodableBatchDataSource
     right_request: RetrivalRequest
     left_on: list[str]
     right_on: list[str]
@@ -1036,7 +1117,7 @@ class ColumnFeatureMappable:
         return [reverse_map.get(column, column) for column in columns]
 
 
-def data_for_request(request: RetrivalRequest, size: int) -> pl.DataFrame:
+def random_values_for(feature: Feature, size: int, seed: int | None = None) -> pl.Series:
     from aligned.schemas.constraints import (
         InDomain,
         LowerBound,
@@ -1045,75 +1126,114 @@ def data_for_request(request: RetrivalRequest, size: int) -> pl.DataFrame:
         UpperBound,
         UpperBoundInclusive,
         Optional,
+        ListConstraint,
     )
     import numpy as np
 
+    if seed:
+        np.random.seed(seed)
+
+    dtype = feature.dtype
+
+    choices: list[Any] | None = None
+    max_value: float | None = None
+    min_value: float | None = None
+
+    is_optional = False
+    is_unique = False
+
+    for constraints in feature.constraints or set():
+        if isinstance(constraints, InDomain):
+            choices = constraints.values
+        elif isinstance(constraints, LowerBound):
+            min_value = constraints.value
+        elif isinstance(constraints, LowerBoundInclusive):
+            min_value = constraints.value
+        elif isinstance(constraints, UpperBound):
+            max_value = constraints.value
+        elif isinstance(constraints, UpperBoundInclusive):
+            max_value = constraints.value
+        elif isinstance(constraints, Unique):
+            is_unique = True
+        elif isinstance(constraints, Optional):
+            is_optional = True
+
+    if dtype == FeatureType.boolean():
+        values = np.random.choice([True, False], size=size)
+    elif dtype.is_numeric:
+        if is_unique:
+            values = np.arange(0, size, dtype=dtype.pandas_type)
+        else:
+            values = np.random.random(size)
+
+        if max_value and min_value:
+            values = values * (max_value - min_value) + min_value
+        elif max_value is not None:
+            values = values * max_value
+        elif min_value is not None:
+            values = values * 1000 + min_value
+
+        if 'float' not in dtype.name:
+            values = np.round(values)
+
+    elif dtype.is_datetime:
+        values = [
+            datetime.now(tz=timezone.utc) - np.random.random() * timedelta(days=365) for _ in range(size)
+        ]
+    elif dtype.is_array:
+        subtype = dtype.array_subtype()
+        _sub_constraints: list[ListConstraint] = [
+            constraint
+            for constraint in feature.constraints or set()
+            if isinstance(constraint, ListConstraint)
+        ]
+        sub_constraints = None
+        if _sub_constraints:
+            sub_constraints = set(_sub_constraints[0].constraints)
+
+        if subtype is None:
+            values = np.random.random((size, 4))
+        else:
+            values = [
+                random_values_for(Feature('dd', dtype=subtype, constraints=sub_constraints), 4)
+                for _ in range(size)
+            ]
+    elif dtype.is_embedding:
+        embedding_size = dtype.embedding_size() or 10
+        values = np.random.random((size, embedding_size))
+    else:
+        if choices:
+            values = np.random.choice(choices, size=size)
+        else:
+            values = np.random.choice(list('abcde'), size=size)
+
+    pl_vals = pl.Series(values=values)
+    if is_optional:
+        pl_vals = pl_vals.set(pl.Series(values=np.random.random(size) > 0.5), value=None)
+
+    return pl_vals
+
+
+async def data_for_request(request: RetrivalRequest, size: int, seed: int | None = None) -> pl.DataFrame:
+    from aligned.retrival_job import RetrivalJob
+
     needed_features = request.features.union(request.entities)
+    if request.event_timestamp:
+        needed_features.add(request.event_timestamp.as_feature())
+
     schema = {feature.name: feature.dtype.polars_type for feature in needed_features}
 
     exprs = {}
 
-    for feature in needed_features:
-        dtype = feature.dtype
+    for feature in sorted(needed_features, key=lambda f: f.name):
+        logger.info(f"Generating data for {feature.name}")
+        exprs[feature.name] = random_values_for(feature, size, seed)
 
-        choices: list[Any] | None = None
-        max_value: float | None = None
-        min_value: float | None = None
-
-        is_optional = False
-        is_unique = False
-
-        for constraints in feature.constraints or set():
-            if isinstance(constraints, InDomain):
-                choices = constraints.values
-            elif isinstance(constraints, LowerBound):
-                min_value = constraints.value
-            elif isinstance(constraints, LowerBoundInclusive):
-                min_value = constraints.value
-            elif isinstance(constraints, UpperBound):
-                max_value = constraints.value
-            elif isinstance(constraints, UpperBoundInclusive):
-                max_value = constraints.value
-            elif isinstance(constraints, Unique):
-                is_unique = True
-            elif isinstance(constraints, Optional):
-                is_optional = True
-
-        if dtype == FeatureType.bool():
-            values = np.random.choice([True, False], size=size)
-        elif dtype.is_numeric:
-            if is_unique:
-                values = np.arange(0, size, dtype=dtype.pandas_type)
-            else:
-                values = np.random.random(size) * 1000
-
-                if max_value is not None:
-                    values = values * max_value
-
-            if min_value is not None:
-                values = values - min_value
-        elif dtype.is_datetime:
-            values = [
-                datetime.now(tz=timezone.utc) - np.random.random() * timedelta(days=365) for _ in range(size)
-            ]
-        elif dtype.is_embedding:
-            embedding_size = dtype.embedding_size() or 10
-            values = np.random.random((size, embedding_size))
-        else:
-            if choices:
-                values = np.random.choice(choices, size=size)
-            else:
-                values = np.random.choice(list('abcde'), size=size)
-
-        if is_optional:
-            values = np.where(np.random.random(size) > 0.5, values, np.NaN)
-
-        exprs[feature.name] = values
-
-    return pl.DataFrame(exprs, schema=schema)
+    job = RetrivalJob.from_polars_df(pl.DataFrame(exprs, schema=schema), request=[request])
+    return await job.derive_features().to_polars()
 
 
-class DummyDataSource(BatchDataSource):
+class DummyDataSource(CodableBatchDataSource):
     """
     The DummyDataBatchSource is a data source that generates random data for a given request.
     This can be useful for testing and development purposes.
@@ -1135,7 +1255,13 @@ class DummyDataSource(BatchDataSource):
     ```
     """
 
+    default_data_size: int
+    seed: int | None
     type_name: str = 'dummy_data'
+
+    def __init__(self, default_data_size: int = 10_000, seed: int | None = None):
+        self.default_data_size = default_data_size
+        self.seed = seed
 
     def job_group_key(self) -> str:
         return self.type_name
@@ -1146,7 +1272,7 @@ class DummyDataSource(BatchDataSource):
     ) -> RetrivalJob:
         async def random_features_for(facts: RetrivalJob, request: RetrivalRequest) -> pl.LazyFrame:
             df = await facts.to_polars()
-            random = data_for_request(request, df.height).lazy()
+            random = (await data_for_request(request, df.height)).lazy()
             join_columns = set(request.all_returned_columns) - set(df.columns)
             return df.hstack(random.select(pl.col(join_columns)).collect()).lazy()
 
@@ -1159,7 +1285,7 @@ class DummyDataSource(BatchDataSource):
         from aligned import CustomMethodDataSource
 
         async def all_data(request: RetrivalRequest, limit: int | None = None) -> pl.LazyFrame:
-            return data_for_request(request, limit or 100).lazy()
+            return (await data_for_request(request, limit or self.default_data_size)).lazy()
 
         return CustomMethodDataSource.from_methods(all_data=all_data).all_data(request, limit)
 
@@ -1171,7 +1297,7 @@ class DummyDataSource(BatchDataSource):
         async def between_date(
             request: RetrivalRequest, start_date: datetime, end_date: datetime
         ) -> pl.LazyFrame:
-            return data_for_request(request, 100).lazy()
+            return (await data_for_request(request, self.default_data_size)).lazy()
 
         return CustomMethodDataSource.from_methods(all_between_dates=between_date).all_between_dates(
             request, start_date, end_date

@@ -37,7 +37,7 @@ class ModelHaveNeededFeaturesCheck:
 def feature_exist(feature: FeatureReference, store: ContractStore) -> bool:
 
     loc = feature.location
-    if loc.location == 'model':
+    if loc.location_type == 'model':
         model = store.model(loc.name).model
         all_features = model.predictions_view.full_schema
     else:

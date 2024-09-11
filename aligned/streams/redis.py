@@ -8,8 +8,8 @@ try:
 except ModuleNotFoundError:
 
     class Redis:  # type: ignore
-        async def xread(self, streams: dict[str, str], count: int, block: int) -> list:
-            pass
+        async def xread(self, streams: dict[str, str], count: int | None, block: int) -> list:
+            raise NotImplementedError()
 
         async def xadd(self, stream: str, record: dict) -> None:
             pass
@@ -24,10 +24,10 @@ class RedisStream(ReadableStream, SinakableStream):
     mappings: dict[str, str] = field(default_factory=dict)
     record_coder: RecordCoder = field(default_factory=lambda: PassthroughRecordCoder())
 
-    async def read(self, max_records: int = None, max_wait: float = None) -> list[dict]:
+    async def read(self, max_records: int | None = None, max_wait: float | None = None) -> list[dict]:
 
         stream_values = await self.client.xread(
-            streams={self.stream_name: self.read_timestamp}, count=max_records, block=max_wait or 1000
+            streams={self.stream_name: self.read_timestamp}, count=max_records, block=int(max_wait or 1000)
         )
 
         if not stream_values:

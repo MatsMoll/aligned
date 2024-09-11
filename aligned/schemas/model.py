@@ -4,7 +4,7 @@ from datetime import timedelta, datetime
 
 from aligned.request.retrival_request import EventTimestampRequest, FeatureRequest, RetrivalRequest
 from aligned.schemas.codable import Codable
-from aligned.schemas.feature import FeatureLocation, FeatureType
+from aligned.schemas.feature import FeatureLocation, FeatureType, StaticFeatureTags
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureReference
 from aligned.schemas.event_trigger import EventTrigger
 from aligned.schemas.target import ClassificationTarget, RecommendationTarget, RegressionTarget
@@ -13,7 +13,7 @@ from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.folder import DatasetStore
 from aligned.exposed_model.interface import ExposedModel
 from aligned.data_source.stream_data_source import StreamDataSource
-from aligned.data_source.batch_data_source import BatchDataSource
+from aligned.data_source.batch_data_source import CodableBatchDataSource
 from aligned.retrival_job import RetrivalJob
 
 logger = logging.getLogger(__name__)
@@ -61,11 +61,8 @@ class PredictionsView(Codable):
     derived_features: set[DerivedFeature]
     event_timestamp: EventTimestamp | None = field(default=None)
 
-    model_version_column: Feature | None = field(default=None)
-    is_shadow_model_flag: Feature | None = field(default=None)
-
-    source: BatchDataSource | None = field(default=None)
-    application_source: BatchDataSource | None = field(default=None)
+    source: CodableBatchDataSource | None = field(default=None)
+    application_source: CodableBatchDataSource | None = field(default=None)
     stream_source: StreamDataSource | None = field(default=None)
 
     regression_targets: set[RegressionTarget] | None = field(default=None)
@@ -74,6 +71,27 @@ class PredictionsView(Codable):
 
     acceptable_freshness: timedelta | None = field(default=None)
     unacceptable_freshness: timedelta | None = field(default=None)
+
+    @property
+    def is_shadow_model_flag(self) -> Feature | None:
+        for feature in self.features:
+            if feature.tags and StaticFeatureTags.is_shadow_model in feature.tags:
+                return feature
+        return None
+
+    @property
+    def model_version_column(self) -> Feature | None:
+        for feature in self.features:
+            if feature.tags and StaticFeatureTags.is_model_version in feature.tags:
+                return feature
+        return None
+
+    @property
+    def logged_features(self) -> Feature | None:
+        for feature in self.features:
+            if feature.tags and StaticFeatureTags.is_input_features in feature.tags:
+                return feature
+        return None
 
     def as_view(self, name: str) -> CompiledFeatureView | None:
         if not self.source:
@@ -217,7 +235,7 @@ class Model(Codable):
 
 
 @dataclass
-class ModelSource(BatchDataSource):
+class ModelSource(CodableBatchDataSource):
 
     model: Model
     pred_view: CompiledFeatureView
@@ -266,7 +284,7 @@ class ModelSource(BatchDataSource):
         return self.source().features_for(facts, request)
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple['ModelSource', RetrivalRequest]]
     ) -> RetrivalJob:
 

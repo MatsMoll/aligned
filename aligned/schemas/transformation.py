@@ -7,10 +7,10 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
-import pandas as pd
 import polars as pl
 from mashumaro.types import SerializableType
 
+from aligned.lazy_imports import pandas as pd
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import FeatureType
 from aligned.schemas.literal_value import LiteralValue
@@ -42,7 +42,7 @@ class TransformationTestDefinition:
     def output_polars(self) -> pl.Series:
         try:
             values = pl.Series(self.output).fill_nan(None)
-            if self.transformation.dtype == FeatureType.bool():
+            if self.transformation.dtype == FeatureType.boolean():
                 return values.cast(pl.Boolean)
             else:
                 return values
@@ -116,14 +116,14 @@ class Transformation(Codable, SerializableType):
             assert (set(test.input_polars.columns) - set(output_df.columns)) == set()
 
             expected = test.output_polars
-            if test.transformation.dtype == FeatureType.bool():
+            if test.transformation.dtype == FeatureType.boolean():
                 is_correct = output.equals(test.output_polars.alias(alias))
                 assert is_correct, (
                     f'Output for {cls.__name__} is not correct.,'
                     f'\nGot: {output},\nexpected: {test.output_polars}'
                 )
             else:
-                assert_series_equal(expected.alias(alias), output, check_names=False, check_dtype=False)
+                assert_series_equal(expected.alias(alias), output, check_names=False, check_dtypes=False)
         except AttributeError:
             raise AssertionError(
                 f'Error for transformation {cls.__name__}. Could be missing a return in the transformation'
@@ -139,7 +139,7 @@ class Transformation(Codable, SerializableType):
         with suppress(NotImplementedError):
             test = cls.test_definition()
             output = await test.transformation.transform_pandas(test.input_pandas)
-            if test.transformation.dtype == FeatureType.bool():
+            if test.transformation.dtype == FeatureType.boolean():
                 is_correct = np.all(output == test.output_pandas) | output.equals(test.output_pandas)
                 assert is_correct, (
                     f'Output for {cls.__name__} is not correct.,'
@@ -351,7 +351,8 @@ class PolarsFunctionTransformation(Transformation):
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         polars_df = await self.transform_polars(pl.from_pandas(df).lazy(), self.function_name)
-        return polars_df.collect().to_pandas()[self.function_name]
+        assert isinstance(polars_df, pl.LazyFrame)
+        return polars_df.collect().to_pandas()[self.function_name]  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         if self.function_name not in locals():
@@ -396,10 +397,10 @@ class NotNull(Transformation):
     key: str
 
     name: str = 'not_null'
-    dtype: FeatureType = FeatureType.bool()
+    dtype: FeatureType = FeatureType.boolean()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return df[self.key].notnull()
+        return df[self.key].notnull()  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return df.with_columns(pl.col(self.key).is_not_null().alias(alias))
@@ -420,7 +421,7 @@ class Equals(Transformation):
     other_key: str
 
     name: str = 'equals_feature'
-    dtype: FeatureType = FeatureType.bool()
+    dtype: FeatureType = FeatureType.boolean()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key] == df[self.other_key]
@@ -447,7 +448,7 @@ class EqualsLiteral(Transformation):
     value: LiteralValue
 
     name: str = 'equals'
-    dtype: FeatureType = FeatureType.bool()
+    dtype: FeatureType = FeatureType.boolean()
 
     def __init__(self, key: str, value: LiteralValue) -> None:
         self.key = key
@@ -475,7 +476,7 @@ class And(Transformation):
     second_key: str
 
     name: str = 'and'
-    dtype: FeatureType = FeatureType.bool()
+    dtype: FeatureType = FeatureType.boolean()
 
     def __init__(self, first_key: str, second_key: str) -> None:
         self.first_key = first_key
@@ -513,7 +514,7 @@ class Or(Transformation):
     second_key: str
 
     name: str = 'or'
-    dtype: FeatureType = FeatureType.bool()
+    dtype: FeatureType = FeatureType.boolean()
 
     def __init__(self, first_key: str, second_key: str) -> None:
         self.first_key = first_key
@@ -545,7 +546,7 @@ class Inverse(Transformation):
     key: str
 
     name: str = 'inverse'
-    dtype: FeatureType = FeatureType.bool()
+    dtype: FeatureType = FeatureType.boolean()
 
     def __init__(self, key: str) -> None:
         self.key = key
@@ -553,8 +554,8 @@ class Inverse(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return gracefull_transformation(
             df,
-            is_valid_mask=~(df[self.key].isnull()),
-            transformation=lambda dfv: ~dfv[self.key].astype('bool'),
+            is_valid_mask=~(df[self.key].isnull()),  # type: ignore
+            transformation=lambda dfv: ~dfv[self.key].astype('bool'),  # type: ignore
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
@@ -576,7 +577,7 @@ class NotEquals(Transformation):
     other_key: str
 
     name: str = 'not-equals-feature'
-    dtype: FeatureType = FeatureType.bool()
+    dtype: FeatureType = FeatureType.boolean()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key] != df[self.other_key]
@@ -603,7 +604,7 @@ class NotEqualsLiteral(Transformation):
     value: LiteralValue
 
     name: str = 'not-equals'
-    dtype: FeatureType = FeatureType.bool()
+    dtype: FeatureType = FeatureType.boolean()
 
     def __init__(self, key: str, value: Any) -> None:
         self.key = key
@@ -634,7 +635,7 @@ class GreaterThenValue(Transformation):
     value: float
 
     name: str = 'gt'
-    dtype: FeatureType = FeatureType.bool()
+    dtype: FeatureType = FeatureType.boolean()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key] > self.value
@@ -658,7 +659,7 @@ class GreaterThen(Transformation):
     right_key: str
 
     name: str = field(default='gtf')
-    dtype: FeatureType = field(default=FeatureType.bool())
+    dtype: FeatureType = field(default=FeatureType.boolean())
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.left_key] > df[self.right_key]
@@ -684,7 +685,7 @@ class GreaterThenOrEqual(Transformation):
     value: float
 
     name: str = 'gte'
-    dtype: FeatureType = FeatureType.bool()
+    dtype: FeatureType = FeatureType.boolean()
 
     def __init__(self, key: str, value: float) -> None:
         self.key = key
@@ -712,13 +713,77 @@ class GreaterThenOrEqual(Transformation):
 
 
 @dataclass
+class LowerThenCol(Transformation):
+
+    key: str
+    right_col: str
+
+    name: str = 'lt'
+    dtype: FeatureType = FeatureType.boolean()
+
+    def __init__(self, key: str, right_col: str) -> None:
+        self.key = key
+        self.right_col = right_col
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return gracefull_transformation(
+            df,
+            is_valid_mask=~(df[self.key].isna() | df[self.key].isnull()),
+            transformation=lambda dfv: dfv[self.key] < dfv[self.right_col],
+        )
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        return df.with_columns((pl.col(self.key) < pl.col(self.right_col)).alias(alias))
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        from numpy import nan
+
+        return TransformationTestDefinition(
+            LowerThen(key='x', value=2), input={'x': [1, 2, 3, None]}, output=[True, False, False, nan]
+        )
+
+
+@dataclass
+class LowerThenOrEqualCol(Transformation):
+
+    key: str
+    right_col: str
+
+    name: str = 'lte'
+    dtype: FeatureType = FeatureType.boolean()
+
+    def __init__(self, key: str, right_col: str) -> None:
+        self.key = key
+        self.right_col = right_col
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        return pl.col(self.key) <= pl.col(self.right_col)
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return gracefull_transformation(
+            df,
+            is_valid_mask=~(df[self.key].isna() | df[self.key].isnull()),
+            transformation=lambda dfv: dfv[self.key] <= dfv[self.right_col],
+        )
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        from numpy import nan
+
+        return TransformationTestDefinition(
+            LowerThenOrEqual(key='x', value=2), input={'x': [1, 2, 3, None]}, output=[True, True, False, nan]
+        )
+
+
+@dataclass
 class LowerThen(Transformation):
 
     key: str
     value: float
 
     name: str = 'lt'
-    dtype: FeatureType = FeatureType.bool()
+    dtype: FeatureType = FeatureType.boolean()
 
     def __init__(self, key: str, value: float) -> None:
         self.key = key
@@ -750,7 +815,7 @@ class LowerThenOrEqual(Transformation):
     value: float
 
     name: str = 'lte'
-    dtype: FeatureType = FeatureType.bool()
+    dtype: FeatureType = FeatureType.boolean()
 
     def __init__(self, key: str, value: float) -> None:
         self.key = key
@@ -782,7 +847,7 @@ class SubtractionValue(Transformation, PsqlTransformation, RedshiftTransformatio
     behind: LiteralValue
 
     name: str = 'sub_val'
-    dtype: FeatureType = FeatureType.float()
+    dtype: FeatureType = FeatureType.floating_point()
 
     def __init__(self, front: str, behind: LiteralValue) -> None:
         self.front = front
@@ -794,7 +859,7 @@ class SubtractionValue(Transformation, PsqlTransformation, RedshiftTransformatio
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return gracefull_transformation(
             df,
-            is_valid_mask=~(df[self.front].isna()),
+            is_valid_mask=~(df[self.front].isna()),  # type: ignore
             transformation=lambda dfv: dfv[self.front] - self.behind.python_value,
         )
 
@@ -819,7 +884,7 @@ class Subtraction(Transformation, PsqlTransformation, RedshiftTransformation):
     behind: str
 
     name: str = 'sub'
-    dtype: FeatureType = FeatureType.float()
+    dtype: FeatureType = FeatureType.floating_point()
 
     def __init__(self, front: str, behind: str) -> None:
         self.front = front
@@ -856,7 +921,7 @@ class AdditionValue(Transformation):
     value: LiteralValue
 
     name: str = 'add_value'
-    dtype: FeatureType = FeatureType.float()
+    dtype: FeatureType = FeatureType.floating_point()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.feature] + self.value.python_value
@@ -882,7 +947,7 @@ class Multiply(Transformation, PsqlTransformation, RedshiftTransformation):
     behind: str
 
     name: str = 'mul'
-    dtype: FeatureType = FeatureType.float()
+    dtype: FeatureType = FeatureType.floating_point()
 
     def __init__(self, front: str, behind: str) -> None:
         self.front = front
@@ -905,7 +970,7 @@ class MultiplyValue(Transformation, PsqlTransformation, RedshiftTransformation):
     value: LiteralValue
 
     name: str = 'mul_val'
-    dtype: FeatureType = FeatureType.float()
+    dtype: FeatureType = FeatureType.floating_point()
 
     def __init__(self, key: str, value: LiteralValue) -> None:
         self.key = key
@@ -928,7 +993,7 @@ class Addition(Transformation, PsqlTransformation, RedshiftTransformation):
     behind: str
 
     name: str = 'add'
-    dtype: FeatureType = FeatureType.float()
+    dtype: FeatureType = FeatureType.floating_point()
 
     def __init__(self, front: str, behind: str) -> None:
         self.front = front
@@ -966,7 +1031,7 @@ class TimeDifference(Transformation, PsqlTransformation, RedshiftTransformation)
     unit: str
 
     name: str = 'time-diff'
-    dtype: FeatureType = FeatureType.float()
+    dtype: FeatureType = FeatureType.floating_point()
 
     def __init__(self, front: str, behind: str, unit: str = 's') -> None:
         self.front = front
@@ -977,7 +1042,7 @@ class TimeDifference(Transformation, PsqlTransformation, RedshiftTransformation)
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.front].isna() | df[self.behind].isna()),
-            transformation=lambda dfv: (dfv[self.front] - dfv[self.behind]) / np.timedelta64(1, self.unit),
+            transformation=lambda dfv: (dfv[self.front] - dfv[self.behind]) / np.timedelta64(1, self.unit),  # type: ignore
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
@@ -1018,7 +1083,7 @@ class Logarithm(Transformation):
     key: str
 
     name: str = 'log'
-    dtype: FeatureType = FeatureType.float()
+    dtype: FeatureType = FeatureType.floating_point()
 
     def __init__(self, key: str) -> None:
         self.key = key
@@ -1027,7 +1092,7 @@ class Logarithm(Transformation):
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna() | (df[self.key] <= 0)),
-            transformation=lambda dfv: np.log(dfv[self.key]),
+            transformation=lambda dfv: np.log(dfv[self.key]),  # type: ignore
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
@@ -1050,7 +1115,7 @@ class LogarithmOnePluss(Transformation):
     key: str
 
     name: str = 'log1p'
-    dtype: FeatureType = FeatureType.float()
+    dtype: FeatureType = FeatureType.floating_point()
 
     def __init__(self, key: str) -> None:
         self.key = key
@@ -1059,7 +1124,7 @@ class LogarithmOnePluss(Transformation):
         return gracefull_transformation(
             df,
             is_valid_mask=~(df[self.key].isna() | (df[self.key] <= -1)),
-            transformation=lambda dfv: np.log1p(dfv[self.key]),
+            transformation=lambda dfv: np.log1p(dfv[self.key]),  # type: ignore
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
@@ -1086,7 +1151,7 @@ class ToNumerical(Transformation):
     key: str
 
     name: str = 'to-num'
-    dtype: FeatureType = FeatureType.float()
+    dtype: FeatureType = FeatureType.floating_point()
 
     def __init__(self, key: str) -> None:
         self.key = key
@@ -1094,7 +1159,7 @@ class ToNumerical(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         from pandas import to_numeric
 
-        return to_numeric(df[self.key], errors='coerce')
+        return to_numeric(df[self.key], errors='coerce')  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).cast(pl.Float64)
@@ -1127,8 +1192,8 @@ class DateComponent(Transformation):
 
         return gracefull_transformation(
             df,
-            is_valid_mask=~(df[self.key].isna()),
-            transformation=lambda dfv: getattr(dfv[self.key].dt, self.component),
+            is_valid_mask=~(df[self.key].isna()),  # type: ignore
+            transformation=lambda dfv: getattr(dfv[self.key].dt, self.component),  # type: ignore
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
@@ -1214,7 +1279,7 @@ class ArrayAtIndex(Transformation):
     index: int
 
     name: str = 'array_at_index'
-    dtype: FeatureType = FeatureType.bool()
+    dtype: FeatureType = FeatureType.boolean()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return pl.Series(df[self.key]).list.get(self.index).to_pandas()
@@ -1243,7 +1308,7 @@ class ArrayContains(Transformation):
     value: LiteralValue
 
     name: str = 'array_contains'
-    dtype: FeatureType = FeatureType.bool()
+    dtype: FeatureType = FeatureType.boolean()
 
     def __init__(self, key: str, value: Any | LiteralValue) -> None:
         self.key = key
@@ -1279,7 +1344,7 @@ class Contains(Transformation):
     value: str
 
     name: str = 'contains'
-    dtype: FeatureType = FeatureType.bool()
+    dtype: FeatureType = FeatureType.boolean()
 
     def __init__(self, key: str, value: str) -> None:
         self.key = key
@@ -1288,8 +1353,8 @@ class Contains(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return gracefull_transformation(
             df,
-            is_valid_mask=~(df[self.key].isna()),
-            transformation=lambda dfv: dfv[self.key].astype('str').str.contains(self.value),
+            is_valid_mask=~(df[self.key].isna()),  # type: ignore
+            transformation=lambda dfv: dfv[self.key].astype('str').str.contains(self.value),  # type: ignore
         )
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
@@ -1322,7 +1387,7 @@ class Ordinal(Transformation):
         self.orders = orders
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return df[self.key].map(self.orders_dict)
+        return df[self.key].map(self.orders_dict)  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         mapper = pl.DataFrame({self.key: list(self.orders), alias: list(range(0, len(self.orders)))})
@@ -1359,7 +1424,7 @@ class ReplaceStrings(Transformation):
         for k, v in self.values:
             temp_df.loc[mask] = temp_df.loc[mask].str.replace(k, v, regex=True)
 
-        return temp_df
+        return temp_df  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         collected = df.collect()
@@ -1391,7 +1456,7 @@ class Ratio(Transformation):
     denumerator: str
 
     name: str = 'ratio'
-    dtype: FeatureType = FeatureType.float()
+    dtype: FeatureType = FeatureType.floating_point()
 
     def __init__(self, numerator: str, denumerator: str) -> None:
         self.numerator = numerator
@@ -1432,7 +1497,7 @@ class DivideDenumeratorValue(Transformation):
     denumerator: LiteralValue
 
     name: str = 'div_denum_val'
-    dtype: FeatureType = FeatureType.float()
+    dtype: FeatureType = FeatureType.floating_point()
 
     def __init__(self, numerator: str, denumerator: LiteralValue) -> None:
         self.numerator = numerator
@@ -1442,7 +1507,7 @@ class DivideDenumeratorValue(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return gracefull_transformation(
             df,
-            is_valid_mask=~(df[self.numerator].isna()),
+            is_valid_mask=~(df[self.numerator].isna()),  # type: ignore
             transformation=lambda dfv: dfv[self.numerator].astype(float) / self.denumerator.python_value,
         )
 
@@ -1467,10 +1532,10 @@ class IsIn(Transformation):
     key: str
 
     name = 'isin'
-    dtype = FeatureType.bool()
+    dtype = FeatureType.boolean()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return df[self.key].isin(self.values)
+        return df[self.key].isin(self.values)  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).is_in(self.values)
@@ -1494,10 +1559,10 @@ class FillNaValuesColumns(Transformation):
     name: str = 'fill_missing_key'
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return df[self.key].fillna(df[self.fill_key])
+        return df[self.key].fillna(df[self.fill_key])  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        if self.dtype == FeatureType.float():
+        if self.dtype == FeatureType.floating_point():
             return pl.col(self.key).fill_nan(pl.col(self.fill_key)).fill_null(pl.col(self.fill_key))
 
         else:
@@ -1525,10 +1590,10 @@ class FillNaValues(Transformation):
     name: str = 'fill_missing'
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return df[self.key].fillna(self.value.python_value)
+        return df[self.key].fillna(self.value.python_value)  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        if self.dtype == FeatureType.float():
+        if self.dtype == FeatureType.floating_point():
             return pl.col(self.key).fill_nan(self.value.python_value).fill_null(self.value.python_value)
 
         else:
@@ -1554,7 +1619,7 @@ class CopyTransformation(Transformation):
     name: str = 'nothing'
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return df[self.key]
+        return df[self.key]  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).alias(alias)
@@ -1571,7 +1636,7 @@ class Floor(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         from numpy import floor
 
-        return floor(df[self.key])
+        return floor(df[self.key])  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).floor().alias(alias)
@@ -1596,7 +1661,7 @@ class Ceil(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         from numpy import ceil
 
-        return ceil(df[self.key])
+        return ceil(df[self.key])  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).ceil().alias(alias)
@@ -1621,7 +1686,7 @@ class Round(Transformation):
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         from numpy import round
 
-        return round(df[self.key])
+        return round(df[self.key])  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).round(0).alias(alias)
@@ -1639,14 +1704,14 @@ class Round(Transformation):
 class Absolute(Transformation):
 
     key: str
-    dtype: FeatureType = FeatureType.float()
+    dtype: FeatureType = FeatureType.floating_point()
 
     name: str = 'abs'
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         from numpy import abs
 
-        return abs(df[self.key])
+        return abs(df[self.key])  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).abs().alias(alias)
@@ -1667,19 +1732,19 @@ class MapArgMax(Transformation):
     name = 'map_arg_max'
 
     @property
-    def dtype(self) -> FeatureType:
+    def dtype(self) -> FeatureType:  # type: ignore
         return list(self.column_mappings.values())[0].dtype
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         pl_df = await self.transform_polars(pl.from_pandas(df).lazy(), 'feature')
-        return pl_df.collect().to_pandas()['feature']
+        return pl_df.collect().to_pandas()['feature']  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         expr: pl.Expr = pl.lit(None)
 
         if len(self.column_mappings) == 1:
             key, value = list(self.column_mappings.items())[0]
-            if self.dtype == FeatureType.bool():
+            if self.dtype == FeatureType.boolean():
                 expr = pl.when(pl.col(key) > 0.5).then(value.python_value).otherwise(not value.python_value)
             elif self.dtype == FeatureType.string():
                 expr = (
@@ -1729,7 +1794,7 @@ class WordVectoriser(Transformation):
     dtype = FeatureType.embedding(768)
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return await self.model.vectorise_pandas(df[self.key])
+        return await self.model.vectorise_pandas(df[self.key])  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return await self.model.vectorise_polars(df, self.key, alias)
@@ -1771,7 +1836,7 @@ class GrayscaleImage(Transformation):
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         import numpy as np
 
-        def grayscale(images):
+        def grayscale(images) -> pl.Series:
             return pl.Series(
                 [np.mean(image, axis=2) if len(image.shape) == 3 else image for image in images.to_list()]
             )
@@ -1785,7 +1850,7 @@ class Power(Transformation):
     key: str
     power: LiteralValue
     name = 'power'
-    dtype = FeatureType.float()
+    dtype = FeatureType.floating_point()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key] ** self.power.python_value
@@ -1798,9 +1863,9 @@ class Power(Transformation):
 class PowerFeature(Transformation):
 
     key: str
-    power_key: float
+    power_key: str
     name = 'power_feat'
-    dtype = FeatureType.float()
+    dtype = FeatureType.floating_point()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         return df[self.key] ** df[self.power_key]
@@ -1873,14 +1938,12 @@ class ConcatStringAggregation(Transformation, PsqlTransformation, RedshiftTransf
     dtype = FeatureType.string()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return (
-            (await self.transform_polars(pl.from_pandas(df).lazy(), self.name))
-            .collect()
-            .to_pandas()[self.name]
-        )
+        pdf = await self.transform_polars(pl.from_pandas(df).lazy(), self.name)
+        assert isinstance(pdf, pl.LazyFrame)
+        return pdf.collect().to_pandas()[self.name]  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
-        return df.with_columns(pl.concat_str(pl.col(self.key), sep=self.separator).alias(alias))
+        return df.with_columns(pl.concat_str(pl.col(self.key), separator=self.separator).alias(alias))
 
     def as_psql(self) -> str:
         return f"array_to_string(array_agg({self.key}), '{self.separator}')"
@@ -1895,7 +1958,7 @@ class SumAggregation(Transformation, PsqlTransformation, RedshiftTransformation)
     key: str
 
     name = 'sum_agg'
-    dtype = FeatureType.float()
+    dtype = FeatureType.floating_point()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -1913,7 +1976,7 @@ class MeanAggregation(Transformation, PsqlTransformation, RedshiftTransformation
     key: str
 
     name = 'mean_agg'
-    dtype = FeatureType.float()
+    dtype = FeatureType.floating_point()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -1931,7 +1994,7 @@ class MinAggregation(Transformation, PsqlTransformation, RedshiftTransformation)
     key: str
 
     name = 'min_agg'
-    dtype = FeatureType.float()
+    dtype = FeatureType.floating_point()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -1949,7 +2012,7 @@ class MaxAggregation(Transformation, PsqlTransformation, RedshiftTransformation)
     key: str
 
     name = 'max_agg'
-    dtype = FeatureType.float()
+    dtype = FeatureType.floating_point()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -1967,7 +2030,7 @@ class CountAggregation(Transformation, PsqlTransformation, RedshiftTransformatio
     key: str
 
     name = 'count_agg'
-    dtype = FeatureType.float()
+    dtype = FeatureType.floating_point()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -1985,7 +2048,7 @@ class CountDistinctAggregation(Transformation, PsqlTransformation, RedshiftTrans
     key: str
 
     name = 'count_distinct_agg'
-    dtype = FeatureType.float()
+    dtype = FeatureType.floating_point()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -2003,7 +2066,7 @@ class StdAggregation(Transformation, PsqlTransformation, RedshiftTransformation)
     key: str
 
     name = 'std_agg'
-    dtype = FeatureType.float()
+    dtype = FeatureType.floating_point()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -2021,7 +2084,7 @@ class VarianceAggregation(Transformation, PsqlTransformation, RedshiftTransforma
     key: str
 
     name = 'var_agg'
-    dtype = FeatureType.float()
+    dtype = FeatureType.floating_point()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -2039,7 +2102,7 @@ class MedianAggregation(Transformation, PsqlTransformation, RedshiftTransformati
     key: str
 
     name = 'median_agg'
-    dtype = FeatureType.float()
+    dtype = FeatureType.floating_point()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -2058,7 +2121,7 @@ class PercentileAggregation(Transformation, PsqlTransformation, RedshiftTransfor
     percentile: float
 
     name = 'percentile_agg'
-    dtype = FeatureType.float()
+    dtype = FeatureType.floating_point()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
         raise NotImplementedError()
@@ -2078,10 +2141,10 @@ class Clip(Transformation, PsqlTransformation, RedshiftTransformation):
     upper: LiteralValue
 
     name = 'clip'
-    dtype = FeatureType.float()
+    dtype = FeatureType.floating_point()
 
     async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
-        return df[self.key].clip(lower=self.lower.python_value, upper=self.upper.python_value)
+        return df[self.key].clip(lower=self.lower.python_value, upper=self.upper.python_value)  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         return pl.col(self.key).clip(lower_bound=self.lower.python_value, upper_bound=self.upper.python_value)
@@ -2117,7 +2180,7 @@ class PresignedAwsUrl(Transformation):
         from httpx import AsyncClient
 
         s3 = S3Client(AsyncClient(), config=self.config.s3_config)
-        return df[self.key].apply(lambda x: s3.signed_download_url(x, max_age=self.max_age_seconds))
+        return df[self.key].apply(lambda x: s3.signed_download_url(x, max_age=self.max_age_seconds))  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         from aioaws.s3 import S3Client
@@ -2146,9 +2209,9 @@ class StructField(Transformation):
         tran = await self.transform_polars(data, 'feature')
 
         if isinstance(tran, pl.LazyFrame):
-            return tran.collect().to_pandas()['feature']
+            return tran.collect().to_pandas()['feature']  # type: ignore
 
-        return data.select(tran).collect().to_pandas()['feature']
+        return data.select(tran).collect().to_pandas()['feature']  # type: ignore
 
     async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
         if df.schema[self.key].is_(pl.Utf8):
@@ -2183,7 +2246,7 @@ class OllamaGenerate(Transformation):
         for index, row in df.iterrows():
             response.iloc[index] = await client.generate(
                 model=self.model,
-                prompt=row[self.key],
+                prompt=row[self.key],  # type: ignore
                 system=self.system,
             )
 
@@ -2239,7 +2302,8 @@ class OllamaEmbedding(Transformation):
         response = pd.Series([[]] * df.shape[0])
 
         for index, row in df.iterrows():
-            response.iloc[index] = await client.embeddings(self.model, row[self.key])['embedding']
+            embedded = await client.embeddings(self.model, row[self.key])  # type: ignore
+            response.iloc[index] = embedded['embedding']
 
         return response
 

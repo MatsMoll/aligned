@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
-import pandas as pd
 import polars as pl
+from aligned.lazy_imports import pandas as pd
 from mashumaro.types import SerializableType
 from pydantic import BaseModel, ValidationError
 
@@ -60,7 +60,7 @@ class EmbeddingModel(Codable, SerializableType):
 
         return data_class.from_dict(value)
 
-    async def load_model(self):
+    async def load_model(self) -> None:
         pass
 
     async def vectorise_pandas(self, texts: pd.Series) -> pd.Series:
@@ -170,7 +170,7 @@ class GensimModel(EmbeddingModel):
             [pl.col(f'{text_key}_tokens').apply(vector, return_dtype=pl.List(pl.Float64)).alias(output_key)]
         )
 
-    async def load_model(self):
+    async def load_model(self) -> None:
         import gensim.downloader as gensim_downloader
 
         self.loaded_model = gensim_downloader.load(self.model_name)
@@ -238,7 +238,7 @@ class OpenAiEmbeddingModel(EmbeddingModel):
             logger.error(f'Error parsing OpenAi Embeddings API response: {e}')
             raise e
 
-    async def load_model(self):
+    async def load_model(self) -> None:
         pass
 
     async def vectorise_pandas(self, texts: pd.Series) -> pd.Series:
@@ -268,7 +268,7 @@ class HuggingFaceTransformer(EmbeddingModel):
 
         return len(model.encode(['test'])[0])
 
-    async def load_model(self):
+    async def load_model(self) -> None:
         from sentence_transformers import SentenceTransformer
 
         self.loaded_model = SentenceTransformer(self.model)

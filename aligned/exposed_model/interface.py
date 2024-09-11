@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import polars as pl
-from typing import TYPE_CHECKING, Callable, Coroutine
+from typing import TYPE_CHECKING, Any, AsyncIterable, Callable, Coroutine
 from dataclasses import dataclass
 from aligned.retrival_job import RetrivalJob
 from aligned.schemas.codable import Codable
 from mashumaro.types import SerializableType
 import logging
 
-from aligned.schemas.feature import Feature, FeatureReference
+from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference
 
 if TYPE_CHECKING:
     from aligned.feature_store import ModelFeatureStore
@@ -21,7 +21,7 @@ class PredictorFactory:
     supported_predictors: dict[str, type[ExposedModel]]
     _shared: PredictorFactory | None = None
 
-    def __init__(self):
+    def __init__(self) -> None:
         from aligned.exposed_model.mlflow import MLFlowServer, InMemMLFlowAlias
         from aligned.exposed_model.ollama import OllamaGeneratePredictor, OllamaEmbeddingPredictor
 
@@ -48,6 +48,24 @@ class PredictorFactory:
         return cls._shared
 
 
+class PromptModel:
+    @property
+    def precomputed_prompt_key(self) -> str | None:
+        """
+        This is the property that contains the fully compiled prompt.
+        Meaning a user can bypass the prompt templating step.
+
+        This is usefull in some scanarios where we want to do similarity search
+        when the prompt components do not make sense to provide.
+        """
+        return None
+
+
+class VersionedModel:
+    async def model_version(self) -> str:
+        raise NotImplementedError(type(self))
+
+
 class ExposedModel(Codable, SerializableType):
 
     model_type: str
@@ -59,6 +77,14 @@ class ExposedModel(Codable, SerializableType):
     @property
     def as_markdown(self) -> str:
         raise NotImplementedError(type(self))
+
+    async def depends_on(self) -> list[FeatureLocation]:
+        """
+        The data artefacts that the model depends on. Which is not the input features.
+        This is useful for e.g. RAG systems, as we can describe which documents a model depends on
+        Or something like a vector database that we assume to be up to date.
+        """
+        return []
 
     async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
         raise NotImplementedError(type(self))
@@ -129,6 +155,7 @@ class ExposedModel(Codable, SerializableType):
         input_features_versions: str,
         prompt_template: str,
         embedding_name: str | None = None,
+        precomputed_prompt_key: str = 'full_prompt',
     ) -> 'ExposedModel':
         from aligned.exposed_model.ollama import OllamaEmbeddingPredictor
 
@@ -138,6 +165,7 @@ class ExposedModel(Codable, SerializableType):
             prompt_template=prompt_template,
             input_features_versions=input_features_versions,
             embedding_name=embedding_name or 'embedding',
+            precomputed_prompt_key_overwrite=precomputed_prompt_key,
         )
 
     @staticmethod
@@ -145,7 +173,7 @@ class ExposedModel(Codable, SerializableType):
         model_name: str,
         model_alias: str,
         model_contract_version_tag: str | None = None,
-    ):
+    ) -> 'ExposedModel':
         from aligned.exposed_model.mlflow import in_memory_mlflow
 
         return in_memory_mlflow(
@@ -159,18 +187,21 @@ class ExposedModel(Codable, SerializableType):
         host: str,
         model_alias: str | None = None,
         model_name: str | None = None,
-        model_contract_version_tag: str | None = None,
         timeout: int = 30,
-    ):
+    ) -> 'ExposedModel':
         from aligned.exposed_model.mlflow import mlflow_server
 
         return mlflow_server(
             host=host,
             model_name=model_name,
             model_alias=model_alias,
-            model_contract_version_tag=model_contract_version_tag,
             timeout=timeout,
         )
+
+
+class StreamablePredictor:
+    async def stream_predict(self, input: dict[str, Any]) -> AsyncIterable[dict[str, Any]]:
+        raise NotImplementedError(type(self))
 
 
 @dataclass
@@ -316,7 +347,7 @@ class ABTestModel(ExposedModel):
         return features
 
     async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
-        entities = set()
+        entities: set[Feature] = set()
         for model, _ in self.models:
             entities = entities.union(await model.needed_entities(store))
         return entities
@@ -325,7 +356,7 @@ class ABTestModel(ExposedModel):
         import random
 
         total_weight = sum([weight for _, weight in self.models])
-        total_sum = 0
+        total_sum: float = 0.0
 
         random_value = random.random()
 
@@ -383,13 +414,10 @@ def python_function(function: Callable[[pl.DataFrame], pl.Series]) -> DillFuncti
         if len(pred_columns) != 1:
             raise ValueError(f"Expected exactly one prediction column, got {len(pred_columns)} columns.")
 
-        feature_request = store.features_for(values).log_each_job()
-        input_features = feature_request.request_result.feature_columns
+        feature_request = store.features_for(values)
         features = await feature_request.to_polars()
 
-        result = features.with_columns(
-            function(features.select(input_features)).alias(list(pred_columns)[0].name)
-        )
+        result = features.with_columns(function(features).alias(next(iter(pred_columns)).name))
         return result
 
     return DillFunction(function=dill.dumps(function_wrapper))

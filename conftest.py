@@ -21,8 +21,8 @@ from aligned import (
 from aligned.feature_view.feature_view import FeatureView, FeatureViewMetadata
 from aligned.compiler.model import model_contract, ModelContractWrapper
 from aligned.feature_store import ContractStore
-from aligned.feature_view.combined_view import CombinedFeatureView, CombinedFeatureViewMetadata
 from aligned.retrival_job import DerivedFeatureJob, RetrivalJob, RetrivalRequest
+from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference, FeatureType
 from aligned.schemas.record_coders import JsonRecordCoder
@@ -46,10 +46,9 @@ def retrival_request_without_derived() -> RetrivalRequest:
 
 @pytest.fixture
 def retrival_job(retrival_request_without_derived: RetrivalRequest) -> RetrivalJob:
-    import pandas as pd
 
     return FileFullJob(
-        LiteralReference(pd.DataFrame({'id': [1, 2, 3, 4, 5], 'a': [3, 4, 2, 3, 4], 'b': [1, 1, 1, 2, 4]})),
+        LiteralReference(pl.DataFrame({'id': [1, 2, 3, 4, 5], 'a': [3, 4, 2, 3, 4], 'b': [1, 1, 1, 2, 4]})),
         request=retrival_request_without_derived,
     )
 
@@ -95,14 +94,12 @@ def retrival_request_with_derived() -> RetrivalRequest:
 def retrival_job_with_timestamp(retrival_request_with_derived: RetrivalRequest) -> RetrivalJob:
     from datetime import datetime, timedelta
 
-    import pandas as pd
-
     date = datetime(year=2022, month=1, day=1)
     one_day = timedelta(days=1)
     return DerivedFeatureJob(
         job=FileFullJob(
             LiteralReference(
-                pd.DataFrame(
+                pl.DataFrame(
                     {
                         'id': [1, 2, 3, 4, 5],
                         'c': [3, 4, 2, 3, 4],
@@ -220,7 +217,10 @@ def breast_scan_without_timestamp_feature_store(
 
 @pytest.fixture
 def scan_with_datetime() -> CsvFileSource:
-    return FileSource.csv_at(path='test_data/data-with-datetime.csv')
+    return FileSource.csv_at(
+        path='test_data/data-with-datetime.csv',
+        date_formatter=DateFormatter.string_format('%Y-%m-%d %H:%M:%S'),
+    )
 
 
 @pytest.fixture
@@ -233,7 +233,7 @@ def breast_scan_feature_view_with_datetime(scan_with_datetime: CsvFileSource) ->
             source=scan_with_datetime,
         )
 
-        scan_id = Entity(dtype=Int32())
+        scan_id = Int32().as_entity()
 
         created_at = EventTimestamp()
 
@@ -546,34 +546,13 @@ def alot_of_transforation_feature_store(
 
 
 @pytest.fixture
-def combined_view(
-    titanic_feature_view: FeatureView, breast_scan_feature_viewout_with_datetime: FeatureView
-) -> CombinedFeatureView:
-    class SomeCombinedView(CombinedFeatureView):
-
-        metadata = CombinedFeatureViewMetadata(
-            name='combined', description='Some features that depend on multiple view'
-        )
-
-        titanic = titanic_feature_view
-        cancer_scan = breast_scan_feature_viewout_with_datetime
-
-        some_feature = titanic.age + cancer_scan.radius_mean  # type: ignore
-        other_feature = titanic.sibsp + cancer_scan.radius_mean  # type: ignore
-
-    return SomeCombinedView()
-
-
-@pytest.fixture
 def combined_feature_store(
     titanic_feature_view: FeatureView,
     breast_scan_feature_viewout_with_datetime: FeatureView,
-    combined_view: CombinedFeatureView,
 ) -> ContractStore:
     feature_store = ContractStore.empty()
     feature_store.add_feature_view(titanic_feature_view)
     feature_store.add_feature_view(breast_scan_feature_viewout_with_datetime)
-    feature_store.add_combined_feature_view(combined_view)
     return feature_store
 
 

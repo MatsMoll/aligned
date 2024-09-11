@@ -53,6 +53,7 @@ class SupportedConstraints:
             Unique,
             Regex,
             ReferencingColumn,
+            ListConstraint,
         ]:
             self.add(tran_type)
 
@@ -199,6 +200,15 @@ class InDomain(Constraint):
 
     values: list[str]
     name = 'in_domain'
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+@dataclass
+class ListConstraint(Constraint):
+    constraints: list[Constraint]
+    name = 'list'
 
     def __hash__(self) -> int:
         return hash(self.name)

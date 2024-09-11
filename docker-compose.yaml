@@ -25,4 +25,4 @@ services:
       - PSQL_DATABASE_TEST=postgresql://postgres:postgres@psql_app_db:5432/aligned-test
     volumes:
       - ./pyproject.toml:/opt/app/pyproject.toml
-      - ./aligned:/opt/app/aligned
+      - ./:/opt/app/

@@ -46,10 +46,16 @@ async def test_aggregations_on_all() -> None:
         student_loan_due = Int32()
 
         credit_card_due_sum = credit_card_due.aggregate().over(days=1).sum()
-        student_loan_due_mean = student_loan_due.aggregate().over(days=1).mean()
+        student_loan_due_mean = student_loan_due.aggregate().over(days=1).mean().with_tag('mean')
 
     df = await TestAgg.query().all().to_pandas()  # type: ignore
     assert df.shape[0] == 6
+
+    all_features = TestAgg.compile().request_all.request_result.features
+    assert len(all_features) == 4
+
+    with_tag = [feature for feature in all_features if feature.tags]
+    assert len(with_tag) == 1
 
 
 @pytest.mark.asyncio

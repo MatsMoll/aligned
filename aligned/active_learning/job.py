@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass
 
-import pandas as pd
 import polars as pl
 
+from aligned.lazy_imports import pandas as pd
 from aligned.active_learning.selection import ActiveLearningMetric, ActiveLearningSelection
 from aligned.active_learning.write_policy import ActiveLearningWritePolicy
 from aligned.retrival_job import RetrivalJob

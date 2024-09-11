@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING
 import logging
 from dataclasses import dataclass, field
 
-import pandas as pd
 import polars as pl
 
+from aligned.lazy_imports import pandas as pd
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.retrival_job import RetrivalJob
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, DerivedFeature
@@ -112,6 +112,7 @@ class PostgreSqlJob(RetrivalJob):
     query: str
     requests: list[RetrivalRequest] = field(default_factory=list)
 
+    @property
     def request_result(self) -> RequestResult:
         return RequestResult.from_request_list(self.retrival_requests)
 
@@ -141,7 +142,7 @@ class PostgreSqlJob(RetrivalJob):
     def describe(self) -> str:
         return f'PostgreSQL Job: \n{self.query}\n'
 
-    def filter(self, condition: str | Feature | DerivedFeature) -> RetrivalJob:
+    def filter(self, condition: str | Feature | DerivedFeature | pl.Expr) -> RetrivalJob:
 
         query = f'SELECT * FROM ({self.query}) as values WHERE '
 
@@ -381,7 +382,7 @@ class FactPsqlJob(RetrivalJob):
 
         aggregates = {
             SqlColumn(
-                feature.derived_feature.transformation.as_psql(),
+                feature.derived_feature.transformation.as_psql(),  # type: ignore
                 feature.name,
             )
             for feature in features
@@ -416,7 +417,7 @@ class FactPsqlJob(RetrivalJob):
             join_conditions.append(event_timestamp_clause)
 
         field_selects = request.all_required_feature_names.union({'entities.*'})
-        field_identifiers = source.feature_identifier_for(field_selects)
+        field_identifiers = source.feature_identifier_for(list(field_selects))
         selects = {
             SqlColumn(db_field_name, feature)
             for feature, db_field_name in zip(field_selects, field_identifiers)

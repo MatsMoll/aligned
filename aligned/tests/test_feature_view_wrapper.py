@@ -1,7 +1,20 @@
-# type: ignore
 import pytest
-from aligned import feature_view, String, Int32, FileSource
+from aligned import feature_view, String, Int32, FileSource, Float
+from aligned.compiler.feature_factory import EventTimestamp
 from aligned.schemas.feature import FeatureLocation
+
+
+@feature_view(name='test', source=FileSource.csv_at('test_data/test.csv'))
+class DefaultValueTest:
+
+    some_id = Int32().as_entity()
+
+    feature = Int32()
+
+    other_value = String().default_value('Hello')
+    optional_value = Int32().is_optional()
+
+    other_default = Float().default_value(0)
 
 
 @feature_view(name='test', source=FileSource.csv_at('some_file.csv'))
@@ -22,9 +35,25 @@ class TestDerived:
     contains_hello = feature.contains('Hello')
 
 
+@feature_view(name='test', source=FileSource.csv_at('some_file.csv'))
+class TestEventTimestamp:
+    some_id = Int32().as_entity()
+    feature = String()
+    loaded_at = EventTimestamp()
+    contains_hello = feature.contains('Hello')
+
+
+def test_event_timestamp() -> None:
+    view = TestEventTimestamp.compile()
+    assert len(view.entities) == 1
+    assert view.event_timestamp is not None
+    assert len(view.features) == 1
+    assert len(view.derived_features) == 1
+
+
 def test_feature_view_wrapper_feature_references() -> None:
 
-    NewTest = Test.filter('new_test', where=lambda view: view.feature == 'test')  # type: ignore
+    NewTest = Test.filter('new_test', lambda view: view.feature == 'test')  # type: ignore
 
     new_test = NewTest()
     test = Test()
@@ -57,3 +86,12 @@ async def test_feature_view_wrapper_from_data() -> None:
 
     # Returns two as the int can be casted to a str, but a str can not be casted to int
     assert len(test_invalid_result['some_id']) == 2
+
+
+@pytest.mark.asyncio
+async def test_fill_missing_features() -> None:
+    df = await DefaultValueTest.query().all().to_polars()
+
+    fill_columns = ['other_default', 'other_value', 'optional_value']
+    for col in fill_columns:
+        assert col in df.columns

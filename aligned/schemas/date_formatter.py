@@ -16,7 +16,7 @@ class AllDateFormatters:
     @classmethod
     def shared(cls) -> AllDateFormatters:
         if cls._shared is None:
-            formatters = [Timestamp, StringDateFormatter, NoopFormatter]
+            formatters: list[type[DateFormatter]] = [Timestamp, StringDateFormatter, NoopFormatter]
             cls._shared = AllDateFormatters({formatter.name(): formatter for formatter in formatters})
         return cls._shared
 
@@ -39,15 +39,15 @@ class DateFormatter(Codable, SerializableType):
         return data
 
     @classmethod
-    def _deserialize(cls, data: dict) -> DateFormatter:
-        formatter_name = data.pop('name')
+    def _deserialize(cls, value: dict) -> DateFormatter:
+        formatter_name = value.pop('name')
         formatters = AllDateFormatters.shared().supported_formatters
         if formatter_name not in formatters:
             raise ValueError(
                 f"Unknown formatter name: {formatter_name}. Supported formatters: {formatters.keys()}"
             )
         formatter_class = formatters[formatter_name]
-        return formatter_class.from_dict(data)
+        return formatter_class.from_dict(value)
 
     @staticmethod
     def string_format(format: str) -> StringDateFormatter:
@@ -55,7 +55,7 @@ class DateFormatter(Codable, SerializableType):
 
     @staticmethod
     def iso_8601() -> StringDateFormatter:
-        return StringDateFormatter('%Y-%m-%dT%H:%M:%S%.f+%Z')
+        return StringDateFormatter('%Y-%m-%dT%H:%M:%S%.f%Z', time_zone='UTC')
 
     @staticmethod
     def unix_timestamp(time_unit: TimeUnit = 'us', time_zone: str | None = 'UTC') -> Timestamp:

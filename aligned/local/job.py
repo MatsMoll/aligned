@@ -1,18 +1,18 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable
 
 from pytz import timezone
 from datetime import datetime
 
-import pandas as pd
 import polars as pl
 
+from aligned.lazy_imports import pandas as pd
 from aligned.request.retrival_request import AggregatedFeature, AggregateOver, RetrivalRequest
 from aligned.retrival_job import RequestResult, RetrivalJob
 from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.feature import Feature
-from aligned.sources.local import DataFileReference
-from aligned.schemas.constraints import Optional
+from aligned.data_file import DataFileReference
 import logging
 
 logger = logging.getLogger(__name__)
@@ -25,10 +25,14 @@ class LiteralRetrivalJob(RetrivalJob):
 
     def __init__(self, df: pl.LazyFrame | pd.DataFrame, requests: list[RetrivalRequest]) -> None:
         self.requests = requests
-        if isinstance(df, pd.DataFrame):
+        if isinstance(df, pl.DataFrame):
+            self.df = df.lazy()
+        elif isinstance(df, pl.LazyFrame):
+            self.df = df
+        elif isinstance(df, pd.DataFrame):
             self.df = pl.from_pandas(df).lazy()
         else:
-            self.df = df
+            raise ValueError(f"Unsupported type {type(df)}")
 
     @property
     def loaded_columns(self) -> list[str]:
@@ -67,7 +71,7 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
                 raise ValueError(f'Aggregation needs to be an expression, got {tran}')
             exprs.append(tran.alias(feat.name))
 
-        return core_data.groupby(first_over.group_by_names).agg(exprs)
+        return core_data.group_by(first_over.group_by_names).agg(exprs)
 
     group_by_names = first_over.group_by_names
 
@@ -93,18 +97,18 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
 
         if over.window.every_interval:
             sub = (
-                sorted_data.groupby_dynamic(
+                sorted_data.group_by_dynamic(
                     time_name,
                     every=over.window.every_interval,
                     period=over.window.time_window,
-                    by=over.group_by_names,
+                    group_by=over.group_by_names,
                     offset=-over.window.time_window,
                 )
                 .agg(exprs)
                 .with_columns(pl.col(time_name) + over.window.time_window)
             ).filter(pl.col(time_name) <= sorted_data.select(pl.col(time_name).max()).collect()[0, 0])
         else:
-            sub = sorted_data.groupby_rolling(
+            sub = sorted_data.group_by_rolling(
                 time_name,
                 period=over.window.time_window,
                 by=over.group_by_names,
@@ -202,6 +206,7 @@ class FileFullJob(RetrivalJob):
 
     async def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
+        from aligned.sources.local import fill_missing_in_request
 
         if not self.request.features_to_include:
             return df
@@ -221,25 +226,12 @@ class FileFullJob(RetrivalJob):
             request_features = self.source.feature_identifier_for(all_names)
             feature_column_map = dict(zip(all_names, request_features))
 
+        df = fill_missing_in_request(self.request, df, feature_column_map)
         renames = {
             org_name: wanted_name
             for org_name, wanted_name in zip(request_features, all_names)
             if org_name != wanted_name
         }
-
-        optional_constraint = Optional()
-        optional_features = [
-            feature
-            for feature in self.request.features
-            if (
-                feature.constraints
-                and optional_constraint in feature.constraints
-                and feature_column_map.get(feature.name, feature.name) not in df.columns
-            )
-        ]
-        if optional_features:
-            df = df.with_columns([pl.lit(None).alias(feature.name) for feature in optional_features])
-
         if renames:
             df = df.rename(mapping=renames)
 
@@ -280,6 +272,7 @@ class FileDateJob(RetrivalJob):
 
     def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
+        from aligned.sources.local import fill_missing_in_request
 
         if not self.request.features_to_include:
             return df
@@ -296,18 +289,7 @@ class FileDateJob(RetrivalJob):
             request_features = self.source.feature_identifier_for(all_names)
             feature_column_map = dict(zip(all_names, request_features))
 
-        optional_constraint = Optional()
-        optional_features = [
-            feature
-            for feature in self.request.features
-            if (
-                feature.constraints
-                and optional_constraint in feature.constraints
-                and feature_column_map.get(feature.name, feature.name) not in df.columns
-            )
-        ]
-        if optional_features:
-            df = df.with_columns([pl.lit(None).alias(feature.name) for feature in optional_features])
+        df = fill_missing_in_request(self.request, df, feature_column_map)
 
         df = df.rename(mapping=dict(zip(request_features, all_names)))
         event_timestamp_column = self.request.event_timestamp.name
@@ -319,8 +301,8 @@ class FileDateJob(RetrivalJob):
             end_date = self.end_date.replace(tzinfo=None)
         else:
             tz = timezone(time_zone)
-            start_date = tz.localize(self.start_date)
-            end_date = tz.localize(self.end_date)
+            start_date = self.start_date.astimezone(tz)
+            end_date = self.end_date.astimezone(tz)
 
         return df.filter(pl.col(event_timestamp_column).is_between(start_date, end_date))
 
@@ -363,7 +345,7 @@ async def aggregate_over(
         else:
             raise NotImplementedError('Only expressions are supported for file data source')
 
-    return subset.groupby(group_by).agg(transformations)
+    return subset.group_by(group_by).agg(transformations)
 
 
 @dataclass
@@ -399,10 +381,18 @@ class FileFactualJob(RetrivalJob):
             pl.LazyFrame: The subset of the source which is needed for the request
         """
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
+        from aligned.sources.local import fill_missing_in_request
 
         all_features: set[Feature] = set()
+        date_features: set[str] = set()
+
         for request in self.requests:
             all_features.update(request.all_required_features)
+            if request.event_timestamp:
+                date_features.add(request.event_timestamp.name)
+            for feature in request.features:
+                if feature.dtype.is_datetime:
+                    date_features.add(feature.name)
 
         result = await self.facts.to_lazy_polars()
         event_timestamp_col = 'aligned_event_timestamp'
@@ -422,6 +412,7 @@ class FileFactualJob(RetrivalJob):
 
         row_id_name = 'row_id'
         result = result.with_row_index(row_id_name)
+
         for request in self.requests:
 
             entity_names = request.entity_names
@@ -433,17 +424,7 @@ class FileFactualJob(RetrivalJob):
                 request_features = self.source.feature_identifier_for(list(all_names))
                 feature_column_map = dict(zip(all_names, request_features))
 
-            optional_constraint = Optional()
-            optional_features = [
-                feature
-                for feature in request.features
-                if feature.constraints is not None
-                and optional_constraint in feature.constraints
-                and feature_column_map.get(feature.name, feature.name) not in df.columns
-            ]
-            if optional_features:
-                df = df.with_columns([pl.lit(None).alias(feature.name) for feature in optional_features])
-
+            df = fill_missing_in_request(request, df, feature_column_map)
             for derived_feature in request.derived_features:
                 if derived_feature.name in df.columns:
                     all_names.add(derived_feature.name)
@@ -475,7 +456,6 @@ class FileFactualJob(RetrivalJob):
                 if isinstance(self.source, ColumnFeatureMappable):
                     request_features = self.source.feature_identifier_for(all_names)
 
-                df = decode_timestamps(df, request, self.date_formatter)
                 feature_df = df.select(request_features)
 
                 renames = {
@@ -485,6 +465,8 @@ class FileFactualJob(RetrivalJob):
                 }
                 if renames:
                     feature_df = feature_df.rename(renames)
+
+                feature_df = decode_timestamps(feature_df, request, self.date_formatter)
 
                 for entity in request.entities:
                     feature_df = feature_df.with_columns(pl.col(entity.name).cast(entity.dtype.polars_type))
@@ -519,13 +501,17 @@ class FileFactualJob(RetrivalJob):
                     new_result = new_result.filter(
                         pl.col(field).is_null() | (pl.col(field) <= pl.col(event_timestamp_col))
                     )
-                new_result = new_result.sort(field, descending=True).select(pl.exclude(field))
+                new_result = new_result.sort(field, descending=True, nulls_last=True).select(
+                    pl.exclude(field)
+                )
             elif request.event_timestamp:
                 new_result = new_result.sort([row_id_name, request.event_timestamp.name], descending=True)
 
             unique = new_result.unique(subset=row_id_name, keep='first')
             column_selects.remove('row_id')
-            result = result.join(unique.select(pl.exclude(column_selects)), on=row_id_name, how='left')
+            result = result.join(
+                unique.select(pl.exclude(column_selects)), on=row_id_name, how='left', coalesce=True
+            )
             result = result.select(pl.exclude('.*_right'))
 
         if did_rename_event_timestamp:

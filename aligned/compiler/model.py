@@ -18,11 +18,14 @@ from aligned.compiler.feature_factory import (
     RecommendationTarget,
     RegressionLabel,
     TargetProbability,
-    ModelVersion,
 )
-from aligned.data_source.batch_data_source import BatchDataSource
+from aligned.data_source.batch_data_source import CodableBatchDataSource, DummyDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
-from aligned.feature_view.feature_view import FeatureView, FeatureViewWrapper
+from aligned.feature_view.feature_view import (
+    FeatureView,
+    FeatureViewMetadata,
+    FeatureViewWrapper,
+)
 from aligned.exposed_model.interface import ExposedModel
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import ConvertableToRetrivalJob, PredictionJob, RetrivalJob
@@ -56,10 +59,10 @@ class ModelMetadata:
     tags: list[str] | None = field(default=None)
     description: str | None = field(default=None)
 
-    output_source: BatchDataSource | None = field(default=None)
+    output_source: CodableBatchDataSource | None = field(default=None)
     output_stream: StreamDataSource | None = field(default=None)
 
-    application_source: BatchDataSource | None = field(default=None)
+    application_source: CodableBatchDataSource | None = field(default=None)
 
     acceptable_freshness: timedelta | None = field(default=None)
     unacceptable_freshness: timedelta | None = field(default=None)
@@ -69,12 +72,27 @@ class ModelMetadata:
 
     dataset_store: DatasetStore | None = field(default=None)
 
+    def as_view_meatadata(self) -> FeatureViewMetadata:
+        return FeatureViewMetadata(
+            name=self.name,
+            source=self.output_source or DummyDataSource(),
+            contacts=self.contacts,
+            tags=self.tags,
+            description=self.description,
+            acceptable_freshness=self.acceptable_freshness,
+            unacceptable_freshness=self.unacceptable_freshness,
+        )
+
 
 @dataclass
 class ModelContractWrapper(Generic[T]):
 
     metadata: ModelMetadata
     contract: Type[T]
+
+    @property
+    def location(self) -> FeatureLocation:
+        return FeatureLocation.model(self.metadata.name)
 
     def __call__(self) -> T:
         # Needs to compiile the model to set the location for the view features
@@ -89,7 +107,7 @@ class ModelContractWrapper(Generic[T]):
 
             value = getattr(contract, attribute)
             if isinstance(value, FeatureFactory):
-                value._location = FeatureLocation.model(self.metadata.name)
+                value._location = self.location
                 setattr(contract, attribute, copy.deepcopy(value))
 
         setattr(contract, '__model_wrapper__', self)
@@ -97,6 +115,49 @@ class ModelContractWrapper(Generic[T]):
 
     def compile(self) -> ModelSchema:
         return compile_with_metadata(self.contract(), self.metadata)
+
+    def as_view_wrapper(self) -> FeatureViewWrapper[T]:
+
+        return FeatureViewWrapper(self.metadata.as_view_meatadata(), self.contract())
+
+    def with_schema(
+        self,
+        name: str,
+        source: CodableBatchDataSource | FeatureViewWrapper,
+        materialized_source: CodableBatchDataSource | None = None,
+        entities: dict[str, FeatureFactory] | None = None,
+        additional_features: dict[str, FeatureFactory] | None = None,
+        copy_default_values: bool = False,
+        copy_transformations: bool = False,
+    ) -> FeatureViewWrapper[T]:
+
+        return self.as_view_wrapper().with_schema(
+            name=name,
+            source=source,
+            materialized_source=materialized_source,
+            entities=entities,
+            additional_features=additional_features,
+            copy_default_values=copy_default_values,
+            copy_transformations=copy_transformations,
+        )
+
+    def as_langchain_retriver(
+        self,
+        number_of_docs: int = 5,
+        needed_views: list[FeatureViewWrapper | ModelContractWrapper] | None = None,
+    ):
+        from aligned.exposed_model.langchain import AlignedRetriver
+        from aligned.sources.vector_index import VectorIndex
+
+        source = self.metadata.output_source
+        if not isinstance(source, VectorIndex):
+            raise ValueError(f"Found no vector index in source: {source}")
+
+        store = self.query(needed_views)
+
+        index_name = source.vector_index_name() or self.metadata.name
+
+        return AlignedRetriver(store=store.store, index_name=index_name, number_of_docs=number_of_docs)
 
     def query(
         self, needed_views: list[FeatureViewWrapper | ModelContractWrapper] | None = None
@@ -147,7 +208,7 @@ class ModelContractWrapper(Generic[T]):
         return view.as_view(self.metadata.name)
 
     def filter(
-        self, name: str, where: Callable[[T], Bool], application_source: BatchDataSource | None = None
+        self, name: str, where: Callable[[T], Bool], application_source: CodableBatchDataSource | None = None
     ) -> ModelContractWrapper[T]:
         from aligned.data_source.batch_data_source import FilteredDataSource
 
@@ -176,7 +237,7 @@ class ModelContractWrapper(Generic[T]):
 
         return ModelContractWrapper(metadata=meta, contract=self.contract)
 
-    def as_source(self) -> BatchDataSource:
+    def as_source(self) -> CodableBatchDataSource:
         from aligned.schemas.model import ModelSource
 
         compiled_model = self.compile()
@@ -193,7 +254,7 @@ class ModelContractWrapper(Generic[T]):
         on_left: str | FeatureFactory | list[str] | list[FeatureFactory],
         on_right: str | FeatureFactory | list[str] | list[FeatureFactory],
         how: str = 'inner',
-    ) -> BatchDataSource:
+    ) -> CodableBatchDataSource:
         from aligned.data_source.batch_data_source import join_source
         from aligned.schemas.model import ModelSource
 
@@ -214,7 +275,9 @@ class ModelContractWrapper(Generic[T]):
             how=how,
         )
 
-    def join_asof(self, view: FeatureViewWrapper, on_left: list[str], on_right: list[str]) -> BatchDataSource:
+    def join_asof(
+        self, view: FeatureViewWrapper, on_left: list[str], on_right: list[str]
+    ) -> CodableBatchDataSource:
         from aligned.data_source.batch_data_source import join_asof_source
         from aligned.schemas.model import ModelSource
 
@@ -267,9 +330,9 @@ def model_contract(
     contacts: list[str] | None = None,
     tags: list[str] | None = None,
     description: str | None = None,
-    output_source: BatchDataSource | None = None,
+    output_source: CodableBatchDataSource | None = None,
     output_stream: StreamDataSource | None = None,
-    application_source: BatchDataSource | None = None,
+    application_source: CodableBatchDataSource | None = None,
     dataset_store: DatasetStore | StorageFileReference | None = None,
     exposed_at_url: str | None = None,
     exposed_model: ExposedModel | None = None,
@@ -291,7 +354,7 @@ def model_contract(
                         feat.as_reference(FeatureLocation.feature_view(compiled_view.name))
                         for feat in request.request_result.features
                     ]
-                    unwrapped_input_features.extend(features)
+                    unwrapped_input_features.extend(features)  # type: ignore
                 elif isinstance(feature, ModelContractWrapper):
                     compiled_model = feature.compile()
                     request = compiled_model.predictions_view.request('')
@@ -299,7 +362,7 @@ def model_contract(
                         feat.as_reference(FeatureLocation.model(compiled_model.name))
                         for feat in request.request_result.features
                     ]
-                    unwrapped_input_features.extend(features)
+                    unwrapped_input_features.extend(features)  # type: ignore
                 else:
                     unwrapped_input_features.append(feature)
 
@@ -361,7 +424,6 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
         entities=set(),
         features=set(),
         derived_features=set(),
-        model_version_column=None,
         source=metadata.output_source,
         application_source=metadata.application_source,
         stream_source=metadata.output_stream,
@@ -371,6 +433,11 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
         acceptable_freshness=metadata.acceptable_freshness,
         unacceptable_freshness=metadata.unacceptable_freshness,
     )
+
+    assert inference_view.classification_targets is not None
+    assert inference_view.regression_targets is not None
+    assert inference_view.recommendation_targets is not None
+
     probability_features: dict[str, set[TargetProbability]] = {}
     hidden_features = 0
 
@@ -380,11 +447,10 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
     for var_name in var_names:
         feature = getattr(model, var_name)
         if isinstance(feature, FeatureFactory):
-            assert feature._name
+            assert (
+                feature._name
+            ), f"Expected name but found none in model: {metadata.name} for feature {var_name}"
             feature._location = FeatureLocation.model(metadata.name)
-
-        if isinstance(feature, ModelVersion):
-            inference_view.model_version_column = feature.feature()
 
         if isinstance(feature, FeatureView):
             compiled = feature.compile()
@@ -412,7 +478,9 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
             inference_view.event_timestamp = feature.event_timestamp()
 
         elif isinstance(feature, TargetProbability):
+            assert isinstance(feature.target, FeatureFactory)
             feature_name = feature.target._name
+            assert feature_name
             assert feature._name
             assert feature.target._name in classification_targets, 'Target must be a classification target.'
 
@@ -422,7 +490,7 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
             inference_view.features.add(
                 Feature(
                     var_name,
-                    FeatureType.float(),
+                    FeatureType.floating_point(),
                     f"The probability of target named {feature_name} being '{feature.of_value}'.",
                 )
             )
@@ -484,9 +552,6 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
             else:
                 inference_view.features.add(feature.feature())
 
-        if isinstance(feature, Bool) and feature._is_shadow_model_flag:
-            inference_view.is_shadow_model_flag = feature.feature()
-
     # Needs to run after the feature views have compiled
     features = metadata.features.compile()
 
@@ -502,7 +567,9 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
             dtype=transformation.dtype,
             transformation=transformation,
             depending_on={
-                FeatureReference(feat, FeatureLocation.model(metadata.name), dtype=FeatureType.float())
+                FeatureReference(
+                    feat, FeatureLocation.model(metadata.name), dtype=FeatureType.floating_point()
+                )
                 for feat in transformation.column_mappings.keys()
             },
             depth=1,

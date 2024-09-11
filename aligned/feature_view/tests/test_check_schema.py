@@ -2,7 +2,7 @@ import pytest
 from aligned import Bool, Float, String, feature_view, FileSource
 from aligned.feature_view.feature_view import check_schema
 from typing import Annotated
-import pandas as pd
+from aligned.lazy_imports import pandas as pd
 
 
 @feature_view(

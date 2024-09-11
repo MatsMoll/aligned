@@ -22,7 +22,7 @@ class DerivedFeature(Feature):
         transformation: Transformation,
         depth: int,
         description: str | None = None,
-        tags: dict[str, str] | None = None,
+        tags: list[str] | None = None,
         constraints: set[Constraint] | None = None,
     ):
         self.name = name
@@ -33,6 +33,7 @@ class DerivedFeature(Feature):
         self.description = description
         self.tags = tags
         self.constraints = constraints
+        self.default_value = None
 
     def __pre_serialize__(self) -> DerivedFeature:
         from aligned.schemas.transformation import SupportedTransformations

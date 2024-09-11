@@ -5,10 +5,8 @@ from inspect import getmro, isclass
 from typing import Any
 from aligned.compiler.model import ModelContractWrapper
 
-from aligned.enricher import Enricher
-from aligned.feature_view.combined_view import CombinedFeatureViewWrapper
 from aligned.feature_view.feature_view import FeatureViewWrapper
-from aligned.schemas.repo_definition import EnricherReference, RepoDefinition, RepoMetadata, RepoReference
+from aligned.schemas.repo_definition import RepoDefinition, RepoMetadata, RepoReference
 from pathlib import Path
 
 
@@ -83,33 +81,22 @@ class RepoReader:
     """
 
     @staticmethod
-    async def definition_from_path(repo_path: Path, excludes: list[str] | None = None) -> RepoDefinition:
+    async def definition_from_files(files: list[Path], root_path: Path) -> RepoDefinition:
 
-        excluded_files: list[Path] = []
-        for exclude in excludes or []:
-            excluded_files.extend(repo_path.resolve().glob(exclude))
-
-        metadata = RepoMetadata(created_at=datetime.now(), name=repo_path.name, github_url=None)
+        metadata = RepoMetadata(created_at=datetime.now(), name=root_path.name, github_url=None)
         repo = RepoDefinition(
             metadata=metadata,
             feature_views=set(),
-            combined_feature_views=set(),
             models=set(),
-            enrichers=[],
         )
 
-        feature_view_names: dict[str, str] = {}
-
-        for py_file in find_files(repo_path):
-            if py_file in excluded_files:
-                continue
-
+        for py_file in files:
             imports = imports_for(py_file)
+            module_path = path_to_py_module(py_file, root_path)
 
-            module_path = path_to_py_module(py_file, repo_path)
-
-            if module_path.startswith('aladdin') or module_path.startswith('.') or module_path.endswith('__'):
+            if module_path.startswith('aligned') or module_path.startswith('.') or module_path.endswith('__'):
                 # Skip no feature defintion modules
+                logger.debug(f"Skipping module {module_path}")
                 continue
 
             module = import_module(module_path)
@@ -120,43 +107,27 @@ class RepoReader:
 
                 obj = getattr(module, attribute)
 
-                if isinstance(obj, Enricher):
-                    repo.enrichers.append(
-                        EnricherReference(module=module_path, attribute_name=attribute, enricher=obj)
-                    )
-                elif isinstance(obj, FeatureViewWrapper):
+                if isinstance(obj, FeatureViewWrapper):
                     repo.feature_views.add(obj.compile())
-                elif isinstance(obj, CombinedFeatureViewWrapper):
-                    repo.combined_feature_views.add(obj.compile())
                 elif isinstance(obj, ModelContractWrapper):
                     repo.models.add(obj.compile())
-                else:
-                    classes = super_classes_in(obj)
-                    if 'ModelContract' in classes:
-                        repo.models.add(obj.compile())
-                    elif 'FeatureView' in classes:
-                        fv = obj.compile()
-                        if fv.name in feature_view_names:
-                            raise Exception(
-                                (
-                                    f'Duplicate feature view names: {fv.name},',
-                                    f' in {py_file}, and {feature_view_names[fv.name]}',
-                                )
-                            )
-                        feature_view_names[fv.name] = py_file.as_posix()
-                        repo.feature_views.add(fv)
-                    elif 'CombinedFeatureView' in classes:
-                        fv = obj.compile()
-                        if fv.name in feature_view_names:
-                            raise Exception(
-                                (
-                                    f'Duplicate feature view names: {fv.name},',
-                                    f' in {py_file}, and {feature_view_names[fv.name]}',
-                                )
-                            )
-                        feature_view_names[fv.name] = py_file.as_posix()
-                        repo.combined_feature_views.add(fv)
         return repo
+
+    @staticmethod
+    async def definition_from_glob(root_path: Path, glob: str) -> RepoDefinition:
+        return await RepoReader.definition_from_files(files=list(root_path.glob(glob)), root_path=root_path)
+
+    @staticmethod
+    async def definition_from_path(repo_path: Path, excludes: list[str] | None = None) -> RepoDefinition:
+
+        excluded_files: list[Path] = []
+        for exclude in excludes or []:
+            excluded_files.extend(repo_path.resolve().glob(exclude))
+
+        return await RepoReader.definition_from_files(
+            files=[py_file for py_file in find_files(repo_path) if py_file not in excluded_files],
+            root_path=repo_path,
+        )
 
     @staticmethod
     def reference_from_path(repo_path: Path, file: Path) -> RepoReference:

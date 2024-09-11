@@ -1,25 +1,25 @@
 from __future__ import annotations
 
 import logging
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Protocol
 from uuid import uuid4
 
-import pandas as pd
+from aligned.lazy_imports import pandas as pd
 import polars as pl
 from httpx import HTTPStatusError
 
 from aligned.data_file import DataFileReference, upsert_on_column
-from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
-from aligned.enricher import CsvFileEnricher, Enricher, LoadedStatEnricher, TimespanSelector
+from aligned.data_source.batch_data_source import CodableBatchDataSource, ColumnFeatureMappable
 from aligned.exceptions import UnableToFindFileException
 from aligned.local.job import FileDateJob, FileFactualJob, FileFullJob
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import RetrivalJob
 from aligned.s3.storage import FileStorage, HttpStorage
 from aligned.schemas.codable import Codable
-from aligned.schemas.feature import EventTimestamp, FeatureType
+from aligned.schemas.feature import EventTimestamp, FeatureType, Feature
 from aligned.storage import Storage
 from aligned.feature_source import WritableFeatureSource
 from aligned.schemas.date_formatter import DateFormatter
@@ -71,17 +71,53 @@ class StorageFileReference(AsRepoDefinition):
         return RepoDefinition.from_json(file)
 
 
-async def data_file_freshness(reference: DataFileReference, column_name: str) -> datetime | None:
+async def data_file_freshness(
+    reference: DataFileReference, column_name: str, formatter: DateFormatter | None = None
+) -> datetime | None:
     try:
+        formatter = formatter or DateFormatter.unix_timestamp()
         file = await reference.to_lazy_polars()
         if isinstance(reference, ColumnFeatureMappable):
             source_column = reference.feature_identifier_for([column_name])[0]
         else:
             source_column = column_name
 
-        return file.select(source_column).max().collect()[0, source_column]
+        return file.select(formatter.decode_polars(source_column)).max().collect()[0, source_column]
     except UnableToFindFileException:
         return None
+
+
+def fill_missing_in_request(
+    request: RetrivalRequest, df: pl.LazyFrame, feature_rename: dict[str, str]
+) -> pl.LazyFrame:
+    existing_columns = df.columns
+
+    missing_features = [
+        feature
+        for feature in request.features
+        if feature_rename.get(feature.name, feature.name) not in existing_columns
+    ]
+
+    if missing_features:
+        return fill_with_default(missing_features, df, feature_rename)
+    else:
+        return df
+
+
+def fill_with_default(
+    features: list[Feature], df: pl.LazyFrame, feature_rename: dict[str, str]
+) -> pl.LazyFrame:
+
+    default_values = [
+        (feature_rename.get(feature.name, feature.name), feature.default_value.python_value)
+        for feature in features
+        if feature.default_value is not None
+    ]
+
+    if not default_values:
+        return df
+
+    return df.with_columns([pl.lit(value).alias(feature_name) for feature_name, value in default_values])
 
 
 def create_parent_dir(path: str) -> None:
@@ -105,8 +141,12 @@ def do_file_exist(path: str) -> bool:
 
 def delete_path(path: str) -> None:
     path_obj = Path(path)
+
+    if not path_obj.exists():
+        return
+
     if path_obj.is_dir():
-        path_obj.rmdir()
+        shutil.rmtree(path)
     else:
         Path(path).unlink()
 
@@ -124,7 +164,7 @@ class CsvConfig(Codable):
 
 @dataclass
 class CsvFileSource(
-    BatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource, Deletable
+    CodableBatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource, Deletable
 ):
     """
     A source pointing to a CSV file
@@ -179,7 +219,7 @@ class CsvFileSource(
             buffer = await HttpStorage().read(self.path)
             io_buffer = BytesIO(buffer)
             io_buffer.seek(0)
-            return pl.read_csv(io_buffer, separator=self.csv_config.seperator, try_parse_dates=True).lazy()
+            return pl.read_csv(io_buffer, separator=self.csv_config.seperator).lazy()
 
         if not do_file_exist(self.path):
             raise UnableToFindFileException(self.path)
@@ -197,9 +237,7 @@ class CsvFileSource(
                     reverse_mapping = {v: k for k, v in self.mapping_keys.items()}
                     schema = {reverse_mapping.get(name, name): dtype for name, dtype in schema.items()}
 
-            return pl.scan_csv(
-                self.path, dtypes=schema, separator=self.csv_config.seperator, try_parse_dates=True
-            )
+            return pl.scan_csv(self.path, schema_overrides=schema, separator=self.csv_config.seperator)
         except OSError:
             raise UnableToFindFileException(self.path)
 
@@ -234,6 +272,9 @@ class CsvFileSource(
             if feature.dtype.is_datetime:
                 data = data.with_columns(self.formatter.encode_polars(feature.name))
 
+        if request.event_timestamp:
+            data = data.with_columns(self.formatter.encode_polars(request.event_timestamp.name))
+
         if self.mapping_keys:
             columns = self.feature_identifier_for(data.columns)
             data = data.rename(dict(zip(data.columns, columns)))
@@ -252,6 +293,9 @@ class CsvFileSource(
         for feature in request.features:
             if feature.dtype.is_datetime:
                 data = data.with_columns(self.formatter.encode_polars(feature.name))
+
+        if request.event_timestamp:
+            data = data.with_columns(self.formatter.encode_polars(request.event_timestamp.name))
 
         if self.mapping_keys:
             columns = self.feature_identifier_for(data.columns)
@@ -273,34 +317,7 @@ class CsvFileSource(
         create_parent_dir(self.path)
         await self.write_pandas(df.collect().to_pandas())
 
-    def std(
-        self, columns: set[str], time: TimespanSelector | None = None, limit: int | None = None
-    ) -> Enricher:
-        return LoadedStatEnricher(
-            stat='std',
-            columns=list(columns),
-            enricher=self.enricher().selector(time, limit),
-            mapping_keys=self.mapping_keys,
-        )
-
-    def mean(
-        self, columns: set[str], time: TimespanSelector | None = None, limit: int | None = None
-    ) -> Enricher:
-        return LoadedStatEnricher(
-            stat='mean',
-            columns=list(columns),
-            enricher=self.enricher().selector(time, limit),
-            mapping_keys=self.mapping_keys,
-        )
-
-    def enricher(self) -> CsvFileEnricher:
-        return CsvFileEnricher(file=self.path)
-
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
-        from aligned.schemas.constraints import Optional
-
-        optional_constraint = Optional()
-
         with_schema = CsvFileSource(
             path=self.path,
             mapping_keys=self.mapping_keys,
@@ -309,8 +326,7 @@ class CsvFileSource(
             expected_schema={
                 feat.name: feat.dtype
                 for feat in request.features.union(request.entities)
-                if not (feat.constraints and optional_constraint in feat.constraints)
-                and not feat.name.isdigit()
+                if (feat.default_value is None) and not feat.name.isdigit()
             },
         )
         return FileFullJob(with_schema, request, limit, date_formatter=self.formatter)
@@ -327,7 +343,7 @@ class CsvFileSource(
         )
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple[CsvFileSource, RetrivalRequest]]
     ) -> RetrivalJob:
         sources = {source for source, _ in requests}
@@ -364,7 +380,7 @@ class CsvFileSource(
         )
 
     async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
-        return await data_file_freshness(self, event_timestamp.name)
+        return await data_file_freshness(self, event_timestamp.name, self.formatter)
 
 
 @dataclass
@@ -374,13 +390,12 @@ class ParquetConfig(Codable):
     """
 
     engine: Literal['auto', 'pyarrow', 'fastparquet'] = field(default='auto')
-    compression: Literal['snappy', 'gzip', 'brotli', None] = field(default='snappy')
-    should_write_index: bool = field(default=False)
+    compression: Literal['snappy', 'gzip', 'brotli'] = field(default='snappy')
 
 
 @dataclass
 class PartitionedParquetFileSource(
-    BatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource, Deletable
+    CodableBatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource, Deletable
 ):
     """
     A source pointing to a Parquet file
@@ -418,11 +433,10 @@ class PartitionedParquetFileSource(
         return (await self.to_lazy_polars()).collect().to_pandas()
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
-
         glob_path = f'{self.directory}/**/*.parquet'
         try:
             return pl.scan_parquet(glob_path, retries=3)
-        except OSError:
+        except (OSError, FileNotFoundError):
             raise UnableToFindFileException(self.directory)
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
@@ -451,7 +465,7 @@ class PartitionedParquetFileSource(
         )
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple[ParquetFileSource, RetrivalRequest]]
     ) -> RetrivalJob:
 
@@ -487,15 +501,54 @@ class PartitionedParquetFileSource(
         df = await job.to_lazy_polars()
         await self.write_polars(df)
 
+    async def upsert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
+        import shutil
+
+        upsert_on = sorted(request.entity_names)
+
+        df = await job.select(request.all_returned_columns).to_polars()
+        unique_partitions = df.select(self.partition_keys).unique()
+
+        filters: list[pl.Expr] = []
+        for row in unique_partitions.iter_rows(named=True):
+            current: pl.Expr | None = None
+
+            for key, value in row.items():
+                if current is not None:
+                    current = current & (pl.col(key) == value)
+                else:
+                    current = pl.col(key) == value
+
+            if current is not None:
+                filters.append(current)
+
+        try:
+            existing_df = (await self.to_lazy_polars()).filter(*filters)
+            write_df = upsert_on_column(upsert_on, df.lazy(), existing_df).collect()
+        except (UnableToFindFileException, pl.ComputeError):
+            write_df = df.lazy()
+
+        for row in unique_partitions.iter_rows(named=True):
+            dir = Path(self.directory)
+            for partition_key in self.partition_keys:
+                dir = dir / f"{partition_key}={row[partition_key]}"
+
+            if dir.exists():
+                shutil.rmtree(dir.as_posix())
+
+        await self.write_polars(write_df.lazy())
+
     async def overwrite(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         import shutil
 
-        shutil.rmtree(self.directory)
+        if Path(self.directory).exists():
+            shutil.rmtree(self.directory)
+
         await self.insert(job, request)
 
 
 @dataclass
-class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReference, Deletable):
+class ParquetFileSource(CodableBatchDataSource, ColumnFeatureMappable, DataFileReference, Deletable):
     """
     A source pointing to a Parquet file
     """
@@ -535,12 +588,7 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
         create_parent_dir(self.path)
-        df.to_parquet(
-            self.path,
-            engine=self.config.engine,
-            compression=self.config.compression,
-            index=self.config.should_write_index,
-        )
+        df.to_parquet(self.path, engine=self.config.engine, compression=self.config.compression, index=False)
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
 
@@ -571,7 +619,7 @@ class ParquetFileSource(BatchDataSource, ColumnFeatureMappable, DataFileReferenc
         )
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple[ParquetFileSource, RetrivalRequest]]
     ) -> RetrivalJob:
 
@@ -615,7 +663,7 @@ class DeltaFileConfig(Codable):
 
 @dataclass
 class DeltaFileSource(
-    BatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource, Deletable
+    CodableBatchDataSource, ColumnFeatureMappable, DataFileReference, WritableFeatureSource, Deletable
 ):
     """
     A source pointing to a Parquet file
@@ -673,7 +721,7 @@ class DeltaFileSource(
         )
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple[DeltaFileSource, RetrivalRequest]]
     ) -> RetrivalJob:
 
@@ -756,7 +804,7 @@ class Directory(Protocol):
 
     def csv_at(
         self, path: str, mapping_keys: dict[str, str] | None = None, csv_config: CsvConfig | None = None
-    ) -> BatchDataSource:
+    ) -> CodableBatchDataSource:
         ...
 
     def partitioned_parquet_at(
@@ -766,17 +814,21 @@ class Directory(Protocol):
         mapping_keys: dict[str, str] | None = None,
         config: ParquetConfig | None = None,
         date_formatter: DateFormatter | None = None,
-    ) -> PartitionedParquetFileSource:
+    ) -> CodableBatchDataSource:
         ...
 
     def parquet_at(
-        self, path: str, mapping_keys: dict[str, str] | None = None, config: ParquetConfig | None = None
-    ) -> BatchDataSource:
+        self,
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        config: ParquetConfig | None = None,
+        date_formatter: DateFormatter | None = None,
+    ) -> CodableBatchDataSource:
         ...
 
     def delta_at(
         self, path: str, mapping_keys: dict[str, str] | None = None, config: DeltaFileConfig | None = None
-    ) -> BatchDataSource:
+    ) -> CodableBatchDataSource:
         ...
 
     def sub_directory(self, path: str) -> Directory:
@@ -809,10 +861,17 @@ class FileDirectory(Codable, Directory):
         )
 
     def parquet_at(
-        self, path: str, mapping_keys: dict[str, str] | None = None, config: ParquetConfig | None = None
+        self,
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        config: ParquetConfig | None = None,
+        date_formatter: DateFormatter | None = None,
     ) -> ParquetFileSource:
         return ParquetFileSource(
-            path=self.path_string(path), mapping_keys=mapping_keys or {}, config=config or ParquetConfig()
+            path=self.path_string(path),
+            mapping_keys=mapping_keys or {},
+            config=config or ParquetConfig(),
+            date_formatter=date_formatter or DateFormatter.noop(),
         )
 
     def partitioned_parquet_at(
@@ -937,11 +996,15 @@ class LiteralReference(DataFileReference):
 
     file: pl.LazyFrame
 
-    def __init__(self, file: pl.LazyFrame | pd.DataFrame) -> None:
-        if isinstance(file, pd.DataFrame):
+    def __init__(self, file: pl.LazyFrame | pd.DataFrame | pl.DataFrame) -> None:
+        if isinstance(file, pl.DataFrame):
+            self.file = file.lazy()
+        elif isinstance(file, pl.LazyFrame):
+            self.file = file
+        elif isinstance(file, pd.DataFrame):
             self.file = pl.from_pandas(file).lazy()
         else:
-            self.file = file
+            raise ValueError(f"Unsupported type {type(file)}")
 
     def job_group_key(self) -> str:
         return str(uuid4())

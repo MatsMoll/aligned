@@ -28,10 +28,10 @@ class RecordCoder(Codable, SerializableType):
         return data_class.from_dict(value)
 
     def decode(self, records: list[dict]) -> list[dict]:
-        pass
+        raise NotImplementedError(type(self))
 
     def encode(self, records: list[dict]) -> list[dict]:
-        pass
+        raise NotImplementedError(type(self))
 
 
 class SupportedRecordCoders:

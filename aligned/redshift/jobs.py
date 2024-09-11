@@ -3,9 +3,9 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
-import pandas as pd
 import polars as pl
 
+from aligned.lazy_imports import pandas as pd
 from aligned.psql.jobs import PostgreSqlJob
 from aligned.redshift.sql_job import SqlColumn, TableFetch
 from aligned.request.retrival_request import RequestResult, RetrivalRequest

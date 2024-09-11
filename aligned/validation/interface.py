@@ -1,6 +1,7 @@
-import pandas as pd
+from __future__ import annotations
 import polars as pl
 
+from aligned.lazy_imports import pandas as pd
 from aligned.schemas.feature import Feature
 
 

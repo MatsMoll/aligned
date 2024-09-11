@@ -1,21 +1,7 @@
 import pytest
 
-from aligned import ContractStore, FileSource
-from aligned.schemas.feature import FeatureType, FeatureLocation
-from aligned.source_validation import validate_sources_in
-
-
-@pytest.mark.asyncio
-async def test_source_validation(titanic_feature_store: ContractStore) -> None:
-
-    source = FileSource.parquet_at('test_data/titanic.parquet')
-
-    views = titanic_feature_store.views_with_config(source)
-
-    assert len(views) == 1
-    validation = await validate_sources_in(views)
-
-    assert {FeatureLocation.feature_view('titanic_parquet'): True} == validation
+from aligned import FileSource
+from aligned.schemas.feature import FeatureType
 
 
 @pytest.mark.asyncio

@@ -1,12 +1,14 @@
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass, field
 from datetime import timedelta  # noqa: TC003
 from typing import Any, Callable
 
-import pandas as pd
 import polars as pl
 
 from aligned import AwsS3Config
+from aligned.lazy_imports import pandas as pd
 from aligned.compiler.feature_factory import FeatureFactory, Transformation, TransformationFactory
 from aligned.schemas.transformation import FillNaValuesColumns, LiteralValue, EmbeddingModel
 
@@ -195,7 +197,7 @@ class GreaterThenOrEqualFactory(TransformationFactory):
 @dataclass
 class LowerThenFactory(TransformationFactory):
 
-    value: float
+    value: Any
     in_feature: FeatureFactory
 
     @property
@@ -204,14 +206,18 @@ class LowerThenFactory(TransformationFactory):
 
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import LowerThen as LTTransformation
+        from aligned.schemas.transformation import LowerThenCol
 
-        return LTTransformation(self.in_feature.name, self.value)
+        if isinstance(self.value, FeatureFactory):
+            return LowerThenCol(self.in_feature.name, self.value.name)
+        else:
+            return LTTransformation(self.in_feature.name, self.value)
 
 
 @dataclass
 class LowerThenOrEqualFactory(TransformationFactory):
 
-    value: float
+    value: Any
     in_feature: FeatureFactory
 
     @property
@@ -220,6 +226,10 @@ class LowerThenOrEqualFactory(TransformationFactory):
 
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import LowerThenOrEqual as LTETransformation
+        from aligned.schemas.transformation import LowerThenOrEqualCol
+
+        if isinstance(self.value, FeatureFactory):
+            return LowerThenOrEqualCol(self.in_feature.name, self.value.name)
 
         return LTETransformation(self.in_feature.name, self.value)
 
@@ -645,9 +655,11 @@ class PandasTransformationFactory(TransformationFactory):
                 dtype=self.dtype.dtype,
             )
         else:
+            function_name = (dill.source.getname(self.method),)
+            assert isinstance(function_name, str), f"Expected string got {type(function_name)}"
             return PandasFunctionTransformation(
                 code=inspect.getsource(self.method),
-                function_name=dill.source.getname(self.method),
+                function_name=function_name,
                 dtype=self.dtype.dtype,
             )
 
@@ -672,7 +684,10 @@ class PolarsTransformationFactory(TransformationFactory):
         from aligned.schemas.transformation import PolarsFunctionTransformation, PolarsLambdaTransformation
 
         if isinstance(self.method, pl.Expr):
-            method = lambda df, alias: self.method  # type: ignore
+
+            def method(df: pl.DataFrame, alias: str) -> pl.Expr:
+                return self.method  # type: ignore
+
             return PolarsLambdaTransformation(method=dill.dumps(method), code='', dtype=self.dtype.dtype)
         else:
             code = inspect.getsource(self.method)
@@ -682,9 +697,11 @@ class PolarsTransformationFactory(TransformationFactory):
                 method=dill.dumps(self.method), code=code.strip(), dtype=self.dtype.dtype
             )
         else:
+            function_name = (dill.source.getname(self.method),)
+            assert isinstance(function_name, str), f"Expected string got {type(function_name)}"
             return PolarsFunctionTransformation(
                 code=code,
-                function_name=dill.source.getname(self.method),
+                function_name=function_name,
                 dtype=self.dtype.dtype,
             )
 
@@ -709,11 +726,9 @@ class MeanTransfomrationFactory(TransformationFactory, AggregatableTransformatio
             return [self.feature]
 
     def compile(self) -> Transformation:
-        from aligned.schemas.transformation import Mean
+        from aligned.schemas.transformation import MeanAggregation
 
-        return Mean(
-            key=self.feature.name, group_keys=[feat.name for feat in self.group_by] if self.group_by else None
-        )
+        return MeanAggregation(key=self.feature.name)
 
     def copy(self) -> 'MeanTransfomrationFactory':
         return MeanTransfomrationFactory(self.feature, self.over, self.group_by)
@@ -783,7 +798,7 @@ class AppendStrings(TransformationFactory):
         from aligned.schemas.transformation import AppendConstString, AppendStrings
 
         if isinstance(self.second_feature, LiteralValue):
-            return AppendConstString(self.first_feature.name, self.second_feature.value)
+            return AppendConstString(self.first_feature.name, self.second_feature.python_value)
         else:
             return AppendStrings(self.first_feature.name, self.second_feature.name, self.separator)
 

@@ -166,8 +166,10 @@ class RedisSource(FeatureSource, WritableFeatureSource):
     def features_for(self, facts: RetrivalJob, request: FeatureRequest) -> RetrivalJob:
         from aligned.redis.job import FactualRedisJob
 
-        needed_requests = [req for req in request.needed_requests if req.location.location != 'combined_view']
-        combined = [req for req in request.needed_requests if req.location.location == 'combined_view']
+        needed_requests = [
+            req for req in request.needed_requests if req.location.location_type != 'combined_view'
+        ]
+        combined = [req for req in request.needed_requests if req.location.location_type == 'combined_view']
         return FactualRedisJob(self.config, needed_requests, facts).combined_features(combined)
 
     async def insert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
@@ -196,7 +198,7 @@ class RedisSource(FeatureSource, WritableFeatureSource):
 
                 expr = pl.col(feature.name).cast(pl.Utf8).alias(feature.name)
 
-                if feature.dtype == FeatureType.bool():
+                if feature.dtype == FeatureType.boolean():
                     # Redis do not support bools
                     expr = pl.col(feature.name).cast(pl.Int8, strict=False).cast(pl.Utf8).alias(feature.name)
                 elif feature.dtype == FeatureType.datetime():
@@ -255,7 +257,7 @@ class RedisStreamSource(StreamDataSource, SinkableDataSource, ColumnFeatureMappa
 
             expr = pl.col(feature.name)
 
-            if feature.dtype == FeatureType.bool():
+            if feature.dtype == FeatureType.boolean():
                 # Redis do not support bools
                 expr = pl.col(feature.name).cast(pl.Int8, strict=False)
             elif feature.dtype == FeatureType.datetime():

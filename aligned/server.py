@@ -107,7 +107,9 @@ class FastAPIServer:
         from aligned.feature_store import RawStringFeatureRequest
 
         model = feature_store.models[name]
-        features = {f'{feature.location.identifier}:{feature.name}' for feature in model.features}
+        features = {
+            f'{feature.location.identifier}:{feature.name}' for feature in model.features.default_features
+        }
         feature_request = feature_store.requests_for(RawStringFeatureRequest(features))
 
         entities: set[Feature] = set()
@@ -146,7 +148,7 @@ class FastAPIServer:
 
         # Using POST as this can have a body with the fact / entity table
         @app.post(f'/models/{name}', openapi_extra=featch_api_schema)
-        async def get_model(entity_values: dict) -> str:
+        async def get_model(entity_values: dict) -> Response:
             missing_entities = {entity.name for entity in entities if entity.name not in entity_values}
             if missing_entities:
                 raise HTTPException(status_code=400, detail=f'Missing entity values {missing_entities}')
@@ -230,7 +232,7 @@ class FastAPIServer:
             return RedirectResponse('/docs')
 
         @app.post('/features')
-        async def features(payload: APIFeatureRequest) -> dict:
+        async def features(payload: APIFeatureRequest) -> Response:
             import json
 
             df = await feature_store.features_for(
@@ -252,9 +254,10 @@ class FastAPIServer:
 
         app = FastAPIServer.app(feature_store)
 
-        uvicorn.run(app, host=host or '127.0.0.1', port=port or 8000, workers=workers or workers)
+        uvicorn.run(app, host=host or '127.0.0.1', port=port or 8000, workers=workers or workers)  # type: ignore
 
 
+@dataclass
 class FeatureServer:
 
     definition_reference: StorageFileReference

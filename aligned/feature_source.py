@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Mapping
 
 import asyncio
 
@@ -56,7 +56,7 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
     This class will then know how to strucutre the query in the correct way
     """
 
-    sources: dict[str, BatchDataSource]
+    sources: Mapping[str, BatchDataSource]
 
     @property
     def source_types(self) -> dict[str, type[BatchDataSource]]:

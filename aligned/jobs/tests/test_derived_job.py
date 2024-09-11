@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 from datetime import datetime, timedelta
 
-import pandas as pd
+import polars as pl
 import pytest
 
+from aligned.lazy_imports import pandas as pd
 from aligned import feature_view, Float, String, FileSource
 from aligned.compiler.model import model_contract
 from aligned.feature_store import ContractStore
@@ -123,6 +126,60 @@ def feature_store() -> ContractStore:
     store.add_compiled_model(Model.compile())
 
     return store
+
+
+@pytest.mark.asyncio
+async def test_without_derived_features():
+    df = await Transaction.query().all().to_polars()
+
+    assert 'is_expence' in df.columns
+
+    without_job = Transaction.query().all().remove_derived_features()
+    without_df = await without_job.to_polars()
+
+    assert 'is_expence' not in without_df.columns
+
+    feature_columns = without_job.request_result.feature_columns
+    assert 'is_expence' not in feature_columns
+
+
+def test_with_schema() -> None:
+
+    Test = Transaction.with_schema(
+        name='test',
+        source=FileSource.parquet_at('test_data/transactions.parquet'),
+        entities=dict(  # noqa: C408
+            other_id=String(),
+        ),
+        additional_features=dict(  # noqa: C408
+            other=Float(),
+        ),
+    )
+    transaction = Transaction.compile()
+
+    assert len(transaction.derived_features) > 1
+
+    view = Test.compile()
+    assert len(view.entities) == 1
+
+    assert len(view.derived_features) == 0
+    assert len(view.aggregated_features) == 0
+    assert (
+        len(view.features) == len({feat.name for feat in transaction.full_schema - transaction.entities}) + 1
+    )
+
+    assert list(view.entities)[0].name == 'other_id'
+
+
+@pytest.mark.asyncio
+async def test_polars_filter_source() -> None:
+
+    Expences = Transaction.filter(name='expence', where=pl.col('amount') > 0)  # type: ignore
+    data = await Expences.query().all().to_lazy_polars()
+
+    df = data.collect()
+
+    assert df.height == 4
 
 
 @pytest.mark.asyncio

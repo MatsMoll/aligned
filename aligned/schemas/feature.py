@@ -8,9 +8,18 @@ import polars as pl
 
 from aligned.schemas.codable import Codable
 from aligned.schemas.constraints import Constraint
+from aligned.schemas.literal_value import LiteralValue
 
 if TYPE_CHECKING:
     from aligned.compiler.feature_factory import FeatureFactory
+
+
+class StaticFeatureTags:
+    is_shadow_model = 'is_shadow_model'
+    is_model_version = 'is_model_version'
+    is_entity = 'is_entity'
+    is_annotated_by = 'is_annotated_by'
+    is_input_features = 'is_input_features'
 
 
 NAME_POLARS_MAPPING = [
@@ -132,7 +141,7 @@ class FeatureType(Codable):
         }[self.name]
 
     @property
-    def polars_type(self) -> type:
+    def polars_type(self) -> pl.DataType:
         if self.is_datetime:
             time_zone = self.datetime_timezone
             return pl.Datetime(time_zone=time_zone)  # type: ignore
@@ -166,7 +175,9 @@ class FeatureType(Codable):
             return ff.List(FeatureType(name=sub_type).feature_factory)
 
         if self.is_embedding:
-            return ff.Embedding(embedding_size=self.embedding_size())
+            embedding_size = self.embedding_size()
+            assert embedding_size, 'Missing embedding size'
+            return ff.Embedding(embedding_size=embedding_size)
 
         return {
             'string': ff.String(),
@@ -259,7 +270,7 @@ class FeatureType(Codable):
         return FeatureType(name='int32')
 
     @staticmethod
-    def bool() -> FeatureType:
+    def boolean() -> FeatureType:
         return FeatureType(name='bool')
 
     @staticmethod
@@ -267,7 +278,7 @@ class FeatureType(Codable):
         return FeatureType(name='int64')
 
     @staticmethod
-    def float() -> FeatureType:
+    def floating_point() -> FeatureType:
         return FeatureType(name='float')
 
     @staticmethod
@@ -293,8 +304,10 @@ class FeatureType(Codable):
         return FeatureType(name='json')
 
     @staticmethod
-    def array() -> FeatureType:
-        return FeatureType(name='array')
+    def array(sub_type: FeatureType | None = None) -> FeatureType:
+        if sub_type is None:
+            return FeatureType(name='array')
+        return FeatureType(name=f'array-{sub_type.name}')
 
     @staticmethod
     def embedding(size: int) -> FeatureType:
@@ -315,15 +328,17 @@ class Feature(Codable):
     name: str
     dtype: FeatureType
     description: str | None = None
-    tags: dict[str, str] | None = None
+    tags: list[str] | None = None
 
     constraints: set[Constraint] | None = None
+    default_value: LiteralValue | None = None
 
     def __pre_serialize__(self) -> Feature:
         assert isinstance(self.name, str)
         assert isinstance(self.dtype, FeatureType)
         assert isinstance(self.description, str) or self.description is None
-        assert isinstance(self.tags, dict) or self.tags is None
+        assert isinstance(self.tags, list) or self.tags is None
+        assert isinstance(self.default_value, LiteralValue) or self.default_value is None
         if self.constraints:
             for constraint in self.constraints:
                 assert isinstance(constraint, Constraint)
@@ -337,6 +352,7 @@ class Feature(Codable):
             description=self.description,
             tags=self.tags,
             constraints=self.constraints,
+            default_value=self.default_value,
         )
 
     def as_reference(self, location: FeatureLocation) -> FeatureReference:
@@ -361,7 +377,7 @@ class EventTimestamp(Codable):
     name: str
     ttl: int | None = None
     description: str | None = None
-    tags: dict[str, str] | None = None
+    tags: set[str] | None = None
     dtype: FeatureType = field(default_factory=lambda: FeatureType.datetime())
 
     def __hash__(self) -> int:
@@ -378,24 +394,24 @@ class EventTimestamp(Codable):
             name=self.name,
             dtype=self.dtype,
             description=self.description,
-            tags=self.tags,
+            tags=list(self.tags or set()),
         )
 
 
 @dataclass
 class FeatureLocation(Codable):
     name: str
-    location: Literal['feature_view', 'combined_view', 'model']
+    location_type: Literal['feature_view', 'combined_view', 'model']
 
     @property
     def identifier(self) -> str:
         return str(self)
 
     def __str__(self) -> str:
-        return f'{self.location}:{self.name}'
+        return f'{self.location_type}:{self.name}'
 
     def __hash__(self) -> int:
-        return (self.name + self.location).__hash__()
+        return (self.name + self.location_type).__hash__()
 
     @staticmethod
     def feature_view(name: str) -> FeatureLocation:
@@ -412,7 +428,13 @@ class FeatureLocation(Codable):
     @staticmethod
     def from_string(string: str) -> FeatureLocation:
         splits = string.split(':')
-        return FeatureLocation(name=splits[1], location=splits[0])
+        location_type = splits[0]
+        assert location_type in [
+            'feature_view',
+            'combined_view',
+            'model',
+        ], f"Unexpected location type {location_type}"
+        return FeatureLocation(name=splits[1], location_type=location_type)  # type: ignore
 
 
 @dataclass

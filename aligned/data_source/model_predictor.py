@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from aligned.feature_store import ModelFeatureStore
+from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.schemas.feature import FeatureLocation, FeatureType
 from aligned.schemas.model import Model
@@ -10,7 +11,7 @@ from aligned.retrival_job import RetrivalJob
 
 
 @dataclass
-class PredictModelSource:
+class PredictModelSource(BatchDataSource):
 
     store: ModelFeatureStore
     type_name: str = 'pred_model_source'
@@ -39,7 +40,7 @@ class PredictModelSource:
             )
 
         location = reqs.needed_requests[0].location
-        if location.location != 'feature_view':
+        if location.location_type != 'feature_view':
             raise NotImplementedError(
                 f'Type: {type(self)} have not implemented how to load fact data with multiple sources.'
             )
@@ -57,7 +58,7 @@ class PredictModelSource:
             )
 
         location = reqs.needed_requests[0].location
-        if location.location != 'feature_view':
+        if location.location_type != 'feature_view':
             raise NotImplementedError(
                 f'Type: {type(self)} have not implemented how to load fact data with multiple sources.'
             )
@@ -69,7 +70,7 @@ class PredictModelSource:
         return self.store.predict_over(facts).with_request([request])
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple[PredictModelSource, RetrivalRequest]]
     ) -> RetrivalJob:
 

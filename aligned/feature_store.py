@@ -1,21 +1,23 @@
 from __future__ import annotations
 
 import polars as pl
-import pandas as pd
+from aligned.lazy_imports import pandas as pd
 
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from importlib import import_module
-from typing import Any, Union
+from typing import Union, TypeVar, Callable
 
 from prometheus_client import Histogram
 
 from aligned.compiler.model import ModelContractWrapper
 from aligned.data_file import DataFileReference, upsert_on_column
-from aligned.data_source.batch_data_source import BatchDataSource, ColumnFeatureMappable
-from aligned.enricher import Enricher
+from aligned.data_source.batch_data_source import (
+    CodableBatchDataSource,
+    ColumnFeatureMappable,
+    BatchDataSource,
+)
 from aligned.exceptions import UnableToFindFileException
 from aligned.feature_source import (
     BatchFeatureSource,
@@ -24,7 +26,6 @@ from aligned.feature_source import (
     RangeFeatureSource,
     WritableFeatureSource,
 )
-from aligned.feature_view.combined_view import CombinedFeatureView, CompiledCombinedFeatureView
 from aligned.feature_view.feature_view import FeatureView, FeatureViewWrapper
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import (
@@ -41,7 +42,7 @@ from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.folder import DatasetStore
 from aligned.schemas.model import EventTrigger
 from aligned.schemas.model import Model as ModelSchema
-from aligned.schemas.repo_definition import EnricherReference, RepoDefinition, RepoMetadata
+from aligned.schemas.repo_definition import RepoDefinition, RepoMetadata
 from aligned.sources.vector_index import VectorIndex
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,7 @@ feature_view_write_time = Histogram(
 )
 
 FeatureSourceable = Union[FeatureSource, FeatureSourceFactory, None]
+T = TypeVar('T')
 
 
 @dataclass
@@ -63,7 +65,7 @@ class SourceRequest:
     """
 
     location: FeatureLocation
-    source: BatchDataSource
+    source: CodableBatchDataSource
     request: RetrivalRequest
 
 
@@ -103,7 +105,6 @@ class ContractStore:
 
     feature_source: FeatureSource
     feature_views: dict[str, CompiledFeatureView]
-    combined_feature_views: dict[str, CompiledCombinedFeatureView]
     models: dict[str, ModelSchema]
     vector_indexes: dict[str, ModelSchema]
 
@@ -114,13 +115,11 @@ class ContractStore:
     def __init__(
         self,
         feature_views: dict[str, CompiledFeatureView],
-        combined_feature_views: dict[str, CompiledCombinedFeatureView],
         models: dict[str, ModelSchema],
         feature_source: FeatureSource,
         vector_indexes: dict[str, ModelSchema] | None = None,
     ) -> None:
         self.feature_source = feature_source
-        self.combined_feature_views = combined_feature_views
         self.feature_views = feature_views
         self.models = models
         self.vector_indexes = vector_indexes or {}
@@ -150,42 +149,6 @@ class ContractStore:
         return ContractStore.empty()
 
     @staticmethod
-    def register_enrichers(enrichers: list[EnricherReference]) -> None:
-        from types import ModuleType
-
-        class DynamicEnricher(ModuleType):
-            def __init__(self, values: dict[str, Enricher]) -> None:
-                for key, item in values.items():
-                    self.__setattr__(key, item)
-
-        def set_module(path: str, module_class: DynamicEnricher) -> None:
-            import sys
-
-            components = path.split('.')
-            cum_path = ''
-
-            for component in components:
-                cum_path += f'.{component}'
-                if cum_path.startswith('.'):
-                    cum_path = cum_path[1:]
-
-                try:
-                    sys.modules[cum_path] = import_module(cum_path)
-                except Exception:
-                    logger.info(f'Setting enricher at {cum_path}')
-                    sys.modules[cum_path] = module_class
-
-        grouped_enrichers: dict[str, list[EnricherReference]] = defaultdict(list)
-
-        for enricher in enrichers:
-            grouped_enrichers[enricher.module].append(enricher)
-
-        for module, values in grouped_enrichers.items():
-            set_module(
-                module, DynamicEnricher({enricher.attribute_name: enricher.enricher for enricher in values})
-            )
-
-    @staticmethod
     def from_definition(repo: RepoDefinition) -> ContractStore:
         """Creates a feature store based on a repo definition
         A feature source can also be defined if wanted, otherwise will the batch source be used for reads
@@ -203,13 +166,8 @@ class ContractStore:
         Returns:
             FeatureStore: A ready to use feature store
         """
-        combined_feature_views = {fv.name: fv for fv in repo.combined_feature_views}
-
-        ContractStore.register_enrichers(repo.enrichers)
-
         store = ContractStore(
             feature_views={},
-            combined_feature_views=combined_feature_views,
             models={},
             feature_source=BatchFeatureSource({}),
         )
@@ -226,9 +184,7 @@ class ContractStore:
         return RepoDefinition(
             metadata=RepoMetadata(datetime.utcnow(), name='feature_store_location.py'),
             feature_views=set(self.feature_views.values()),
-            combined_feature_views=set(self.combined_feature_views.values()),
             models=set(self.models.values()),
-            enrichers=[],
         )
 
     def combined_with(self, other: ContractStore) -> ContractStore:
@@ -273,6 +229,22 @@ class ContractStore:
         return ContractStore.from_definition(repo_def)
 
     @staticmethod
+    async def from_glob(glob: str) -> ContractStore:
+        """Reads and generates a feature store based on the given glob path.
+
+        This will read the feature views, services etc in a given repo and generate a feature store.
+        This can be used for fast development purposes.
+
+        Args:
+            glob (str): the files to read. E.g. `src/**/*.py`
+
+        Returns:
+            ContractStore: The generated contract store
+        """
+        definition = await RepoDefinition.from_glob(glob)
+        return ContractStore.from_definition(definition)
+
+    @staticmethod
     async def from_dir(path: str = '.') -> ContractStore:
         """Reads and generates a feature store based on the given directory's content.
 
@@ -295,9 +267,10 @@ class ContractStore:
     def execute_sql(self, query: str) -> RetrivalJob:
         import polars as pl
         import sqlglot
+        import sqlglot.expressions as exp
 
         expr = sqlglot.parse_one(query)
-        select_expr = expr.find_all(sqlglot.exp.Select)
+        select_expr = expr.find_all(exp.Select)
 
         tables = set()
         table_alias: dict[str, str] = {}
@@ -315,7 +288,7 @@ class ContractStore:
 
         for expr in select_expr:
 
-            for table in expr.find_all(sqlglot.exp.Table):
+            for table in expr.find_all(exp.Table):
                 tables.add(table.name)
                 table_alias[table.alias_or_name] = table.name
 
@@ -328,13 +301,13 @@ class ContractStore:
                     else:
                         unique_column_table_lookup[column] = table.name
 
-            if expr.find(sqlglot.exp.Star):
+            if expr.find(exp.Star):
                 for table in tables:
                     table_columns[table].update(
                         all_table_columns.get(table, set()).union(all_model_columns.get(table, set()))
                     )
             else:
-                for column in expr.find_all(sqlglot.exp.Column):
+                for column in expr.find_all(exp.Column):
                     source_table = table_alias.get(column.table)
 
                     if source_table:
@@ -362,10 +335,10 @@ class ContractStore:
 
             for req in feature_request.needed_requests:
 
-                if req.location.location == 'feature_view':
+                if req.location.location_type == 'feature_view':
                     view = self.feature_view(req.location.name).select(req.all_feature_names).all()
                     dfs[req.location.name] = await view.to_lazy_polars()
-                elif req.location.location == 'model':
+                elif req.location.location_type == 'model':
                     model = (
                         self.model(req.location.name).all_predictions().select_columns(req.all_feature_names)
                     )
@@ -433,7 +406,7 @@ class ContractStore:
             else:
                 for request in requests.needed_requests:
                     if view.name == request.location.name:
-                        feature_names.update(request.all_feature_names)
+                        feature_names.update(request.all_returned_columns)
 
         if not isinstance(entities, RetrivalJob):
             entities = RetrivalJob.from_convertable(entities, requests)
@@ -458,7 +431,7 @@ class ContractStore:
         new_request = FeatureRequest(requests.location, requests.features_to_include, loaded_requests)
         return self.features_for_request(new_request, entities, feature_names)
 
-    def model(self, name: str) -> ModelFeatureStore:
+    def model(self, model: str | ModelContractWrapper) -> ModelFeatureStore:
         """
         Selects a model for easy of use.
 
@@ -470,17 +443,21 @@ class ContractStore:
         Returns:
             ModelFeatureStore: A new store that containes the selected model
         """
-        model = self.models[name]
-        return ModelFeatureStore(model, self)
+        if isinstance(model, ModelContractWrapper):
+            name = model.location.name
+        else:
+            name = model
+
+        return ModelFeatureStore(self.models[name], self)
 
     def vector_index(self, name: str) -> VectorIndexStore:
-        return VectorIndexStore(self, self.vector_indexes[name])
+        return VectorIndexStore(self, self.vector_indexes[name], index_name=name)
 
     def event_triggers_for(self, feature_view: str) -> set[EventTrigger]:
         triggers = self.feature_views[feature_view].event_triggers or set()
         for model in self.models.values():
             for target in model.predictions_view.classification_targets or set():
-                if target.event_trigger and target.estimating.location.location == feature_view:
+                if target.event_trigger and target.estimating.location.location_type == feature_view:
                     triggers.add(target.event_trigger)
         return triggers
 
@@ -488,7 +465,6 @@ class ContractStore:
     def _requests_for(
         feature_request: RawStringFeatureRequest,
         feature_views: dict[str, CompiledFeatureView],
-        combined_feature_views: dict[str, CompiledCombinedFeatureView],
         models: dict[str, ModelSchema],
         event_timestamp_column: str | None = None,
         model_version_as_entity: bool | None = None,
@@ -501,7 +477,7 @@ class ContractStore:
         for location in feature_request.locations:
             location_name = location.name
 
-            if location.location == 'model':
+            if location.location_type == 'model':
                 model = models[location_name]
                 view = model.predictions_view
                 if len(features[location]) == 1 and list(features[location])[0] == '*':
@@ -512,16 +488,6 @@ class ContractStore:
                     )
                 requests.append(request)
                 entity_names.update(request.entity_names)
-
-            elif location_name in combined_feature_views:
-                cfv = combined_feature_views[location_name]
-                if len(features[location]) == 1 and list(features[location])[0] == '*':
-                    sub_requests = cfv.request_all
-                else:
-                    sub_requests = cfv.requests_for(features[location])
-                requests.extend(sub_requests.needed_requests)
-                for request in sub_requests.needed_requests:
-                    entity_names.update(request.entity_names)
 
             elif location_name in feature_views:
                 feature_view = feature_views[location_name]
@@ -551,8 +517,7 @@ class ContractStore:
                 entity_names.update(sub_request.entity_names)
             else:
                 raise ValueError(
-                    f'Unable to find: {location_name}, '
-                    f'availible views are: {combined_feature_views.keys()}, and: {feature_views.keys()}'
+                    f'Unable to find: {location_name}, ' f'availible views are: {feature_views.keys()}'
                 )
 
         if event_timestamp_column:
@@ -589,13 +554,12 @@ class ContractStore:
         return ContractStore._requests_for(
             feature_request,
             self.feature_views,
-            self.combined_feature_views,
             self.models,
             event_timestamp_column=event_timestamp_column,
             model_version_as_entity=model_version_as_entity,
         )
 
-    def feature_view(self, view: str) -> FeatureViewStore:
+    def feature_view(self, view: str | FeatureViewWrapper) -> FeatureViewStore:
         """
         Selects a feature view based on a name.
 
@@ -608,16 +572,16 @@ class ContractStore:
         Args:
             view (str): The name of the feature view
 
-        Raises:
-            CombinedFeatureViewQuerying: If the name is a combined feature view
-
         Returns:
             FeatureViewStore: The selected feature view ready for querying
         """
-        if view in self.combined_feature_views:
-            return FeatureViewStore(self, self.combined_feature_views[view], set())
-        feature_view = self.feature_views[view]
-        return FeatureViewStore(self, feature_view, self.event_triggers_for(view))
+        if isinstance(view, FeatureViewWrapper):
+            view_name = view.location.name
+        else:
+            view_name = view
+
+        feature_view = self.feature_views[view_name]
+        return FeatureViewStore(self, feature_view, self.event_triggers_for(view_name))
 
     def add_view(self, view: CompiledFeatureView | FeatureView | FeatureViewWrapper) -> None:
         """
@@ -662,6 +626,7 @@ class ContractStore:
 
         self.feature_views[view.name] = view
         if isinstance(self.feature_source, BatchFeatureSource):
+            assert isinstance(self.feature_source.sources, dict)
             self.feature_source.sources[FeatureLocation.feature_view(view.name).identifier] = (
                 view.materialized_source or view.source
             )
@@ -673,13 +638,6 @@ class ContractStore:
             self.add_compiled_view(feature_view.compile_instance())
         else:
             self.add_compiled_view(feature_view)
-
-    def add_combined_feature_view(self, feature_view: CombinedFeatureView) -> None:
-        compiled_view = type(feature_view).compile()
-        self.combined_feature_views[compiled_view.name] = compiled_view
-
-    def add_combined_view(self, compiled_view: CompiledCombinedFeatureView) -> None:
-        self.combined_feature_views[compiled_view.name] = compiled_view
 
     def add_model(self, model: ModelContractWrapper) -> None:
         """
@@ -710,6 +668,7 @@ class ContractStore:
             self.vector_indexes[index_name] = model
 
         if isinstance(self.feature_source, BatchFeatureSource) and source is not None:
+            assert isinstance(self.feature_source.sources, dict)
             self.feature_source.sources[FeatureLocation.model(model.name).identifier] = source
 
     def with_source(self, source: FeatureSourceable = None) -> ContractStore:
@@ -730,6 +689,8 @@ class ContractStore:
         """
         if isinstance(source, FeatureSourceFactory):
             feature_source = source.feature_source()
+        elif isinstance(source, FeatureSource):
+            feature_source = source
         elif source is None:
             sources = {
                 FeatureLocation.feature_view(view.name).identifier: view.source
@@ -740,8 +701,6 @@ class ContractStore:
                 if model.predictions_view.source is not None
             }
             feature_source = source or BatchFeatureSource(sources=sources)
-        elif isinstance(source, FeatureSource):
-            feature_source = source
         else:
             raise ValueError(
                 'Setting a dedicated source needs to be either a FeatureSource, '
@@ -750,10 +709,25 @@ class ContractStore:
 
         return ContractStore(
             feature_views=self.feature_views,
-            combined_feature_views=self.combined_feature_views,
             models=self.models,
             feature_source=feature_source,
         )
+
+    def sources_of_type(self, source_type: type[T], function: Callable[[T, FeatureLocation], None]) -> None:
+
+        if not isinstance(self.feature_source, BatchFeatureSource):
+            raise ValueError(
+                f'.update_source_for(...) needs a `BatchFeatureSource`, got {type(self.feature_source)}'
+            )
+
+        assert isinstance(self.feature_source.sources, dict), 'Can only operate on a dict'
+
+        for location, source in self.feature_source.sources.items():
+            if not isinstance(source, source_type):
+                continue
+
+            loc = FeatureLocation.from_string(location)
+            function(source, loc)
 
     def update_source_for(self, location: FeatureLocation | str, source: BatchDataSource) -> ContractStore:
         if not isinstance(self.feature_source, BatchFeatureSource):
@@ -765,11 +739,11 @@ class ContractStore:
             location = FeatureLocation.from_string(location)
 
         new_source = self.feature_source
+        assert isinstance(new_source.sources, dict)
         new_source.sources[location.identifier] = source
 
         return ContractStore(
             feature_views=self.feature_views,
-            combined_feature_views=self.combined_feature_views,
             models=self.models,
             feature_source=new_source,
         )
@@ -801,7 +775,6 @@ class ContractStore:
         }
         return ContractStore(
             feature_views=self.feature_views,
-            combined_feature_views=self.combined_feature_views,
             models=self.models,
             feature_source=BatchFeatureSource(sources=sources),
         )
@@ -818,44 +791,12 @@ class ContractStore:
             )
         return all_model_features
 
-    def views_with_config(self, config: Any) -> list[SourceRequest]:
-        """
-        Returns the feature views where the config match.
-
-        ```python
-        source = PostgreSQLConfig(env_var='SOURCE_URL')
-        store.views_with_conifg(source)
-        ```
-
-        Args:
-            config (Any): The config to find views for
-
-        Returns:
-            list[SourceRequest]: A list of data sources, the request and it's location
-        """
-        views: list[SourceRequest] = []
-        for view in self.feature_views.values():
-            request = view.request_all.needed_requests[0]
-            if view.source.contains_config(config):
-                views.append(SourceRequest(FeatureLocation.feature_view(view.name), view.source, request))
-
-            if view.application_source and view.application_source.contains_config(config):
-                views.append(
-                    SourceRequest(FeatureLocation.feature_view(view.name), view.application_source, request)
-                )
-        return views
-
     def write_request_for(self, location: FeatureLocation) -> RetrivalRequest:
 
-        if location.location == 'feature_view':
+        if location.location_type == 'feature_view':
             return self.feature_views[location.name].request_all.needed_requests[0]
-        elif location.location == 'model':
+        elif location.location_type == 'model':
             return self.models[location.name].predictions_view.request('write', model_version_as_entity=True)
-        elif location.location == 'combined_view':
-            raise NotImplementedError(
-                'Have not implemented write requests for combined views. '
-                'Please consider contributing and add a PR.'
-            )
         else:
             raise ValueError(f"Unable to write to location: '{location}'.")
 
@@ -890,8 +831,10 @@ class ContractStore:
 
             try:
                 existing_df = await source.to_lazy_polars()
-                write_df = pl.concat([new_df, existing_df.select(columns)], how='vertical_relaxed')
-            except UnableToFindFileException:
+                write_df = (
+                    pl.concat([new_df, existing_df.select(columns)], how='vertical_relaxed').collect().lazy()
+                )
+            except (UnableToFindFileException, pl.ComputeError):
                 write_df = new_df
 
             if isinstance(source, ColumnFeatureMappable):
@@ -933,8 +876,9 @@ class ContractStore:
             try:
                 existing_df = await source.to_lazy_polars()
                 write_df = upsert_on_column(entities, new_df, existing_df)
-            except UnableToFindFileException:
+            except (UnableToFindFileException, pl.ComputeError):
                 write_df = new_df
+
             await source.write_polars(write_df)
         else:
             raise ValueError(f'The source {type(source)} do not support writes')
@@ -985,6 +929,19 @@ class ModelFeatureStore:
     @property
     def dataset_store(self) -> DatasetStore | None:
         return self.model.dataset_store
+
+    def has_one_source_for_input_features(self) -> bool:
+        """
+        If the input features are from the same source.
+
+        This can be interesting to know in order to automatically predict over
+        the input.
+        E.g. predict over all data in the source.
+        """
+        version = self.selected_version or self.model.features.default_version
+        features = self.model.features.features_for(version)
+        locations = {feature.location for feature in features}
+        return len(locations) == 1
 
     def raw_string_features(self, except_features: set[str]) -> set[str]:
 
@@ -1097,9 +1054,7 @@ class ModelFeatureStore:
         else:
             features = self.raw_string_features(set())
 
-        job = self.store.features_for(
-            entities, list(features), event_timestamp_column=event_timestamp_column
-        ).with_request(request.needed_requests)
+        job = self.store.features_for(entities, list(features), event_timestamp_column=event_timestamp_column)
 
         if isinstance(entities, (dict, pl.DataFrame, pd.DataFrame)):
 
@@ -1125,6 +1080,9 @@ class ModelFeatureStore:
         return job
 
     async def freshness(self) -> dict[FeatureLocation, datetime | None]:
+        return await self.input_freshness()
+
+    async def input_freshness(self) -> dict[FeatureLocation, datetime | None]:
         from aligned.schemas.feature import EventTimestamp
 
         locs: dict[FeatureLocation, EventTimestamp] = {}
@@ -1133,7 +1091,28 @@ class ModelFeatureStore:
             if req.event_timestamp:
                 locs[req.location] = req.event_timestamp
 
+        if self.model.exposed_model:
+            additional_model_deps = await self.model.exposed_model.depends_on()
+            for loc in additional_model_deps:
+                if loc in locs:
+                    continue
+
+                if loc.location_type == 'model':
+                    event_timestamp = self.store.model(loc.name).prediction_request().event_timestamp
+                else:
+                    event_timestamp = self.store.feature_view(loc.name).request.event_timestamp
+
+                if event_timestamp:
+                    locs[loc] = event_timestamp
+
         return await self.store.feature_source.freshness_for(locs)
+
+    async def prediction_freshness(self) -> datetime | None:
+        pred_req = self.prediction_request()
+        if not pred_req.event_timestamp:
+            return None
+        freshness = await self.store.feature_source.freshness_for({self.location: pred_req.event_timestamp})
+        return freshness[self.location]
 
     def with_labels(self, label_refs: set[FeatureReference] | None = None) -> SupervisedModelFeatureStore:
         """Will also load the labels for the model
@@ -1621,6 +1600,9 @@ class FeatureViewStore:
     def all(self, limit: int | None = None) -> RetrivalJob:
         return self.all_columns(limit)
 
+    def filter(self, filter: pl.Expr | str) -> RetrivalJob:
+        return self.all().filter(filter)
+
     def all_columns(self, limit: int | None = None) -> RetrivalJob:
         if not isinstance(self.source, RangeFeatureSource):
             raise ValueError(f'The source ({self.source}) needs to conform to RangeFeatureSource')
@@ -1786,7 +1768,7 @@ class FeatureViewStore:
         #     job = job.filter(self.feature_filter)
 
         with feature_view_write_time.labels(self.view.name).time():
-            await self.source.insert(job, job.retrival_requests)
+            await self.source.insert(job, job.retrival_requests[0])
 
     async def freshness(self) -> datetime | None:
 
@@ -1805,8 +1787,9 @@ class VectorIndexStore:
 
     store: ContractStore
     model: ModelSchema
+    index_name: str
 
-    def __init__(self, store: ContractStore, model: ModelSchema):
+    def __init__(self, store: ContractStore, model: ModelSchema, index_name: str):
         if model.predictions_view.source is None:
             raise ValueError(f"An output source on the model {model.name} is needed")
 
@@ -1819,6 +1802,7 @@ class VectorIndexStore:
 
         self.store = store
         self.model = model
+        self.index_name = index_name
 
     def nearest_n_to(
         self, entities: RetrivalJob | ConvertableToRetrivalJob, number_of_records: int
@@ -1857,3 +1841,8 @@ class VectorIndexStore:
             features: RetrivalJob = self.store.features_for(entities, features=[feature_ref.identifier])
 
         return source.nearest_n_to(features, number_of_records, response)
+
+    def as_langchain_retriver(self, number_of_docs: int = 5):
+        from aligned.exposed_model.langchain import AlignedRetriver
+
+        return AlignedRetriver(store=self.store, index_name=self.index_name, number_of_docs=number_of_docs)

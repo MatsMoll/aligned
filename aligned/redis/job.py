@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
-import pandas as pd
 import polars as pl
 
+from aligned.lazy_imports import pandas as pd
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import RequestResult, RetrivalJob
 from aligned.schemas.feature import FeatureType
@@ -69,7 +71,7 @@ class FactualRedisJob(RetrivalJob):
             ).select(pl.exclude(redis_combine_id))
 
             for feature in request.returned_features:
-                if feature.dtype == FeatureType.bool():
+                if feature.dtype == FeatureType.boolean():
                     reqs = reqs.with_columns(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
                 elif reqs[feature.name].dtype == pl.Utf8 and (
                     feature.dtype == FeatureType.int32() or feature.dtype == FeatureType.int64()
