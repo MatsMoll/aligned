@@ -559,7 +559,11 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
         from aligned.schemas.transformation import MapArgMax
 
         transformation = MapArgMax(
-            {probs._name: LiteralValue.from_value(probs.of_value) for probs in probabilities}
+            {
+                probs._name: LiteralValue.from_value(probs.of_value)
+                for probs in probabilities
+                if probs._name is not None
+            }
         )
 
         arg_max_feature = DerivedFeature(

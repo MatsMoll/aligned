@@ -209,7 +209,7 @@ async def test_read_csv(point_in_time_data_test: DataTest) -> None:
             description=view.metadata.description,
             batch_source=file_source,
         )
-        compiled = view.compile_instance()
+        compiled = view.compile()
         assert compiled.source.path == file_source.path
 
         store.add_compiled_view(compiled)

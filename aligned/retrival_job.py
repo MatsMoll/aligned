@@ -1739,15 +1739,8 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
 
                     logger.debug(f'Computing feature with pandas: {feature.name}')
                     df[feature.name] = await feature.transformation.transform_pandas(
-                        df[feature.depending_on_names]
+                        df[feature.depending_on_names]  # type: ignore
                     )
-                    # if df[feature.name].dtype != feature.dtype.pandas_type:
-                    #     if feature.dtype.is_numeric:
-                    #         df[feature.name] = pd.to_numeric(df[feature.name], errors='coerce').astype(
-                    #             feature.dtype.pandas_type
-                    #         )
-                    #     else:
-                    #         df[feature.name] = df[feature.name].astype(feature.dtype.pandas_type)
         return df
 
     async def to_pandas(self) -> pd.DataFrame:
@@ -1989,7 +1982,7 @@ class DataLoaderJob:
             df = raw_files[start:end, :]
 
             chunked_job = (
-                LiteralRetrivalJob(df.lazy(), RequestResult.from_request_list(needed_requests))
+                LiteralRetrivalJob(df.lazy(), needed_requests)
                 .derive_features(needed_requests)
                 .select_columns(features_to_include_names)
             )
@@ -2312,7 +2305,7 @@ class CombineFactualJob(RetrivalJob):
                     continue
                 logger.debug(f'Computing feature: {feature.name}')
                 df[feature.name] = await feature.transformation.transform_pandas(
-                    df[feature.depending_on_names]
+                    df[feature.depending_on_names]  # type: ignore
                 )
         return df
 
@@ -2406,7 +2399,7 @@ class SelectColumnsJob(RetrivalJob, ModificationJob):
         df = await self.job.to_pandas()
         if self.include_features:
             total_list = list({ent.name for ent in self.request_result.entities}.union(self.include_features))
-            return df[total_list]
+            return df[total_list]  # type: ignore
         else:
             return df
 

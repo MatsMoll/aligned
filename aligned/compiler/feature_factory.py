@@ -1354,6 +1354,9 @@ class Timestamp(DateFeature, ArithmeticFeature):
     def __init__(self, time_zone: str | None = 'UTC') -> None:
         self.time_zone = time_zone
 
+    def defines_freshness(self) -> Timestamp:
+        return self.with_tag('freshness_timestamp')
+
     @property
     def dtype(self) -> FeatureType:
         from zoneinfo import ZoneInfo

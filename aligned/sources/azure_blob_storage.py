@@ -571,8 +571,9 @@ Partition Keys: *{self.partition_keys}*
             fs.rmdir(directory_path)
 
         upsert_on = sorted(request.entity_names)
+        returend_columns = request.all_returned_columns
 
-        df = await job.select(request.all_returned_columns).to_polars()
+        df = await job.select(returend_columns).to_polars()
         unique_partitions = df.select(self.partition_keys).unique()
 
         filters: list[pl.Expr] = []
@@ -590,7 +591,7 @@ Partition Keys: *{self.partition_keys}*
 
         try:
             existing_df = (await self.to_lazy_polars()).filter(*filters)
-            write_df = upsert_on_column(upsert_on, df.lazy(), existing_df).collect()
+            write_df = upsert_on_column(upsert_on, df.lazy(), existing_df).select(returend_columns).collect()
         except (UnableToFindFileException, pl.ComputeError):
             write_df = df.lazy()
 

@@ -1166,6 +1166,18 @@ def random_values_for(feature: Feature, size: int, seed: int | None = None) -> p
         else:
             values = np.random.random(size)
 
+        if max_value is None and dtype.name.startswith('uint'):
+            bits = dtype.name.lstrip('uint')
+            if bits.isdigit():
+                max_value = 2 ** int(bits)
+                min_value = 0
+        elif max_value is None and dtype.name.startswith('int'):
+            bits = dtype.name.lstrip('int')
+            if bits.isdigit():
+                value_range = 2 ** int(bits) / 2
+                max_value = value_range
+                min_value = -value_range
+
         if max_value and min_value:
             values = values * (max_value - min_value) + min_value
         elif max_value is not None:

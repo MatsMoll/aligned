@@ -230,7 +230,7 @@ class CsvFileSource(
                 schema = {  # type: ignore
                     name: dtype.polars_type
                     for name, dtype in self.expected_schema.items()
-                    if not dtype.is_datetime
+                    if not dtype.is_datetime and dtype.name != 'bool'
                 }
 
                 if self.mapping_keys:
@@ -506,7 +506,8 @@ class PartitionedParquetFileSource(
 
         upsert_on = sorted(request.entity_names)
 
-        df = await job.select(request.all_returned_columns).to_polars()
+        returned_columns = request.all_returned_columns
+        df = await job.select(returned_columns).to_polars()
         unique_partitions = df.select(self.partition_keys).unique()
 
         filters: list[pl.Expr] = []
@@ -524,7 +525,7 @@ class PartitionedParquetFileSource(
 
         try:
             existing_df = (await self.to_lazy_polars()).filter(*filters)
-            write_df = upsert_on_column(upsert_on, df.lazy(), existing_df).collect()
+            write_df = upsert_on_column(upsert_on, df.lazy(), existing_df).select(returned_columns).collect()
         except (UnableToFindFileException, pl.ComputeError):
             write_df = df.lazy()
 

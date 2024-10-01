@@ -17,8 +17,9 @@ from aligned import (
     String,
     Int8,
     EmbeddingModel,
+    feature_view,
 )
-from aligned.feature_view.feature_view import FeatureView, FeatureViewMetadata
+from aligned.feature_view.feature_view import FeatureView, FeatureViewWrapper
 from aligned.compiler.model import model_contract, ModelContractWrapper
 from aligned.feature_store import ContractStore
 from aligned.retrival_job import DerivedFeatureJob, RetrivalJob, RetrivalRequest
@@ -150,14 +151,13 @@ def scan_without_datetime() -> CsvFileSource:
 
 
 @pytest.fixture
-def breast_scan_feature_viewout_with_datetime(scan_without_datetime: CsvFileSource) -> FeatureView:
-    class BreastDiagnoseFeatureView(FeatureView):
-
-        metadata = FeatureViewMetadata(
-            name='breast_features',
-            description='Features defining a scan and diagnose of potential cancer cells',
-            source=scan_without_datetime,
-        )
+def breast_scan_feature_viewout_with_datetime(scan_without_datetime: CsvFileSource) -> FeatureViewWrapper:
+    @feature_view(
+        name='breast_features',
+        description='Features defining a scan and diagnose of potential cancer cells',
+        source=scan_without_datetime,
+    )
+    class BreastDiagnoseFeatureView:
 
         scan_id = Entity(dtype=Int32())
         diagnosis = String().description('The given diagnose. M for malignant, and B for benigne')
@@ -203,7 +203,7 @@ def breast_scan_feature_viewout_with_datetime(scan_without_datetime: CsvFileSour
         fractal_dimension_se = Float()
         fractal_dimension_worst = Float()
 
-    return BreastDiagnoseFeatureView()
+    return BreastDiagnoseFeatureView
 
 
 @pytest.fixture
@@ -224,14 +224,13 @@ def scan_with_datetime() -> CsvFileSource:
 
 
 @pytest.fixture
-def breast_scan_feature_view_with_datetime(scan_with_datetime: CsvFileSource) -> FeatureView:
-    class BreastDiagnoseFeatureView(FeatureView):
-
-        metadata = FeatureViewMetadata(
-            name='breast_features',
-            description='Features defining a scan and diagnose of potential cancer cells',
-            source=scan_with_datetime,
-        )
+def breast_scan_feature_view_with_datetime(scan_with_datetime: CsvFileSource) -> FeatureViewWrapper:
+    @feature_view(
+        name='breast_features',
+        description='Features defining a scan and diagnose of potential cancer cells',
+        source=scan_with_datetime,
+    )
+    class BreastDiagnoseFeatureView:
 
         scan_id = Int32().as_entity()
 
@@ -280,18 +279,19 @@ def breast_scan_feature_view_with_datetime(scan_with_datetime: CsvFileSource) ->
         fractal_dimension_se = Float()
         fractal_dimension_worst = Float()
 
-    return BreastDiagnoseFeatureView()
+    return BreastDiagnoseFeatureView
 
 
 @pytest.fixture
-def breast_scan_feature_view_with_datetime_and_aggregation(scan_with_datetime: CsvFileSource) -> FeatureView:
-    class BreastDiagnoseFeatureView(FeatureView):
-
-        metadata = FeatureViewMetadata(
-            name='breast_features',
-            description='Features defining a scan and diagnose of potential cancer cells',
-            source=scan_with_datetime,
-        )
+def breast_scan_feature_view_with_datetime_and_aggregation(
+    scan_with_datetime: CsvFileSource,
+) -> FeatureViewWrapper:
+    @feature_view(
+        name='breast_features',
+        description='Features defining a scan and diagnose of potential cancer cells',
+        source=scan_with_datetime,
+    )
+    class BreastDiagnoseFeatureView:
 
         scan_id = Entity(dtype=Int32())
 
@@ -340,7 +340,7 @@ def breast_scan_feature_view_with_datetime_and_aggregation(scan_with_datetime: C
         fractal_dimension_se = Float()
         fractal_dimension_worst = Float()
 
-    return BreastDiagnoseFeatureView()
+    return BreastDiagnoseFeatureView
 
 
 @pytest.fixture
@@ -393,17 +393,14 @@ def titanic_source_scd() -> CsvFileSource:
 
 
 @pytest.fixture
-def titanic_source_parquet() -> CsvFileSource:
+def titanic_source_parquet() -> ParquetFileSource:
     return FileSource.parquet_at('test_data/titanic.parquet')
 
 
 @pytest.fixture
-def titanic_feature_view(titanic_source: CsvFileSource) -> FeatureView:
-    class TitanicPassenger(FeatureView):
-
-        metadata = FeatureViewMetadata(
-            name='titanic', description='Some features from the titanic dataset', source=titanic_source
-        )
+def titanic_feature_view(titanic_source: CsvFileSource) -> FeatureViewWrapper:
+    @feature_view(name='titanic', description='Some features from the titanic dataset', source=titanic_source)
+    class TitanicPassenger:
 
         passenger_id = Int32().as_entity()
 
@@ -425,13 +422,13 @@ def titanic_feature_view(titanic_source: CsvFileSource) -> FeatureView:
         is_male, is_female = sex.one_hot_encode(['male', 'female'])
         is_mr = name.contains('Mr.')
 
-    return TitanicPassenger()
+    return TitanicPassenger
 
 
 @pytest.fixture
-def titanic_model(titanic_feature_view: FeatureView) -> ModelContractWrapper:
+def titanic_model(titanic_feature_view: FeatureViewWrapper) -> ModelContractWrapper:
 
-    features = titanic_feature_view
+    features = titanic_feature_view()
 
     @model_contract(
         name='titanic',
@@ -453,15 +450,13 @@ def titanic_model(titanic_feature_view: FeatureView) -> ModelContractWrapper:
 
 
 @pytest.fixture
-def titanic_feature_view_parquet(titanic_source_parquet: ParquetFileSource) -> FeatureView:
-    class TitanicPassenger(FeatureView):
-
-        metadata = FeatureViewMetadata(
-            name='titanic_parquet',
-            description='Some features from the titanic dataset',
-            source=titanic_source_parquet,
-        )
-
+def titanic_feature_view_parquet(titanic_source_parquet: ParquetFileSource) -> FeatureViewWrapper:
+    @feature_view(
+        name='titanic_parquet',
+        description='Some features from the titanic dataset',
+        source=titanic_source_parquet,
+    )
+    class TitanicPassenger:
         passenger_id = Entity(dtype=Int32())
 
         # Input values
@@ -482,7 +477,7 @@ def titanic_feature_view_parquet(titanic_source_parquet: ParquetFileSource) -> F
         is_male, is_female = sex.one_hot_encode(['male', 'female'])
         is_mr = name.contains('Mr.')
 
-    return TitanicPassenger()
+    return TitanicPassenger
 
 
 @pytest.fixture
@@ -499,12 +494,9 @@ def titanic_feature_store(
 
 
 @pytest.fixture
-def alot_of_transforations_feature_view(titanic_source: CsvFileSource) -> FeatureView:
-    class TitanicPassenger(FeatureView):
-
-        metadata = FeatureViewMetadata(
-            name='titanic', description='Some features from the titanic dataset', source=titanic_source
-        )
+def alot_of_transforations_feature_view(titanic_source: CsvFileSource) -> FeatureViewWrapper:
+    @feature_view(name='titanic', description='Some features from the titanic dataset', source=titanic_source)
+    class TitanicPassenger:
 
         passenger_id = Entity(dtype=Int32())
 
@@ -512,7 +504,7 @@ def alot_of_transforations_feature_view(titanic_source: CsvFileSource) -> Featur
         age = Float()
         name = String()
         sex = String()
-        survived = Int8()
+        survived = Bool()
         sibsp = Int32()
         cabin = String().fill_na('Nada')
 
@@ -533,12 +525,12 @@ def alot_of_transforations_feature_view(titanic_source: CsvFileSource) -> Featur
         logical_and = is_mr & survived
         logical_or = is_mr | survived
 
-    return TitanicPassenger()
+    return TitanicPassenger
 
 
 @pytest.fixture
 def alot_of_transforation_feature_store(
-    alot_of_transforations_feature_view: FeatureView,
+    alot_of_transforations_feature_view: FeatureViewWrapper,
 ) -> ContractStore:
     feature_store = ContractStore.empty()
     feature_store.add_feature_view(alot_of_transforations_feature_view)
@@ -547,8 +539,8 @@ def alot_of_transforation_feature_store(
 
 @pytest.fixture
 def combined_feature_store(
-    titanic_feature_view: FeatureView,
-    breast_scan_feature_viewout_with_datetime: FeatureView,
+    titanic_feature_view: FeatureViewWrapper,
+    breast_scan_feature_viewout_with_datetime: FeatureViewWrapper,
 ) -> ContractStore:
     feature_store = ContractStore.empty()
     feature_store.add_feature_view(titanic_feature_view)
@@ -557,17 +549,16 @@ def combined_feature_store(
 
 
 @pytest.fixture
-def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureView:
+def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureViewWrapper:
     redis = RedisConfig.localhost()
 
-    class TitanicPassenger(FeatureView):
-
-        metadata = FeatureViewMetadata(
-            name='titanic',
-            description='Some features from the titanic dataset',
-            source=titanic_source_scd,
-            stream_source=redis.stream(topic='titanic_stream').with_coder(JsonRecordCoder('json')),
-        )
+    @feature_view(
+        name='titanic',
+        description='Some features from the titanic dataset',
+        source=titanic_source_scd,
+        stream_source=redis.stream(topic='titanic_stream').with_coder(JsonRecordCoder('json')),
+    )
+    class TitanicPassenger:
 
         passenger_id = Entity(dtype=Int32())
 
@@ -597,13 +588,13 @@ def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureView:
         is_male, is_female = sex.one_hot_encode(['male', 'female'])
         is_mr = name.contains('Mr.')
 
-    return TitanicPassenger()
+    return TitanicPassenger
 
 
 @pytest.fixture
-def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> ModelContractWrapper:
+def titanic_model_scd(titanic_feature_view_scd: FeatureViewWrapper) -> ModelContractWrapper:
 
-    features = titanic_feature_view_scd
+    features = titanic_feature_view_scd()
 
     @model_contract(
         name='titanic',
@@ -627,8 +618,8 @@ def titanic_model_scd(titanic_feature_view_scd: FeatureView) -> ModelContractWra
 
 @pytest.fixture
 def titanic_feature_store_scd(
-    titanic_feature_view_scd: FeatureView,
-    titanic_feature_view_parquet: FeatureView,
+    titanic_feature_view_scd: FeatureViewWrapper,
+    titanic_feature_view_parquet: FeatureViewWrapper,
     titanic_model_scd: ModelContractWrapper,
 ) -> ContractStore:
     feature_store = ContractStore.empty()
@@ -641,7 +632,7 @@ def titanic_feature_store_scd(
 @dataclass
 class FeatureData:
     data: pl.DataFrame
-    view: FeatureView
+    view: FeatureViewWrapper
 
 
 @dataclass
@@ -658,9 +649,8 @@ def point_in_time_data_test() -> DataTest:
 
     placeholder_ds = FileSource.parquet_at('placeholder')
 
-    class CreditHistory(FeatureView):
-
-        metadata = FeatureView.metadata_with('credit_history', description='', batch_source=placeholder_ds)
+    @feature_view(name='credit_history', description='', source=placeholder_ds)
+    class CreditHistory:
 
         dob_ssn = String().as_entity()
         event_timestamp = EventTimestamp()
@@ -671,21 +661,16 @@ def point_in_time_data_test() -> DataTest:
 
         bankruptcies = Int32()
 
-    class CreditHistoryAggregate(FeatureView):
-
-        metadata = FeatureView.metadata_with(
-            'credit_history_agg', description='', batch_source=placeholder_ds
-        )
-
+    @feature_view(name='credit_history_agg', description='', source=placeholder_ds)
+    class CreditHistoryAggregate:
         dob_ssn = String().as_entity()
         event_timestamp = EventTimestamp()
         credit_card_due = Int64()
 
         credit_sum = credit_card_due.aggregate().over(weeks=1).sum()
 
-    class Loan(FeatureView):
-
-        metadata = FeatureView.metadata_with('loan', description='', batch_source=placeholder_ds)
+    @feature_view(name='loan', description='', source=placeholder_ds)
+    class Loan:
 
         loan_id = Int32().as_entity()
         event_timestamp = EventTimestamp()
@@ -760,9 +745,9 @@ def point_in_time_data_test() -> DataTest:
 
     return DataTest(
         sources=[
-            FeatureData(data=credit_data, view=CreditHistory()),
-            FeatureData(data=loan_data, view=Loan()),
-            FeatureData(data=credit_data, view=CreditHistoryAggregate()),
+            FeatureData(data=credit_data, view=CreditHistory),
+            FeatureData(data=loan_data, view=Loan),
+            FeatureData(data=credit_data, view=CreditHistoryAggregate),
         ],
         entities=entities,
         feature_reference=[
@@ -782,9 +767,8 @@ def point_in_time_data_test_wituout_event_timestamp() -> DataTest:
 
     placeholder_ds = FileSource.parquet_at('placeholder')
 
-    class CreditHistory(FeatureView):
-
-        metadata = FeatureView.metadata_with('credit_history', description='', batch_source=placeholder_ds)
+    @feature_view(name='credit_history', description='', source=placeholder_ds)
+    class CreditHistory:
 
         dob_ssn = String().as_entity()
         event_timestamp = EventTimestamp()
@@ -795,21 +779,16 @@ def point_in_time_data_test_wituout_event_timestamp() -> DataTest:
 
         bankruptcies = Int32()
 
-    class CreditHistoryAggregate(FeatureView):
-
-        metadata = FeatureView.metadata_with(
-            'credit_history_agg', description='', batch_source=placeholder_ds
-        )
-
+    @feature_view(name='credit_history_agg', description='', source=placeholder_ds)
+    class CreditHistoryAggregate:
         dob_ssn = String().as_entity()
         event_timestamp = EventTimestamp()
         credit_card_due = Int64()
 
         credit_sum = credit_card_due.aggregate().over(weeks=1).sum()
 
-    class Loan(FeatureView):
-
-        metadata = FeatureView.metadata_with('loan', description='', batch_source=placeholder_ds)
+    @feature_view(name='loan', description='', source=placeholder_ds)
+    class Loan:
 
         loan_id = Int32().as_entity()
         event_timestamp = EventTimestamp()
@@ -882,9 +861,9 @@ def point_in_time_data_test_wituout_event_timestamp() -> DataTest:
 
     return DataTest(
         sources=[
-            FeatureData(data=credit_data, view=CreditHistory()),
-            FeatureData(data=loan_data, view=Loan()),
-            FeatureData(data=credit_data, view=CreditHistoryAggregate()),
+            FeatureData(data=credit_data, view=CreditHistory),
+            FeatureData(data=loan_data, view=Loan),
+            FeatureData(data=credit_data, view=CreditHistoryAggregate),
         ],
         entities=entities,
         feature_reference=[

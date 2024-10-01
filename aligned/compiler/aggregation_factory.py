@@ -376,6 +376,6 @@ class PolarsTransformationFactoryAggregation(TransformationFactory, AggregationT
         else:
             return PolarsFunctionTransformation(
                 code=code,
-                function_name=dill.source.getname(self.method),
+                function_name=dill.source.getname(self.method),  # type: ignore
                 dtype=self.dtype.dtype,
             )

@@ -94,7 +94,8 @@ class RawStringFeatureRequest:
     def unpack_feature(feature: str) -> tuple[FeatureLocation, str]:
         splits = feature.split(':')
         if len(splits) == 3:
-            return (FeatureLocation(splits[1], splits[0]), splits[2])
+            assert splits[0]
+            return (FeatureLocation(splits[1], splits[0]), splits[2])  # type: ignore
         if len(splits) == 2:
             return (FeatureLocation(splits[0], 'feature_view'), splits[1])
         else:

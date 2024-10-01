@@ -187,7 +187,8 @@ class StreamWorker:
         processes = []
         for topic_name, views in feature_views.items():
             process_views = views
-            stream: StreamDataSource = views[0].view.stream_data_source
+            stream: StreamDataSource | None = views[0].view.stream_data_source
+            assert stream is not None
             stream_consumer = stream.consumer(
                 self.read_timestamps.get(topic_name, self.default_start_timestamp)
             )
@@ -204,10 +205,12 @@ class StreamWorker:
 
                 if not source:
                     logger.debug(f'Skipping to setup active learning set for {model_name}')
-
-                processes.append(
-                    process_predictions(source.consumer(), store.model(model_name), active_learning_config)
-                )
+                else:
+                    processes.append(
+                        process_predictions(
+                            source.consumer(), store.model(model_name), active_learning_config
+                        )
+                    )
 
         if self.metric_logging_port:
             start_http_server(self.metric_logging_port)
@@ -229,9 +232,6 @@ async def process_predictions(
         logger.debug('No active learning config found, will not listen to predictions')
         return
 
-    topic_name = model.model.predictions_view.stream_source.topic_name
-    logger.debug(f'Started listning to {topic_name}')
-
     while True:
         records = await stream_source.read()
 
@@ -240,7 +240,7 @@ async def process_predictions(
         start_time = timeit.default_timer()
 
         request = model.model.request_all_predictions.needed_requests[0]
-        job = RetrivalJob.from_dict(records, request).ensure_types([request])
+        job = RetrivalJob.from_dict(records, request).ensure_types([request])  # type: ignore
         job = ActiveLearningJob(
             job,
             model.model,
@@ -264,7 +264,7 @@ def stream_job(values: list[dict], feature_view: FeatureViewStore) -> RetrivalJo
     if isinstance(feature_view.view.stream_data_source, ColumnFeatureMappable):
         mappings = feature_view.view.stream_data_source.mapping_keys
 
-    value_job = RetrivalJob.from_dict(values, request)
+    value_job = RetrivalJob.from_dict(values, request)  # type: ignore
 
     if mappings:
         value_job = value_job.rename(mappings)
