@@ -38,6 +38,8 @@ async def test_read_parquet(point_in_time_data_test: DataTest) -> None:
 
 @pytest.mark.asyncio
 async def test_partition_parquet(point_in_time_data_test: DataTest) -> None:
+    from datetime import datetime
+
     store = ContractStore.experimental()
 
     agg_features: list[str] = []
@@ -80,6 +82,32 @@ async def test_partition_parquet(point_in_time_data_test: DataTest) -> None:
 
     ordered_columns = data.select(expected.columns)
     assert ordered_columns.equals(expected), f'Expected: {expected}\nGot: {ordered_columns}'
+
+    await store.upsert_into(
+        FeatureLocation.feature_view('loan'),
+        pl.DataFrame(
+            {
+                'loan_amount': [4000],
+                'loan_id': [10000],
+                'event_timestamp': [datetime.now()],
+                'personal_income': [59000],
+                'loan_status': [1],
+            }
+        ),
+    )
+    await store.upsert_into(
+        FeatureLocation.feature_view('loan'),
+        pl.DataFrame(
+            {
+                'loan_id': [10001],
+                'loan_amount': [4000],
+                'event_timestamp': [datetime.now()],
+                'personal_income': [59000],
+                'loan_status': [1],
+            }
+        ),
+    )
+    await store.feature_view('loan').all().to_polars()
 
 
 @pytest.mark.asyncio

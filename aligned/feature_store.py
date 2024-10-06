@@ -181,6 +181,24 @@ class ContractStore:
 
         return store
 
+    def dummy_store(self) -> ContractStore:
+        """
+        Creates a new contract store that only generates dummy data
+        """
+        from aligned.data_source.batch_data_source import RandomDataSource
+
+        sources: dict[str, BatchDataSource] = {}
+
+        for view_name in self.feature_views.keys():
+            sources[FeatureLocation.feature_view(view_name).identifier] = RandomDataSource()
+
+        for model_name in self.models.keys():
+            sources[FeatureLocation.model(model_name).identifier] = RandomDataSource()
+
+        return ContractStore(
+            self.feature_views, self.models, BatchFeatureSource(sources), self.vector_indexes
+        )
+
     def repo_definition(self) -> RepoDefinition:
         return RepoDefinition(
             metadata=RepoMetadata(datetime.utcnow(), name='feature_store_location.py'),

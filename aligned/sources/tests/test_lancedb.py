@@ -2,7 +2,7 @@ import polars as pl
 from aligned import model_contract, feature_view, String, Embedding, ExposedModel
 from aligned.feature_store import ContractStore, ModelFeatureStore
 from aligned.sources.lancedb import LanceDBConfig
-from aligned.data_source.batch_data_source import DummyDataSource
+from aligned.sources.random_source import RandomDataSource
 
 import pytest
 
@@ -12,7 +12,7 @@ async def test_lancedb() -> None:
     table = 'my_embedding'
     config = LanceDBConfig('test_data/temp/lancedb')
 
-    @feature_view(source=DummyDataSource())
+    @feature_view(source=RandomDataSource())
     class TestFeatureView:
         id = String().as_entity()
         text = String()

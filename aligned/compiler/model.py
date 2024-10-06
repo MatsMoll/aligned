@@ -19,7 +19,8 @@ from aligned.compiler.feature_factory import (
     RegressionLabel,
     TargetProbability,
 )
-from aligned.data_source.batch_data_source import CodableBatchDataSource, DummyDataSource
+from aligned.sources.random_source import RandomDataSource
+from aligned.data_source.batch_data_source import CodableBatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.feature_view.feature_view import (
     FeatureView,
@@ -75,7 +76,7 @@ class ModelMetadata:
     def as_view_meatadata(self) -> FeatureViewMetadata:
         return FeatureViewMetadata(
             name=self.name,
-            source=self.output_source or DummyDataSource(),
+            source=self.output_source or RandomDataSource(),
             contacts=self.contacts,
             tags=self.tags,
             description=self.description,

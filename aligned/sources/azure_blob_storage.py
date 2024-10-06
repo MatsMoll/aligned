@@ -574,6 +574,9 @@ Partition Keys: *{self.partition_keys}*
         returend_columns = request.all_returned_columns
 
         df = await job.select(returend_columns).to_polars()
+        if df.is_empty():
+            return
+
         unique_partitions = df.select(self.partition_keys).unique()
 
         filters: list[pl.Expr] = []
@@ -591,7 +594,7 @@ Partition Keys: *{self.partition_keys}*
 
         try:
             existing_df = (await self.to_lazy_polars()).filter(*filters)
-            write_df = upsert_on_column(upsert_on, df.lazy(), existing_df).select(returend_columns).collect()
+            write_df = upsert_on_column(upsert_on, df.lazy(), existing_df).collect()
         except (UnableToFindFileException, pl.ComputeError):
             write_df = df.lazy()
 
@@ -604,7 +607,7 @@ Partition Keys: *{self.partition_keys}*
             if fs.exists(dir.as_posix()):
                 delete_directory_recursively(dir.as_posix())
 
-        await self.write_polars(write_df.lazy())
+        await self.write_polars(write_df.select(returend_columns).lazy())
 
     async def delete(self) -> None:
         from adlfs import AzureBlobFileSystem

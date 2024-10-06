@@ -1,7 +1,7 @@
 from contextlib import suppress
 import pytest
 from aligned import ExposedModel, model_contract, String, Int32, EventTimestamp, feature_view, FileSource
-from aligned.data_source.batch_data_source import DummyDataSource
+from aligned.sources.random_source import RandomDataSource
 from aligned.exposed_model.interface import python_function
 
 
@@ -114,7 +114,7 @@ async def test_pipeline_model_with_source() -> None:
     @model_contract(
         input_features=[InputFeatureView().x],
         exposed_model=python_function(lambda df: df['x'] * 2),
-        output_source=DummyDataSource(),
+        output_source=RandomDataSource(),
     )
     class MyModelContract:
         entity_id = String().as_entity()
