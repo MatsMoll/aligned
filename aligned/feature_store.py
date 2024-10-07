@@ -185,7 +185,7 @@ class ContractStore:
         """
         Creates a new contract store that only generates dummy data
         """
-        from aligned.data_source.batch_data_source import RandomDataSource
+        from aligned.sources.random_source import RandomDataSource
 
         sources: dict[str, BatchDataSource] = {}
 
