@@ -235,6 +235,13 @@ class RandomDataSource(CodableBatchDataSource, DataFileReference, WritableFeatur
         source, _ = requests[0]
 
         async def random_features_for(facts: RetrivalJob, request: RetrivalRequest) -> pl.LazyFrame:
+
+            if source.partial_data.is_empty():
+                df = await facts.to_polars()
+                random = (await data_for_request(request, df.height)).lazy()
+                join_columns = set(request.all_returned_columns) - set(df.columns)
+                return df.hstack(random.select(pl.col(join_columns)).collect()).lazy()
+
             join_columns = set(request.all_returned_columns) - set(source.partial_data.columns)
             if not join_columns:
                 return source.partial_data.lazy()
