@@ -124,6 +124,34 @@ class CompiledFeatureView(Codable):
             ],
         )
 
+    @property
+    def retrival_request(self) -> RetrivalRequest:
+        return RetrivalRequest(
+            name=self.name,
+            location=FeatureLocation.feature_view(self.name),
+            entities=self.entities,
+            features=self.features,
+            derived_features=self.derived_features,
+            aggregated_features=self.aggregated_features,
+            event_timestamp=self.event_timestamp,
+            features_to_include={feature.name for feature in self.full_schema},
+        )
+
+    def schema_hash(self) -> bytes:
+        from hashlib import md5
+
+        schema_string = ''
+
+        schema_features = self.features.union(self.entities)
+        if self.event_timestamp:
+            schema_features.add(self.event_timestamp.as_feature())
+
+        for feature in sorted(schema_features, key=lambda val: val.name):
+            if not feature.default_value:
+                schema_string += f"{feature.name}:{feature.dtype.name}"
+
+        return md5(schema_string.encode(), usedforsecurity=False).digest()
+
     def request_for(self, feature_names: set[str]) -> FeatureRequest:
 
         features = {feature for feature in self.features if feature.name in feature_names}.union(

@@ -184,6 +184,15 @@ class CsvFileSource(
     def __hash__(self) -> int:
         return hash(self.job_group_key())
 
+    def with_schema_version(self, schema_hash: bytes) -> CsvFileSource:
+        return CsvFileSource(
+            path=self.path.replace(FileDirectory.schema_placeholder(), schema_hash.hex()),
+            mapping_keys=self.mapping_keys,
+            csv_config=self.csv_config,
+            formatter=self.formatter,
+            expected_schema=self.expected_schema,
+        )
+
     def to_markdown(self) -> str:
         return f"""### CSV File
 
@@ -426,6 +435,15 @@ class PartitionedParquetFileSource(
     def __hash__(self) -> int:
         return hash(self.job_group_key())
 
+    def with_schema_version(self, schema_hash: bytes) -> PartitionedParquetFileSource:
+        return PartitionedParquetFileSource(
+            directory=self.directory.replace(FileDirectory.schema_placeholder(), schema_hash.hex()),
+            partition_keys=self.partition_keys,
+            mapping_keys=self.mapping_keys,
+            config=self.config,
+            date_formatter=self.date_formatter,
+        )
+
     async def delete(self) -> None:
         delete_path(self.directory)
 
@@ -569,6 +587,14 @@ class ParquetFileSource(CodableBatchDataSource, ColumnFeatureMappable, DataFileR
 *File*: {self.path}
 
 [Go to file]({self.path})'''  # noqa
+
+    def with_schema_version(self, schema_hash: bytes) -> ParquetFileSource:
+        return ParquetFileSource(
+            path=self.path.replace(FileDirectory.schema_placeholder(), schema_hash.hex()),
+            mapping_keys=self.mapping_keys,
+            config=self.config,
+            date_formatter=self.date_formatter,
+        )
 
     def job_group_key(self) -> str:
         return f'{self.type_name}/{self.path}'
@@ -835,11 +861,18 @@ class Directory(Protocol):
     def sub_directory(self, path: str) -> Directory:
         ...
 
+    def with_schema_version(self, sub_directory: str | None = None) -> Directory:
+        ...
+
 
 @dataclass
 class FileDirectory(Codable, Directory):
 
     dir_path: Path
+
+    @classmethod
+    def schema_placeholder(cls) -> str:
+        return '{_schema_version_placeholder}'
 
     def path_string(self, path: str) -> str:
         string_value = (self.dir_path / path).as_posix()
@@ -899,6 +932,12 @@ class FileDirectory(Codable, Directory):
 
     def sub_directory(self, path: str) -> FileDirectory:
         return FileDirectory(self.dir_path / path)
+
+    def with_schema_version(self, sub_directory: str | None = None) -> Directory:
+        if sub_directory:
+            return FileDirectory(self.dir_path / sub_directory / FileDirectory.schema_placeholder())
+        else:
+            return FileDirectory(self.dir_path / FileDirectory.schema_placeholder())
 
     def directory(self, path: str) -> FileDirectory:
         return self.sub_directory(path)
@@ -981,6 +1020,12 @@ class FileSource:
     @staticmethod
     def directory(path: str) -> FileDirectory:
         return FileDirectory(Path(path))
+
+    def with_schema_version(self, sub_directory: str | None = None) -> Directory:
+        if sub_directory:
+            return FileDirectory(Path(sub_directory) / FileDirectory.schema_placeholder())
+        else:
+            return FileDirectory(Path('.') / FileDirectory.schema_placeholder())
 
     @staticmethod
     def repo_from_dir(dir: str, exclude: list[str] | None = None) -> AsRepoDefinition:

@@ -113,6 +113,9 @@ class BatchDataSource:
         """
         return self.job_group_key()
 
+    def with_schema_version(self: T, schema_hash: bytes) -> T:
+        return self
+
     def __hash__(self) -> int:
         return hash(self.job_group_key())
 

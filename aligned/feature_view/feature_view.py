@@ -746,6 +746,12 @@ class FeatureView(ABC):
             )
             view.aggregated_features.add(feat)
 
+        schema_hash = view.schema_hash()
+        view.source = view.source.with_schema_version(schema_hash)
+
+        if view.materialized_source:
+            view.materialized_source = view.materialized_source.with_schema_version(schema_hash)
+
         return view
 
     @classmethod

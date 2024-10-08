@@ -106,6 +106,21 @@ class PredictionsView(Codable):
             event_timestamp=self.event_timestamp,
         )
 
+    def schema_hash(self) -> bytes:
+        from hashlib import md5
+
+        schema_string = ''
+
+        schema_features = self.features.union(self.entities)
+        if self.event_timestamp:
+            schema_features.add(self.event_timestamp.as_feature())
+
+        for feature in sorted(schema_features, key=lambda val: val.name):
+            if not feature.default_value:
+                schema_string += f"{feature.name}:{feature.dtype.name}"
+
+        return md5(schema_string.encode(), usedforsecurity=False).digest()
+
     @property
     def full_schema(self) -> set[Feature]:
 

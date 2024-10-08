@@ -584,6 +584,11 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
     if not probability_features and inference_view.classification_targets:
         inference_view.features.update({target.feature for target in inference_view.classification_targets})
 
+    schema_hash = inference_view.schema_hash()
+
+    if inference_view.source:
+        inference_view.source = inference_view.source.with_schema_version(schema_hash)
+
     return ModelSchema(
         name=metadata.name,
         features=features,

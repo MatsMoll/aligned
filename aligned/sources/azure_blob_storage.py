@@ -202,6 +202,10 @@ class AzureBlobDirectory(Directory):
     config: AzureBlobConfig
     sub_path: Path
 
+    @classmethod
+    def schema_placeholder(cls) -> str:
+        return '{_schema_version_placeholder}'
+
     def json_at(self, path: str) -> StorageFileReference:
         return AzureBlobDataSource(self.config, (self.sub_path / path).as_posix())
 
@@ -269,6 +273,14 @@ class AzureBlobDirectory(Directory):
 
     def directory(self, path: str) -> AzureBlobDirectory:
         return AzureBlobDirectory(self.config, self.sub_path / path)
+
+    def with_schema_version(self, sub_directory: str | None = None) -> Directory:
+        if sub_directory:
+            return AzureBlobDirectory(
+                self.config, self.sub_path / sub_directory / AzureBlobDirectory.schema_placeholder()
+            )
+        else:
+            return AzureBlobDirectory(self.config, self.sub_path / AzureBlobDirectory.schema_placeholder())
 
 
 @dataclass
@@ -339,6 +351,15 @@ Path: *{self.path}*
     @property
     def storage(self) -> Storage:
         return self.config.storage
+
+    def with_schema_version(self, schema_hash: bytes) -> AzureBlobCsvDataSource:
+        return AzureBlobCsvDataSource(
+            config=self.config,
+            path=self.path.replace(AzureBlobDirectory.schema_placeholder(), schema_hash.hex()),
+            mapping_keys=self.mapping_keys,
+            csv_config=self.csv_config,
+            date_formatter=self.date_formatter,
+        )
 
     async def schema(self) -> dict[str, FeatureType]:
         try:
@@ -461,6 +482,16 @@ Partition Keys: *{self.partition_keys}*
 
     def __hash__(self) -> int:
         return hash(self.job_group_key())
+
+    def with_schema_version(self, schema_hash: bytes) -> AzureBlobPartitionedParquetDataSource:
+        return AzureBlobPartitionedParquetDataSource(
+            config=self.config,
+            directory=self.directory.replace(AzureBlobDirectory.schema_placeholder(), schema_hash.hex()),
+            partition_keys=self.partition_keys,
+            mapping_keys=self.mapping_keys,
+            parquet_config=self.parquet_config,
+            date_formatter=self.date_formatter,
+        )
 
     @property
     def storage(self) -> Storage:
@@ -656,6 +687,15 @@ Path: *{self.path}*
 
     def __hash__(self) -> int:
         return hash(self.job_group_key())
+
+    def with_schema_version(self, schema_hash: bytes) -> AzureBlobParquetDataSource:
+        return AzureBlobParquetDataSource(
+            config=self.config,
+            path=self.path.replace(AzureBlobDirectory.schema_placeholder(), schema_hash.hex()),
+            mapping_keys=self.mapping_keys,
+            parquet_config=self.parquet_config,
+            date_formatter=self.date_formatter,
+        )
 
     @property
     def storage(self) -> Storage:
