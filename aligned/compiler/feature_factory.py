@@ -547,7 +547,7 @@ class FeatureFactory(FeatureReferencable):
     def transformed_using_features_polars(
         self: T,
         using_features: list[FeatureFactory],
-        transformation: Callable[[pl.LazyFrame, str], pl.LazyFrame],
+        transformation: Callable[[pl.LazyFrame, str], pl.LazyFrame] | pl.Expr,
     ) -> T:
         from aligned.compiler.transformation_factory import PolarsTransformationFactory
 
@@ -1841,3 +1841,40 @@ class ArithmeticAggregation:
             offset_interval=self.offset_interval,
         )
         return feat
+
+
+def transform_polars(
+    using_features: list[FeatureFactory], return_type: T
+) -> Callable[[Callable[[Any, pl.LazyFrame, str], pl.LazyFrame]], T]:
+    def wrapper(method: Callable[[Any, pl.LazyFrame, str], pl.LazyFrame]) -> T:
+        return return_type.transformed_using_features_polars(
+            using_features=using_features, transformation=method  # type: ignore
+        )
+
+    return wrapper
+
+
+def transform_pandas(
+    using_features: list[FeatureFactory], return_type: T
+) -> Callable[[Callable[[Any, pd.DataFrame], pd.Series]], T]:
+    def wrapper(method: Callable[[Any, pd.DataFrame], pd.Series]) -> T:
+        return return_type.transformed_using_features_pandas(
+            using_features=using_features, transformation=method  # type: ignore
+        )
+
+    return wrapper
+
+
+def transform_row(
+    using_features: list[FeatureFactory], return_type: T
+) -> Callable[[Callable[[Any, dict[str, Any]], Any]], T]:
+    def wrapper(method: Callable[[Any, dict[str, Any]], Any]) -> T:
+        from aligned.compiler.transformation_factory import MapRowTransformation
+
+        new_value = return_type.copy_type()
+        new_value.transformation = MapRowTransformation(
+            dtype=new_value, method=method, _using_features=using_features  # type: ignore
+        )
+        return new_value
+
+    return wrapper

@@ -76,31 +76,57 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
             if request.location.identifier in self.sources
         }
 
+        loaded_columns = set(facts.loaded_columns)
+
+        def needs_to_load_source(requests: list[RetrivalRequest]) -> bool:
+            for req in requests:
+                if set(req.feature_names) - loaded_columns:
+                    return True
+
+                for feat in req.derived_features:
+                    if (
+                        set(
+                            depends_on.name
+                            for depends_on in feat.depending_on
+                            if depends_on.location != req.location
+                        )
+                        - loaded_columns
+                    ):
+                        return True
+
+                for feat in req.aggregated_features:
+                    if set(feat.depending_on_names) - loaded_columns:
+                        return True
+            return False
+
         # The combined views basicly, as they have no direct
         combined_requests = [
             request for request in request.needed_requests if request.location.identifier not in self.sources
         ]
         jobs = []
         for source_group in source_groupes:
-            requests = [
+            requests_with_source = [
                 (source, req) for source, req in core_requests if source.job_group_key() == source_group
             ]
-            has_derived_features = any(req.derived_features for _, req in requests)
-            job = (
-                self.source_types[source_group]
-                .multi_source_features_for(facts=facts, requests=requests)
-                .ensure_types([req for _, req in requests])
-            )
-            if has_derived_features:
-                job = job.derive_features()
+            requests = [req for _, req in requests_with_source]
 
-            if len(requests) == 1 and requests[0][1].aggregated_features:
-                req = requests[0][1]
+            if needs_to_load_source(requests):
+                job = (
+                    self.source_types[source_group]
+                    .multi_source_features_for(facts=facts, requests=requests_with_source)
+                    .ensure_types(requests)
+                    .derive_features()
+                )
+            else:
+                job = facts.derive_features(requests)
+
+            if len(requests) == 1 and requests_with_source[0][1].aggregated_features:
+                req = requests_with_source[0][1]
                 job = job.aggregate(req)
 
             jobs.append(job)
 
-        fact_features = set(facts.loaded_columns) - set(request.request_result.entity_columns)
+        fact_features = loaded_columns - set(request.request_result.entity_columns)
         if fact_features:
             jobs.append(facts)
 

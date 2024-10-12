@@ -762,7 +762,7 @@ class RetrivalJob(ABC):
         requests = requests or self.retrival_requests
 
         for request in requests:
-            if len(request.derived_features) > 0:
+            if request.derived_features:
                 return DerivedFeatureJob(job=self, requests=requests)
         return self
 

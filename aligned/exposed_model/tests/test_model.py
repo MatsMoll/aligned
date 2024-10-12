@@ -1,6 +1,8 @@
 from contextlib import suppress
 import pytest
 from aligned import ExposedModel, model_contract, String, Int32, EventTimestamp, feature_view, FileSource
+from aligned.feature_store import ContractStore
+from aligned.sources.in_mem_source import InMemorySource
 from aligned.sources.random_source import RandomDataSource
 from aligned.exposed_model.interface import python_function
 
@@ -136,3 +138,91 @@ async def test_pipeline_model_with_source() -> None:
     ).to_polars()
 
     assert 'other_pred' in preds
+
+
+@pytest.mark.asyncio
+async def test_pipeline_model() -> None:
+    @feature_view(
+        name='input',
+        source=InMemorySource.from_values(
+            {'entity_id': ['a', 'b', 'c'], 'x': [1, 2, 3], 'other': [9, 8, 7]}  # type: ignore
+        ),
+    )
+    class InputFeatureView:
+        entity_id = String().as_entity()
+        x = Int32()
+        other = Int32()
+
+    input = InputFeatureView()
+
+    @model_contract(
+        input_features=[InputFeatureView().x],
+        exposed_model=python_function(lambda df: df['x'] * 2),
+        output_source=InMemorySource.from_values(
+            {'entity_id': ['a', 'b'], 'prediction': [2, 4]}  # type: ignore
+        ),
+    )
+    class MyModelContract:
+        entity_id = String().as_entity()
+
+        prediction = input.x.as_regression_target()
+
+        model_version = String().as_model_version()
+
+    @model_contract(
+        input_features=[InputFeatureView().x, MyModelContract().prediction],
+        exposed_model=python_function(lambda df: df['prediction'] * 3 + df['x']),
+    )
+    class MyModelContract2:
+        entity_id = String().as_entity()
+
+        other_pred = input.other.as_regression_target()
+
+        model_version = String().as_model_version()
+
+    store = ContractStore.empty()
+    store.add_view(InputFeatureView)
+    store.add_model(MyModelContract)
+    store.add_model(MyModelContract2)
+
+    without_cache = store.without_model_cache()
+
+    first_preds = await store.model(MyModelContract).predict_over({'entity_id': ['a', 'c']}).to_polars()
+    assert first_preds['prediction'].null_count() == 0
+
+    preds = (
+        await store.model(MyModelContract2)
+        .predict_over(
+            {
+                'entity_id': ['a', 'c'],
+            }
+        )
+        .to_polars()
+    )
+    assert preds['other_pred'].null_count() == 1
+    assert not first_preds['model_version'].series_equal(preds['model_version'])
+
+    preds = (
+        await store.model(MyModelContract2)
+        .predict_over(
+            {
+                'entity_id': ['a', 'c'],
+                'prediction': [2, 6],
+            }
+        )
+        .to_polars()
+    )
+    assert preds['other_pred'].null_count() == 0
+    assert not first_preds['model_version'].series_equal(preds['model_version'])
+
+    preds = (
+        await without_cache.model(MyModelContract2)
+        .predict_over(
+            {
+                'entity_id': ['a', 'c'],
+            }
+        )
+        .to_polars()
+    )
+    assert preds['other_pred'].null_count() == 0
+    assert not first_preds['model_version'].series_equal(preds['model_version'])

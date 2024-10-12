@@ -235,6 +235,7 @@ class SupportedTransformations:
             ArrayContains,
             ArrayAtIndex,
             OllamaEmbedding,
+            PolarsMapRowTransformation,
         ]:
             self.add(tran_type)
 
@@ -247,6 +248,43 @@ class SupportedTransformations:
             return cls._shared
         cls._shared = SupportedTransformations()
         return cls._shared
+
+
+@dataclass
+class PolarsMapRowTransformation(Transformation):
+    """
+    This will encode a custom method, that is not a lambda function
+    Threfore, we will stort the actuall code, and dynamically load it on runtime.
+
+    This is unsafe, but will remove the ModuleImportError for custom methods
+    """
+
+    code: str
+    function_name: str
+    dtype: FeatureType
+    name: str = 'pol_map_row'
+
+    async def transform_pandas(self, df: pd.DataFrame) -> pd.Series:
+        return (await self.transform_polars(pl.from_pandas(df).lazy(), 'value')).collect()[
+            'value'
+        ]  # type: ignore
+
+    async def transform_polars(self, df: pl.LazyFrame, alias: str) -> pl.LazyFrame | pl.Expr:
+        if self.function_name not in locals():
+            exec(self.code)
+
+        loaded = locals()[self.function_name]
+
+        polars_df = df.collect()
+        columns = polars_df.columns
+        new_cols = polars_df.columns
+        new_cols.append(alias)
+
+        return (
+            polars_df.map_rows(lambda values: (*values, loaded(dict(zip(columns, values)))))
+            .rename(lambda col: new_cols[int(col.split('_')[1])])
+            .lazy()
+        )
 
 
 @dataclass

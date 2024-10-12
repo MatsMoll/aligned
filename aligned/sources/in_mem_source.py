@@ -1,13 +1,21 @@
+from typing import TYPE_CHECKING
+
 import uuid
 
 import polars as pl
 from aligned.data_file import DataFileReference, upsert_on_column
-from aligned.data_source.batch_data_source import BatchDataSource
+from aligned.data_source.batch_data_source import BatchDataSource, CodableBatchDataSource
 from aligned.feature_source import WritableFeatureSource
 from aligned.retrival_job import RetrivalJob, RetrivalRequest
 
+if TYPE_CHECKING:
+    from aligned.schemas.feature_view import CompiledFeatureView
 
-class InMemorySource(BatchDataSource, DataFileReference, WritableFeatureSource):
+
+class InMemorySource(CodableBatchDataSource, DataFileReference, WritableFeatureSource):
+
+    type_name = 'in_mem_source'
+
     def __init__(self, data: pl.DataFrame) -> None:
         self.data = data
         self.job_key = str(uuid.uuid4())
@@ -37,6 +45,11 @@ class InMemorySource(BatchDataSource, DataFileReference, WritableFeatureSource):
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
         self.data = df.collect()
+
+    def with_view(self, view: 'CompiledFeatureView') -> 'InMemorySource':
+        if self.data.is_empty():
+            return InMemorySource.from_values({feat.name: [] for feat in view.features})
+        return self
 
     @classmethod
     def multi_source_features_for(  # type: ignore

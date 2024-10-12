@@ -722,9 +722,6 @@ class FeatureView(ABC):
             else:
                 view.features.add(compiled_feature)
 
-        if not view.entities:
-            raise ValueError(f'FeatureView {metadata.name} must contain at least one Entity')
-
         loc = FeatureLocation.feature_view(view.name)
         aggregation_group_by = [FeatureReference(entity.name, loc, entity.dtype) for entity in view.entities]
         event_timestamp_ref = (
@@ -746,11 +743,10 @@ class FeatureView(ABC):
             )
             view.aggregated_features.add(feat)
 
-        schema_hash = view.schema_hash()
-        view.source = view.source.with_schema_version(schema_hash)
+        view.source = view.source.with_view(view)
 
         if view.materialized_source:
-            view.materialized_source = view.materialized_source.with_schema_version(schema_hash)
+            view.materialized_source = view.materialized_source.with_view(view)
 
         return view
 

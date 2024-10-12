@@ -39,13 +39,18 @@ class PredictModelSource(BatchDataSource):
                 f'Type: {type(self)} have not implemented how to load fact data with multiple sources.'
             )
 
-        location = reqs.needed_requests[0].location
+        req = reqs.needed_requests[0]
+        location = req.location
         if location.location_type != 'feature_view':
             raise NotImplementedError(
                 f'Type: {type(self)} have not implemented how to load fact data with multiple sources.'
             )
 
-        entities = self.store.store.feature_view(location.name).all_columns(limit=limit)
+        entities = (
+            self.store.store.feature_view(location.name)
+            .select(req.features_to_include)
+            .all_columns(limit=limit)
+        )
         return self.store.predict_over(entities).with_request([request])
 
     def all_between_dates(
@@ -57,13 +62,18 @@ class PredictModelSource(BatchDataSource):
                 f'Type: {type(self)} have not implemented how to load fact data with multiple sources.'
             )
 
-        location = reqs.needed_requests[0].location
+        req = reqs.needed_requests[0]
+        location = req.location
         if location.location_type != 'feature_view':
             raise NotImplementedError(
                 f'Type: {type(self)} have not implemented how to load fact data with multiple sources.'
             )
 
-        entities = self.store.store.feature_view(location.name).between_dates(start_date, end_date)
+        entities = (
+            self.store.store.feature_view(location.name)
+            .select(req.features_to_include)
+            .between_dates(start_date, end_date)
+        )
         return self.store.predict_over(entities).with_request([request])
 
     def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:

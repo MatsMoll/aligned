@@ -93,13 +93,13 @@ class PredictionsView(Codable):
                 return feature
         return None
 
-    def as_view(self, name: str) -> CompiledFeatureView | None:
-        if not self.source:
-            return None
+    def as_view(self, name: str) -> CompiledFeatureView:
+        from aligned.sources.in_mem_source import InMemorySource
+        import polars as pl
 
         return CompiledFeatureView(
             name=name,
-            source=self.source,
+            source=self.source or InMemorySource(pl.DataFrame()),
             entities=self.entities,
             features=self.features,
             derived_features=self.derived_features,
