@@ -15,6 +15,7 @@ from aligned.local.job import FileDateJob, FileFactualJob, FileFullJob
 from aligned.retrival_job import RetrivalJob, RetrivalRequest
 from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.feature import FeatureType, EventTimestamp
+from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.sources.local import (
     CsvConfig,
     DataFileReference,
@@ -352,7 +353,8 @@ Path: *{self.path}*
     def storage(self) -> Storage:
         return self.config.storage
 
-    def with_schema_version(self, schema_hash: bytes) -> AzureBlobCsvDataSource:
+    def with_view(self, view: CompiledFeatureView) -> AzureBlobCsvDataSource:
+        schema_hash = view.schema_hash()
         return AzureBlobCsvDataSource(
             config=self.config,
             path=self.path.replace(AzureBlobDirectory.schema_placeholder(), schema_hash.hex()),
@@ -483,7 +485,8 @@ Partition Keys: *{self.partition_keys}*
     def __hash__(self) -> int:
         return hash(self.job_group_key())
 
-    def with_schema_version(self, schema_hash: bytes) -> AzureBlobPartitionedParquetDataSource:
+    def with_view(self, view: CompiledFeatureView) -> AzureBlobPartitionedParquetDataSource:
+        schema_hash = view.schema_hash()
         return AzureBlobPartitionedParquetDataSource(
             config=self.config,
             directory=self.directory.replace(AzureBlobDirectory.schema_placeholder(), schema_hash.hex()),
@@ -688,10 +691,10 @@ Path: *{self.path}*
     def __hash__(self) -> int:
         return hash(self.job_group_key())
 
-    def with_schema_version(self, schema_hash: bytes) -> AzureBlobParquetDataSource:
+    def with_view(self, view: CompiledFeatureView) -> AzureBlobParquetDataSource:
         return AzureBlobParquetDataSource(
             config=self.config,
-            path=self.path.replace(AzureBlobDirectory.schema_placeholder(), schema_hash.hex()),
+            path=self.path.replace(AzureBlobDirectory.schema_placeholder(), view.schema_hash().hex()),
             mapping_keys=self.mapping_keys,
             parquet_config=self.parquet_config,
             date_formatter=self.date_formatter,

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from copy import copy
 
 import polars as pl
 from aligned.lazy_imports import pandas as pd
@@ -198,6 +199,21 @@ class ContractStore:
         return ContractStore(
             self.feature_views, self.models, BatchFeatureSource(sources), self.vector_indexes
         )
+
+    def without_model_cache(self) -> ContractStore:
+        from aligned.data_source.model_predictor import PredictModelSource
+
+        new_store = self
+
+        for model_name, model in self.models.items():
+            if not model.exposed_model:
+                continue
+
+            new_store = new_store.update_source_for(
+                FeatureLocation.model(model_name), PredictModelSource(new_store.model(model_name))
+            )
+
+        return new_store
 
     def repo_definition(self) -> RepoDefinition:
         return RepoDefinition(
@@ -757,7 +773,7 @@ class ContractStore:
         if isinstance(location, str):
             location = FeatureLocation.from_string(location)
 
-        new_source = self.feature_source
+        new_source = BatchFeatureSource(copy(self.feature_source.sources))
         assert isinstance(new_source.sources, dict)
         new_source.sources[location.identifier] = source
 

@@ -27,6 +27,7 @@ from aligned.schemas.date_formatter import DateFormatter
 if TYPE_CHECKING:
     from datetime import datetime
     from aligned.schemas.repo_definition import RepoDefinition
+    from aligned.schemas.feature_view import CompiledFeatureView
     from aligned.feature_store import ContractStore
 
 
@@ -184,7 +185,8 @@ class CsvFileSource(
     def __hash__(self) -> int:
         return hash(self.job_group_key())
 
-    def with_schema_version(self, schema_hash: bytes) -> CsvFileSource:
+    def with_view(self, view: CompiledFeatureView) -> CsvFileSource:
+        schema_hash = view.schema_hash()
         return CsvFileSource(
             path=self.path.replace(FileDirectory.schema_placeholder(), schema_hash.hex()),
             mapping_keys=self.mapping_keys,
@@ -435,7 +437,8 @@ class PartitionedParquetFileSource(
     def __hash__(self) -> int:
         return hash(self.job_group_key())
 
-    def with_schema_version(self, schema_hash: bytes) -> PartitionedParquetFileSource:
+    def with_view(self, view: CompiledFeatureView) -> PartitionedParquetFileSource:
+        schema_hash = view.schema_hash()
         return PartitionedParquetFileSource(
             directory=self.directory.replace(FileDirectory.schema_placeholder(), schema_hash.hex()),
             partition_keys=self.partition_keys,
@@ -588,7 +591,8 @@ class ParquetFileSource(CodableBatchDataSource, ColumnFeatureMappable, DataFileR
 
 [Go to file]({self.path})'''  # noqa
 
-    def with_schema_version(self, schema_hash: bytes) -> ParquetFileSource:
+    def with_view(self, view: CompiledFeatureView) -> ParquetFileSource:
+        schema_hash = view.schema_hash()
         return ParquetFileSource(
             path=self.path.replace(FileDirectory.schema_placeholder(), schema_hash.hex()),
             mapping_keys=self.mapping_keys,

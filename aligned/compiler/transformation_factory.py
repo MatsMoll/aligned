@@ -630,6 +630,56 @@ class AbsoluteFactory(TransformationFactory):
 
 
 @dataclass
+class MapRowTransformation(TransformationFactory):
+
+    dtype: FeatureFactory
+    method: Callable[[dict], Any]
+    _using_features: list[FeatureFactory]
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return self._using_features
+
+    def compile(self) -> Transformation:
+        import inspect
+        import types
+        import dill
+        from aligned.schemas.transformation import PolarsMapRowTransformation
+
+        if isinstance(self.method, types.LambdaType) and self.method.__name__ == '<lambda>':
+            raise NotImplementedError(type(self))
+
+        function_name = dill.source.getname(self.method)
+        assert isinstance(function_name, str), 'Need a function name'
+        raw_code = inspect.getsource(self.method)
+
+        code = ''
+
+        indents: int | None = None
+        start_signature = f"def {function_name}"
+
+        for line in raw_code.splitlines(keepends=True):
+
+            if indents:
+                if len(line) > indents:
+                    code += line[:indents].lstrip() + line[indents:]
+                else:
+                    code += line
+
+            if start_signature in line:
+                stripped = line.lstrip()
+                indents = len(line) - len(stripped)
+                stripped = stripped.replace(f"{start_signature}(self,", f"{start_signature}(")
+                code += stripped
+
+        return PolarsMapRowTransformation(
+            code=code,
+            function_name=function_name,
+            dtype=self.dtype.dtype,
+        )
+
+
+@dataclass
 class PandasTransformationFactory(TransformationFactory):
 
     dtype: FeatureFactory
@@ -655,10 +705,31 @@ class PandasTransformationFactory(TransformationFactory):
                 dtype=self.dtype.dtype,
             )
         else:
-            function_name = (dill.source.getname(self.method),)
-            assert isinstance(function_name, str), f"Expected string got {type(function_name)}"
+            function_name = dill.source.getname(self.method)
+            assert isinstance(function_name, str), 'Need a function name'
+            raw_code = inspect.getsource(self.method)
+
+            code = ''
+
+            indents: int | None = None
+            start_signature = f"def {function_name}"
+
+            for line in raw_code.splitlines(keepends=True):
+
+                if indents:
+                    if len(line) > indents:
+                        code += line[:indents].lstrip() + line[indents:]
+                    else:
+                        code += line
+
+                if start_signature in line:
+                    stripped = line.lstrip()
+                    indents = len(line) - len(stripped)
+                    stripped = stripped.replace(f"{start_signature}(self,", f"{start_signature}(")
+                    code += stripped
+
             return PandasFunctionTransformation(
-                code=inspect.getsource(self.method),
+                code=code,
                 function_name=function_name,
                 dtype=self.dtype.dtype,
             )
@@ -690,14 +761,35 @@ class PolarsTransformationFactory(TransformationFactory):
 
             return PolarsLambdaTransformation(method=dill.dumps(method), code='', dtype=self.dtype.dtype)
         else:
-            code = inspect.getsource(self.method)
+            function_name = dill.source.getname(self.method)
+            assert isinstance(function_name, str), 'Need a function name'
+            raw_code = inspect.getsource(self.method)
+
+            code = ''
+
+            indents: int | None = None
+            start_signature = f"def {function_name}"
+
+            for line in raw_code.splitlines(keepends=True):
+
+                if indents:
+                    if len(line) > indents:
+                        code += line[:indents].lstrip() + line[indents:]
+                    else:
+                        code += line
+
+                if start_signature in line:
+                    stripped = line.lstrip()
+                    indents = len(line) - len(stripped)
+                    stripped = stripped.replace(f"{start_signature}(self,", f"{start_signature}(")
+                    code += stripped
 
         if isinstance(self.method, types.LambdaType) and self.method.__name__ == '<lambda>':
             return PolarsLambdaTransformation(
                 method=dill.dumps(self.method), code=code.strip(), dtype=self.dtype.dtype
             )
         else:
-            function_name = (dill.source.getname(self.method),)
+            function_name = dill.source.getname(self.method)
             assert isinstance(function_name, str), f"Expected string got {type(function_name)}"
             return PolarsFunctionTransformation(
                 code=code,

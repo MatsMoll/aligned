@@ -18,10 +18,12 @@ import polars as pl
 
 import logging
 
+
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from aligned.retrival_job import RetrivalJob
+    from aligned.schemas.feature_view import CompiledFeatureView
 
 T = TypeVar('T')
 
@@ -113,7 +115,7 @@ class BatchDataSource:
         """
         return self.job_group_key()
 
-    def with_schema_version(self: T, schema_hash: bytes) -> T:
+    def with_view(self: T, view: CompiledFeatureView) -> T:
         return self
 
     def __hash__(self) -> int:
@@ -1051,9 +1053,11 @@ class JoinDataSource(CodableBatchDataSource):
         )
 
     def all_between_dates(
-        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
+        self,
+        request: RetrivalRequest,
+        start_date: datetime,
+        end_date: datetime,
     ) -> RetrivalJob:
-
         right_job = self.right_source.all_data(self.right_request, limit=None).derive_features(
             [self.right_request]
         )

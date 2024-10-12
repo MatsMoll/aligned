@@ -373,7 +373,7 @@ def ab_test_model(models: list[tuple[ExposedModel, float]]) -> ABTestModel:
 
 
 @dataclass
-class DillFunction(ExposedModel):
+class DillFunction(ExposedModel, VersionedModel):
 
     function: bytes
 
@@ -386,6 +386,11 @@ class DillFunction(ExposedModel):
     @property
     def as_markdown(self) -> str:
         return 'A function stored in a dill file.'
+
+    async def model_version(self) -> str:
+        from hashlib import md5
+
+        return md5(self.function, usedforsecurity=False).hexdigest()
 
     async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
         default = store.model.features.default_version
