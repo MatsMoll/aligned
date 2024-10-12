@@ -212,7 +212,6 @@ async def test_model_with_label_multiple_views() -> None:
     store = feature_store()
     entities = await (store.feature_view('expence').select_columns(['transaction_id', 'user_id']).to_pandas())
 
-    print(entities.columns)
     data_job = store.model('model').with_labels().features_for(entities)
     data = await data_job.to_pandas()
 
