@@ -57,6 +57,7 @@ class LiteralRetrivalJob(RetrivalJob):
 
 
 async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.LazyFrame:
+    from aligned import ContractStore
 
     aggregate_over = request.aggregate_over()
 
@@ -65,7 +66,9 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
 
         exprs = []
         for feat in aggregate_over[first_over]:
-            tran = await feat.derived_feature.transformation.transform_polars(core_data, feat.name)
+            tran = await feat.derived_feature.transformation.transform_polars(
+                core_data, feat.name, ContractStore.empty()
+            )
 
             if not isinstance(tran, pl.Expr):
                 raise ValueError(f'Aggregation needs to be an expression, got {tran}')
@@ -86,7 +89,9 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
     for over, features in aggregate_over.items():
         exprs = []
         for feat in features:
-            tran = await feat.derived_feature.transformation.transform_polars(core_data, feat.name)
+            tran = await feat.derived_feature.transformation.transform_polars(
+                core_data, feat.name, ContractStore.empty()
+            )
 
             if not isinstance(tran, pl.Expr):
                 raise ValueError(f'Aggregation needs to be an expression, got {tran}')
@@ -321,6 +326,7 @@ async def aggregate_over(
     event_timestamp_col: str,
     group_by: list[str] | None = None,
 ) -> pl.LazyFrame:
+    from aligned import ContractStore
 
     if not group_by:
         group_by = ['row_id']
@@ -338,7 +344,7 @@ async def aggregate_over(
     transformations = []
     for feature in features:
         expr = await feature.derived_feature.transformation.transform_polars(
-            subset, feature.derived_feature.name
+            subset, feature.derived_feature.name, ContractStore.empty()
         )
         if isinstance(expr, pl.Expr):
             transformations.append(expr.alias(feature.name))

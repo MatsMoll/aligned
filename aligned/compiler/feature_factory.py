@@ -36,6 +36,7 @@ from aligned.schemas.vector_storage import VectorStorage
 
 if TYPE_CHECKING:
     from aligned.sources.s3 import AwsS3Config
+    from aligned.feature_store import ContractStore
 
 
 class TransformationFactory:
@@ -527,7 +528,9 @@ class FeatureFactory(FeatureReferencable):
         return instance  # type: ignore [return-value]
 
     def transformed_using_features_pandas(
-        self: T, using_features: list[FeatureFactory], transformation: Callable[[pd.DataFrame], pd.Series]
+        self: T,
+        using_features: list[FeatureFactory],
+        transformation: Callable[[pd.DataFrame, ContractStore], pd.Series],
     ) -> T:
         from aligned.compiler.transformation_factory import PandasTransformationFactory
 
@@ -536,7 +539,9 @@ class FeatureFactory(FeatureReferencable):
         dtype.transformation = PandasTransformationFactory(dtype, transformation, using_features or [self])
         return dtype  # type: ignore [return-value]
 
-    def transform_pandas(self, transformation: Callable[[pd.DataFrame], pd.Series], as_dtype: T) -> T:
+    def transform_pandas(
+        self, transformation: Callable[[pd.DataFrame, ContractStore], pd.Series], as_dtype: T
+    ) -> T:
         from aligned.compiler.transformation_factory import PandasTransformationFactory
 
         dtype: FeatureFactory = as_dtype  # type: ignore [assignment]
@@ -547,7 +552,7 @@ class FeatureFactory(FeatureReferencable):
     def transformed_using_features_polars(
         self: T,
         using_features: list[FeatureFactory],
-        transformation: Callable[[pl.LazyFrame, str], pl.LazyFrame] | pl.Expr,
+        transformation: Callable[[pl.LazyFrame, str, ContractStore], pl.LazyFrame] | pl.Expr,
     ) -> T:
         from aligned.compiler.transformation_factory import PolarsTransformationFactory
 
@@ -1845,8 +1850,8 @@ class ArithmeticAggregation:
 
 def transform_polars(
     using_features: list[FeatureFactory], return_type: T
-) -> Callable[[Callable[[Any, pl.LazyFrame, str], pl.LazyFrame]], T]:
-    def wrapper(method: Callable[[Any, pl.LazyFrame, str], pl.LazyFrame]) -> T:
+) -> Callable[[Callable[[Any, pl.LazyFrame, str, ContractStore], pl.LazyFrame]], T]:
+    def wrapper(method: Callable[[Any, pl.LazyFrame, str, ContractStore], pl.LazyFrame]) -> T:
         return return_type.transformed_using_features_polars(
             using_features=using_features, transformation=method  # type: ignore
         )
@@ -1856,8 +1861,8 @@ def transform_polars(
 
 def transform_pandas(
     using_features: list[FeatureFactory], return_type: T
-) -> Callable[[Callable[[Any, pd.DataFrame], pd.Series]], T]:
-    def wrapper(method: Callable[[Any, pd.DataFrame], pd.Series]) -> T:
+) -> Callable[[Callable[[Any, pd.DataFrame, ContractStore], pd.Series]], T]:
+    def wrapper(method: Callable[[Any, pd.DataFrame, ContractStore], pd.Series]) -> T:
         return return_type.transformed_using_features_pandas(
             using_features=using_features, transformation=method  # type: ignore
         )
@@ -1867,8 +1872,8 @@ def transform_pandas(
 
 def transform_row(
     using_features: list[FeatureFactory], return_type: T
-) -> Callable[[Callable[[Any, dict[str, Any]], Any]], T]:
-    def wrapper(method: Callable[[Any, dict[str, Any]], Any]) -> T:
+) -> Callable[[Callable[[Any, dict[str, Any], ContractStore], Any]], T]:
+    def wrapper(method: Callable[[Any, dict[str, Any], ContractStore], Any]) -> T:
         from aligned.compiler.transformation_factory import MapRowTransformation
 
         new_value = return_type.copy_type()

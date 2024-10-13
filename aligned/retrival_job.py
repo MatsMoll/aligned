@@ -538,7 +538,9 @@ class SupervisedJob:
         return f'{self.job.describe()} with target columns {self.target_columns}'
 
 
-ConvertableToRetrivalJob = Union[dict[str, list], 'pd.DataFrame', pl.DataFrame, pl.LazyFrame]
+ConvertableToRetrivalJob = Union[
+    list[dict[str, Any]], dict[str, list], 'pd.DataFrame', pl.DataFrame, pl.LazyFrame
+]
 
 
 class RetrivalJob(ABC):
@@ -570,6 +572,11 @@ class RetrivalJob(ABC):
 
     async def to_polars(self) -> pl.DataFrame:
         return await (await self.to_lazy_polars()).collect_async()
+
+    def inject_store(self, store: ContractStore) -> RetrivalJob:
+        if isinstance(self, ModificationJob):
+            return self.copy_with(self.job.inject_store(store))
+        return self
 
     def describe(self) -> str:
         if isinstance(self, ModificationJob):
@@ -860,6 +867,7 @@ class RetrivalJob(ABC):
     def from_convertable(
         data: ConvertableToRetrivalJob, request: list[RetrivalRequest] | RetrivalRequest | FeatureRequest
     ) -> RetrivalJob:
+        import polars as pl
         from aligned.local.job import LiteralRetrivalJob
 
         if isinstance(request, RetrivalRequest):
@@ -868,9 +876,10 @@ class RetrivalJob(ABC):
             request = request.needed_requests
 
         if isinstance(data, dict):
-            return LiteralDictJob(data, request)
-
-        if isinstance(data, pl.DataFrame):
+            return LiteralRetrivalJob(pl.DataFrame(data).lazy(), request)
+        elif isinstance(data, list):
+            return LiteralRetrivalJob(pl.DataFrame(data).lazy(), request)
+        elif isinstance(data, pl.DataFrame):
             return LiteralRetrivalJob(data.lazy(), request)
         elif isinstance(data, pl.LazyFrame):
             return LiteralRetrivalJob(data, request)
@@ -1440,7 +1449,10 @@ class FilteredJob(RetrivalJob, ModificationJob):
         elif isinstance(self.condition, pl.Expr):
             col = self.condition
         elif isinstance(self.condition, DerivedFeature):
-            expr = await self.condition.transformation.transform_polars(df, self.condition.name)
+            from aligned.feature_store import ContractStore
+
+            store = ContractStore.empty()
+            expr = await self.condition.transformation.transform_polars(df, self.condition.name, store)
             if isinstance(expr, pl.Expr):
                 col = expr
             else:
@@ -1460,7 +1472,10 @@ class FilteredJob(RetrivalJob, ModificationJob):
         if isinstance(self.condition, str):
             mask = df[self.condition]
         elif isinstance(self.condition, DerivedFeature):
-            mask = await self.condition.transformation.transform_pandas(df)
+            from aligned.feature_store import ContractStore
+
+            store = ContractStore.empty()
+            mask = await self.condition.transformation.transform_pandas(df, store)
         elif isinstance(self.condition, Feature):
             mask = df[self.condition.name]
         else:
@@ -1673,6 +1688,7 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
 
     job: RetrivalJob
     requests: list[RetrivalRequest]
+    store: ContractStore | None = field(default=None)
 
     @property
     def request_result(self) -> RequestResult:
@@ -1681,6 +1697,11 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
     @property
     def retrival_requests(self) -> list[RetrivalRequest]:
         return self.job.retrival_requests
+
+    def inject_store(self, store: ContractStore) -> RetrivalJob:
+        job = self.copy_with(self.job.inject_store(store))
+        job.store = store
+        return job
 
     def filter(self, condition: str | Feature | DerivedFeature | pl.Expr) -> RetrivalJob:
 
@@ -1697,6 +1718,7 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
         return self.copy_with(self.job.filter(condition))
 
     async def compute_derived_features_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
+        from aligned.feature_store import ContractStore
 
         for request in self.requests:
             missing_features = request.features_to_include - set(df.columns)
@@ -1716,7 +1738,9 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
 
                     logger.debug(f'Adding feature to computation plan in polars: {feature.name}')
 
-                    method = await feature.transformation.transform_polars(df, feature.name)
+                    method = await feature.transformation.transform_polars(
+                        df, feature.name, self.store or ContractStore.empty()
+                    )
                     if isinstance(method, pl.LazyFrame):
                         df = method
                     elif isinstance(method, pl.Expr):
@@ -1730,6 +1754,8 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
         return df
 
     async def compute_derived_features_pandas(self, df: pd.DataFrame) -> pd.DataFrame:
+        from aligned.feature_store import ContractStore
+
         for request in self.requests:
             for feature_round in request.derived_features_order():
                 for feature in feature_round:
@@ -1739,7 +1765,7 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
 
                     logger.debug(f'Computing feature with pandas: {feature.name}')
                     df[feature.name] = await feature.transformation.transform_pandas(
-                        df[feature.depending_on_names]  # type: ignore
+                        df[feature.depending_on_names], self.store or ContractStore.empty()  # type: ignore
                     )
         return df
 
@@ -2280,6 +2306,7 @@ class CombineFactualJob(RetrivalJob):
 
     jobs: list[RetrivalJob]
     combined_requests: list[RetrivalRequest]
+    store: ContractStore | None = field(default=None)
 
     @property
     def request_result(self) -> RequestResult:
@@ -2297,7 +2324,14 @@ class CombineFactualJob(RetrivalJob):
     def ignore_event_timestamp(self) -> RetrivalJob:
         return CombineFactualJob([job.ignore_event_timestamp() for job in self.jobs], self.combined_requests)
 
+    def inject_store(self, store: ContractStore) -> RetrivalJob:
+        return CombineFactualJob(
+            [job.inject_store(store) for job in self.jobs], self.combined_requests, store=store
+        )
+
     async def combine_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        from aligned import ContractStore
+
         for request in self.combined_requests:
             for feature in request.derived_features:
                 if feature.name in df.columns:
@@ -2305,11 +2339,13 @@ class CombineFactualJob(RetrivalJob):
                     continue
                 logger.debug(f'Computing feature: {feature.name}')
                 df[feature.name] = await feature.transformation.transform_pandas(
-                    df[feature.depending_on_names]  # type: ignore
+                    df[feature.depending_on_names], self.store or ContractStore.empty()  # type: ignore
                 )
         return df
 
     async def combine_polars_data(self, df: pl.LazyFrame) -> pl.LazyFrame:
+        from aligned import ContractStore
+
         for request in self.combined_requests:
             logger.debug(f'{request.name}, {len(request.derived_features)}')
             for feature in request.derived_features:
@@ -2317,7 +2353,9 @@ class CombineFactualJob(RetrivalJob):
                     logger.debug(f'Skipping feature {feature.name}, already computed')
                     continue
                 logger.debug(f'Computing feature: {feature.name}')
-                result = await feature.transformation.transform_polars(df, feature.name)
+                result = await feature.transformation.transform_polars(
+                    df, feature.name, self.store or ContractStore.empty()
+                )
                 if isinstance(result, pl.Expr):
                     df = df.with_columns([result.alias(feature.name)])
                 elif isinstance(result, pl.LazyFrame):

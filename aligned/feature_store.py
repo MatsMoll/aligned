@@ -464,7 +464,7 @@ class ContractStore:
             return entities
 
         new_request = FeatureRequest(requests.location, requests.features_to_include, loaded_requests)
-        return self.features_for_request(new_request, entities, feature_names)
+        return self.features_for_request(new_request, entities, feature_names).inject_store(self)
 
     def model(self, model: str | ModelContractWrapper) -> ModelFeatureStore:
         """
@@ -485,7 +485,10 @@ class ContractStore:
 
         return ModelFeatureStore(self.models[name], self)
 
-    def vector_index(self, name: str) -> VectorIndexStore:
+    def vector_index(self, name: str | ModelContractWrapper) -> VectorIndexStore:
+        if isinstance(name, ModelContractWrapper):
+            name = name.location.name
+
         return VectorIndexStore(self, self.vector_indexes[name], index_name=name)
 
     def event_triggers_for(self, feature_view: str) -> set[EventTrigger]:
@@ -658,6 +661,10 @@ class ContractStore:
         """
         if view.name in self.feature_views:
             raise ValueError(f'Feature view with name "{view.name}" already exists')
+
+        if isinstance(view.source, VectorIndex):
+            index_name = view.source.vector_index_name() or view.name
+            self.vector_indexes[index_name] = view
 
         self.feature_views[view.name] = view
         if isinstance(self.feature_source, BatchFeatureSource):
@@ -1295,7 +1302,11 @@ class ModelFeatureStore:
         source = selected_source.sources[location.identifier]
         request = self.model.predictions_view.request(self.model.name)
 
-        return source.all_data(request, limit=limit).select_columns(set(request.all_returned_columns))
+        return (
+            source.all_data(request, limit=limit)
+            .inject_store(self.store)
+            .select_columns(set(request.all_returned_columns))
+        )
 
     def using_source(self, source: FeatureSourceable | BatchDataSource) -> ModelFeatureStore:
 
@@ -1650,6 +1661,7 @@ class FeatureViewStore:
             self.source.all_for(request, limit)
             .ensure_types(request.needed_requests)
             .derive_features(request.needed_requests)
+            .inject_store(self.store)
         )
         if self.feature_filter:
             selected_columns = self.feature_filter
@@ -1671,7 +1683,7 @@ class FeatureViewStore:
             )
 
         request = self.view.request_all
-        return self.source.all_between(start_date, end_date, request)
+        return self.source.all_between(start_date, end_date, request).inject_store(self.store)
 
     def previous(self, days: int = 0, minutes: int = 0, seconds: int = 0) -> RetrivalJob:
         end_date = datetime.utcnow()

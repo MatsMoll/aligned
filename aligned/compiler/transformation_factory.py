@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import timedelta  # noqa: TC003
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 import polars as pl
 
@@ -11,6 +11,9 @@ from aligned import AwsS3Config
 from aligned.lazy_imports import pandas as pd
 from aligned.compiler.feature_factory import FeatureFactory, Transformation, TransformationFactory
 from aligned.schemas.transformation import FillNaValuesColumns, LiteralValue, EmbeddingModel
+
+if TYPE_CHECKING:
+    from aligned.feature_store import ContractStore
 
 logger = logging.getLogger(__name__)
 
@@ -683,7 +686,7 @@ class MapRowTransformation(TransformationFactory):
 class PandasTransformationFactory(TransformationFactory):
 
     dtype: FeatureFactory
-    method: Callable[[pd.DataFrame], pd.Series]
+    method: Callable[[pd.DataFrame, ContractStore], pd.Series]
     _using_features: list[FeatureFactory]
 
     @property
@@ -739,7 +742,7 @@ class PandasTransformationFactory(TransformationFactory):
 class PolarsTransformationFactory(TransformationFactory):
 
     dtype: FeatureFactory
-    method: pl.Expr | Callable[[pl.LazyFrame, pl.Expr], pl.LazyFrame]
+    method: pl.Expr | Callable[[pl.LazyFrame, pl.Expr, ContractStore], pl.LazyFrame]
     _using_features: list[FeatureFactory]
 
     @property

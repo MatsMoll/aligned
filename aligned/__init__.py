@@ -19,6 +19,9 @@ from aligned.compiler.feature_factory import (
     CustomAggregation,
     List,
     Embedding,
+    transform_polars,
+    transform_row,
+    transform_pandas,
 )
 from aligned.compiler.model import model_contract, FeatureInputVersions
 from aligned.data_source.stream_data_source import HttpStreamSource
@@ -78,6 +81,10 @@ __all__ = [
     'EmbeddingModel',
     'feature_view',
     'model_contract',
+    # Transformations
+    'transform_polars',
+    'transform_row',
+    'transform_pandas',
     # Aggregation
     'CustomAggregation',
     # Schemas

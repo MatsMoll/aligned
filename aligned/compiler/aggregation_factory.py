@@ -363,7 +363,7 @@ class PolarsTransformationFactoryAggregation(TransformationFactory, AggregationT
         from aligned.schemas.transformation import PolarsFunctionTransformation, PolarsLambdaTransformation
 
         if isinstance(self.method, pl.Expr):
-            method = lambda df, alias: self.method  # noqa: E731
+            method = lambda df, alias, store: self.method  # noqa: E731
             code = ''
             return PolarsLambdaTransformation(method=dill.dumps(method), code=code, dtype=self.dtype.dtype)
         else:
