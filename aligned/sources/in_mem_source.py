@@ -129,7 +129,7 @@ class InMemorySource(CodableBatchDataSource, DataFileReference, WritableFeatureS
             self._vector_index_name = view.name
 
         if self.data.is_empty():
-            return InMemorySource.from_values({feat.name: [] for feat in view.features})
+            return InMemorySource.from_values({feat.name: [] for feat in view.entities.union(view.features)})
         return self
 
     @classmethod

@@ -12,7 +12,7 @@ from mashumaro.types import SerializableType
 
 from aligned.lazy_imports import pandas as pd
 from aligned.schemas.codable import Codable
-from aligned.schemas.feature import FeatureType
+from aligned.schemas.feature import FeatureReference, FeatureType
 from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.text_vectoriser import EmbeddingModel
 
@@ -2543,3 +2543,49 @@ class Split(Transformation):
         self, df: pl.LazyFrame, alias: str, store: ContractStore
     ) -> pl.LazyFrame | pl.Expr | pl.Expr:
         return pl.col(self.key).str.split(self.separator)
+
+
+@dataclass
+class LoadFeature(Transformation):
+
+    entities: dict[str, str]
+    feature: FeatureReference
+    explode_key: str | None
+
+    async def transform_pandas(self, df: pd.DataFrame, store: ContractStore) -> pd.Series:
+
+        entities = {}
+        for key, df_key in self.entities.items():
+            entities[key] = df[df_key]
+
+        values = await store.features_for(entities, features=[self.feature.identifier]).to_pandas()
+        return values[self.feature.name]  # type: ignore
+
+    async def transform_polars(
+        self, df: pl.LazyFrame, alias: str, store: ContractStore
+    ) -> pl.LazyFrame | pl.Expr:
+
+        group_keys = []
+
+        if self.explode_key:
+            group_keys = ['row_nr']
+            entity_df = df.with_row_count('row_nr').explode(self.explode_key)
+        else:
+            entity_df = df
+
+        entities = entity_df.rename({df_key: key for key, df_key in self.entities.items()})
+
+        values = (
+            await store.features_for(entities.collect(), features=[self.feature.identifier])
+            .with_subfeatures()
+            .to_polars()
+        )
+
+        if group_keys:
+            values = values.group_by(group_keys).agg(
+                [pl.col(col) for col in values.columns if col not in group_keys]
+            )
+
+        values = values.select(pl.col(self.feature.name).alias(alias))
+
+        return pl.concat([df, values.lazy()], how='horizontal')

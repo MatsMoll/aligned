@@ -10,6 +10,7 @@ import polars as pl
 from aligned import AwsS3Config
 from aligned.lazy_imports import pandas as pd
 from aligned.compiler.feature_factory import FeatureFactory, Transformation, TransformationFactory
+from aligned.schemas.feature import FeatureReference
 from aligned.schemas.transformation import FillNaValuesColumns, LiteralValue, EmbeddingModel
 
 if TYPE_CHECKING:
@@ -759,7 +760,7 @@ class PolarsTransformationFactory(TransformationFactory):
 
         if isinstance(self.method, pl.Expr):
 
-            def method(df: pl.DataFrame, alias: str) -> pl.Expr:
+            def method(df: pl.DataFrame, alias: str, store: ContractStore) -> pl.Expr:
                 return self.method  # type: ignore
 
             return PolarsLambdaTransformation(method=dill.dumps(method), code='', dtype=self.dtype.dtype)
@@ -1005,3 +1006,27 @@ class MultiplyFactory(TransformationFactory):
             return MultiplyValue(self.first.name, self.behind)
         else:
             return Multiply(self.first.name, self.behind.name)
+
+
+@dataclass
+class LoadFeature(TransformationFactory):
+
+    entities: dict[str, FeatureFactory]
+    feature: FeatureReference
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return list(self.entities.values())
+
+    def compile(self) -> Transformation:
+        from aligned.compiler.feature_factory import List
+        from aligned.schemas.transformation import LoadFeature
+
+        explode_key: str | None = None
+        for feature in self.entities.values():
+            if isinstance(feature, List):
+                explode_key = feature.name
+
+        return LoadFeature(
+            {key: value.name for key, value in self.entities.items()}, self.feature, explode_key
+        )

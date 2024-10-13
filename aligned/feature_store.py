@@ -1096,7 +1096,7 @@ class ModelFeatureStore:
         else:
             features = self.raw_string_features(set())
 
-        job = self.store.features_for(entities, list(features), event_timestamp_column=event_timestamp_column)
+        job = None
 
         if isinstance(entities, (dict, pl.DataFrame, pd.DataFrame)):
 
@@ -1117,7 +1117,16 @@ class ModelFeatureStore:
                     break
 
             if not needs_core_features:
-                job = RetrivalJob.from_convertable(entities, request).derive_features(request.needed_requests)
+                job = (
+                    RetrivalJob.from_convertable(entities, request)
+                    .derive_features(request.needed_requests)
+                    .inject_store(self.store)
+                )
+
+        if job is None:
+            job = self.store.features_for(
+                entities, list(features), event_timestamp_column=event_timestamp_column
+            )
 
         return job
 
@@ -1129,23 +1138,30 @@ class ModelFeatureStore:
 
         locs: dict[FeatureLocation, EventTimestamp] = {}
 
+        other_locs: set[FeatureLocation] = set()
+
         for req in self.request().needed_requests:
             if req.event_timestamp:
                 locs[req.location] = req.event_timestamp
 
+            for feature in req.derived_features:
+                if feature.loads_feature:
+                    other_locs.add(feature.loads_feature.location)
+
         if self.model.exposed_model:
-            additional_model_deps = await self.model.exposed_model.depends_on()
-            for loc in additional_model_deps:
-                if loc in locs:
-                    continue
+            other_locs.update(await self.model.exposed_model.depends_on())
 
-                if loc.location_type == 'model':
-                    event_timestamp = self.store.model(loc.name).prediction_request().event_timestamp
-                else:
-                    event_timestamp = self.store.feature_view(loc.name).request.event_timestamp
+        for loc in other_locs:
+            if loc in locs:
+                continue
 
-                if event_timestamp:
-                    locs[loc] = event_timestamp
+            if loc.location_type == 'model':
+                event_timestamp = self.store.model(loc.name).prediction_request().event_timestamp
+            else:
+                event_timestamp = self.store.feature_view(loc.name).request.event_timestamp
+
+            if event_timestamp:
+                locs[loc] = event_timestamp
 
         return await self.store.feature_source.freshness_for(locs)
 

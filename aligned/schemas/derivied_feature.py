@@ -12,6 +12,7 @@ class DerivedFeature(Feature):
 
     depending_on: set[FeatureReference]
     transformation: Transformation
+    loads_feature: FeatureReference | None
     depth: int = 1
 
     def __init__(
@@ -24,15 +25,17 @@ class DerivedFeature(Feature):
         description: str | None = None,
         tags: list[str] | None = None,
         constraints: set[Constraint] | None = None,
+        loads_feature: FeatureReference | None = None,
     ):
         self.name = name
+        self.tags = tags
+        self.depth = depth
         self.dtype = dtype
+        self.description = description
+        self.constraints = constraints
         self.depending_on = depending_on
         self.transformation = transformation
-        self.depth = depth
-        self.description = description
-        self.tags = tags
-        self.constraints = constraints
+        self.loads_feature = loads_feature
         self.default_value = None
 
     def __pre_serialize__(self) -> DerivedFeature:

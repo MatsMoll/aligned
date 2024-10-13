@@ -1,9 +1,10 @@
 import pytest
-from aligned.compiler.feature_factory import EventTimestamp, Int32, String, Float
+from aligned.compiler.feature_factory import EventTimestamp, Int32, String, Float, List
 
 from aligned.feature_store import ContractStore
 from aligned.feature_view.feature_view import feature_view
 from aligned.schemas.transformation import SupportedTransformations
+from aligned.sources.in_mem_source import InMemorySource
 from aligned.sources.local import FileSource, CsvFileSource
 
 
@@ -160,3 +161,29 @@ async def test_fill_optional_column_bug(titanic_source: CsvFileSource) -> None:
 
     assert df['some_new_column'].is_null().sum() == 0
     assert df['some_string'].is_null().sum() == 0
+
+
+@pytest.mark.asyncio
+async def test_load_features() -> None:
+    import polars as pl
+
+    @feature_view(source=InMemorySource.from_values({'passenger_id': [1, 2, 3], 'age': [24, 20, 30]}))
+    class Test:
+        passenger_id = Int32().as_entity()
+        age = Int32()
+
+    @feature_view(source=InMemorySource.empty())
+    class Other:
+        some_value = Int32()
+
+        lookup_id = some_value.transform_polars(pl.lit([2, 1]), as_dtype=List(Int32()))
+        age_value = Test().age.for_entities({'passenger_id': lookup_id})
+
+    store = ContractStore.empty()
+    store.add_feature_view(Test)
+    store.add_feature_view(Other)
+
+    df = await store.feature_view(Other).features_for({'some_value': [1, 1.5, 0.5]}).to_polars()
+
+    assert Other().age_value._loads_feature is not None
+    assert df['age_value'].null_count() == 0

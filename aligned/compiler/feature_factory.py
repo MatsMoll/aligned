@@ -390,6 +390,7 @@ class FeatureFactory(FeatureReferencable):
     _location: FeatureLocation | None = None
     _description: str | None = None
     _default_value: LiteralValue | None = None
+    _loads_feature: FeatureReference | None = None
 
     tags: set[str] | None = None
     transformation: TransformationFactory | None = None
@@ -477,6 +478,7 @@ class FeatureFactory(FeatureReferencable):
             description=self._description,
             tags=list(self.tags) if self.tags else None,
             constraints=self.constraints,
+            loads_feature=self._loads_feature,
         )
 
     def depth(self) -> int:
@@ -634,6 +636,14 @@ class FeatureFactory(FeatureReferencable):
 
         self._add_constraint(ReferencingColumn(entity.feature_reference()))
         return self
+
+    def for_entities(self: T, entities: dict[str, FeatureFactory]) -> T:
+        from aligned.compiler.transformation_factory import LoadFeature
+
+        new = self.copy_type()
+        new.transformation = LoadFeature(entities, self.feature_reference())
+        new._loads_feature = self.feature_reference()
+        return new
 
 
 class CouldBeModelVersion:
