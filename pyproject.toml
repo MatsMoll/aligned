@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aligned"
-version = "0.0.108"
+version = "0.0.109"
 description = "A data managment and lineage tool for ML applications."
 authors = ["Mats E. Mollestad <mats@mollestad.no>"]
 license = "Apache-2.0"
@@ -72,6 +72,7 @@ mlflow = { version = "^2.11.3", optional = true }
 adlfs = { version = "^2024.4.1", optional = true }
 lancedb = { version = "^0.8.2", optional = true }
 deltalake = { version = "^0.18.1", optional = true }
+sentence-transformers = { version = "^3.2.0", optional = true }
 
 [tool.poetry.extras]
 aws = ["aioaws", "connectorx"]
@@ -88,6 +89,7 @@ azure = ["adlfs"]
 deltalake = ["deltalake"]
 lancedb = ["lancedb"]
 pandas = ["pandas"]
+sentence-transformers = ["sentence-transformers"]
 
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.2.6"

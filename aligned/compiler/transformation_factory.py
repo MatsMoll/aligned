@@ -1030,3 +1030,19 @@ class LoadFeature(TransformationFactory):
         return LoadFeature(
             {key: value.name for key, value in self.entities.items()}, self.feature, explode_key
         )
+
+
+@dataclass
+class FormatString(TransformationFactory):
+
+    format: str
+    features: list[FeatureFactory]
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return self.features
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import FormatStringTransformation
+
+        return FormatStringTransformation(self.format, [feature.name for feature in self.features])

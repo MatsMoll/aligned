@@ -243,6 +243,8 @@ class SupportedTransformations:
             ArrayAtIndex,
             OllamaEmbedding,
             PolarsMapRowTransformation,
+            LoadFeature,
+            FormatStringTransformation,
         ]:
             self.add(tran_type)
 
@@ -2535,6 +2537,7 @@ class Split(Transformation):
 
     key: str
     separator: str
+    name = 'split'
 
     async def transform_pandas(self, df: pd.DataFrame, store: ContractStore) -> pd.Series:
         return df[self.key].str.split(self.separator)
@@ -2551,6 +2554,7 @@ class LoadFeature(Transformation):
     entities: dict[str, str]
     feature: FeatureReference
     explode_key: str | None
+    name = 'load_feature'
 
     async def transform_pandas(self, df: pd.DataFrame, store: ContractStore) -> pd.Series:
 
@@ -2589,3 +2593,31 @@ class LoadFeature(Transformation):
         values = values.select(pl.col(self.feature.name).alias(alias))
 
         return pl.concat([df, values.lazy()], how='horizontal')
+
+
+@dataclass
+class FormatStringTransformation(Transformation):
+
+    format: str
+    keys: list[str]
+    name = 'format_string'
+
+    async def transform_pandas(self, df: pd.DataFrame, store: ContractStore) -> pd.Series:
+        values = []
+        for row in df[self.keys].to_dict(orient='records'):  # type: ignore
+            values.append(self.format.format(**row))
+
+        return pd.Series(values)
+
+    async def transform_polars(
+        self, df: pl.LazyFrame, alias: str, store: ContractStore
+    ) -> pl.LazyFrame | pl.Expr:
+
+        polars_df = df.collect()
+        new_rows = []
+
+        for row in polars_df.to_dicts():
+            row[alias] = self.format.format(**row)
+            new_rows.append(row)
+
+        return pl.DataFrame(new_rows).lazy()

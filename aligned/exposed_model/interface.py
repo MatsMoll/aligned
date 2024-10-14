@@ -24,6 +24,7 @@ class PredictorFactory:
     def __init__(self) -> None:
         from aligned.exposed_model.mlflow import MLFlowServer, InMemMLFlowAlias
         from aligned.exposed_model.ollama import OllamaGeneratePredictor, OllamaEmbeddingPredictor
+        from aligned.exposed_model.sentence_transformer import SentenceTransformerPredictor
 
         self.supported_predictors = {}
 
@@ -36,6 +37,7 @@ class PredictorFactory:
             ShadowModel,
             ABTestModel,
             DillPredictor,
+            SentenceTransformerPredictor,
         ]
         for predictor in types:
             self.supported_predictors[predictor.model_type] = predictor

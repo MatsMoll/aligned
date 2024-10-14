@@ -52,6 +52,8 @@ class CombinedData:
     def using_row(self, row: dict, store: ContractStore) -> str:
         return row['query'] + ' something'
 
+    new_format = String().format_string([query, contains_mr], format='Hello {contains_mr} - {query}')
+
     @transform_row(using_features=[embedding], return_type=List(String()))
     async def related_entities(self, row: dict, store: ContractStore) -> list[str]:
         df = (
@@ -59,7 +61,6 @@ class CombinedData:
             .nearest_n_to(entities=[row], number_of_records=2)
             .to_polars()
         )
-        print(df)
         return df['vec_id'].to_list()
 
     not_contains = contains_something.not_equals(True)
@@ -75,7 +76,6 @@ async def test_feature_view_without_entity():
         {'query': ['Hello', 'Hello mr'], 'embedding': [[1, 3], [0, 10]]}
     )
     df = await job.to_polars()
-    print(df)
 
     assert df['contains_mr'].sum() == 1
 

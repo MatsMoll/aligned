@@ -1237,6 +1237,13 @@ class String(
         feature.transformation = Split(pattern, self)
         return feature
 
+    def format_string(self, features: list[FeatureFactory], format: str) -> String:
+        from aligned.compiler.transformation_factory import FormatString
+
+        feature = String()
+        feature.transformation = FormatString(format, features)
+        return feature
+
     def replace(self, values: dict[str, str]) -> String:
         from aligned.compiler.transformation_factory import ReplaceFactory
 
