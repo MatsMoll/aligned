@@ -12,6 +12,7 @@ from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference
 
 if TYPE_CHECKING:
     from aligned.feature_store import ModelFeatureStore
+    from aligned.schemas.model import Model
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,9 @@ class ExposedModel(Codable, SerializableType):
         Or something like a vector database that we assume to be up to date.
         """
         return []
+
+    def with_contract(self, model: Model) -> ExposedModel:
+        return self
 
     async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
         raise NotImplementedError(type(self))
@@ -428,3 +432,9 @@ def python_function(function: Callable[[pl.DataFrame], pl.Series]) -> DillFuncti
         return result
 
     return DillFunction(function=dill.dumps(function_wrapper))
+
+
+def openai_embedding(model: str, prompt_template: str | None = None) -> ExposedModel:
+    from aligned.exposed_model.openai import OpenAiEmbeddingPredictor
+
+    return OpenAiEmbeddingPredictor(model=model, prompt_template=prompt_template or '')

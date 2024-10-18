@@ -655,11 +655,8 @@ class CouldBeModelVersion:
 
 
 class CouldBeEntityFeature:
-    def as_entity(self) -> Entity:
-        if isinstance(self, FeatureFactory):
-            return Entity(self).with_tag(StaticFeatureTags.is_entity)
-
-        raise ValueError(f'{self} is not a feature factory, and can therefore not be an entity')
+    def as_entity(self: T) -> T:
+        return self.with_tag(StaticFeatureTags.is_entity)
 
 
 class EquatableFeature(FeatureFactory):
@@ -1345,30 +1342,6 @@ class ModelVersion(FeatureFactory):
         return CategoricalAggregation(self)
 
 
-class Entity(FeatureFactory):
-
-    _dtype: FeatureFactory
-
-    @property
-    def dtype(self) -> FeatureType:
-        return self._dtype.dtype
-
-    def __init__(self, dtype: FeatureFactory):
-        self._dtype = dtype
-
-    def aggregate(self) -> CategoricalAggregation:
-        return CategoricalAggregation(self)
-
-    def feature(self) -> Feature:
-        return Feature(
-            name=self.name,
-            dtype=self.dtype,
-            description=self._description,
-            tags=None,
-            constraints=self._dtype.constraints,
-        )
-
-
 class Timestamp(DateFeature, ArithmeticFeature):
 
     time_zone: str | None
@@ -1376,8 +1349,8 @@ class Timestamp(DateFeature, ArithmeticFeature):
     def __init__(self, time_zone: str | None = 'UTC') -> None:
         self.time_zone = time_zone
 
-    def defines_freshness(self) -> Timestamp:
-        return self.with_tag('freshness_timestamp')
+    def as_freshness(self) -> Timestamp:
+        return self.with_tag(StaticFeatureTags.is_freshness)
 
     @property
     def dtype(self) -> FeatureType:
@@ -1429,6 +1402,13 @@ class Embedding(FeatureFactory):
     @property
     def dtype(self) -> FeatureType:
         return FeatureType.embedding(self.embedding_size or 0)
+
+    def dot_product(self, embedding: Embedding) -> Float:
+        from aligned.compiler.transformation_factory import ListDotProduct
+
+        feat = Float()
+        feat.transformation = ListDotProduct(self, embedding)
+        return feat
 
     def indexed(
         self,

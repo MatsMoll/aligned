@@ -13,7 +13,7 @@ from datetime import datetime
 from aligned.schemas.feature import FeatureType
 
 if TYPE_CHECKING:
-    from aligned.schemas.feature import EventTimestamp
+    from aligned.schemas.feature import Feature
 
 
 @dataclass
@@ -145,11 +145,11 @@ WHERE table_schema = '{schema}'
         values = df.select(['column_name', 'data_type']).to_dicts()
         return {value['column_name']: psql_types[value['data_type']] for value in values}
 
-    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+    async def freshness(self, feature: Feature) -> datetime | None:
         import polars as pl
 
         value = pl.read_database(
-            f'SELECT MAX({event_timestamp.name}) as freshness FROM {self.table}',
+            f'SELECT MAX({feature.name}) as freshness FROM {self.table}',
             connection=self.config.url,
         )['freshness'].max()
 

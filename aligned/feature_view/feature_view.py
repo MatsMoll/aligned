@@ -14,7 +14,6 @@ from aligned.lazy_imports import pandas as pd
 from aligned.compiler.feature_factory import (
     AggregationTransformationFactory,
     Embedding,
-    Entity,
     EventTimestamp,
     Bool,
 )
@@ -647,11 +646,10 @@ class FeatureView(ABC):
                     ]
                 )
 
-            if isinstance(feature, Entity):
+            if feature.tags and StaticFeatureTags.is_entity in feature.tags:
                 view.entities.add(compiled_feature)
 
-                if feature._dtype.transformation:
-                    feature = feature._dtype
+                if feature.transformation:
                     feature._name = var_name
                     feature._location = FeatureLocation.feature_view(metadata.name)
                 else:

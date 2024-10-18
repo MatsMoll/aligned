@@ -8,7 +8,7 @@ import asyncio
 from aligned.data_source.batch_data_source import BatchDataSource
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import RetrivalJob
-from aligned.schemas.feature import FeatureLocation, EventTimestamp
+from aligned.schemas.feature import FeatureLocation, Feature
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -24,7 +24,7 @@ class FeatureSource:
         raise NotImplementedError()
 
     async def freshness_for(
-        self, locations: dict[FeatureLocation, EventTimestamp]
+        self, locations: dict[FeatureLocation, Feature]
     ) -> dict[FeatureLocation, datetime | None]:
         raise NotImplementedError()
 
@@ -173,7 +173,7 @@ class BatchFeatureSource(FeatureSource, RangeFeatureSource):
         )
 
     async def freshness_for(
-        self, locations: dict[FeatureLocation, EventTimestamp]
+        self, locations: dict[FeatureLocation, Feature]
     ) -> dict[FeatureLocation, datetime | None]:
         locs = list(locations.keys())
         results = await asyncio.gather(

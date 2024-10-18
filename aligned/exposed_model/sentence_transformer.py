@@ -4,9 +4,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 
 from aligned.compiler.feature_factory import (
+    CouldBeEntityFeature,
     CouldBeModelVersion,
     Embedding,
-    Entity,
     EventTimestamp,
     FeatureFactory,
     FeatureReferencable,
@@ -226,12 +226,9 @@ def sentence_transformer_contract(
         entities = [entities]
 
     for entity in entities:
-        if isinstance(entity, Entity):
-            feature = entity._dtype.copy_type()
-        else:
-            feature = entity.copy_type()
-
-        new_entity = Entity(feature)
+        feature = entity.copy_type()
+        assert isinstance(feature, CouldBeEntityFeature)
+        new_entity = feature.as_entity()
 
         feature._name = entity.name
         new_entity._name = entity.name

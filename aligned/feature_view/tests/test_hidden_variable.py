@@ -2,27 +2,22 @@ import pytest
 
 from aligned import (
     Bool,
-    Entity,
     Float,
     PostgreSQLConfig,
     String,
     feature_view,
     FileSource,
 )
-from aligned.feature_view.feature_view import FeatureView, FeatureViewMetadata
 from aligned.compiler.feature_factory import compile_hidden_features
 from aligned.schemas.feature import FeatureLocation
 
 source = PostgreSQLConfig.localhost('test')
 
 
-class TestView(FeatureView):
+@feature_view(name='test', description='test', tags=['Test'], source=source.table('test'))
+class TestView:
 
-    metadata = FeatureViewMetadata(
-        name='test', description='test', tags=['Test'], source=source.table('test')
-    )
-
-    test_id = Entity(String())
+    test_id = String().as_entity()
 
     variable = String()
     some_bool = Bool()

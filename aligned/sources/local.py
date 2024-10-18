@@ -19,7 +19,7 @@ from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import RetrivalJob
 from aligned.s3.storage import FileStorage, HttpStorage
 from aligned.schemas.codable import Codable
-from aligned.schemas.feature import EventTimestamp, FeatureType, Feature
+from aligned.schemas.feature import FeatureType, Feature
 from aligned.storage import Storage
 from aligned.feature_source import WritableFeatureSource
 from aligned.schemas.date_formatter import DateFormatter
@@ -390,8 +390,8 @@ class CsvFileSource(
             'from aligned import FileSource\nfrom aligned.sources.local import CsvConfig',
         )
 
-    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
-        return await data_file_freshness(self, event_timestamp.name, self.formatter)
+    async def freshness(self, feature: Feature) -> datetime | None:
+        return await data_file_freshness(self, feature.name, self.formatter)
 
 
 @dataclass

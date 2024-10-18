@@ -7,7 +7,6 @@ import pytest
 
 from aligned import (
     Bool,
-    Entity,
     EventTimestamp,
     FileSource,
     Float,
@@ -159,7 +158,7 @@ def breast_scan_feature_viewout_with_datetime(scan_without_datetime: CsvFileSour
     )
     class BreastDiagnoseFeatureView:
 
-        scan_id = Entity(dtype=Int32())
+        scan_id = Int32().as_entity()
         diagnosis = String().description('The given diagnose. M for malignant, and B for benigne')
         is_malignant = (diagnosis == 'M').description('If the scanned cells was diagnosed as dangerous')
 
@@ -293,7 +292,7 @@ def breast_scan_feature_view_with_datetime_and_aggregation(
     )
     class BreastDiagnoseFeatureView:
 
-        scan_id = Entity(dtype=Int32())
+        scan_id = Int32().as_entity()
 
         created_at = EventTimestamp()
 
@@ -457,7 +456,7 @@ def titanic_feature_view_parquet(titanic_source_parquet: ParquetFileSource) -> F
         source=titanic_source_parquet,
     )
     class TitanicPassenger:
-        passenger_id = Entity(dtype=Int32())
+        passenger_id = Int32().as_entity()
 
         # Input values
         age = (
@@ -498,7 +497,7 @@ def alot_of_transforations_feature_view(titanic_source: CsvFileSource) -> Featur
     @feature_view(name='titanic', description='Some features from the titanic dataset', source=titanic_source)
     class TitanicPassenger:
 
-        passenger_id = Entity(dtype=Int32())
+        passenger_id = Int32().as_entity()
 
         # Input values
         age = Float()
@@ -560,7 +559,7 @@ def titanic_feature_view_scd(titanic_source_scd: CsvFileSource) -> FeatureViewWr
     )
     class TitanicPassenger:
 
-        passenger_id = Entity(dtype=Int32())
+        passenger_id = Int32().as_entity()
 
         # Input values
         age = (

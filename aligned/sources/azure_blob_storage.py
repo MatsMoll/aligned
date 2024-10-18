@@ -14,7 +14,7 @@ from aligned.feature_source import WritableFeatureSource
 from aligned.local.job import FileDateJob, FileFactualJob, FileFullJob
 from aligned.retrival_job import RetrivalJob, RetrivalRequest
 from aligned.schemas.date_formatter import DateFormatter
-from aligned.schemas.feature import FeatureType, EventTimestamp
+from aligned.schemas.feature import FeatureType, Feature
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.sources.local import (
     CsvConfig,
@@ -832,9 +832,9 @@ Path: *{self.path}*
         except HTTPStatusError as error:
             raise UnableToFindFileException() from error
 
-    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+    async def freshness(self, feature: Feature) -> datetime | None:
         try:
-            return await data_file_freshness(self, event_timestamp.name)
+            return await data_file_freshness(self, feature.name)
         except Exception as error:
             logger.info(f"Failed to get freshness for {self.path}. {error} - returning None.")
             return None
@@ -904,7 +904,6 @@ Path: *{self.path}*
     ) -> tuple[pl.DataFrame, dict]:
         import pyarrow as pa
         from aligned.schemas.constraints import Optional
-        from aligned.schemas.feature import Feature
 
         def pa_dtype(dtype: FeatureType) -> pa.DataType:
             pa_types = {

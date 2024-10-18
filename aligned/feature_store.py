@@ -406,7 +406,7 @@ class ContractStore:
     def features_for(
         self,
         entities: ConvertableToRetrivalJob | RetrivalJob,
-        features: list[str],
+        features: list[str] | list[FeatureReference],
         event_timestamp_column: str | None = None,
         model_version_as_entity: bool | None = None,
     ) -> RetrivalJob:
@@ -426,8 +426,9 @@ class ContractStore:
         Returns:
             RetrivalJob: A job that knows how to fetch the features
         """
-
-        feature_request = RawStringFeatureRequest(features=set(features))
+        assert features, 'One or more features are needed'
+        raw_features = {feat.identifier if isinstance(feat, FeatureReference) else feat for feat in features}
+        feature_request = RawStringFeatureRequest(features=raw_features)
         requests = self.requests_for(feature_request, event_timestamp_column, model_version_as_entity)
 
         feature_names = set()
@@ -1134,15 +1135,13 @@ class ModelFeatureStore:
         return await self.input_freshness()
 
     async def input_freshness(self) -> dict[FeatureLocation, datetime | None]:
-        from aligned.schemas.feature import EventTimestamp
-
-        locs: dict[FeatureLocation, EventTimestamp] = {}
+        locs: dict[FeatureLocation, Feature] = {}
 
         other_locs: set[FeatureLocation] = set()
 
         for req in self.request().needed_requests:
             if req.event_timestamp:
-                locs[req.location] = req.event_timestamp
+                locs[req.location] = req.event_timestamp.as_feature()
 
             for feature in req.derived_features:
                 if feature.loads_feature:
@@ -1156,9 +1155,11 @@ class ModelFeatureStore:
                 continue
 
             if loc.location_type == 'model':
-                event_timestamp = self.store.model(loc.name).prediction_request().event_timestamp
+                event_timestamp = (
+                    self.store.model(loc.name).model.predictions_view.as_view(loc.name).freshness_feature
+                )
             else:
-                event_timestamp = self.store.feature_view(loc.name).request.event_timestamp
+                event_timestamp = self.store.feature_view(loc.name).view.freshness_feature
 
             if event_timestamp:
                 locs[loc] = event_timestamp
@@ -1166,10 +1167,14 @@ class ModelFeatureStore:
         return await self.store.feature_source.freshness_for(locs)
 
     async def prediction_freshness(self) -> datetime | None:
-        pred_req = self.prediction_request()
-        if not pred_req.event_timestamp:
+        feature = (
+            self.store.model(self.model.name)
+            .model.predictions_view.as_view(self.model.name)
+            .freshness_feature
+        )
+        if not feature:
             return None
-        freshness = await self.store.feature_source.freshness_for({self.location: pred_req.event_timestamp})
+        freshness = await self.store.feature_source.freshness_for({self.location: feature})
         return freshness[self.location]
 
     def with_labels(self, label_refs: set[FeatureReference] | None = None) -> SupervisedModelFeatureStore:

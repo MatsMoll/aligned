@@ -10,7 +10,7 @@ from aligned.data_file import DataFileReference
 
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import DerivedFeature
-from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation, FeatureType
+from aligned.schemas.feature import Feature, FeatureLocation, FeatureType
 from aligned.request.retrival_request import RequestResult, RetrivalRequest
 from aligned.compiler.feature_factory import FeatureFactory
 from polars.type_aliases import TimeUnit
@@ -243,7 +243,7 @@ class BatchDataSource:
         feature_types = {name: feature_type.feature_factory for name, feature_type in schema.items()}
         return FeatureView.feature_view_code_template(feature_types, f'{self}', view_name)
 
-    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+    async def freshness(self, feature: Feature) -> datetime | None:
         """
         my_table_freshenss = await (PostgreSQLConfig("DB_URL")
             .table("my_table")
@@ -254,7 +254,7 @@ class BatchDataSource:
         from aligned.sources.local import data_file_freshness
 
         if isinstance(self, DataFileReference):
-            return await data_file_freshness(self, event_timestamp.name)
+            return await data_file_freshness(self, feature.name)
 
         raise NotImplementedError(f'Freshness is not implemented for {type(self)}.')
 
@@ -504,8 +504,8 @@ class FilteredDataSource(CodableBatchDataSource):
 
         return source.source.features_for(facts, request).filter(condition)
 
-    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
-        return await self.source.freshness(event_timestamp)
+    async def freshness(self, feature: Feature) -> datetime | None:
+        return await self.source.freshness(feature)
 
     def all_between_dates(
         self, request: RetrivalRequest, start_date: datetime, end_date: datetime
@@ -780,9 +780,9 @@ class JoinAsofDataSource(CodableBatchDataSource):
             .derive_features([request])
         )
 
-    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
-        left_freshness = await self.source.freshness(event_timestamp)
-        right_frehsness = await self.right_source.freshness(event_timestamp)
+    async def freshness(self, feature: Feature) -> datetime | None:
+        left_freshness = await self.source.freshness(feature)
+        right_frehsness = await self.right_source.freshness(feature)
 
         if left_freshness is None:
             return None
@@ -990,7 +990,7 @@ Adding a loaded at timestamp to the source:
     def depends_on(self) -> set[FeatureLocation]:
         return self.source.depends_on()
 
-    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+    async def freshness(self, feature: Feature) -> datetime | None:
         return None
 
     @classmethod
@@ -1077,9 +1077,9 @@ class JoinDataSource(CodableBatchDataSource):
             .derive_features([request])
         )
 
-    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
-        left_freshness = await self.source.freshness(event_timestamp)
-        right_frehsness = await self.right_source.freshness(event_timestamp)
+    async def freshness(self, feature: Feature) -> datetime | None:
+        left_freshness = await self.source.freshness(feature)
+        right_frehsness = await self.right_source.freshness(feature)
 
         if left_freshness is None:
             return None

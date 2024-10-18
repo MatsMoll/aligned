@@ -2284,7 +2284,7 @@ class CombineFactualJob(RetrivalJob):
             name="some_view",
             batch_source=FileSource.csv_at("data.csv")
         )
-        id = Entity(Int32())
+        id = Int32().as_entity()
         a = Int32()
 
     class OtherView(FeatureView):
@@ -2292,7 +2292,7 @@ class CombineFactualJob(RetrivalJob):
             name="other_view",
             batch_source=FileSource.parquet_at("other.parquet")
         )
-        id = Entity(Int32())
+        id = Int32().as_entity()
         c = Int32()
 
     class Combined(CombinedFeatureView):

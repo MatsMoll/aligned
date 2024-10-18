@@ -11,7 +11,7 @@ from aligned.schemas.codable import Codable
 from aligned.sources.psql import PostgreSQLConfig, PostgreSQLDataSource
 
 if TYPE_CHECKING:
-    from aligned import EventTimestamp
+    from aligned.schemas.feature import Feature
 
 
 @dataclass
@@ -129,6 +129,6 @@ class RedshiftSQLDataSource(CodableBatchDataSource, ColumnFeatureMappable):
             facts=facts,
         )
 
-    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
-        f'SELECT MAX({event_timestamp.name})'
-        return await super().freshness(event_timestamp)
+    async def freshness(self, feature: Feature) -> datetime | None:
+        f'SELECT MAX({feature.name})'
+        return await super().freshness(feature)

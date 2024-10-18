@@ -10,7 +10,6 @@ from uuid import uuid4
 
 from aligned.compiler.feature_factory import (
     CanBeClassificationLabel,
-    Entity,
     Bool,
     EventTimestamp,
     FeatureFactory,
@@ -31,7 +30,7 @@ from aligned.exposed_model.interface import ExposedModel
 from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import ConvertableToRetrivalJob, PredictionJob, RetrivalJob
 from aligned.schemas.derivied_feature import DerivedFeature
-from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference, FeatureType
+from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference, FeatureType, StaticFeatureTags
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.model import Model as ModelSchema
@@ -500,9 +499,12 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
             )
         elif isinstance(feature, RecommendationTarget):
             inference_view.recommendation_targets.add(feature.compile())
-        elif isinstance(feature, Entity):
-            inference_view.entities.add(feature.feature())
         elif isinstance(feature, FeatureFactory):
+
+            if feature.tags and StaticFeatureTags.is_entity in feature.tags:
+                inference_view.entities.add(feature.feature())
+                continue
+
             if feature.transformation:
                 # Adding features that is not stored in the view
                 # e.g:
@@ -588,7 +590,7 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
     if inference_view.source:
         inference_view.source = inference_view.source.with_view(view)
 
-    return ModelSchema(
+    schema = ModelSchema(
         name=metadata.name,
         features=features,
         predictions_view=inference_view,
@@ -599,3 +601,6 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
         exposed_at_url=metadata.exposed_at_url,
         exposed_model=metadata.exposed_model,
     )
+    if schema.exposed_model:
+        schema.exposed_model = schema.exposed_model.with_contract(schema)
+    return schema

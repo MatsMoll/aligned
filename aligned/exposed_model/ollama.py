@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from aligned.compiler.model import ModelContractWrapper
 from aligned.compiler.feature_factory import (
+    CouldBeEntityFeature,
     CouldBeModelVersion,
     Embedding,
-    Entity,
     FeatureFactory,
     FeatureReferencable,
     Int32,
@@ -22,6 +22,7 @@ from aligned.schemas.feature import Feature, FeatureReference
 from aligned.retrival_job import RetrivalJob
 import polars as pl
 from aligned.feature_store import ModelFeatureStore
+from aligned.schemas.model import Model
 
 
 logger = logging.getLogger(__name__)
@@ -99,6 +100,152 @@ And use the prompt template:
             ret_vals.append(response)
 
         return prompts.hstack(pl.DataFrame(ret_vals))
+
+
+@dataclass
+class OllamaEmbeddingPredictorWithRef(ExposedModel, PromptModel):
+
+    endpoint: str
+    model_name: str
+
+    embedding_name: str = ''
+    feature_references: list[FeatureReference] = []
+    precomputed_prompt_key_overwrite: str = 'full_prompt'
+    prompt_template: str = ''
+    model_type: str = 'ollama_embedding'
+
+    @property
+    def precomputed_prompt_key(self) -> str | None:
+        return self.precomputed_prompt_key_overwrite
+
+    @property
+    def exposed_at_url(self) -> str | None:
+        return self.endpoint
+
+    def prompt_template_hash(self) -> str:
+        from hashlib import sha256
+
+        return sha256(self.prompt_template.encode(), usedforsecurity=False).hexdigest()
+
+    def with_contract(self, model: Model) -> ExposedModel:
+        if len(model.features.versions) != 1:
+            assert self.feature_references != []
+            return self
+
+        if self.prompt_template == '':
+            refs = model.feature_references()
+            if len(refs) == 1:
+                self.prompt_template += f"{{{list(refs)[0].name}}}"
+            else:
+                for feature in refs:
+                    self.prompt_template += f"{feature.name}: {{{feature.name}}}"
+
+        if self.embedding_name == '':
+            embeddings = model.predictions_view.embeddings()
+            assert len(embeddings) == 1
+            self.embedding_name = embeddings[0].name
+
+        return self
+
+    async def potential_drift_from_model(self, old_model: ExposedModel) -> str | None:
+        """
+        Checks if a change in model can lead to a potential distribution shift.
+
+        Returns:
+            str: A message explaining the potential drift.
+        """
+        if not isinstance(old_model, OllamaEmbeddingPredictor):
+            return None
+
+        changes = ''
+        if old_model.model_name != self.model_name:
+            changes += f"Model name changed from `{old_model.model_name}` to `{self.model_name}`.\n"
+
+        if old_model.prompt_template != self.prompt_template:
+            changes += (
+                f"Prompt template changed from `{old_model.prompt_template}` to `{self.prompt_template}`.\n"
+            )
+
+        if changes:
+            return changes
+        else:
+            return None
+
+    @property
+    def as_markdown(self) -> str:
+        return f"""Sending a `embedding` request to an Ollama server located at: {self.endpoint}.
+
+This will use the model: `{self.model_name}` to generate the embeddings."""
+
+    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
+        return self.feature_references
+
+    async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
+        return store.store.requests_for_features(self.feature_references).request_result.entities
+
+    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+        from ollama import AsyncClient
+        import polars as pl
+
+        client = AsyncClient(host=self.endpoint)
+
+        expected_cols = [feat.name for feat in self.feature_references]
+        entities = await values.to_polars()
+
+        prompts = []
+
+        if self.precomputed_prompt_key_overwrite in entities.columns:
+            prompts = entities[self.precomputed_prompt_key_overwrite].to_list()
+        else:
+            missing_cols = set(expected_cols) - set(entities.columns)
+            if missing_cols:
+                entities = await store.store.features_for(
+                    values, features=self.feature_references
+                ).to_polars()
+
+            for index, value in enumerate(entities.iter_rows(named=True)):
+                logger.info(f"Processing row {index + 1}/{len(prompts)}")
+
+                prompt = self.prompt_template.format(**value)
+                prompts.append(prompt)
+
+            entities = entities.with_columns(
+                pl.Series(name=self.precomputed_prompt_key_overwrite, values=prompts)
+            )
+
+        ret_vals = []
+
+        for prompt in prompts:
+            response = await client.embeddings(self.model_name, prompt)
+
+            if isinstance(response, dict):
+                embedding = response['embedding']  # type: ignore
+            else:
+                embedding = response
+
+            ret_vals.append(embedding)
+
+        pred_view = store.model.predictions_view
+        if pred_view.model_version_column:
+            model_version = f"{self.prompt_template_hash()} -> {self.model_name}"
+            model_version_name = pred_view.model_version_column.name
+            entities = entities.with_columns(pl.lit(model_version).alias(model_version_name))
+
+        if pred_view.event_timestamp:
+            new_et = pred_view.event_timestamp.name
+            existing_et = values.request_result.event_timestamp
+            need_to_add_et = new_et not in entities.columns
+
+            if existing_et and need_to_add_et and existing_et in entities.columns:
+                logger.info(f"Using existing event timestamp `{existing_et}` as new timestamp.")
+                entities = entities.with_columns(pl.col(existing_et).alias(new_et))
+            elif need_to_add_et:
+                logger.info('No event timestamp using now as the timestamp.')
+                entities = entities.with_columns(
+                    pl.lit(datetime.now(tz=timezone.utc)).alias(pred_view.event_timestamp.name)
+                )
+
+        return entities.hstack([pl.Series(name=self.embedding_name, values=ret_vals)])
 
 
 @dataclass
@@ -331,17 +478,12 @@ def ollama_generate_contract(
         entities = [entities]
 
     for entity in entities:
-        if isinstance(entity, Entity):
-            feature = entity._dtype.copy_type()
-        else:
-            feature = entity.copy_type()
-
-        new_entity = Entity(feature)
-
+        feature = entity.copy_type()
+        assert isinstance(feature, CouldBeEntityFeature)
+        feature = feature.as_entity()
         feature._name = entity.name
-        new_entity._name = entity.name
 
-        setattr(OllamaOutput.contract, entity.name, new_entity)
+        setattr(OllamaOutput.contract, entity.name, feature)
 
     return OllamaOutput  # type: ignore
 
@@ -418,17 +560,12 @@ def ollama_embedding_contract(
         entities = [entities]
 
     for entity in entities:
-        if isinstance(entity, Entity):
-            feature = entity._dtype.copy_type()
-        else:
-            feature = entity.copy_type()
-
-        new_entity = Entity(feature)
-
+        feature = entity.copy_type()
+        assert isinstance(feature, CouldBeEntityFeature)
+        feature = feature.as_entity()
         feature._name = entity.name
-        new_entity._name = entity.name
 
-        setattr(OllamaEmbedding.contract, entity.name, new_entity)
+        setattr(OllamaEmbedding.contract, entity.name, feature)
 
     def add_feature(feature: FeatureFactory) -> None:
 
@@ -530,16 +667,11 @@ def ollama_classification_contract(
         entities = [entities]
 
     for entity in entities:
-        if isinstance(entity, Entity):
-            feature = entity._dtype.copy_type()
-        else:
-            feature = entity.copy_type()
-
-        new_entity = Entity(feature)
-
+        feature = entity.copy_type()
+        assert isinstance(feature, CouldBeEntityFeature)
+        feature = feature.as_entity()
         feature._name = entity.name
-        new_entity._name = entity.name
 
-        setattr(OllamaOutput.contract, entity.name, new_entity)
+        setattr(OllamaOutput.contract, entity.name, feature)
 
     return OllamaOutput  # type: ignore

@@ -12,7 +12,7 @@ from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import AggregatedFeature, DerivedFeature
 from aligned.schemas.event_trigger import EventTrigger
-from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation, FeatureType
+from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation, FeatureType, StaticFeatureTags
 from aligned.schemas.vector_storage import VectorIndex
 
 if TYPE_CHECKING:
@@ -136,6 +136,16 @@ class CompiledFeatureView(Codable):
             event_timestamp=self.event_timestamp,
             features_to_include={feature.name for feature in self.full_schema},
         )
+
+    @property
+    def freshness_feature(self) -> Feature | None:
+        if self.event_timestamp:
+            return self.event_timestamp.as_feature()
+
+        for feat in self.features:
+            if feat.tags and StaticFeatureTags.is_freshness in feat.tags:
+                return feat
+        return None
 
     def schema_hash(self) -> bytes:
         from hashlib import md5
@@ -376,6 +386,6 @@ class FeatureViewReferenceSource(CodableBatchDataSource):
     def depends_on(self) -> set[FeatureLocation]:
         return {self.location}
 
-    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+    async def freshness(self, feature: Feature) -> datetime | None:
         source = self.view.materialized_source or self.view.source
-        return await source.freshness(event_timestamp)
+        return await source.freshness(feature)

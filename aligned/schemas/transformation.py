@@ -119,7 +119,9 @@ class Transformation(Codable, SerializableType):
             if isinstance(output_df, pl.Expr):
                 output_df = test.input_polars.lazy().with_columns([output_df.alias(alias)])
             output = output_df.select(pl.col(alias)).collect().to_series()
-            assert (set(test.input_polars.columns) - set(output_df.columns)) == set()
+
+            missing_columns = set(test.input_polars.columns) - set(output_df.columns)
+            assert missing_columns == set(), f"Missing columns: {missing_columns}"
 
             expected = test.output_polars
             if test.transformation.dtype == FeatureType.boolean():
@@ -245,6 +247,7 @@ class SupportedTransformations:
             PolarsMapRowTransformation,
             LoadFeature,
             FormatStringTransformation,
+            ListDotProduct,
         ]:
             self.add(tran_type)
 
@@ -2621,3 +2624,46 @@ class FormatStringTransformation(Transformation):
             new_rows.append(row)
 
         return pl.DataFrame(new_rows).lazy()
+
+
+@dataclass
+class ListDotProduct(Transformation):
+
+    left: str
+    right: str
+
+    name = 'list_dot_product'
+    dtype = FeatureType.floating_point()
+
+    async def transform_pandas(self, df: pd.DataFrame, store: ContractStore) -> pd.Series:
+        return (
+            (await self.transform_polars(pl.from_pandas(df).lazy(), 'output', store))
+            .collect()['output']
+            .to_pandas()
+        )  # type: ignore
+
+    async def transform_polars(
+        self, df: pl.LazyFrame, alias: str, store: ContractStore
+    ) -> pl.LazyFrame | pl.Expr:
+
+        dot_product = (
+            df.select(self.left, self.right)
+            .with_row_index(name='index')
+            .explode(self.left, self.right)
+            .group_by('index', maintain_order=True)
+            .agg(pl.col(self.left).dot(self.right).alias(alias))
+            .drop('index')
+        )
+
+        return pl.concat([df, dot_product], how='horizontal')
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            transformation=ListDotProduct('left', 'right'),
+            input={
+                'left': [[1, 2, 3], [2, 3]],
+                'right': [[1, 1, 1], [2, 2]],
+            },
+            output=[6, 10],
+        )

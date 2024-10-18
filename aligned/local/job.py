@@ -422,6 +422,7 @@ class FileFactualJob(RetrivalJob):
         for request in self.requests:
 
             entity_names = request.entity_names
+            assert entity_names, 'Need at there will be at least one entity to join'
             all_names = request.all_required_feature_names.union(entity_names)
 
             request_features = list(all_names)

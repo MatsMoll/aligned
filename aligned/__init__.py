@@ -1,7 +1,6 @@
 from aligned.compiler.feature_factory import (
     UUID,
     Bool,
-    Entity,
     EventTimestamp,
     ValidFrom,
     Float,
@@ -58,10 +57,8 @@ __all__ = [
     'KafkaConfig',
     # Types
     'ExposedModel',
-    'Entity',
     'String',
     'Bool',
-    'Entity',
     'UUID',
     'UInt8',
     'UInt16',

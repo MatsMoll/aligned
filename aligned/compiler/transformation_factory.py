@@ -1046,3 +1046,19 @@ class FormatString(TransformationFactory):
         from aligned.schemas.transformation import FormatStringTransformation
 
         return FormatStringTransformation(self.format, [feature.name for feature in self.features])
+
+
+@dataclass
+class ListDotProduct(TransformationFactory):
+
+    left: FeatureFactory
+    right: FeatureFactory
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.left, self.right]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import ListDotProduct
+
+        return ListDotProduct(self.left.name, self.right.name)

@@ -20,6 +20,7 @@ class StaticFeatureTags:
     is_entity = 'is_entity'
     is_annotated_by = 'is_annotated_by'
     is_input_features = 'is_input_features'
+    is_freshness = 'is_updated_at_feature'
 
 
 NAME_POLARS_MAPPING = [

@@ -5,7 +5,7 @@ from datetime import datetime
 from aligned.data_source.batch_data_source import CodableBatchDataSource
 from aligned.feature_source import WritableFeatureSource
 from aligned.request.retrival_request import RetrivalRequest
-from aligned.schemas.feature import Feature, EventTimestamp
+from aligned.schemas.feature import Feature
 from aligned.sources.local import Deletable
 import logging
 
@@ -60,17 +60,17 @@ class LanceDbTable(VectorIndex, CodableBatchDataSource, WritableFeatureSource, D
         self._vector_index_name = name
         return self
 
-    async def freshness(self, event_timestamp: EventTimestamp) -> datetime | None:
+    async def freshness(self, feature: Feature) -> datetime | None:
         from lancedb import AsyncTable
 
         try:
             lance_table: AsyncTable = await self.config.connect_to_table(self.table_name)
-            table = await lance_table.query().select([event_timestamp.name]).to_arrow()
+            table = await lance_table.query().select([feature.name]).to_arrow()
             df = pl.from_arrow(table)
             if isinstance(df, pl.Series):
                 col = df
             else:
-                col = df.get_column(event_timestamp.name)
+                col = df.get_column(feature.name)
 
             max_value = col.max()
             if max_value is not None:
