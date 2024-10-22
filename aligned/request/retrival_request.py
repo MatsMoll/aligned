@@ -494,6 +494,12 @@ class FeatureRequest(Codable):
     def request_result(self) -> RequestResult:
         return RequestResult.from_request_list(self.needed_requests).filter_features(self.features_to_include)
 
+    def entities(self) -> set[Feature]:
+        features = set()
+        for req in self.needed_requests:
+            features.update(req.entities)
+        return features
+
     def without_event_timestamp(self, name_sufix: str | None = None) -> 'FeatureRequest':
         return FeatureRequest(
             location=self.location,

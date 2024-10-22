@@ -434,7 +434,39 @@ def python_function(function: Callable[[pl.DataFrame], pl.Series]) -> DillFuncti
     return DillFunction(function=dill.dumps(function_wrapper))
 
 
-def openai_embedding(model: str, prompt_template: str | None = None) -> ExposedModel:
+def openai_embedding(
+    model: str, batch_on_n_chunks: int | None, prompt_template: str | None = None
+) -> ExposedModel:
+    """
+    Returns an OpenAI embedding model.
+
+    ```python
+    @model_contract(
+        input_features=[MyFeature().name],
+        exposed_model=openai_embedding("text-embedding-3-small"),
+    )
+    class MyEmbedding:
+        my_entity = Int32().as_entity()
+        name = String()
+        embedding = Embedding(1536)
+        predicted_at = EventTimestamp()
+
+    embeddings = await store.model(MyEmbedding).predict_over({
+        "my_entity": [1, 2, 3],
+        "name": ["Hello", "World", "foo"]
+    }).to_polars()
+    ```
+
+
+    Args:
+        model (str): the model to use. Look at the OpenAi docs to find the correct one.
+        batch_on_n_chunks (int): When to change to the batch API. Given that the batch size is too big.
+        prompt_template (str): A custom prompt template if wanted. The default will be based on the input features.
+
+    Returns:
+        ExposedModel: a model that sends embedding requests to OpenAI
+
+    """
     from aligned.exposed_model.openai import OpenAiEmbeddingPredictor
 
     return OpenAiEmbeddingPredictor(model=model, prompt_template=prompt_template or '')

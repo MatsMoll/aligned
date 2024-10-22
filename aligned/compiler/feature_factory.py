@@ -1403,8 +1403,14 @@ class Embedding(FeatureFactory):
     def dtype(self) -> FeatureType:
         return FeatureType.embedding(self.embedding_size or 0)
 
-    def dot_product(self, embedding: Embedding) -> Float:
+    def dot_product(self, embedding: Embedding, check_embedding_size: bool = True) -> Float:
         from aligned.compiler.transformation_factory import ListDotProduct
+
+        if check_embedding_size:
+            assert self.embedding_size == embedding.embedding_size, (
+                'Expected similar embedding size, but got two different ones. '
+                f"Left: {self.embedding_size}, right: {embedding.embedding_size}"
+            )
 
         feat = Float()
         feat.transformation = ListDotProduct(self, embedding)

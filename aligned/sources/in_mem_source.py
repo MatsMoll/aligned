@@ -57,8 +57,6 @@ class InMemorySource(CodableBatchDataSource, DataFileReference, WritableFeatureS
     ) -> RetrivalJob:
         from aligned.retrival_job import RetrivalJob
 
-        print(request.features_to_include)
-
         async def load() -> pl.LazyFrame:
             def first_embedding(features: set[Feature]) -> Feature | None:
                 for feature in features:

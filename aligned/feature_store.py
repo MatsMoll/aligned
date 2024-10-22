@@ -446,6 +446,9 @@ class ContractStore:
 
         if not isinstance(entities, RetrivalJob):
             entities = RetrivalJob.from_convertable(entities, requests)
+            feature_names.update(entities.loaded_columns)
+        else:
+            feature_names.update(entities.request_result.all_returned_columns)
 
         existing_features = set(entities.loaded_columns)
 
@@ -1056,10 +1059,12 @@ class ModelFeatureStore:
                 'This can be done by setting the `exposed_at` value'
             )
 
-        if not isinstance(entities, RetrivalJob):
-            entities = RetrivalJob.from_convertable(entities, self.request().needed_requests)
+        returned_request = self.request().needed_requests
 
-        return PredictionJob(entities, self.model, self.store)
+        if not isinstance(entities, RetrivalJob):
+            entities = RetrivalJob.from_convertable(entities, returned_request)
+
+        return PredictionJob(entities, self.model, self.store, returned_request)
 
     def features_for(
         self, entities: ConvertableToRetrivalJob | RetrivalJob, event_timestamp_column: str | None = None

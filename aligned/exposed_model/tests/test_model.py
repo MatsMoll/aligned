@@ -94,7 +94,7 @@ async def test_model() -> None:
 
     entities = {'entity_id': ['a', 'b'], 'x': [1, 2]}
     pred_job = MyModelContract2.predict_over(entities, needed_views=[InputFeatureView, MyModelContract])
-    assert set(pred_job.request_result.feature_columns) == {'x', 'prediction', 'other_pred'}
+    assert set(pred_job.request_result.all_returned_columns) == {'x', 'entity_id', 'prediction', 'other_pred'}
 
     preds = await pred_job.to_polars()
     assert preds['other_pred'].to_list() == [6, 12]
@@ -224,5 +224,15 @@ async def test_pipeline_model() -> None:
         )
         .to_polars()
     )
+    assert preds['other_pred'].null_count() == 0
+    assert not first_preds['model_version'].series_equal(preds['model_version'])
+
+    preds = (
+        await without_cache.model(MyModelContract2)
+        .predict_over(without_cache.feature_view(InputFeatureView).all())
+        .to_polars()
+    )
+    input_features = InputFeatureView.query().request.all_returned_columns
+    assert set(input_features) - set(preds.columns) == set(), 'Missing some columns'
     assert preds['other_pred'].null_count() == 0
     assert not first_preds['model_version'].series_equal(preds['model_version'])

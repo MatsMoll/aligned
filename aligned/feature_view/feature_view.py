@@ -311,6 +311,8 @@ class FeatureViewWrapper(Generic[T]):
         compiled = self.compile()
 
         for agg_feature in compiled.aggregated_features:
+            if agg_feature.name.isdigit():
+                continue
             org_feature: FeatureFactory = getattr(view, agg_feature.derived_feature.name)
             feature = org_feature.copy_type()
             feature.transformation = None
@@ -322,6 +324,8 @@ class FeatureViewWrapper(Generic[T]):
             setattr(view, agg_feature.derived_feature.name, feature)
 
         for derived_feature in compiled.derived_features:
+            if derived_feature.name.isdigit():
+                continue
             org_feature: FeatureFactory = getattr(view, derived_feature.name)
             feature = org_feature.copy_type()
             feature.transformation = None

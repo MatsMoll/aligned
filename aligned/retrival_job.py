@@ -21,7 +21,7 @@ from prometheus_client import Histogram
 from aligned.exceptions import UnableToFindFileException
 
 from aligned.request.retrival_request import FeatureRequest, RequestResult, RetrivalRequest
-from aligned.schemas.feature import Feature, FeatureType
+from aligned.schemas.feature import Feature, FeatureLocation, FeatureType
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.vector_storage import VectorIndex
 from aligned.split_strategy import SupervisedDataSet
@@ -875,18 +875,55 @@ class RetrivalJob(ABC):
         elif isinstance(request, FeatureRequest):
             request = request.needed_requests
 
+        def remove_features(loaded_features: dict[str, pl.DataType]) -> list[RetrivalRequest]:
+            revised_requests: list[RetrivalRequest] = []
+            req_feature_names: list[str] = []
+            for req in request:
+                req_feature_names.extend(req.all_returned_columns)
+
+                revised_requests.append(
+                    RetrivalRequest(
+                        name=req.name,
+                        location=req.location,
+                        entities=req.entities,
+                        features={feat for feat in req.features if feat.name in loaded_features},
+                        derived_features=req.derived_features,
+                        event_timestamp_request=req.event_timestamp_request,
+                    )
+                )
+
+            additional_features = {
+                Feature(feat, FeatureType.from_polars(dtype))
+                for feat, dtype in loaded_features.items()
+                if feat not in req_feature_names
+            }
+            if additional_features:
+                revised_requests.append(
+                    RetrivalRequest(
+                        name='additional',
+                        location=FeatureLocation.feature_view('additional'),
+                        entities=set(),
+                        features=additional_features,
+                        derived_features=set(),
+                    )
+                )
+
+            return revised_requests
+
         if isinstance(data, dict):
-            return LiteralRetrivalJob(pl.DataFrame(data).lazy(), request)
+            df = pl.DataFrame(data).lazy()
         elif isinstance(data, list):
-            return LiteralRetrivalJob(pl.DataFrame(data).lazy(), request)
+            df = pl.DataFrame(data).lazy()
         elif isinstance(data, pl.DataFrame):
-            return LiteralRetrivalJob(data.lazy(), request)
+            df = data.lazy()
         elif isinstance(data, pl.LazyFrame):
-            return LiteralRetrivalJob(data, request)
+            df = data
         elif isinstance(data, pd.DataFrame):
-            return LiteralRetrivalJob(pl.from_pandas(data).lazy(), request)
+            df = pl.from_pandas(data).lazy()
         else:
             raise ValueError(f'Unable to convert {type(data)} to RetrivalJob')
+
+        return LiteralRetrivalJob(df, remove_features(df.schema))
 
     async def write_to_source(self, source: WritableFeatureSource | DataFileReference) -> None:
         """
@@ -2550,6 +2587,7 @@ class PredictionJob(RetrivalJob):
     job: RetrivalJob
     model: Model
     store: ContractStore
+    output_requests: list[RetrivalRequest]
 
     def added_features(self) -> set[Feature]:
         pred_view = self.model.predictions_view
@@ -2558,17 +2596,12 @@ class PredictionJob(RetrivalJob):
 
     @property
     def request_result(self) -> RequestResult:
-        result = self.job.request_result
-
-        return RequestResult(
-            entities=result.entities,
-            features=result.features.union(self.added_features()),
-            event_timestamp=result.event_timestamp,
-        )
+        reqs = self.retrival_requests
+        return RequestResult.from_request_list(reqs)
 
     @property
     def retrival_requests(self) -> list[RetrivalRequest]:
-        return self.job.retrival_requests
+        return self.output_requests + [self.model.predictions_view.request(self.model.name)]
 
     def describe(self) -> str:
         added = self.added_features()
@@ -2612,10 +2645,10 @@ class PredictionJob(RetrivalJob):
         return df.lazy()
 
     def log_each_job(self, logger_func: Callable[[object], None] | None = None) -> RetrivalJob:
-        return PredictionJob(self.job.log_each_job(logger_func), self.model, self.store)
+        return PredictionJob(self.job.log_each_job(logger_func), self.model, self.store, self.output_requests)
 
     def filter(self, condition: str | Feature | DerivedFeature | pl.Expr) -> RetrivalJob:
-        return PredictionJob(self.job.filter(condition), self.model, self.store)
+        return PredictionJob(self.job.filter(condition), self.model, self.store, self.output_requests)
 
     def remove_derived_features(self) -> RetrivalJob:
         return self.job.remove_derived_features()

@@ -27,7 +27,6 @@ from aligned.feature_view.feature_view import (
     FeatureViewWrapper,
 )
 from aligned.exposed_model.interface import ExposedModel
-from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import ConvertableToRetrivalJob, PredictionJob, RetrivalJob
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference, FeatureType, StaticFeatureTags
@@ -180,23 +179,10 @@ class ModelContractWrapper(Generic[T]):
         values: ConvertableToRetrivalJob | RetrivalJob,
         needed_views: list[FeatureViewWrapper | ModelContractWrapper] | None = None,
     ) -> PredictionJob:
-        from aligned.retrival_job import RetrivalJob
-
         model = self.compile()
 
         if not model.exposed_model:
             raise ValueError(f"Model {model.name} does not have an `exposed_model` to use for predictions.")
-
-        if not isinstance(values, RetrivalJob):
-            features = {feat.as_feature() for feat in model.features.default_features}
-            request = RetrivalRequest(
-                name='default',
-                location=FeatureLocation.model(model.name),
-                entities=set(),
-                features=features,
-                derived_features=set(),
-            )
-            values = RetrivalJob.from_convertable(values, request)
 
         return self.query(needed_views).predict_over(values)
 
