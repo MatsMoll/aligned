@@ -2,6 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 
 import pyarrow as pa
+import polars as pl
 
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, DerivedFeature
@@ -194,6 +195,10 @@ class RetrivalRequest(Codable):
 
         sorted_features = sorted(self.all_returned_features, key=lambda feature: feature.name)
         return pyarrow_schema(sorted_features)
+
+    def polars_schema(self) -> dict[str, pl.DataType]:
+        sorted_features = sorted(self.all_returned_features, key=lambda feature: feature.name)
+        return {feat.name: feat.dtype.polars_type for feat in sorted_features}
 
     def aggregate_over(self) -> dict[AggregateOver, set[AggregatedFeature]]:
         features = defaultdict(set)

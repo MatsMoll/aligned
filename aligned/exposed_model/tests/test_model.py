@@ -200,7 +200,7 @@ async def test_pipeline_model() -> None:
         .to_polars()
     )
     assert preds['other_pred'].null_count() == 1
-    assert not first_preds['model_version'].series_equal(preds['model_version'])
+    assert not first_preds['model_version'].equals(preds['model_version'])
 
     preds = (
         await store.model(MyModelContract2)
@@ -213,7 +213,7 @@ async def test_pipeline_model() -> None:
         .to_polars()
     )
     assert preds['other_pred'].null_count() == 0
-    assert not first_preds['model_version'].series_equal(preds['model_version'])
+    assert not first_preds['model_version'].equals(preds['model_version'])
 
     preds = (
         await without_cache.model(MyModelContract2)
@@ -225,7 +225,7 @@ async def test_pipeline_model() -> None:
         .to_polars()
     )
     assert preds['other_pred'].null_count() == 0
-    assert not first_preds['model_version'].series_equal(preds['model_version'])
+    assert not first_preds['model_version'].equals(preds['model_version'])
 
     preds = (
         await without_cache.model(MyModelContract2)
@@ -235,4 +235,4 @@ async def test_pipeline_model() -> None:
     input_features = InputFeatureView.query().request.all_returned_columns
     assert set(input_features) - set(preds.columns) == set(), 'Missing some columns'
     assert preds['other_pred'].null_count() == 0
-    assert not first_preds['model_version'].series_equal(preds['model_version'])
+    assert not first_preds['model_version'].equals(preds['model_version'])

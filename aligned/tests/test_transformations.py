@@ -183,7 +183,7 @@ async def test_load_features() -> None:
     store.add_feature_view(Test)
     store.add_feature_view(Other)
 
-    df = await store.feature_view(Other).features_for({'some_value': [1, 1.5, 0.5]}).to_polars()
+    df = await store.feature_view(Other).features_for({'some_value': [1, 10, 5]}).to_polars()
 
     assert Other().age_value._loads_feature is not None
     assert df['age_value'].null_count() == 0

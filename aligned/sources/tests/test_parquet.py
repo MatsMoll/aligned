@@ -1,3 +1,4 @@
+from datetime import timezone
 import pytest
 import polars as pl
 from pathlib import Path
@@ -60,6 +61,7 @@ async def test_partition_parquet(point_in_time_data_test: DataTest) -> None:
         file_source = FileSource.partitioned_parquet_at(
             f'test_data/temp/{view_name}', partition_keys=partition_keys
         )
+        await file_source.delete()
         await file_source.write_polars(source.data.lazy())
 
         view.metadata = FeatureView.metadata_with(  # type: ignore
@@ -89,7 +91,7 @@ async def test_partition_parquet(point_in_time_data_test: DataTest) -> None:
             {
                 'loan_amount': [4000],
                 'loan_id': [10000],
-                'event_timestamp': [datetime.now()],
+                'event_timestamp': [datetime.now(tz=timezone.utc)],
                 'personal_income': [59000],
                 'loan_status': [1],
             }
@@ -101,7 +103,7 @@ async def test_partition_parquet(point_in_time_data_test: DataTest) -> None:
             {
                 'loan_id': [10001],
                 'loan_amount': [4000],
-                'event_timestamp': [datetime.now()],
+                'event_timestamp': [datetime.now(tz=timezone.utc)],
                 'personal_income': [59000],
                 'loan_status': [1],
             }
