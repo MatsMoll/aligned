@@ -946,9 +946,9 @@ class RetrivalJob(ABC):
         elif isinstance(data, list):
             df = pl.DataFrame(data, schema_overrides=schema).lazy()
         elif isinstance(data, pl.DataFrame):
-            df = data.cast(schema).lazy()
+            df = data.cast(schema).lazy()  # type: ignore
         elif isinstance(data, pl.LazyFrame):
-            df = data.cast(schema)
+            df = data.cast(schema)  # type: ignore
         elif isinstance(data, pd.DataFrame):
             df = pl.from_pandas(data, schema_overrides=schema).lazy()
         else:
@@ -1062,14 +1062,14 @@ def polars_filter_expressions_from(features: list[Feature]) -> list[tuple[pl.Exp
             elif isinstance(constraint, MinLength):
                 exprs.append(
                     (
-                        pl.col(feature.name).str.lengths() > constraint.value,
+                        pl.col(feature.name).str.len_chars() > constraint.value,
                         f"MinLength {feature.name} {constraint.value}",
                     )
                 )
             elif isinstance(constraint, MaxLength):
                 exprs.append(
                     (
-                        pl.col(feature.name).str.lengths() < constraint.value,
+                        pl.col(feature.name).str.len_chars() < constraint.value,
                         f"MaxLength {feature.name} {constraint.value}",
                     )
                 )
@@ -2048,7 +2048,7 @@ class StreamAggregationJob(RetrivalJob, ModificationJob):
 
             window_data = await self.data_windows(window, data.select(required_features_name), now)
 
-            agg_data = window_data.lazy().groupby(window.group_by_names).agg(agg_expr).collect()
+            agg_data = window_data.lazy().group_by(window.group_by_names).agg(agg_expr).collect()
             data = data.join(agg_data, on=window.group_by_names, how='left')
 
         return data.lazy()
@@ -2324,10 +2324,14 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
 
                 if feature.dtype == FeatureType.boolean():
                     df = df.with_columns(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
-                elif (feature.dtype.is_array) or (feature.dtype.is_embedding):
+                elif feature.dtype.is_array:
                     dtype = df.select(feature.name).dtypes[0]
                     if dtype == pl.Utf8:
-                        df = df.with_columns(pl.col(feature.name).str.json_extract(pl.List(pl.Utf8)))
+                        df = df.with_columns(pl.col(feature.name).str.json_decode(pl.List(pl.Utf8)))
+                elif feature.dtype.is_embedding:
+                    dtype = df.select(feature.name).dtypes[0]
+                    if dtype == pl.Utf8:
+                        df = df.with_columns(pl.col(feature.name).str.json_decode(pl.List(pl.Float64)))
                 elif (feature.dtype == FeatureType.json()) or feature.dtype.is_datetime:
                     logger.debug(f'Converting {feature.name} to {feature.dtype.name}')
                     pass

@@ -1931,7 +1931,7 @@ class FeatureViewStore:
 
         location = FeatureLocation.feature_view(view.name)
 
-        return (await self.source.freshness_for({location: view.event_timestamp}))[location]
+        return (await self.source.freshness_for({location: view.event_timestamp.as_feature()}))[location]
 
 
 class VectorIndexStore:

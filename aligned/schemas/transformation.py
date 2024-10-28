@@ -1306,33 +1306,33 @@ class DateComponent(Transformation):
             case 'day':
                 expr = col.day()
             case 'days':
-                expr = col.days()
+                expr = col.ordinal_day()
             case 'epoch':
                 expr = col.epoch()
             case 'hour':
                 expr = col.hour()
             case 'hours':
-                expr = col.hours()
+                expr = col.total_hours()
             case 'iso_year':
                 expr = col.iso_year()
             case 'microsecond':
                 expr = col.microsecond()
             case 'microseconds':
-                expr = col.microseconds()
+                expr = col.total_microseconds()
             case 'millisecond':
                 expr = col.millisecond()
             case 'milliseconds':
-                expr = col.milliseconds()
+                expr = col.total_milliseconds()
             case 'minute':
                 expr = col.minute()
             case 'minutes':
-                expr = col.minutes()
+                expr = col.total_minutes()
             case 'month':
                 expr = col.month()
             case 'nanosecond':
                 expr = col.nanosecond()
             case 'nanoseconds':
-                expr = col.nanoseconds()
+                expr = col.total_nanoseconds()
             case 'ordinal_day':
                 expr = col.ordinal_day()
             case 'quarter':
@@ -1340,7 +1340,7 @@ class DateComponent(Transformation):
             case 'second':
                 expr = col.second()
             case 'seconds':
-                expr = col.seconds()
+                expr = col.total_seconds()
             case 'week':
                 expr = col.week()
             case 'weekday':
@@ -1540,7 +1540,7 @@ class ReplaceStrings(Transformation):
     ) -> pl.LazyFrame | pl.Expr:
         collected = df.collect()
         pandas_column = collected.select(self.key).to_pandas()
-        transformed = await self.transform_pandas(pandas_column)
+        transformed = await self.transform_pandas(pandas_column, store)
         return collected.with_columns(pl.Series(transformed).alias(alias)).lazy()
 
     # @staticmethod
@@ -1980,7 +1980,7 @@ class GrayscaleImage(Transformation):
                 [np.mean(image, axis=2) if len(image.shape) == 3 else image for image in images.to_list()]
             )
 
-        return pl.col(self.image_key).map(grayscale).alias(alias)
+        return pl.col(self.image_key).map_batches(grayscale).alias(alias)
 
 
 @dataclass
@@ -2087,7 +2087,7 @@ class ConcatStringAggregation(Transformation, PsqlTransformation, RedshiftTransf
     dtype = FeatureType.string()
 
     async def transform_pandas(self, df: pd.DataFrame, store: ContractStore) -> pd.Series:
-        pdf = await self.transform_polars(pl.from_pandas(df).lazy(), self.name)
+        pdf = await self.transform_polars(pl.from_pandas(df).lazy(), self.name, store)
         assert isinstance(pdf, pl.LazyFrame)
         return pdf.collect().to_pandas()[self.name]  # type: ignore
 
@@ -2365,7 +2365,7 @@ class PresignedAwsUrl(Transformation):
 
         return df.with_columns(
             pl.col(self.key)
-            .apply(lambda x: s3.signed_download_url(x, max_age=self.max_age_seconds))
+            .map_elements(lambda x: s3.signed_download_url(x, max_age=self.max_age_seconds))
             .alias(alias)
         )
 
@@ -2381,7 +2381,7 @@ class StructField(Transformation):
 
     async def transform_pandas(self, df: pd.DataFrame, store: ContractStore) -> pd.Series:
         data = pl.from_pandas(df).lazy()
-        tran = await self.transform_polars(data, 'feature')
+        tran = await self.transform_polars(data, 'feature', store)
 
         if isinstance(tran, pl.LazyFrame):
             return tran.collect().to_pandas()['feature']  # type: ignore
@@ -2392,7 +2392,7 @@ class StructField(Transformation):
         self, df: pl.LazyFrame, alias: str, store: ContractStore
     ) -> pl.LazyFrame | pl.Expr:
         if df.schema[self.key].is_(pl.Utf8):
-            return await JsonPath(self.key, f'$.{self.field}').transform_polars(df, alias)
+            return await JsonPath(self.key, f'$.{self.field}').transform_polars(df, alias, store)
         else:
             return pl.col(self.key).struct.field(self.field).alias(alias)
 

@@ -285,11 +285,12 @@ class ModelContractWrapper(Generic[T]):
 
 
 def resolve_dataset_store(dataset_store: DatasetStore | StorageFileReference) -> DatasetStore:
-    from aligned.schemas.folder import DatasetStore, JsonDatasetStore
+    from aligned.schemas.folder import DatasetStore, JsonDatasetStore, StorageFileSource
 
     if isinstance(dataset_store, DatasetStore):
         return dataset_store
 
+    assert isinstance(dataset_store, StorageFileSource)
     return JsonDatasetStore(dataset_store)
 
 

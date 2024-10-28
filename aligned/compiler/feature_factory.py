@@ -655,7 +655,7 @@ class CouldBeModelVersion:
 
 
 class CouldBeEntityFeature:
-    def as_entity(self: T) -> T:
+    def as_entity(self: T) -> T:  # type: ignore
         return self.with_tag(StaticFeatureTags.is_entity)
 
 

@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import polars as pl
 from aligned.data_source.batch_data_source import CodableBatchDataSource, ColumnFeatureMappable
@@ -31,13 +32,8 @@ from aligned.storage import Storage
 from httpx import HTTPStatusError
 from aligned.lazy_imports import pandas as pd
 
-try:
-    from azure.storage.blob import BlobServiceClient  # type: ignore
-except ModuleNotFoundError:
-
-    class BlobServiceClient:
-        pass
-
+if TYPE_CHECKING:
+    from azure.storage.blob import BlobServiceClient
 
 logger = logging.getLogger(__name__)
 
