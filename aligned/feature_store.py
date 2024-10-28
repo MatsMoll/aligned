@@ -200,6 +200,30 @@ class ContractStore:
             self.feature_views, self.models, BatchFeatureSource(sources), self.vector_indexes
         )
 
+    def source_for(self, location: FeatureLocation) -> BatchDataSource | None:
+        if not isinstance(self.feature_source, BatchFeatureSource):
+            return None
+        return self.feature_source.sources.get(location.identifier)
+
+    def predict_when_missing(self) -> ContractStore:
+        from aligned.data_source.model_predictor import PredictModelSource
+
+        new_store = self
+
+        for model_name, model in self.models.items():
+            if not model.exposed_model:
+                continue
+
+            new_store = new_store.update_source_for(
+                FeatureLocation.model(model_name),
+                PredictModelSource(
+                    new_store.model(model_name),
+                    cache_source=self.source_for(FeatureLocation.model(model_name)),
+                ),
+            )
+
+        return new_store
+
     def without_model_cache(self) -> ContractStore:
         from aligned.data_source.model_predictor import PredictModelSource
 
@@ -676,6 +700,55 @@ class ContractStore:
             self.feature_source.sources[FeatureLocation.feature_view(view.name).identifier] = (
                 view.materialized_source or view.source
             )
+
+    def remove(self, location: str | FeatureLocation) -> None:
+        """
+        Removing a feature view or a model contract from the store.
+
+        ```python
+        store.remove("feature_view:titanic")
+        # or
+        location = FeatureLocation.feature_view("titanic")
+        store.remove(location)
+        ```
+
+        Args:
+            location (str | FeatureLocation): The contract to remove
+        """
+        if isinstance(location, str):
+            location = FeatureLocation.from_string(location)
+
+        if location.location_type == 'feature_view':
+            del self.feature_views[location.name]
+        else:
+            del self.models[location.name]
+
+        if not isinstance(self.feature_source, BatchFeatureSource):
+            return
+        if not isinstance(self.feature_source.sources, dict):
+            return
+        del self.feature_source.sources[location.identifier]
+
+    def add(self, contract: FeatureViewWrapper | ModelContractWrapper) -> None:
+        """
+        Adds a feature view or a model contract
+
+        ```python
+        @feature_view(...)
+        class MyFeatures:
+            feature_id = String().as_entity()
+            feature = Int32()
+
+        store.add(MyFeatures)
+        ```
+
+        Args:
+            contract (FeatureViewWrapper | ModelContractWrappe): The contract to add
+        """
+        if isinstance(contract, FeatureViewWrapper):
+            self.add_feature_view(contract)
+        else:
+            self.add_model(contract)
 
     def add_feature_view(self, feature_view: FeatureView | FeatureViewWrapper | CompiledFeatureView) -> None:
         if isinstance(feature_view, FeatureViewWrapper):
@@ -1389,7 +1462,12 @@ class ModelFeatureStore:
 
         ```
         """
-        return {req.location for req in self.request().needed_requests}
+        locs = {req.location for req in self.request().needed_requests}
+        label_refs = self.model.predictions_view.labels_estimates_refs()
+        if label_refs:
+            for ref in label_refs:
+                locs.add(ref.location)
+        return locs
 
     async def upsert_predictions(self, predictions: ConvertableToRetrivalJob | RetrivalJob) -> None:
         """

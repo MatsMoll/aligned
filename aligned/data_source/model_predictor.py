@@ -14,6 +14,7 @@ from aligned.retrival_job import RetrivalJob
 class PredictModelSource(BatchDataSource):
 
     store: ModelFeatureStore
+    cache_source: BatchDataSource | None = None
     type_name: str = 'pred_model_source'
 
     @property
@@ -77,6 +78,31 @@ class PredictModelSource(BatchDataSource):
         return self.store.predict_over(entities).with_request([request])
 
     def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
+        import polars as pl
+
+        if self.cache_source:
+            preds = self.cache_source.features_for(facts, request)
+
+            async def add_missing(df: pl.LazyFrame) -> pl.LazyFrame:
+                request.feature_names
+                full_features = df.filter(
+                    pl.all_horizontal([pl.col(feat.name).is_not_null() for feat in request.features])
+                )
+                missing_features = df.filter(
+                    pl.all_horizontal([pl.col(feat.name).is_not_null() for feat in request.features]).not_()
+                )
+                preds = await self.store.predict_over(
+                    missing_features.select(request.entity_names)
+                ).to_polars()
+
+                return (
+                    full_features.collect()
+                    .vstack(preds.select(full_features.columns).cast(full_features.schema))  # type: ignore
+                    .lazy()
+                )
+
+            return preds.transform_polars(add_missing)
+
         return self.store.predict_over(facts).with_request([request])
 
     @classmethod

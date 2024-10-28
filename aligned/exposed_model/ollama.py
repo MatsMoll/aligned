@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from aligned.compiler.model import ModelContractWrapper
 from aligned.compiler.feature_factory import (
@@ -108,10 +108,11 @@ class OllamaEmbeddingPredictorWithRef(ExposedModel, PromptModel):
     endpoint: str
     model_name: str
 
-    embedding_name: str = ''
-    feature_references: list[FeatureReference] = []
+    embedding_name: str = field(default='')
+    feature_references: list[FeatureReference] = field(default_factory=list)
+    prompt_template: str = field(default='')
+
     precomputed_prompt_key_overwrite: str = 'full_prompt'
-    prompt_template: str = ''
     model_type: str = 'ollama_embedding'
 
     @property
@@ -328,7 +329,10 @@ This will use the model: `{self.model_name}` to generate the embeddings."""
             missing_cols = set(expected_cols) - set(entities.columns)
             if missing_cols:
                 entities = (
-                    await store.using_version(self.input_features_versions).features_for(values).to_polars()
+                    await store.using_version(self.input_features_versions)
+                    .features_for(values)
+                    .with_subfeatures()
+                    .to_polars()
                 )
 
             for index, value in enumerate(entities.iter_rows(named=True)):

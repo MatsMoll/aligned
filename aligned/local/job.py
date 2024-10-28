@@ -25,6 +25,7 @@ class LiteralRetrivalJob(RetrivalJob):
 
     def __init__(self, df: pl.LazyFrame | pd.DataFrame, requests: list[RetrivalRequest]) -> None:
         self.requests = requests
+
         if isinstance(df, pl.DataFrame):
             self.df = df.lazy()
         elif isinstance(df, pl.LazyFrame):
@@ -113,10 +114,10 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
                 .with_columns(pl.col(time_name) + over.window.time_window)
             ).filter(pl.col(time_name) <= sorted_data.select(pl.col(time_name).max()).collect()[0, 0])
         else:
-            sub = sorted_data.group_by_rolling(
+            sub = sorted_data.rolling(
                 time_name,
                 period=over.window.time_window,
-                by=over.group_by_names,
+                group_by=over.group_by_names,
             ).agg(exprs)
 
         if over.window.offset_interval:

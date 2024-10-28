@@ -19,7 +19,7 @@ async def test_mlflow() -> None:
 
     mlflow_client = MlflowClient()
 
-    with suppress(mlflow.exceptions.MlflowException):
+    with suppress(mlflow.MlflowException):
         mlflow_client.delete_registered_model(model_name)
 
     def predict(data):
@@ -200,7 +200,7 @@ async def test_pipeline_model() -> None:
         .to_polars()
     )
     assert preds['other_pred'].null_count() == 1
-    assert not first_preds['model_version'].series_equal(preds['model_version'])
+    assert not first_preds['model_version'].equals(preds['model_version'])
 
     preds = (
         await store.model(MyModelContract2)
@@ -213,7 +213,7 @@ async def test_pipeline_model() -> None:
         .to_polars()
     )
     assert preds['other_pred'].null_count() == 0
-    assert not first_preds['model_version'].series_equal(preds['model_version'])
+    assert not first_preds['model_version'].equals(preds['model_version'])
 
     preds = (
         await without_cache.model(MyModelContract2)
@@ -225,7 +225,7 @@ async def test_pipeline_model() -> None:
         .to_polars()
     )
     assert preds['other_pred'].null_count() == 0
-    assert not first_preds['model_version'].series_equal(preds['model_version'])
+    assert not first_preds['model_version'].equals(preds['model_version'])
 
     preds = (
         await without_cache.model(MyModelContract2)
@@ -235,4 +235,63 @@ async def test_pipeline_model() -> None:
     input_features = InputFeatureView.query().request.all_returned_columns
     assert set(input_features) - set(preds.columns) == set(), 'Missing some columns'
     assert preds['other_pred'].null_count() == 0
-    assert not first_preds['model_version'].series_equal(preds['model_version'])
+    assert not first_preds['model_version'].equals(preds['model_version'])
+
+
+@pytest.mark.asyncio
+async def test_if_is_missing() -> None:
+    @feature_view(
+        name='input',
+        source=InMemorySource.from_values(
+            {'entity_id': ['a', 'b', 'c'], 'x': [1, 2, 3], 'other': [9, 8, 7]}  # type: ignore
+        ),
+    )
+    class InputFeatureView:
+        entity_id = String().as_entity()
+        x = Int32()
+        other = Int32()
+
+    input = InputFeatureView()
+
+    @model_contract(
+        input_features=[InputFeatureView().x],
+        exposed_model=python_function(lambda df: df['x'] * 2),
+        output_source=InMemorySource.from_values(
+            {'entity_id': ['a', 'b'], 'prediction': [4, 4]}  # type: ignore
+        ),
+    )
+    class MyModelContract:
+        entity_id = String().as_entity()
+
+        prediction = input.x.as_regression_target()
+
+        model_version = String().as_model_version()
+
+    @model_contract(
+        input_features=[InputFeatureView().x, MyModelContract().prediction],
+        exposed_model=python_function(lambda df: df['prediction'] * 3 + df['x']),
+    )
+    class MyModelContract2:
+        entity_id = String().as_entity()
+
+        other_pred = input.other.as_regression_target()
+
+        model_version = String().as_model_version()
+
+    store = ContractStore.empty()
+    store.add_view(InputFeatureView)
+    store.add_model(MyModelContract)
+    store.add_model(MyModelContract2)
+
+    predict_when_missing = store.predict_when_missing()
+    preds = (
+        await predict_when_missing.model(MyModelContract2)
+        .predict_over(
+            {
+                'entity_id': ['a', 'c'],
+            }
+        )
+        .to_polars()
+    )
+    assert preds['other_pred'].null_count() == 0
+    assert preds['prediction'].null_count() == 0

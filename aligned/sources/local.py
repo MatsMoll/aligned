@@ -456,7 +456,7 @@ class PartitionedParquetFileSource(
     async def to_lazy_polars(self) -> pl.LazyFrame:
         glob_path = f'{self.directory}/**/*.parquet'
         try:
-            return pl.scan_parquet(glob_path, retries=3)
+            return pl.scan_parquet(glob_path, retries=3, hive_partitioning=True)
         except (OSError, FileNotFoundError):
             raise UnableToFindFileException(self.directory)
 

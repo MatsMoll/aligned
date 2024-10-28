@@ -37,18 +37,18 @@ class TransformationTestDefinition:
 
     @property
     def input_polars(self) -> pl.DataFrame:
-        return pl.from_dict(self.input)
+        return pl.from_dict(self.input, strict=False)
 
     @property
     def output_polars(self) -> pl.Series:
         try:
-            values = pl.Series(self.output).fill_nan(None)
+            values = pl.Series(self.output, dtype=self.transformation.dtype.polars_type).fill_nan(None)
             if self.transformation.dtype == FeatureType.boolean():
                 return values.cast(pl.Boolean)
             else:
                 return values
         except pl.InvalidOperationError:
-            return pl.Series(self.output)
+            return pl.Series(self.output, dtype=self.transformation.dtype.polars_type)
 
 
 def gracefull_transformation(
@@ -138,6 +138,8 @@ class Transformation(Codable, SerializableType):
             )
         except NotImplementedError:
             pass
+        except TypeError as e:
+            raise ValueError(f"Error for transformation {cls.__name__}: {e}")
 
     @classmethod
     async def run_transformation_test_pandas(cls) -> None:
@@ -572,7 +574,7 @@ class And(Transformation):
         return TransformationTestDefinition(
             And('x', 'y'),
             input={'x': [False, True, True, False, None], 'y': [True, False, True, False, False]},
-            output=[False, False, True, False, np.nan],
+            output=[False, False, True, False, None],
         )
 
 
@@ -607,7 +609,7 @@ class Or(Transformation):
         return TransformationTestDefinition(
             Or('x', 'y'),
             input={'x': [False, True, True, False, None], 'y': [True, False, True, False, False]},
-            output=[True, True, True, False, np.nan],
+            output=[True, True, True, False, None],
         )
 
 
@@ -639,7 +641,7 @@ class Inverse(Transformation):
         return TransformationTestDefinition(
             Inverse('x'),
             input={'x': [False, True, True, False, None]},
-            output=[True, False, False, True, np.nan],
+            output=[True, False, False, True, None],
         )
 
 
@@ -786,12 +788,11 @@ class GreaterThenOrEqual(Transformation):
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
 
         return TransformationTestDefinition(
             GreaterThenOrEqual(key='x', value=2),
             input={'x': [1, 2, 3, None]},
-            output=[False, True, True, nan],
+            output=[False, True, True, None],
         )
 
 
@@ -822,10 +823,8 @@ class LowerThenCol(Transformation):
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
-
         return TransformationTestDefinition(
-            LowerThen(key='x', value=2), input={'x': [1, 2, 3, None]}, output=[True, False, False, nan]
+            LowerThen(key='x', value=2), input={'x': [1, 2, 3, None]}, output=[True, False, False, None]
         )
 
 
@@ -856,10 +855,8 @@ class LowerThenOrEqualCol(Transformation):
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
-
         return TransformationTestDefinition(
-            LowerThenOrEqual(key='x', value=2), input={'x': [1, 2, 3, None]}, output=[True, True, False, nan]
+            LowerThenOrEqual(key='x', value=2), input={'x': [1, 2, 3, None]}, output=[True, True, False, None]
         )
 
 
@@ -890,10 +887,8 @@ class LowerThen(Transformation):
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
-
         return TransformationTestDefinition(
-            LowerThen(key='x', value=2), input={'x': [1, 2, 3, None]}, output=[True, False, False, nan]
+            LowerThen(key='x', value=2), input={'x': [1, 2, 3, None]}, output=[True, False, False, None]
         )
 
 
@@ -924,10 +919,8 @@ class LowerThenOrEqual(Transformation):
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
-
         return TransformationTestDefinition(
-            LowerThenOrEqual(key='x', value=2), input={'x': [1, 2, 3, None]}, output=[True, True, False, nan]
+            LowerThenOrEqual(key='x', value=2), input={'x': [1, 2, 3, None]}, output=[True, True, False, None]
         )
 
 
@@ -1151,7 +1144,7 @@ class TimeDifference(Transformation, PsqlTransformation, RedshiftTransformation)
     async def transform_polars(
         self, df: pl.LazyFrame, alias: str, store: ContractStore
     ) -> pl.LazyFrame | pl.Expr:
-        return df.with_columns((pl.col(self.front) - pl.col(self.behind)).dt.seconds().alias(alias))
+        return df.with_columns((pl.col(self.front) - pl.col(self.behind)).dt.total_seconds().alias(alias))
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -1277,12 +1270,10 @@ class ToNumerical(Transformation):
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
-
         return TransformationTestDefinition(
             ToNumerical('x'),
-            input={'x': ['1', '0', '10.5', None, nan, '-20']},
-            output=[1, 0, 10.5, nan, nan, -20],
+            input={'x': ['1', '0', '10.5', None, '-20']},
+            output=[1, 0, 10.5, None, -20],
         )
 
 
@@ -1366,7 +1357,6 @@ class DateComponent(Transformation):
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
 
         return TransformationTestDefinition(
             DateComponent(key='x', component='hour'),
@@ -1376,7 +1366,7 @@ class DateComponent(Transformation):
                     for value in ['2022-04-02T20:20:50', None, '2022-02-20T23:20:50', '1993-04-02T01:20:50']
                 ]
             },
-            output=[20, nan, 23, 1],
+            output=[20, None, 23, 1],
         )
 
 
@@ -1516,12 +1506,10 @@ class Ordinal(Transformation):
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
-
         return TransformationTestDefinition(
             Ordinal('x', ['a', 'b', 'c', 'd']),
             input={'x': ['a', 'b', 'a', None, 'd', 'p']},
-            output=[0, 1, 0, nan, 3, nan],
+            output=[0, 1, 0, None, 3, None],
         )
 
 
@@ -2636,15 +2624,25 @@ class ListDotProduct(Transformation):
     dtype = FeatureType.floating_point()
 
     async def transform_pandas(self, df: pd.DataFrame, store: ContractStore) -> pd.Series:
-        return (
-            (await self.transform_polars(pl.from_pandas(df).lazy(), 'output', store))
-            .collect()['output']
-            .to_pandas()
-        )  # type: ignore
+        pl_df = pl.from_pandas(df)
+        res = await self.transform_polars(pl_df.lazy(), 'output', store)
+        if isinstance(res, pl.Expr):
+            return pl_df.with_columns(res.alias('output'))['output'].to_pandas()
+        else:
+            return res.collect()['output'].to_pandas()
 
     async def transform_polars(
         self, df: pl.LazyFrame, alias: str, store: ContractStore
     ) -> pl.LazyFrame | pl.Expr:
+
+        polars_version = pl.__version__.split('.')
+        if len(polars_version) != 3:
+            polars_version = [1, 8, 0]
+        else:
+            polars_version = [int(num) for num in polars_version]
+
+        if polars_version[0] >= 1 and polars_version[1] >= 8:
+            return (pl.col(self.left) * pl.col(self.right)).list.sum()
 
         dot_product = (
             df.select(self.left, self.right)
@@ -2654,7 +2652,6 @@ class ListDotProduct(Transformation):
             .agg(pl.col(self.left).dot(self.right).alias(alias))
             .drop('index')
         )
-
         return pl.concat([df, dot_product], how='horizontal')
 
     @staticmethod

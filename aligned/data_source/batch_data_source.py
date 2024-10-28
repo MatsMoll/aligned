@@ -467,9 +467,23 @@ class CustomMethodDataSource(CodableBatchDataSource):
 class FilteredDataSource(CodableBatchDataSource):
 
     source: CodableBatchDataSource
-    condition: DerivedFeature | Feature | str
+    condition: DerivedFeature | Feature | str | bytes
 
     type_name: str = 'subset'
+
+    @property
+    def polars_expression(self) -> pl.Expr:
+        if isinstance(self.condition, bytes):
+            return pl.Expr.deserialize(self.condition, format='binary')
+        elif isinstance(self.condition, str):
+            try:
+                return pl.Expr.deserialize(self.condition, format='json')
+            except:
+                return pl.col(self.condition)
+        elif isinstance(self.condition, (DerivedFeature, Feature)):
+            return pl.col(self.condition.name)
+        else:
+            raise ValueError(f"Unable to `{self.condition}`")
 
     def job_group_key(self) -> str:
         return f'subset/{self.source.job_group_key()}'
@@ -518,7 +532,7 @@ class FilteredDataSource(CodableBatchDataSource):
 
         return (
             self.source.all_between_dates(request, start_date, end_date)
-            .filter(self.condition)
+            .filter(self.polars_expression)
             .aggregate(request)
             .derive_features([request])
         )
@@ -527,12 +541,18 @@ class FilteredDataSource(CodableBatchDataSource):
 
         if isinstance(self.condition, DerivedFeature):
             request.derived_features.add(self.condition)
+            return (
+                self.source.all_data(request, limit)
+                .aggregate(request)
+                .derive_features([request])
+                .filter(self.polars_expression)
+            )
         elif isinstance(self.condition, Feature):
             request.features.add(self.condition)
 
         return (
             self.source.all_data(request, limit)
-            .filter(self.condition)
+            .filter(self.polars_expression)
             .aggregate(request)
             .derive_features([request])
         )

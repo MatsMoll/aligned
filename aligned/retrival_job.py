@@ -839,7 +839,7 @@ class RetrivalJob(ABC):
             return self.copy_with(self.job.ignore_event_timestamp())
         raise NotImplementedError('Not implemented ignore_event_timestamp')
 
-    def transform_polars(self, polars_method: Callable[[pl.LazyFrame], pl.LazyFrame]) -> RetrivalJob:
+    def transform_polars(self, polars_method: CustomPolarsTransform) -> RetrivalJob:
         return CustomPolarsJob(self, polars_method)
 
     def polars_method(self, polars_method: Callable[[pl.LazyFrame], pl.LazyFrame]) -> RetrivalJob:
@@ -875,12 +875,11 @@ class RetrivalJob(ABC):
         elif isinstance(request, FeatureRequest):
             request = request.needed_requests
 
-        def remove_features(loaded_features: dict[str, pl.DataType]) -> list[RetrivalRequest]:
+        def remove_features(
+            loaded_features: set[str], requests: list[RetrivalRequest]
+        ) -> list[RetrivalRequest]:
             revised_requests: list[RetrivalRequest] = []
-            req_feature_names: list[str] = []
-            for req in request:
-                req_feature_names.extend(req.all_returned_columns)
-
+            for req in requests:
                 revised_requests.append(
                     RetrivalRequest(
                         name=req.name,
@@ -892,13 +891,26 @@ class RetrivalJob(ABC):
                     )
                 )
 
-            additional_features = {
-                Feature(feat, FeatureType.from_polars(dtype))
-                for feat, dtype in loaded_features.items()
-                if feat not in req_feature_names
-            }
+            return revised_requests
+
+        def add_additional_features(
+            schema: dict[str, pl.DataType], requests: list[RetrivalRequest]
+        ) -> list[RetrivalRequest]:
+
+            additional_features = set()
+
+            for req in requests:
+                req_feature_names = req.all_returned_columns
+                additional_features.update(
+                    {
+                        Feature(feat, FeatureType.from_polars(dtype))
+                        for feat, dtype in schema.items()
+                        if feat not in req_feature_names
+                    }
+                )
+
             if additional_features:
-                revised_requests.append(
+                return requests + [
                     RetrivalRequest(
                         name='additional',
                         location=FeatureLocation.feature_view('additional'),
@@ -906,24 +918,43 @@ class RetrivalJob(ABC):
                         features=additional_features,
                         derived_features=set(),
                     )
-                )
+                ]
+            return requests
 
-            return revised_requests
+        loaded_features: set[str] = set()
 
         if isinstance(data, dict):
-            df = pl.DataFrame(data).lazy()
+            loaded_features.update(data.keys())
         elif isinstance(data, list):
-            df = pl.DataFrame(data).lazy()
-        elif isinstance(data, pl.DataFrame):
-            df = data.lazy()
-        elif isinstance(data, pl.LazyFrame):
-            df = data
+            assert isinstance(data[0], dict)
+            loaded_features.update(data[0].keys())
+        elif isinstance(data, (pl.DataFrame, pl.LazyFrame)):
+            loaded_features.update(data.columns)
         elif isinstance(data, pd.DataFrame):
-            df = pl.from_pandas(data).lazy()
+            loaded_features.update(data.columns)
+
+        schema: dict[str, pl.DataType] = {}
+        requests = remove_features(loaded_features, request)
+        for req in requests:
+            feature_names = req.feature_names
+            for feat, dtype in req.polars_schema().items():
+                if feat in feature_names:
+                    schema[feat] = dtype
+
+        if isinstance(data, dict):
+            df = pl.DataFrame(data, schema_overrides=schema).lazy()
+        elif isinstance(data, list):
+            df = pl.DataFrame(data, schema_overrides=schema).lazy()
+        elif isinstance(data, pl.DataFrame):
+            df = data.cast(schema).lazy()
+        elif isinstance(data, pl.LazyFrame):
+            df = data.cast(schema)
+        elif isinstance(data, pd.DataFrame):
+            df = pl.from_pandas(data, schema_overrides=schema).lazy()
         else:
             raise ValueError(f'Unable to convert {type(data)} to RetrivalJob')
 
-        return LiteralRetrivalJob(df, remove_features(df.schema))
+        return LiteralRetrivalJob(df, add_additional_features(df.schema, requests))
 
     async def write_to_source(self, source: WritableFeatureSource | DataFileReference) -> None:
         """
@@ -1744,8 +1775,13 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
 
         if isinstance(condition, str):
             column_name = condition
+        elif isinstance(condition, pl.Expr):
+            column_name = condition.meta.output_name(raise_if_undetermined=False)
         else:
             column_name = condition.name
+
+        if column_name is None:
+            return FilteredJob(self, condition)
 
         if any(
             column_name in [feature.name for feature in request.derived_features] for request in self.requests
