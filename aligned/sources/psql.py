@@ -93,7 +93,7 @@ class PostgreSQLDataSource(CodableBatchDataSource, ColumnFeatureMappable, Writab
         )
 
     @classmethod
-    def multi_source_features_for(
+    def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple[PostgreSQLDataSource, RetrivalRequest]]
     ) -> RetrivalJob:
         # Group based on config
@@ -127,7 +127,7 @@ SELECT column_name, data_type, character_maximum_length, is_nullable, column_def
 FROM information_schema.columns
 WHERE table_schema = '{schema}'
   AND table_name = '{table}'"""
-        df = pl.read_database(sql_query, connection=self.config.url, engine='adbc')
+        df = pl.read_database_uri(sql_query, uri=self.config.url, engine='adbc')
         psql_types = {
             'uuid': FeatureType.uuid(),
             'timestamp with time zone': FeatureType.datetime(),
@@ -148,9 +148,9 @@ WHERE table_schema = '{schema}'
     async def freshness(self, feature: Feature) -> datetime | None:
         import polars as pl
 
-        value = pl.read_database(
-            f'SELECT MAX({feature.name}) as freshness FROM {self.table}',
-            connection=self.config.url,
+        value = pl.read_database_uri(
+            query=f'SELECT MAX({feature.name}) as freshness FROM {self.table}',
+            uri=self.config.url,
         )['freshness'].max()
 
         if value:

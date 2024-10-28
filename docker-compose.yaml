@@ -20,7 +20,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.test
-    command: ["pytest"]
+    command: "pytest aligned/sources/tests/test_psql.py"
     environment:
       - PSQL_DATABASE_TEST=postgresql://postgres:postgres@psql_app_db:5432/aligned-test
     volumes:
