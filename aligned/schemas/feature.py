@@ -217,6 +217,9 @@ class FeatureType(Codable):
 
     @staticmethod
     def from_polars(polars_type: pl.DataType) -> FeatureType:
+        if isinstance(polars_type, pl.Null) or isinstance(polars_type, pl.Unknown):
+            return FeatureType.string()
+
         if isinstance(polars_type, pl.Datetime):
             if polars_type.time_zone:
                 return FeatureType(name=f'datetime-{polars_type.time_zone}')

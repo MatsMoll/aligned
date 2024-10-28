@@ -435,7 +435,7 @@ def python_function(function: Callable[[pl.DataFrame], pl.Series]) -> DillFuncti
 
 
 def openai_embedding(
-    model: str, batch_on_n_chunks: int | None, prompt_template: str | None = None
+    model: str, batch_on_n_chunks: int | None = 100, prompt_template: str | None = None
 ) -> ExposedModel:
     """
     Returns an OpenAI embedding model.
@@ -469,4 +469,6 @@ def openai_embedding(
     """
     from aligned.exposed_model.openai import OpenAiEmbeddingPredictor
 
-    return OpenAiEmbeddingPredictor(model=model, prompt_template=prompt_template or '')
+    return OpenAiEmbeddingPredictor(
+        model=model, batch_on_n_chunks=batch_on_n_chunks, prompt_template=prompt_template or ''
+    )

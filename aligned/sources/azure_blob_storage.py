@@ -80,7 +80,7 @@ You can choose between two ways of authenticating with Azure Blob Storage.
 """
 
     def json_at(self, path: str) -> StorageFileReference:
-        raise NotImplementedError(type(self))
+        return AzureBlobDirectory(self, Path('')).json_at(path)
 
     def parquet_at(
         self,
@@ -186,6 +186,9 @@ You can choose between two ways of authenticating with Azure Blob Storage.
                 'client_id': os.environ[self.client_id_env],
                 'client_secret': os.environ[self.client_secret_env],
             }
+
+    def with_schema_version(self, sub_directory: str | None = None) -> Directory:
+        return AzureBlobDirectory(self, Path('')).with_schema_version(sub_directory)
 
     @property
     def storage(self) -> BlobStorage:

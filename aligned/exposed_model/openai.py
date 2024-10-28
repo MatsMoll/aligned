@@ -152,7 +152,7 @@ async def embed_texts(
 
         chunk_size += token_size
 
-    if number_of_texts - 1 > chunks[-1]:
+    if not chunks or number_of_texts - 1 > chunks[-1]:
         chunks.append(number_of_texts - 1)
 
     embeddings: list[list[float]] = []
