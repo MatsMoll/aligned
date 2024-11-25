@@ -1,0 +1,802 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+          "DTD/xhtml1-strict.dtd">
+<html>
+  
+
+  <head>
+    
+    <title>aligned.data_source.batch_data_source</title>
+    <meta name="generator" content="pydoctor 24.3.3"> 
+        
+    </meta>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1 maximum-scale=1" />
+    <link rel="stylesheet" type="text/css" href="bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="apidocs.css" />
+    <link rel="stylesheet" type="text/css" href="extra.css" />
+</head>
+
+  <body>
+
+    
+
+    <nav class="navbar navbar-default mainnavbar">
+      
+  
+  <div class="container-fluid">
+
+
+    <div class="navbar-header">
+      
+      <div class="navlinks">
+        <span class="navbar-brand">
+          <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a> <a href="index.html">API Documentation</a>
+        </span>
+
+        <a href="moduleIndex.html">
+          Modules
+        </a>
+
+        <a href="classIndex.html">
+          Classes
+        </a>
+
+        <a href="nameIndex.html">
+          Names
+        </a>
+
+        <div id="search-box-container">
+          <div class="input-group">
+            <input id="search-box" type="search" name="search-query" placeholder="Search..." aria-label="Search" minlength="2" class="form-control" autocomplete="off" />
+            
+            <span class="input-group-btn">
+              <a style="display: none;" class="btn btn-default" id="search-clear-button" title="Clear" onclick="clearSearch()"><img src="fonts/x-circle.svg" alt="Clear" /></a>
+              <a class="btn btn-default" id="search-help-button" title="Help" onclick="toggleSearchHelpText()"><img src="fonts/info.svg" alt="Help" /></a>
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="search-results-container" style="display: none;">
+        
+        <div id="search-buttons">
+          <span class="label label-default" id="search-docstrings-button">
+          <label class="checkbox-inline">
+            <input type="checkbox" id="toggle-search-in-docstrings-checkbox" value="false" onclick="toggleSearchInDocstrings()">
+              search in docstrings
+            </input>
+          </label>
+          </span>
+          
+        </div>
+        
+        <noscript>
+            <h1>Cannot search: JavaScript is not supported/enabled in your browser.</h1>
+        </noscript>
+
+        <div class="hint" id="search-help-box">
+          <p class="rst-last">
+      
+            Search bar offers the following options:
+            <ul>   
+                <li>
+                  <strong>Term presence.</strong> The below example searches for documents that 
+                    must contain “foo”, might contain “bar” and must not contain “baz”: <code>+foo bar -baz</code>
+                </li> 
+
+                <li>
+                  <strong>Wildcards.</strong> The below example searches for documents with words beginning with “foo”: <code>foo*</code>
+                </li> 
+
+                <li>
+                  <strong>Search in specific fields.</strong> The following search matches all objects 
+                  in "twisted.mail" that matches “search”: <code>+qname:twisted.mail.* +search</code>
+
+                  <p>
+                    Possible fields: 'name', 'qname' (fully qualified name), 'docstring', and 'kind'.
+                    Last two fields are only applicable if "search in docstrings" is enabled.
+                  </p>
+                </li>
+
+                <li>
+                  <strong>Fuzzy matches.</strong> The following search matches all documents 
+                  that have a word within 1 edit distance of “foo”: <code>foo~1</code>
+                </li>
+            </ul>
+
+          </p>
+        </div>
+
+        <div id="search-status"> </div>
+
+        <div class="warning" id="search-warn-box" style="display: none;">
+          <p class="rst-last"><span id="search-warn"></span></p>
+        </div>
+
+        <table id="search-results">
+          <!-- Filled dynamically by JS -->
+        </table>
+        
+        <div style="margin-top: 8px;">
+          <p>Results provided by <a href="https://lunrjs.com">Lunr.js</a></p>
+        </div>
+      </div>
+
+    </div>
+
+
+  </div>
+</nav>
+    
+    <div class="container-fluid">
+
+      <!-- Side navigation -->
+      <div class="sidebarcontainer" style="display: none;">
+        
+        <div class="sidebar"><nav class="sidebar">
+  
+
+  <div>
+
+      <div class="thingTitle">
+        <span>Module</span>
+        <code class="thisobject"><a href="aligned.data_source.batch_data_source.html" class="internal-link" title="This module">batch<wbr></wbr>_data<wbr></wbr>_source</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        <div class="childrenKindTitle">Classes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.BatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource"><wbr></wbr>Batch<wbr></wbr>Data<wbr></wbr>Source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.BatchDataSourceFactory.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSourceFactory"><wbr></wbr>Batch<wbr></wbr>Data<wbr></wbr>Source<wbr></wbr>Factory</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.BatchSourceModification.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchSourceModification"><wbr></wbr>Batch<wbr></wbr>Source<wbr></wbr>Modification</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource"><wbr></wbr>Codable<wbr></wbr>Batch<wbr></wbr>Data<wbr></wbr>Source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.ColumnFeatureMappable.html" class="internal-link" title="aligned.data_source.batch_data_source.ColumnFeatureMappable"><wbr></wbr>Column<wbr></wbr>Feature<wbr></wbr>Mappable</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.FilteredDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.FilteredDataSource"><wbr></wbr>Filtered<wbr></wbr>Data<wbr></wbr>Source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.JoinAsofDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.JoinAsofDataSource"><wbr></wbr>Join<wbr></wbr>Asof<wbr></wbr>Data<wbr></wbr>Source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.JoinDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.JoinDataSource"><wbr></wbr>Join<wbr></wbr>Data<wbr></wbr>Source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.LoadedAtSource.html" class="internal-link" title="aligned.data_source.batch_data_source.LoadedAtSource"><wbr></wbr>Loaded<wbr></wbr>At<wbr></wbr>Source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.StackSource.html" class="internal-link" title="aligned.data_source.batch_data_source.StackSource"><wbr></wbr>Stack<wbr></wbr>Source</a></code>
+            </div>
+        
+
+    </li>
+</ul>
+
+        <div class="childrenKindTitle">Functions</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#join_asof_source" class="internal-link" title="aligned.data_source.batch_data_source.join_asof_source">join<wbr></wbr>_asof<wbr></wbr>_source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#join_source" class="internal-link" title="aligned.data_source.batch_data_source.join_source">join<wbr></wbr>_source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#model_prediction_instance_source" class="internal-link" title="aligned.data_source.batch_data_source.model_prediction_instance_source">model<wbr></wbr>_prediction<wbr></wbr>_instance<wbr></wbr>_source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#request_without_event_timestamp" class="internal-link" title="aligned.data_source.batch_data_source.request_without_event_timestamp">request<wbr></wbr>_without<wbr></wbr>_event<wbr></wbr>_timestamp</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#resolve_keys" class="internal-link" title="aligned.data_source.batch_data_source.resolve_keys">resolve<wbr></wbr>_keys</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#view_wrapper_instance_source" class="internal-link" title="aligned.data_source.batch_data_source.view_wrapper_instance_source">view<wbr></wbr>_wrapper<wbr></wbr>_instance<wbr></wbr>_source</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+
+        <div class="childrenKindTitle">Variables</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#T" class="internal-link" title="aligned.data_source.batch_data_source.T">T</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#logger" class="internal-link" title="aligned.data_source.batch_data_source.logger">logger</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div><div>
+
+      <div class="thingTitle">
+        <span>Package</span>
+        <code><a href="aligned.data_source.html" class="internal-link" title="The parent of this module">data<wbr></wbr>_source</a></code> 
+      </div>
+      
+      <div>
+        
+
+        <div class="childrenKindTitle">Modules</div>
+        <ul>
+    
+    <li class=" thisobject">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.html" class="internal-link" title="aligned.data_source.batch_data_source">batch<wbr></wbr>_data<wbr></wbr>_source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.data_source.model_predictor.html" class="internal-link" title="aligned.data_source.model_predictor">model<wbr></wbr>_predictor</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.data_source.stream_data_source.html" class="internal-link" title="aligned.data_source.stream_data_source">stream<wbr></wbr>_data<wbr></wbr>_source</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+        
+
+        
+         
+
+        
+         
+
+        
+         
+
+        
+         
+        
+      </div>
+  </div>
+
+</nav>
+        </div>
+        <div id="collapseSideBar">
+          <a class="btn btn-link" onclick="toggleSideBarCollapse()" title="Toggle Sidebar Collapse">
+          </a>
+        </div> 
+        <script src="sidebartoggle.js" type="text/javascript"></script>
+       
+      </div>
+
+      <div id="main" class="">
+        
+
+        
+
+        <div class="page-header">
+          <h1 class="module"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.data_source.html" class="internal-link" title="aligned.data_source">data_source</a></code><wbr></wbr>.<code><a href="aligned.data_source.batch_data_source.html" class="internal-link" title="aligned.data_source.batch_data_source">batch_data_source</a></code></code></h1>
+          <div id="showPrivate">
+            <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
+          </div>
+        </div>
+
+        <div class="categoryHeader">
+          module documentation
+        </div>
+
+        <div class="extrasDocstring">
+          <a href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/data_source/batch_data_source.py" class="sourceLink">(source)</a>
+          <p></p>
+        </div>
+
+        <div class="moduleDocstring">
+          <div><p class="undocumented">Undocumented</p></div>
+        </div>
+
+        <div id="splitTables">
+          <table class="children sortable" id="id13">
+  
+  
+  <tr class="class">
+    
+    <td>Class</td>
+    <td><code><a href="aligned.data_source.batch_data_source.BatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource"><wbr></wbr>Batch<wbr></wbr>Data<wbr></wbr>Source</a></code></td>
+    <td><span class="undocumented">No class docstring; 5/18 methods, 0/1 class method documented</span></td>
+  </tr><tr class="class">
+    
+    <td>Class</td>
+    <td><code><a href="aligned.data_source.batch_data_source.BatchDataSourceFactory.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSourceFactory"><wbr></wbr>Batch<wbr></wbr>Data<wbr></wbr>Source<wbr></wbr>Factory</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="class">
+    
+    <td>Class</td>
+    <td><code><a href="aligned.data_source.batch_data_source.BatchSourceModification.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchSourceModification"><wbr></wbr>Batch<wbr></wbr>Source<wbr></wbr>Modification</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="class">
+    
+    <td>Class</td>
+    <td><code><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource"><wbr></wbr>Codable<wbr></wbr>Batch<wbr></wbr>Data<wbr></wbr>Source</a></code></td>
+    <td>A definition to where a specific pice of data can be found. E.g: A database table, a file, a web service, etc.</td>
+  </tr><tr class="class">
+    
+    <td>Class</td>
+    <td><code><a href="aligned.data_source.batch_data_source.ColumnFeatureMappable.html" class="internal-link" title="aligned.data_source.batch_data_source.ColumnFeatureMappable"><wbr></wbr>Column<wbr></wbr>Feature<wbr></wbr>Mappable</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="class">
+    
+    <td>Class</td>
+    <td><code><a href="aligned.data_source.batch_data_source.FilteredDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.FilteredDataSource"><wbr></wbr>Filtered<wbr></wbr>Data<wbr></wbr>Source</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="class">
+    
+    <td>Class</td>
+    <td><code><a href="aligned.data_source.batch_data_source.JoinAsofDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.JoinAsofDataSource"><wbr></wbr>Join<wbr></wbr>Asof<wbr></wbr>Data<wbr></wbr>Source</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="class">
+    
+    <td>Class</td>
+    <td><code><a href="aligned.data_source.batch_data_source.JoinDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.JoinDataSource"><wbr></wbr>Join<wbr></wbr>Data<wbr></wbr>Source</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="class">
+    
+    <td>Class</td>
+    <td><code><a href="aligned.data_source.batch_data_source.LoadedAtSource.html" class="internal-link" title="aligned.data_source.batch_data_source.LoadedAtSource"><wbr></wbr>Loaded<wbr></wbr>At<wbr></wbr>Source</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="class">
+    
+    <td>Class</td>
+    <td><code><a href="aligned.data_source.batch_data_source.StackSource.html" class="internal-link" title="aligned.data_source.batch_data_source.StackSource"><wbr></wbr>Stack<wbr></wbr>Source</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="function">
+    
+    <td>Function</td>
+    <td><code><a href="#join_asof_source" class="internal-link" title="aligned.data_source.batch_data_source.join_asof_source">join<wbr></wbr>_asof<wbr></wbr>_source</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="function">
+    
+    <td>Function</td>
+    <td><code><a href="#join_source" class="internal-link" title="aligned.data_source.batch_data_source.join_source">join<wbr></wbr>_source</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="function">
+    
+    <td>Function</td>
+    <td><code><a href="#model_prediction_instance_source" class="internal-link" title="aligned.data_source.batch_data_source.model_prediction_instance_source">model<wbr></wbr>_prediction<wbr></wbr>_instance<wbr></wbr>_source</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="function">
+    
+    <td>Function</td>
+    <td><code><a href="#request_without_event_timestamp" class="internal-link" title="aligned.data_source.batch_data_source.request_without_event_timestamp">request<wbr></wbr>_without<wbr></wbr>_event<wbr></wbr>_timestamp</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="function">
+    
+    <td>Function</td>
+    <td><code><a href="#resolve_keys" class="internal-link" title="aligned.data_source.batch_data_source.resolve_keys">resolve<wbr></wbr>_keys</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="function">
+    
+    <td>Function</td>
+    <td><code><a href="#view_wrapper_instance_source" class="internal-link" title="aligned.data_source.batch_data_source.view_wrapper_instance_source">view<wbr></wbr>_wrapper<wbr></wbr>_instance<wbr></wbr>_source</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="typevariable">
+    
+    <td>Type Variable</td>
+    <td><code><a href="#T" class="internal-link" title="aligned.data_source.batch_data_source.T">T</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="variable">
+    
+    <td>Variable</td>
+    <td><code><a href="#logger" class="internal-link" title="aligned.data_source.batch_data_source.logger">logger</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr>
+</table>
+          
+
+            
+        </div>
+
+        <div id="childList">
+          <div class="basefunction">
+  
+  
+  <a name="aligned.data_source.batch_data_source.join_asof_source">
+    
+  </a>
+  <a name="join_asof_source">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">join_asof_source</span><span class="function-signature">(source: <code><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a></code>, left_request: <code>RetrivalRequest</code>, view: <code><a href="https://docs.python.org/3/library/typing.html#typing.Any" class="intersphinx-link">Any</a></code>, left_on: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, right_on: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.data_source.batch_data_source.JoinAsofDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.JoinAsofDataSource">JoinAsofDataSource</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/data_source/batch_data_source.py#L624">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#join_asof_source" title="aligned.data_source.batch_data_source.join_asof_source">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basefunction">
+  
+  
+  <a name="aligned.data_source.batch_data_source.join_source">
+    
+  </a>
+  <a name="join_source">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">join_source</span><span class="function-signature">(source: <code><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a></code>, view: <code><a href="https://docs.python.org/3/library/typing.html#typing.Any" class="intersphinx-link">Any</a></code>, on_left: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | FeatureFactory | <a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>FeatureFactory] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, on_right: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | FeatureFactory | <a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>FeatureFactory] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, how: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> = <span class="rst-variable-quote">'</span><span class="rst-variable-string">inner</span><span class="rst-variable-quote">'</span>, left_request: <code>RetrivalRequest | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.data_source.batch_data_source.JoinDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.JoinDataSource">JoinDataSource</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/data_source/batch_data_source.py#L661">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#join_source" title="aligned.data_source.batch_data_source.join_source">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basefunction">
+  
+  
+  <a name="aligned.data_source.batch_data_source.model_prediction_instance_source">
+    
+  </a>
+  <a name="model_prediction_instance_source">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">model_prediction_instance_source</span><span class="function-signature">(model: <code><a href="https://docs.python.org/3/library/typing.html#typing.Any" class="intersphinx-link">Any</a></code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a>, <wbr></wbr>RetrivalRequest] | <a href="https://docs.python.org/3/library/exceptions.html#Exception" class="intersphinx-link">Exception</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/data_source/batch_data_source.py#L578">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#model_prediction_instance_source" title="aligned.data_source.batch_data_source.model_prediction_instance_source">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basefunction">
+  
+  
+  <a name="aligned.data_source.batch_data_source.request_without_event_timestamp">
+    
+  </a>
+  <a name="request_without_event_timestamp">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">request_without_event_timestamp</span><span class="function-signature">(request: <code>RetrivalRequest</code>) -&gt; <code>RetrivalRequest</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/data_source/batch_data_source.py#L960">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#request_without_event_timestamp" title="aligned.data_source.batch_data_source.request_without_event_timestamp">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basefunction">
+  
+  
+  <a name="aligned.data_source.batch_data_source.resolve_keys">
+    
+  </a>
+  <a name="resolve_keys">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">resolve_keys</span><span class="function-signature">(keys: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | FeatureFactory | <a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>FeatureFactory]</code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/data_source/batch_data_source.py#L564">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#resolve_keys" title="aligned.data_source.batch_data_source.resolve_keys">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basefunction">
+  
+  
+  <a name="aligned.data_source.batch_data_source.view_wrapper_instance_source">
+    
+  </a>
+  <a name="view_wrapper_instance_source">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">view_wrapper_instance_source</span><span class="function-signature">(view: <code><a href="https://docs.python.org/3/library/typing.html#typing.Any" class="intersphinx-link">Any</a></code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a>, <wbr></wbr>RetrivalRequest] | <a href="https://docs.python.org/3/library/exceptions.html#Exception" class="intersphinx-link">Exception</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/data_source/batch_data_source.py#L603">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#view_wrapper_instance_source" title="aligned.data_source.batch_data_source.view_wrapper_instance_source">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basetypevariable">
+  
+  
+  <a name="aligned.data_source.batch_data_source.T">
+    
+  </a>
+  <a name="T">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">T</span> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/data_source/batch_data_source.py#L28">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#T" title="aligned.data_source.batch_data_source.T">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    <table class="valueTable"><tr class="fieldStart"><td class="fieldName">Value</td></tr><tr><td><pre class="constant-value"><code><a href="https://docs.python.org/3/library/typing.html#typing.TypeVar" class="intersphinx-link">TypeVar</a>(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">T</span><span class="rst-variable-quote">'</span>)</code></pre></td></tr></table>
+  </div>
+</div><div class="basevariable">
+  
+  
+  <a name="aligned.data_source.batch_data_source.logger">
+    
+  </a>
+  <a name="logger">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">logger</span> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/data_source/batch_data_source.py#L22">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#logger" title="aligned.data_source.batch_data_source.logger">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div>
+        </div>
+      
+      </div>
+    </div>
+
+    <footer class="navbar navbar-default">
+
+  
+  <div class="container">
+    <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
+  generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
+    24.3.3 at 2024-11-25 22:52:40.
+  </div>
+
+  <!-- Search related scripts needs to be loaded at the end of HTML 
+    parsing not to introduce overhead and display HTML data asap -->
+  <script src="ajax.js" type="text/javascript"></script>
+  <script src="searchlib.js" type="text/javascript"></script>
+  <script src="search.js" type="text/javascript"></script>
+
+</footer>
+  
+    <script src="pydoctor.js" type="text/javascript"></script>
+
+  </body>
+</html>

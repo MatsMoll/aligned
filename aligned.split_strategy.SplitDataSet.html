@@ -1,0 +1,620 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+          "DTD/xhtml1-strict.dtd">
+<html>
+  
+
+  <head>
+    
+    <title>aligned.split_strategy.SplitDataSet</title>
+    <meta name="generator" content="pydoctor 24.3.3"> 
+        
+    </meta>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1 maximum-scale=1" />
+    <link rel="stylesheet" type="text/css" href="bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="apidocs.css" />
+    <link rel="stylesheet" type="text/css" href="extra.css" />
+</head>
+
+  <body>
+
+    
+
+    <nav class="navbar navbar-default mainnavbar">
+      
+  
+  <div class="container-fluid">
+
+
+    <div class="navbar-header">
+      
+      <div class="navlinks">
+        <span class="navbar-brand">
+          <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a> <a href="index.html">API Documentation</a>
+        </span>
+
+        <a href="moduleIndex.html">
+          Modules
+        </a>
+
+        <a href="classIndex.html">
+          Classes
+        </a>
+
+        <a href="nameIndex.html">
+          Names
+        </a>
+
+        <div id="search-box-container">
+          <div class="input-group">
+            <input id="search-box" type="search" name="search-query" placeholder="Search..." aria-label="Search" minlength="2" class="form-control" autocomplete="off" />
+            
+            <span class="input-group-btn">
+              <a style="display: none;" class="btn btn-default" id="search-clear-button" title="Clear" onclick="clearSearch()"><img src="fonts/x-circle.svg" alt="Clear" /></a>
+              <a class="btn btn-default" id="search-help-button" title="Help" onclick="toggleSearchHelpText()"><img src="fonts/info.svg" alt="Help" /></a>
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="search-results-container" style="display: none;">
+        
+        <div id="search-buttons">
+          <span class="label label-default" id="search-docstrings-button">
+          <label class="checkbox-inline">
+            <input type="checkbox" id="toggle-search-in-docstrings-checkbox" value="false" onclick="toggleSearchInDocstrings()">
+              search in docstrings
+            </input>
+          </label>
+          </span>
+          
+        </div>
+        
+        <noscript>
+            <h1>Cannot search: JavaScript is not supported/enabled in your browser.</h1>
+        </noscript>
+
+        <div class="hint" id="search-help-box">
+          <p class="rst-last">
+      
+            Search bar offers the following options:
+            <ul>   
+                <li>
+                  <strong>Term presence.</strong> The below example searches for documents that 
+                    must contain “foo”, might contain “bar” and must not contain “baz”: <code>+foo bar -baz</code>
+                </li> 
+
+                <li>
+                  <strong>Wildcards.</strong> The below example searches for documents with words beginning with “foo”: <code>foo*</code>
+                </li> 
+
+                <li>
+                  <strong>Search in specific fields.</strong> The following search matches all objects 
+                  in "twisted.mail" that matches “search”: <code>+qname:twisted.mail.* +search</code>
+
+                  <p>
+                    Possible fields: 'name', 'qname' (fully qualified name), 'docstring', and 'kind'.
+                    Last two fields are only applicable if "search in docstrings" is enabled.
+                  </p>
+                </li>
+
+                <li>
+                  <strong>Fuzzy matches.</strong> The following search matches all documents 
+                  that have a word within 1 edit distance of “foo”: <code>foo~1</code>
+                </li>
+            </ul>
+
+          </p>
+        </div>
+
+        <div id="search-status"> </div>
+
+        <div class="warning" id="search-warn-box" style="display: none;">
+          <p class="rst-last"><span id="search-warn"></span></p>
+        </div>
+
+        <table id="search-results">
+          <!-- Filled dynamically by JS -->
+        </table>
+        
+        <div style="margin-top: 8px;">
+          <p>Results provided by <a href="https://lunrjs.com">Lunr.js</a></p>
+        </div>
+      </div>
+
+    </div>
+
+
+  </div>
+</nav>
+    
+    <div class="container-fluid">
+
+      <!-- Side navigation -->
+      <div class="sidebarcontainer" style="display: none;">
+        
+        <div class="sidebar"><nav class="sidebar">
+  
+
+  <div>
+
+      <div class="thingTitle">
+        <span>Class</span>
+        <code class="thisobject"><a href="aligned.split_strategy.SplitDataSet.html" class="internal-link" title="This class"><wbr></wbr>Split<wbr></wbr>Data<wbr></wbr>Set</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        
+        
+
+        <div class="childrenKindTitle">Methods</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#__init__" class="internal-link" title="aligned.split_strategy.SplitDataSet.__init__">__init__</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+
+        <div class="childrenKindTitle">Attributes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#develop_input" class="internal-link" title="aligned.split_strategy.SplitDataSet.develop_input">develop<wbr></wbr>_input</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#develop_target" class="internal-link" title="aligned.split_strategy.SplitDataSet.develop_target">develop<wbr></wbr>_target</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#test_input" class="internal-link" title="aligned.split_strategy.SplitDataSet.test_input">test<wbr></wbr>_input</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#test_target" class="internal-link" title="aligned.split_strategy.SplitDataSet.test_target">test<wbr></wbr>_target</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#train_input" class="internal-link" title="aligned.split_strategy.SplitDataSet.train_input">train<wbr></wbr>_input</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#train_target" class="internal-link" title="aligned.split_strategy.SplitDataSet.train_target">train<wbr></wbr>_target</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div><div>
+
+      <div class="thingTitle">
+        <span>Module</span>
+        <code><a href="aligned.split_strategy.html" class="internal-link" title="The parent of this class">split<wbr></wbr>_strategy</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        <div class="childrenKindTitle">Classes</div>
+        <ul>
+    
+    <li class=" thisobject">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.split_strategy.SplitDataSet.html" class="internal-link" title="aligned.split_strategy.SplitDataSet"><wbr></wbr>Split<wbr></wbr>Data<wbr></wbr>Set</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.split_strategy.SupervisedDataSet.html" class="internal-link" title="aligned.split_strategy.SupervisedDataSet"><wbr></wbr>Supervised<wbr></wbr>Data<wbr></wbr>Set</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.split_strategy.TrainTestValidateSet.html" class="internal-link" title="aligned.split_strategy.TrainTestValidateSet"><wbr></wbr>Train<wbr></wbr>Test<wbr></wbr>Validate<wbr></wbr>Set</a></code>
+            </div>
+        
+
+    </li>
+</ul>
+
+        
+         
+
+        
+         
+
+        <div class="childrenKindTitle">Variables</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType"><wbr></wbr>Dataset<wbr></wbr>Type</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div>
+
+</nav>
+        </div>
+        <div id="collapseSideBar">
+          <a class="btn btn-link" onclick="toggleSideBarCollapse()" title="Toggle Sidebar Collapse">
+          </a>
+        </div> 
+        <script src="sidebartoggle.js" type="text/javascript"></script>
+       
+      </div>
+
+      <div id="main" class="">
+        
+
+        
+
+        <div class="page-header">
+          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.split_strategy.html" class="internal-link" title="aligned.split_strategy">split_strategy</a></code><wbr></wbr>.<code><a href="aligned.split_strategy.SplitDataSet.html" class="internal-link" title="aligned.split_strategy.SplitDataSet">SplitDataSet</a></code></code></h1>
+          <div id="showPrivate">
+            <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
+          </div>
+        </div>
+
+        <div class="categoryHeader">
+          class documentation
+        </div>
+
+        <div class="extrasDocstring">
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">SplitDataSet</span>(<a href="https://docs.python.org/3/library/typing.html#typing.Generic" class="intersphinx-link">Generic</a>[<wbr></wbr><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a>]): <a href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/split_strategy.py#L174" class="sourceLink">(source)</a></code></p><p>Constructor: <code><a href="#__init__" class="internal-link" title="aligned.split_strategy.SplitDataSet.__init__">SplitDataSet(train_input, train_target, develop_input, develop_target, ...)</a></code></p>
+          <p><a href="classIndex.html#aligned.split_strategy.SplitDataSet">View In Hierarchy</a></p>
+        </div>
+
+        <div class="moduleDocstring">
+          <div><p class="undocumented">Undocumented</p></div>
+        </div>
+
+        <div id="splitTables">
+          <table class="children sortable" id="id338">
+  
+  
+  <tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#__init__" class="internal-link" title="aligned.split_strategy.SplitDataSet.__init__">__init__</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="instancevariable">
+    
+    <td>Instance Variable</td>
+    <td><code><a href="#develop_input" class="internal-link" title="aligned.split_strategy.SplitDataSet.develop_input">develop<wbr></wbr>_input</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="instancevariable">
+    
+    <td>Instance Variable</td>
+    <td><code><a href="#develop_target" class="internal-link" title="aligned.split_strategy.SplitDataSet.develop_target">develop<wbr></wbr>_target</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="instancevariable">
+    
+    <td>Instance Variable</td>
+    <td><code><a href="#test_input" class="internal-link" title="aligned.split_strategy.SplitDataSet.test_input">test<wbr></wbr>_input</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="instancevariable">
+    
+    <td>Instance Variable</td>
+    <td><code><a href="#test_target" class="internal-link" title="aligned.split_strategy.SplitDataSet.test_target">test<wbr></wbr>_target</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="instancevariable">
+    
+    <td>Instance Variable</td>
+    <td><code><a href="#train_input" class="internal-link" title="aligned.split_strategy.SplitDataSet.train_input">train<wbr></wbr>_input</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="instancevariable">
+    
+    <td>Instance Variable</td>
+    <td><code><a href="#train_target" class="internal-link" title="aligned.split_strategy.SplitDataSet.train_target">train<wbr></wbr>_target</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr>
+</table>
+          
+
+            
+        </div>
+
+        <div id="childList">
+          <div class="basemethod">
+  
+  
+  <a name="aligned.split_strategy.SplitDataSet.__init__">
+    
+  </a>
+  <a name="__init__">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">__init__</span><span class="function-signature">(self, train_input: <code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a></code>, train_target: <code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a></code>, develop_input: <code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a></code>, develop_target: <code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a></code>, test_input: <code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a></code>, test_target: <code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a></code>)</span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/split_strategy.py#L185">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#__init__" title="aligned.split_strategy.SplitDataSet.__init__">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="baseinstancevariable">
+  
+  
+  <a name="aligned.split_strategy.SplitDataSet.develop_input">
+    
+  </a>
+  <a name="develop_input">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">develop_input</span>: <code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/split_strategy.py#L179">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#develop_input" title="aligned.split_strategy.SplitDataSet.develop_input">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseinstancevariable">
+  
+  
+  <a name="aligned.split_strategy.SplitDataSet.develop_target">
+    
+  </a>
+  <a name="develop_target">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">develop_target</span>: <code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/split_strategy.py#L180">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#develop_target" title="aligned.split_strategy.SplitDataSet.develop_target">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseinstancevariable">
+  
+  
+  <a name="aligned.split_strategy.SplitDataSet.test_input">
+    
+  </a>
+  <a name="test_input">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">test_input</span>: <code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/split_strategy.py#L182">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#test_input" title="aligned.split_strategy.SplitDataSet.test_input">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseinstancevariable">
+  
+  
+  <a name="aligned.split_strategy.SplitDataSet.test_target">
+    
+  </a>
+  <a name="test_target">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">test_target</span>: <code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/split_strategy.py#L183">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#test_target" title="aligned.split_strategy.SplitDataSet.test_target">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseinstancevariable">
+  
+  
+  <a name="aligned.split_strategy.SplitDataSet.train_input">
+    
+  </a>
+  <a name="train_input">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">train_input</span>: <code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/split_strategy.py#L176">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#train_input" title="aligned.split_strategy.SplitDataSet.train_input">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseinstancevariable">
+  
+  
+  <a name="aligned.split_strategy.SplitDataSet.train_target">
+    
+  </a>
+  <a name="train_target">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">train_target</span>: <code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/split_strategy.py#L177">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#train_target" title="aligned.split_strategy.SplitDataSet.train_target">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div>
+        </div>
+      
+      </div>
+    </div>
+
+    <footer class="navbar navbar-default">
+
+  
+  <div class="container">
+    <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
+  generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
+    24.3.3 at 2024-11-25 22:52:40.
+  </div>
+
+  <!-- Search related scripts needs to be loaded at the end of HTML 
+    parsing not to introduce overhead and display HTML data asap -->
+  <script src="ajax.js" type="text/javascript"></script>
+  <script src="searchlib.js" type="text/javascript"></script>
+  <script src="search.js" type="text/javascript"></script>
+
+</footer>
+  
+    <script src="pydoctor.js" type="text/javascript"></script>
+
+  </body>
+</html>

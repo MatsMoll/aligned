@@ -1,0 +1,1419 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+          "DTD/xhtml1-strict.dtd">
+<html>
+  
+
+  <head>
+    
+    <title>aligned.feature_store.FeatureViewStore</title>
+    <meta name="generator" content="pydoctor 24.3.3"> 
+        
+    </meta>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1 maximum-scale=1" />
+    <link rel="stylesheet" type="text/css" href="bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="apidocs.css" />
+    <link rel="stylesheet" type="text/css" href="extra.css" />
+</head>
+
+  <body>
+
+    
+
+    <nav class="navbar navbar-default mainnavbar">
+      
+  
+  <div class="container-fluid">
+
+
+    <div class="navbar-header">
+      
+      <div class="navlinks">
+        <span class="navbar-brand">
+          <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a> <a href="index.html">API Documentation</a>
+        </span>
+
+        <a href="moduleIndex.html">
+          Modules
+        </a>
+
+        <a href="classIndex.html">
+          Classes
+        </a>
+
+        <a href="nameIndex.html">
+          Names
+        </a>
+
+        <div id="search-box-container">
+          <div class="input-group">
+            <input id="search-box" type="search" name="search-query" placeholder="Search..." aria-label="Search" minlength="2" class="form-control" autocomplete="off" />
+            
+            <span class="input-group-btn">
+              <a style="display: none;" class="btn btn-default" id="search-clear-button" title="Clear" onclick="clearSearch()"><img src="fonts/x-circle.svg" alt="Clear" /></a>
+              <a class="btn btn-default" id="search-help-button" title="Help" onclick="toggleSearchHelpText()"><img src="fonts/info.svg" alt="Help" /></a>
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="search-results-container" style="display: none;">
+        
+        <div id="search-buttons">
+          <span class="label label-default" id="search-docstrings-button">
+          <label class="checkbox-inline">
+            <input type="checkbox" id="toggle-search-in-docstrings-checkbox" value="false" onclick="toggleSearchInDocstrings()">
+              search in docstrings
+            </input>
+          </label>
+          </span>
+          
+        </div>
+        
+        <noscript>
+            <h1>Cannot search: JavaScript is not supported/enabled in your browser.</h1>
+        </noscript>
+
+        <div class="hint" id="search-help-box">
+          <p class="rst-last">
+      
+            Search bar offers the following options:
+            <ul>   
+                <li>
+                  <strong>Term presence.</strong> The below example searches for documents that 
+                    must contain “foo”, might contain “bar” and must not contain “baz”: <code>+foo bar -baz</code>
+                </li> 
+
+                <li>
+                  <strong>Wildcards.</strong> The below example searches for documents with words beginning with “foo”: <code>foo*</code>
+                </li> 
+
+                <li>
+                  <strong>Search in specific fields.</strong> The following search matches all objects 
+                  in "twisted.mail" that matches “search”: <code>+qname:twisted.mail.* +search</code>
+
+                  <p>
+                    Possible fields: 'name', 'qname' (fully qualified name), 'docstring', and 'kind'.
+                    Last two fields are only applicable if "search in docstrings" is enabled.
+                  </p>
+                </li>
+
+                <li>
+                  <strong>Fuzzy matches.</strong> The following search matches all documents 
+                  that have a word within 1 edit distance of “foo”: <code>foo~1</code>
+                </li>
+            </ul>
+
+          </p>
+        </div>
+
+        <div id="search-status"> </div>
+
+        <div class="warning" id="search-warn-box" style="display: none;">
+          <p class="rst-last"><span id="search-warn"></span></p>
+        </div>
+
+        <table id="search-results">
+          <!-- Filled dynamically by JS -->
+        </table>
+        
+        <div style="margin-top: 8px;">
+          <p>Results provided by <a href="https://lunrjs.com">Lunr.js</a></p>
+        </div>
+      </div>
+
+    </div>
+
+
+  </div>
+</nav>
+    
+    <div class="container-fluid">
+
+      <!-- Side navigation -->
+      <div class="sidebarcontainer" style="display: none;">
+        
+        <div class="sidebar"><nav class="sidebar">
+  
+
+  <div>
+
+      <div class="thingTitle">
+        <span>Class</span>
+        <code class="thisobject"><a href="aligned.feature_store.FeatureViewStore.html" class="internal-link" title="This class"><wbr></wbr>Feature<wbr></wbr>View<wbr></wbr>Store</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        
+        
+
+        <div class="childrenKindTitle">Methods</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#all" class="internal-link" title="aligned.feature_store.FeatureViewStore.all">all</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#all_columns" class="internal-link" title="aligned.feature_store.FeatureViewStore.all_columns">all<wbr></wbr>_columns</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#batch_write" class="internal-link" title="aligned.feature_store.FeatureViewStore.batch_write">batch<wbr></wbr>_write</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#between_dates" class="internal-link" title="aligned.feature_store.FeatureViewStore.between_dates">between<wbr></wbr>_dates</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#features_for" class="internal-link" title="aligned.feature_store.FeatureViewStore.features_for">features<wbr></wbr>_for</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#filter" class="internal-link" title="aligned.feature_store.FeatureViewStore.filter">filter</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#freshness" class="internal-link" title="aligned.feature_store.FeatureViewStore.freshness">freshness</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#insert" class="internal-link" title="aligned.feature_store.FeatureViewStore.insert">insert</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#previous" class="internal-link" title="aligned.feature_store.FeatureViewStore.previous">previous</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#process_input" class="internal-link" title="aligned.feature_store.FeatureViewStore.process_input">process<wbr></wbr>_input</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#select" class="internal-link" title="aligned.feature_store.FeatureViewStore.select">select</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#select_columns" class="internal-link" title="aligned.feature_store.FeatureViewStore.select_columns">select<wbr></wbr>_columns</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#upsert" class="internal-link" title="aligned.feature_store.FeatureViewStore.upsert">upsert</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#using_source" class="internal-link" title="aligned.feature_store.FeatureViewStore.using_source">using<wbr></wbr>_source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#with_optimised_write" class="internal-link" title="aligned.feature_store.FeatureViewStore.with_optimised_write">with<wbr></wbr>_optimised<wbr></wbr>_write</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#write" class="internal-link" title="aligned.feature_store.FeatureViewStore.write">write</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+
+        <div class="childrenKindTitle">Attributes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#event_triggers" class="internal-link" title="aligned.feature_store.FeatureViewStore.event_triggers">event<wbr></wbr>_triggers</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#feature_filter" class="internal-link" title="aligned.feature_store.FeatureViewStore.feature_filter">feature<wbr></wbr>_filter</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#store" class="internal-link" title="aligned.feature_store.FeatureViewStore.store">store</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#view" class="internal-link" title="aligned.feature_store.FeatureViewStore.view">view</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#name" class="internal-link" title="aligned.feature_store.FeatureViewStore.name">name</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#request" class="internal-link" title="aligned.feature_store.FeatureViewStore.request">request</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#source" class="internal-link" title="aligned.feature_store.FeatureViewStore.source">source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#write_input" class="internal-link" title="aligned.feature_store.FeatureViewStore.write_input">write<wbr></wbr>_input</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div><div>
+
+      <div class="thingTitle">
+        <span>Module</span>
+        <code><a href="aligned.feature_store.html" class="internal-link" title="The parent of this class">feature<wbr></wbr>_store</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        <div class="childrenKindTitle">Classes</div>
+        <ul>
+    
+    <li class=" thisobject">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.feature_store.FeatureViewStore.html" class="internal-link" title="aligned.feature_store.FeatureViewStore"><wbr></wbr>Feature<wbr></wbr>View<wbr></wbr>Store</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.feature_store.ModelFeatureStore.html" class="internal-link" title="aligned.feature_store.ModelFeatureStore"><wbr></wbr>Model<wbr></wbr>Feature<wbr></wbr>Store</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.feature_store.RawStringFeatureRequest.html" class="internal-link" title="aligned.feature_store.RawStringFeatureRequest"><wbr></wbr>Raw<wbr></wbr>String<wbr></wbr>Feature<wbr></wbr>Request</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.feature_store.SourceRequest.html" class="internal-link" title="aligned.feature_store.SourceRequest"><wbr></wbr>Source<wbr></wbr>Request</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.feature_store.SupervisedModelFeatureStore.html" class="internal-link" title="aligned.feature_store.SupervisedModelFeatureStore"><wbr></wbr>Supervised<wbr></wbr>Model<wbr></wbr>Feature<wbr></wbr>Store</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.feature_store.VectorIndexStore.html" class="internal-link" title="aligned.feature_store.VectorIndexStore"><wbr></wbr>Vector<wbr></wbr>Index<wbr></wbr>Store</a></code>
+            </div>
+        
+
+    </li>
+</ul>
+
+        
+         
+
+        
+         
+
+        <div class="childrenKindTitle">Variables</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.feature_store.html#T" class="internal-link" title="aligned.feature_store.T">T</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.feature_store.html#FeatureSourceable" class="internal-link" title="aligned.feature_store.FeatureSourceable"><wbr></wbr>Feature<wbr></wbr>Sourceable</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.feature_store.html#feature_view_write_time" class="internal-link" title="aligned.feature_store.feature_view_write_time">feature<wbr></wbr>_view<wbr></wbr>_write<wbr></wbr>_time</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.feature_store.html#logger" class="internal-link" title="aligned.feature_store.logger">logger</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div>
+
+</nav>
+        </div>
+        <div id="collapseSideBar">
+          <a class="btn btn-link" onclick="toggleSideBarCollapse()" title="Toggle Sidebar Collapse">
+          </a>
+        </div> 
+        <script src="sidebartoggle.js" type="text/javascript"></script>
+       
+      </div>
+
+      <div id="main" class="">
+        
+
+        
+
+        <div class="page-header">
+          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.feature_store.html" class="internal-link" title="aligned.feature_store">feature_store</a></code><wbr></wbr>.<code><a href="aligned.feature_store.FeatureViewStore.html" class="internal-link" title="aligned.feature_store.FeatureViewStore">FeatureViewStore</a></code></code></h1>
+          <div id="showPrivate">
+            <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
+          </div>
+        </div>
+
+        <div class="categoryHeader">
+          class documentation
+        </div>
+
+        <div class="extrasDocstring">
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">FeatureViewStore</span>: <a href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1681" class="sourceLink">(source)</a></code></p>
+          <p><a href="classIndex.html#aligned.feature_store.FeatureViewStore">View In Hierarchy</a></p>
+        </div>
+
+        <div class="moduleDocstring">
+          <div><p class="undocumented">Undocumented</p></div>
+        </div>
+
+        <div id="splitTables">
+          <table class="children sortable" id="id56">
+  
+  
+  <tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#all" class="internal-link" title="aligned.feature_store.FeatureViewStore.all">all</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#all_columns" class="internal-link" title="aligned.feature_store.FeatureViewStore.all_columns">all<wbr></wbr>_columns</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#batch_write" class="internal-link" title="aligned.feature_store.FeatureViewStore.batch_write">batch<wbr></wbr>_write</a></code></td>
+    <td>Takes a set of features, computes the derived features, and store them in the source</td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#between_dates" class="internal-link" title="aligned.feature_store.FeatureViewStore.between_dates">between<wbr></wbr>_dates</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#features_for" class="internal-link" title="aligned.feature_store.FeatureViewStore.features_for">features<wbr></wbr>_for</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#filter" class="internal-link" title="aligned.feature_store.FeatureViewStore.filter">filter</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#freshness" class="internal-link" title="aligned.feature_store.FeatureViewStore.freshness">freshness</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#insert" class="internal-link" title="aligned.feature_store.FeatureViewStore.insert">insert</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#previous" class="internal-link" title="aligned.feature_store.FeatureViewStore.previous">previous</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#process_input" class="internal-link" title="aligned.feature_store.FeatureViewStore.process_input">process<wbr></wbr>_input</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#select" class="internal-link" title="aligned.feature_store.FeatureViewStore.select">select</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#select_columns" class="internal-link" title="aligned.feature_store.FeatureViewStore.select_columns">select<wbr></wbr>_columns</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#upsert" class="internal-link" title="aligned.feature_store.FeatureViewStore.upsert">upsert</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#using_source" class="internal-link" title="aligned.feature_store.FeatureViewStore.using_source">using<wbr></wbr>_source</a></code></td>
+    <td>Sets the source to load features from.</td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#with_optimised_write" class="internal-link" title="aligned.feature_store.FeatureViewStore.with_optimised_write">with<wbr></wbr>_optimised<wbr></wbr>_write</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#write" class="internal-link" title="aligned.feature_store.FeatureViewStore.write">write</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#event_triggers" class="internal-link" title="aligned.feature_store.FeatureViewStore.event_triggers">event<wbr></wbr>_triggers</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#feature_filter" class="internal-link" title="aligned.feature_store.FeatureViewStore.feature_filter">feature<wbr></wbr>_filter</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#store" class="internal-link" title="aligned.feature_store.FeatureViewStore.store">store</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#view" class="internal-link" title="aligned.feature_store.FeatureViewStore.view">view</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="property">
+    
+    <td>Property</td>
+    <td><code><a href="#name" class="internal-link" title="aligned.feature_store.FeatureViewStore.name">name</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="property">
+    
+    <td>Property</td>
+    <td><code><a href="#request" class="internal-link" title="aligned.feature_store.FeatureViewStore.request">request</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="property">
+    
+    <td>Property</td>
+    <td><code><a href="#source" class="internal-link" title="aligned.feature_store.FeatureViewStore.source">source</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="property">
+    
+    <td>Property</td>
+    <td><code><a href="#write_input" class="internal-link" title="aligned.feature_store.FeatureViewStore.write_input">write<wbr></wbr>_input</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr>
+</table>
+          
+
+            
+        </div>
+
+        <div id="childList">
+          <div class="basemethod">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.all">
+    
+  </a>
+  <a name="all">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">all</span><span class="function-signature">(self, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1750">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#all" title="aligned.feature_store.FeatureViewStore.all">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.all_columns">
+    
+  </a>
+  <a name="all_columns">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">all_columns</span><span class="function-signature">(self, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1756">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#all_columns" title="aligned.feature_store.FeatureViewStore.all_columns">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.batch_write">
+    
+  </a>
+  <a name="batch_write">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">batch_write</span><span class="function-signature">(self, values: <code><a href="aligned.retrival_job.html#ConvertableToRetrivalJob" class="internal-link" title="aligned.retrival_job.ConvertableToRetrivalJob">ConvertableToRetrivalJob</a> | <a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>)</span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1886">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#batch_write" title="aligned.feature_store.FeatureViewStore.batch_write">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p>Takes a set of features, computes the derived features, and store them in the source</p>
+<dl class="rst-docutils">
+<dt>Args:</dt>
+<dd>values (dict[str, list[Any]] | RetrivalJob): The features to write</dd>
+<dt>Raises:</dt>
+<dd>ValueError: In case the inputed features are invalid</dd>
+</dl>
+</div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.between_dates">
+    
+  </a>
+  <a name="between_dates">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">between_dates</span><span class="function-signature">(self, start_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>, end_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1777">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#between_dates" title="aligned.feature_store.FeatureViewStore.between_dates">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.features_for">
+    
+  </a>
+  <a name="features_for">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">features_for</span><span class="function-signature">(self, entities: <code><a href="aligned.retrival_job.html#ConvertableToRetrivalJob" class="internal-link" title="aligned.retrival_job.ConvertableToRetrivalJob">ConvertableToRetrivalJob</a> | <a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, event_timestamp_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1797">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#features_for" title="aligned.feature_store.FeatureViewStore.features_for">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.filter">
+    
+  </a>
+  <a name="filter">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">filter</span><span class="function-signature">(self, filter: <code>pl.Expr | <a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1753">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#filter" title="aligned.feature_store.FeatureViewStore.filter">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.freshness">
+    
+  </a>
+  <a name="freshness">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">freshness</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1924">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#freshness" title="aligned.feature_store.FeatureViewStore.freshness">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.insert">
+    
+  </a>
+  <a name="insert">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">insert</span><span class="function-signature">(self, values: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a> | <a href="aligned.retrival_job.html#ConvertableToRetrivalJob" class="internal-link" title="aligned.retrival_job.ConvertableToRetrivalJob">ConvertableToRetrivalJob</a></code>)</span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1818">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#insert" title="aligned.feature_store.FeatureViewStore.insert">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.previous">
+    
+  </a>
+  <a name="previous">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">previous</span><span class="function-signature">(self, days: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code> = 0, minutes: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code> = 0, seconds: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code> = 0) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1792">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#previous" title="aligned.feature_store.FeatureViewStore.previous">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.process_input">
+    
+  </a>
+  <a name="process_input">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">process_input</span><span class="function-signature">(self, values: <code><a href="aligned.retrival_job.html#ConvertableToRetrivalJob" class="internal-link" title="aligned.retrival_job.ConvertableToRetrivalJob">ConvertableToRetrivalJob</a></code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1876">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#process_input" title="aligned.feature_store.FeatureViewStore.process_input">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.select">
+    
+  </a>
+  <a name="select">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">select</span><span class="function-signature">(self, features: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>) -&gt; <code><a href="aligned.feature_store.FeatureViewStore.html" class="internal-link" title="aligned.feature_store.FeatureViewStore">FeatureViewStore</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1811">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#select" title="aligned.feature_store.FeatureViewStore.select">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.select_columns">
+    
+  </a>
+  <a name="select_columns">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">select_columns</span><span class="function-signature">(self, columns: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1747">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#select_columns" title="aligned.feature_store.FeatureViewStore.select_columns">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.upsert">
+    
+  </a>
+  <a name="upsert">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">upsert</span><span class="function-signature">(self, values: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a> | <a href="aligned.retrival_job.html#ConvertableToRetrivalJob" class="internal-link" title="aligned.retrival_job.ConvertableToRetrivalJob">ConvertableToRetrivalJob</a></code>)</span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1815">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#upsert" title="aligned.feature_store.FeatureViewStore.upsert">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.using_source">
+    
+  </a>
+  <a name="using_source">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">using_source</span><span class="function-signature">(self, source: <code><a href="aligned.feature_store.html#FeatureSourceable" class="internal-link" title="aligned.feature_store.FeatureSourceable">FeatureSourceable</a> | <a href="aligned.data_source.batch_data_source.BatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource">BatchDataSource</a></code>) -&gt; <code><a href="aligned.feature_store.FeatureViewStore.html" class="internal-link" title="aligned.feature_store.FeatureViewStore">FeatureViewStore</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1706">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#using_source" title="aligned.feature_store.FeatureViewStore.using_source">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p>Sets the source to load features from.</p>
+<p>```python
+custom_source = PostgreSQLConfig.localhost("test")</p>
+<p>store = FeatureView.from_dir(".")</p>
+<dl class="rst-docutils">
+<dt>features = await (store.feature_view("titanic")</dt>
+<dd>.using_source(custom_source)
+.all()</dd>
+</dl>
+<div class="rst-section" id="rst-section-1">
+<h2 class="heading">)</h2>
+<dl class="rst-docutils">
+<dt>Args:</dt>
+<dd>source (BatchDataSource): The source to use</dd>
+<dt>Returns:</dt>
+<dd>A new <code><a href="aligned.feature_store.FeatureViewStore.html" class="internal-link" title="aligned.feature_store.FeatureViewStore">FeatureViewStore</a></code> that sends queries to the passed source</dd>
+</dl>
+</div>
+</div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.with_optimised_write">
+    
+  </a>
+  <a name="with_optimised_write">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">with_optimised_write</span><span class="function-signature">(self) -&gt; <code><a href="aligned.feature_store.FeatureViewStore.html" class="internal-link" title="aligned.feature_store.FeatureViewStore">FeatureViewStore</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1743">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#with_optimised_write" title="aligned.feature_store.FeatureViewStore.with_optimised_write">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.write">
+    
+  </a>
+  <a name="write">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">write</span><span class="function-signature">(self, values: <code><a href="aligned.retrival_job.html#ConvertableToRetrivalJob" class="internal-link" title="aligned.retrival_job.ConvertableToRetrivalJob">ConvertableToRetrivalJob</a></code>)</span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1831">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#write" title="aligned.feature_store.FeatureViewStore.write">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.event_triggers">
+    
+  </a>
+  <a name="event_triggers">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">event_triggers</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>EventTrigger]</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1686">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#event_triggers" title="aligned.feature_store.FeatureViewStore.event_triggers">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.feature_filter">
+    
+  </a>
+  <a name="feature_filter">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">feature_filter</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1687">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#feature_filter" title="aligned.feature_store.FeatureViewStore.feature_filter">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.store">
+    
+  </a>
+  <a name="store">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">store</span>: <code><a href="aligned.ContractStore.html" class="internal-link" title="aligned.ContractStore">ContractStore</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1684">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#store" title="aligned.feature_store.FeatureViewStore.store">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.view">
+    
+  </a>
+  <a name="view">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">view</span>: <code>CompiledFeatureView</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1685">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#view" title="aligned.feature_store.FeatureViewStore.view">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseproperty">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.name">
+    
+  </a>
+  <a name="name">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">name</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1689">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#name" title="aligned.feature_store.FeatureViewStore.name">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseproperty">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.request">
+    
+  </a>
+  <a name="request">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">request</span>: <code>RetrivalRequest</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1693">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#request" title="aligned.feature_store.FeatureViewStore.request">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseproperty">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.source">
+    
+  </a>
+  <a name="source">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">source</span>: <code><a href="aligned.feature_source.FeatureSource.html" class="internal-link" title="aligned.feature_source.FeatureSource">FeatureSource</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1702">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#source" title="aligned.feature_store.FeatureViewStore.source">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseproperty">
+  
+  
+  <a name="aligned.feature_store.FeatureViewStore.write_input">
+    
+  </a>
+  <a name="write_input">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">write_input</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1821">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#write_input" title="aligned.feature_store.FeatureViewStore.write_input">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div>
+        </div>
+      
+      </div>
+    </div>
+
+    <footer class="navbar navbar-default">
+
+  
+  <div class="container">
+    <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
+  generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
+    24.3.3 at 2024-11-25 22:52:40.
+  </div>
+
+  <!-- Search related scripts needs to be loaded at the end of HTML 
+    parsing not to introduce overhead and display HTML data asap -->
+  <script src="ajax.js" type="text/javascript"></script>
+  <script src="searchlib.js" type="text/javascript"></script>
+  <script src="search.js" type="text/javascript"></script>
+
+</footer>
+  
+    <script src="pydoctor.js" type="text/javascript"></script>
+
+  </body>
+</html>

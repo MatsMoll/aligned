@@ -1,0 +1,1022 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+          "DTD/xhtml1-strict.dtd">
+<html>
+  
+
+  <head>
+    
+    <title>aligned.worker.StreamWorker</title>
+    <meta name="generator" content="pydoctor 24.3.3"> 
+        
+    </meta>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1 maximum-scale=1" />
+    <link rel="stylesheet" type="text/css" href="bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="apidocs.css" />
+    <link rel="stylesheet" type="text/css" href="extra.css" />
+</head>
+
+  <body>
+
+    
+
+    <nav class="navbar navbar-default mainnavbar">
+      
+  
+  <div class="container-fluid">
+
+
+    <div class="navbar-header">
+      
+      <div class="navlinks">
+        <span class="navbar-brand">
+          <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a> <a href="index.html">API Documentation</a>
+        </span>
+
+        <a href="moduleIndex.html">
+          Modules
+        </a>
+
+        <a href="classIndex.html">
+          Classes
+        </a>
+
+        <a href="nameIndex.html">
+          Names
+        </a>
+
+        <div id="search-box-container">
+          <div class="input-group">
+            <input id="search-box" type="search" name="search-query" placeholder="Search..." aria-label="Search" minlength="2" class="form-control" autocomplete="off" />
+            
+            <span class="input-group-btn">
+              <a style="display: none;" class="btn btn-default" id="search-clear-button" title="Clear" onclick="clearSearch()"><img src="fonts/x-circle.svg" alt="Clear" /></a>
+              <a class="btn btn-default" id="search-help-button" title="Help" onclick="toggleSearchHelpText()"><img src="fonts/info.svg" alt="Help" /></a>
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="search-results-container" style="display: none;">
+        
+        <div id="search-buttons">
+          <span class="label label-default" id="search-docstrings-button">
+          <label class="checkbox-inline">
+            <input type="checkbox" id="toggle-search-in-docstrings-checkbox" value="false" onclick="toggleSearchInDocstrings()">
+              search in docstrings
+            </input>
+          </label>
+          </span>
+          
+        </div>
+        
+        <noscript>
+            <h1>Cannot search: JavaScript is not supported/enabled in your browser.</h1>
+        </noscript>
+
+        <div class="hint" id="search-help-box">
+          <p class="rst-last">
+      
+            Search bar offers the following options:
+            <ul>   
+                <li>
+                  <strong>Term presence.</strong> The below example searches for documents that 
+                    must contain “foo”, might contain “bar” and must not contain “baz”: <code>+foo bar -baz</code>
+                </li> 
+
+                <li>
+                  <strong>Wildcards.</strong> The below example searches for documents with words beginning with “foo”: <code>foo*</code>
+                </li> 
+
+                <li>
+                  <strong>Search in specific fields.</strong> The following search matches all objects 
+                  in "twisted.mail" that matches “search”: <code>+qname:twisted.mail.* +search</code>
+
+                  <p>
+                    Possible fields: 'name', 'qname' (fully qualified name), 'docstring', and 'kind'.
+                    Last two fields are only applicable if "search in docstrings" is enabled.
+                  </p>
+                </li>
+
+                <li>
+                  <strong>Fuzzy matches.</strong> The following search matches all documents 
+                  that have a word within 1 edit distance of “foo”: <code>foo~1</code>
+                </li>
+            </ul>
+
+          </p>
+        </div>
+
+        <div id="search-status"> </div>
+
+        <div class="warning" id="search-warn-box" style="display: none;">
+          <p class="rst-last"><span id="search-warn"></span></p>
+        </div>
+
+        <table id="search-results">
+          <!-- Filled dynamically by JS -->
+        </table>
+        
+        <div style="margin-top: 8px;">
+          <p>Results provided by <a href="https://lunrjs.com">Lunr.js</a></p>
+        </div>
+      </div>
+
+    </div>
+
+
+  </div>
+</nav>
+    
+    <div class="container-fluid">
+
+      <!-- Side navigation -->
+      <div class="sidebarcontainer" style="display: none;">
+        
+        <div class="sidebar"><nav class="sidebar">
+  
+
+  <div>
+
+      <div class="thingTitle">
+        <span>Class</span>
+        <code class="thisobject"><a href="aligned.worker.StreamWorker.html" class="internal-link" title="This class"><wbr></wbr>Stream<wbr></wbr>Worker</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        
+        
+
+        <div class="childrenKindTitle">Methods</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#from_object" class="internal-link" title="aligned.worker.StreamWorker.from_object">from<wbr></wbr>_object</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#from_reference" class="internal-link" title="aligned.worker.StreamWorker.from_reference">from<wbr></wbr>_reference</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#expose_metrics_at" class="internal-link" title="aligned.worker.StreamWorker.expose_metrics_at">expose<wbr></wbr>_metrics<wbr></wbr>_at</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#feature_views_by_topic" class="internal-link" title="aligned.worker.StreamWorker.feature_views_by_topic">feature<wbr></wbr>_views<wbr></wbr>_by<wbr></wbr>_topic</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#prune_unused_features" class="internal-link" title="aligned.worker.StreamWorker.prune_unused_features">prune<wbr></wbr>_unused<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#read_from" class="internal-link" title="aligned.worker.StreamWorker.read_from">read<wbr></wbr>_from</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#read_from_timestamps" class="internal-link" title="aligned.worker.StreamWorker.read_from_timestamps">read<wbr></wbr>_from<wbr></wbr>_timestamps</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#start" class="internal-link" title="aligned.worker.StreamWorker.start">start</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+
+        <div class="childrenKindTitle">Attributes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#repo_definition" class="internal-link" title="aligned.worker.StreamWorker.repo_definition">repo<wbr></wbr>_definition</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#sink_source" class="internal-link" title="aligned.worker.StreamWorker.sink_source">sink<wbr></wbr>_source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#views_to_process" class="internal-link" title="aligned.worker.StreamWorker.views_to_process">views<wbr></wbr>_to<wbr></wbr>_process</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#default_start_timestamp" class="internal-link" title="aligned.worker.StreamWorker.default_start_timestamp">default<wbr></wbr>_start<wbr></wbr>_timestamp</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#metric_logging_port" class="internal-link" title="aligned.worker.StreamWorker.metric_logging_port">metric<wbr></wbr>_logging<wbr></wbr>_port</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#read_timestamps" class="internal-link" title="aligned.worker.StreamWorker.read_timestamps">read<wbr></wbr>_timestamps</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#should_prune_unused_features" class="internal-link" title="aligned.worker.StreamWorker.should_prune_unused_features">should<wbr></wbr>_prune<wbr></wbr>_unused<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div><div>
+
+      <div class="thingTitle">
+        <span>Module</span>
+        <code><a href="aligned.worker.html" class="internal-link" title="The parent of this class">worker</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        <div class="childrenKindTitle">Classes</div>
+        <ul>
+    
+    <li class=" thisobject">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.worker.StreamWorker.html" class="internal-link" title="aligned.worker.StreamWorker"><wbr></wbr>Stream<wbr></wbr>Worker</a></code>
+            </div>
+        
+
+    </li>
+</ul>
+
+        <div class="childrenKindTitle">Functions</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.worker.html#monitor_process" class="internal-link" title="aligned.worker.monitor_process">monitor<wbr></wbr>_process</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.worker.html#multi_processing" class="internal-link" title="aligned.worker.multi_processing">multi<wbr></wbr>_processing</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.worker.html#process" class="internal-link" title="aligned.worker.process">process</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.worker.html#single_processing" class="internal-link" title="aligned.worker.single_processing">single<wbr></wbr>_processing</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.worker.html#stream_job" class="internal-link" title="aligned.worker.stream_job">stream<wbr></wbr>_job</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+
+        <div class="childrenKindTitle">Variables</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.worker.html#logger" class="internal-link" title="aligned.worker.logger">logger</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.worker.html#process_time" class="internal-link" title="aligned.worker.process_time">process<wbr></wbr>_time</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.worker.html#processed_rows_count" class="internal-link" title="aligned.worker.processed_rows_count">processed<wbr></wbr>_rows<wbr></wbr>_count</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div>
+
+</nav>
+        </div>
+        <div id="collapseSideBar">
+          <a class="btn btn-link" onclick="toggleSideBarCollapse()" title="Toggle Sidebar Collapse">
+          </a>
+        </div> 
+        <script src="sidebartoggle.js" type="text/javascript"></script>
+       
+      </div>
+
+      <div id="main" class="">
+        
+
+        
+
+        <div class="page-header">
+          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.worker.html" class="internal-link" title="aligned.worker">worker</a></code><wbr></wbr>.<code><a href="aligned.worker.StreamWorker.html" class="internal-link" title="aligned.worker.StreamWorker">StreamWorker</a></code></code></h1>
+          <div id="showPrivate">
+            <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
+          </div>
+        </div>
+
+        <div class="categoryHeader">
+          class documentation
+        </div>
+
+        <div class="extrasDocstring">
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">StreamWorker</span>: <a href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/worker.py#L34" class="sourceLink">(source)</a></code></p><p>Constructors: <code><a href="#from_object" class="internal-link" title="aligned.worker.StreamWorker.from_object">StreamWorker.from_object(repo, file, obj)</a></code>, <code><a href="#from_reference" class="internal-link" title="aligned.worker.StreamWorker.from_reference">StreamWorker.from_reference(source, sink_source, views_to_process)</a></code></p>
+          <p><a href="classIndex.html#aligned.worker.StreamWorker">View In Hierarchy</a></p>
+        </div>
+
+        <div class="moduleDocstring">
+          <div><p class="undocumented">Undocumented</p></div>
+        </div>
+
+        <div id="splitTables">
+          <table class="children sortable" id="id350">
+  
+  
+  <tr class="staticmethod">
+    
+    <td>Static Method</td>
+    <td><code><a href="#from_object" class="internal-link" title="aligned.worker.StreamWorker.from_object">from<wbr></wbr>_object</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="staticmethod">
+    
+    <td>Static Method</td>
+    <td><code><a href="#from_reference" class="internal-link" title="aligned.worker.StreamWorker.from_reference">from<wbr></wbr>_reference</a></code></td>
+    <td>Creates a stream worker.</td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#expose_metrics_at" class="internal-link" title="aligned.worker.StreamWorker.expose_metrics_at">expose<wbr></wbr>_metrics<wbr></wbr>_at</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#feature_views_by_topic" class="internal-link" title="aligned.worker.StreamWorker.feature_views_by_topic">feature<wbr></wbr>_views<wbr></wbr>_by<wbr></wbr>_topic</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#prune_unused_features" class="internal-link" title="aligned.worker.StreamWorker.prune_unused_features">prune<wbr></wbr>_unused<wbr></wbr>_features</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#read_from" class="internal-link" title="aligned.worker.StreamWorker.read_from">read<wbr></wbr>_from</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#read_from_timestamps" class="internal-link" title="aligned.worker.StreamWorker.read_from_timestamps">read<wbr></wbr>_from<wbr></wbr>_timestamps</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#start" class="internal-link" title="aligned.worker.StreamWorker.start">start</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#repo_definition" class="internal-link" title="aligned.worker.StreamWorker.repo_definition">repo<wbr></wbr>_definition</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#sink_source" class="internal-link" title="aligned.worker.StreamWorker.sink_source">sink<wbr></wbr>_source</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#views_to_process" class="internal-link" title="aligned.worker.StreamWorker.views_to_process">views<wbr></wbr>_to<wbr></wbr>_process</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="instancevariable">
+    
+    <td>Instance Variable</td>
+    <td><code><a href="#default_start_timestamp" class="internal-link" title="aligned.worker.StreamWorker.default_start_timestamp">default<wbr></wbr>_start<wbr></wbr>_timestamp</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="instancevariable">
+    
+    <td>Instance Variable</td>
+    <td><code><a href="#metric_logging_port" class="internal-link" title="aligned.worker.StreamWorker.metric_logging_port">metric<wbr></wbr>_logging<wbr></wbr>_port</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="instancevariable">
+    
+    <td>Instance Variable</td>
+    <td><code><a href="#read_timestamps" class="internal-link" title="aligned.worker.StreamWorker.read_timestamps">read<wbr></wbr>_timestamps</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="instancevariable">
+    
+    <td>Instance Variable</td>
+    <td><code><a href="#should_prune_unused_features" class="internal-link" title="aligned.worker.StreamWorker.should_prune_unused_features">should<wbr></wbr>_prune<wbr></wbr>_unused<wbr></wbr>_features</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr>
+</table>
+          
+
+            
+        </div>
+
+        <div id="childList">
+          <div class="basestaticmethod">
+  
+  
+  <a name="aligned.worker.StreamWorker.from_object">
+    
+  </a>
+  <a name="from_object">
+    
+  </a>
+  <div class="functionHeader">
+    
+    @<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br />
+    <span class="py-keyword">def</span> <span class="py-defname">from_object</span><span class="function-signature">(repo: <code><a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" class="intersphinx-link">Path</a></code>, file: <code><a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" class="intersphinx-link">Path</a></code>, obj: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code><a href="aligned.worker.StreamWorker.html" class="internal-link" title="aligned.worker.StreamWorker">StreamWorker</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/worker.py#L69">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#from_object" title="aligned.worker.StreamWorker.from_object">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basestaticmethod">
+  
+  
+  <a name="aligned.worker.StreamWorker.from_reference">
+    
+  </a>
+  <a name="from_reference">
+    
+  </a>
+  <div class="functionHeader">
+    
+    @<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br />
+    <span class="py-keyword">def</span> <span class="py-defname">from_reference</span><span class="function-signature">(source: <code><a href="aligned.sources.local.AsRepoDefinition.html" class="internal-link" title="aligned.sources.local.AsRepoDefinition">AsRepoDefinition</a></code>, sink_source: <code><a href="aligned.feature_source.WritableFeatureSource.html" class="internal-link" title="aligned.feature_source.WritableFeatureSource">WritableFeatureSource</a></code>, views_to_process: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.worker.StreamWorker.html" class="internal-link" title="aligned.worker.StreamWorker">StreamWorker</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/worker.py#L46">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#from_reference" title="aligned.worker.StreamWorker.from_reference">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p>Creates a stream worker.</p>
+<p>This object can start a background worker process of streaming data.</p>
+<dl class="rst-docutils">
+<dt>Args:</dt>
+<dd><p class="rst-first">source (StorageFileReference): The storage of the feature store file
+sink_source (WritableFeatureSource): Where to store the processed features
+views_to_process (set[str] | None, optional): The views to process.</p>
+<blockquote class="rst-last">
+Defaults to None aka, all streaming views.</blockquote>
+</dd>
+<dt>Returns:</dt>
+<dd>StreamWorker | None: A worker that can start processing</dd>
+</dl>
+</div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.worker.StreamWorker.expose_metrics_at">
+    
+  </a>
+  <a name="expose_metrics_at">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">expose_metrics_at</span><span class="function-signature">(self, port: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code>) -&gt; <code><a href="aligned.worker.StreamWorker.html" class="internal-link" title="aligned.worker.StreamWorker">StreamWorker</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/worker.py#L96">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#expose_metrics_at" title="aligned.worker.StreamWorker.expose_metrics_at">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.worker.StreamWorker.feature_views_by_topic">
+    
+  </a>
+  <a name="feature_views_by_topic">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">feature_views_by_topic</span><span class="function-signature">(self, store: <code>ContractStore</code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="aligned.feature_store.FeatureViewStore.html" class="internal-link" title="aligned.feature_store.FeatureViewStore">FeatureViewStore</a>]]</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/worker.py#L106">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#feature_views_by_topic" title="aligned.worker.StreamWorker.feature_views_by_topic">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.worker.StreamWorker.prune_unused_features">
+    
+  </a>
+  <a name="prune_unused_features">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">prune_unused_features</span><span class="function-signature">(self, should_prune_unused_features: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.worker.StreamWorker.html" class="internal-link" title="aligned.worker.StreamWorker">StreamWorker</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/worker.py#L100">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#prune_unused_features" title="aligned.worker.StreamWorker.prune_unused_features">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.worker.StreamWorker.read_from">
+    
+  </a>
+  <a name="read_from">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">read_from</span><span class="function-signature">(self, timestamp: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code><a href="aligned.worker.StreamWorker.html" class="internal-link" title="aligned.worker.StreamWorker">StreamWorker</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/worker.py#L92">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#read_from" title="aligned.worker.StreamWorker.read_from">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.worker.StreamWorker.read_from_timestamps">
+    
+  </a>
+  <a name="read_from_timestamps">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">read_from_timestamps</span><span class="function-signature">(self, timestamps: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>) -&gt; <code><a href="aligned.worker.StreamWorker.html" class="internal-link" title="aligned.worker.StreamWorker">StreamWorker</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/worker.py#L88">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#read_from_timestamps" title="aligned.worker.StreamWorker.read_from_timestamps">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.worker.StreamWorker.start">
+    
+  </a>
+  <a name="start">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">start</span><span class="function-signature">(self)</span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/worker.py#L150">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#start" title="aligned.worker.StreamWorker.start">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.worker.StreamWorker.repo_definition">
+    
+  </a>
+  <a name="repo_definition">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">repo_definition</span>: <code><a href="aligned.sources.local.AsRepoDefinition.html" class="internal-link" title="aligned.sources.local.AsRepoDefinition">AsRepoDefinition</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/worker.py#L37">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#repo_definition" title="aligned.worker.StreamWorker.repo_definition">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.worker.StreamWorker.sink_source">
+    
+  </a>
+  <a name="sink_source">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">sink_source</span>: <code><a href="aligned.feature_source.WritableFeatureSource.html" class="internal-link" title="aligned.feature_source.WritableFeatureSource">WritableFeatureSource</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/worker.py#L38">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#sink_source" title="aligned.worker.StreamWorker.sink_source">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.worker.StreamWorker.views_to_process">
+    
+  </a>
+  <a name="views_to_process">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">views_to_process</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/worker.py#L39">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#views_to_process" title="aligned.worker.StreamWorker.views_to_process">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseinstancevariable">
+  
+  
+  <a name="aligned.worker.StreamWorker.default_start_timestamp">
+    
+  </a>
+  <a name="default_start_timestamp">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">default_start_timestamp</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/worker.py#L44">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#default_start_timestamp" title="aligned.worker.StreamWorker.default_start_timestamp">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseinstancevariable">
+  
+  
+  <a name="aligned.worker.StreamWorker.metric_logging_port">
+    
+  </a>
+  <a name="metric_logging_port">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">metric_logging_port</span>: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/worker.py#L41">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#metric_logging_port" title="aligned.worker.StreamWorker.metric_logging_port">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseinstancevariable">
+  
+  
+  <a name="aligned.worker.StreamWorker.read_timestamps">
+    
+  </a>
+  <a name="read_timestamps">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">read_timestamps</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/worker.py#L43">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#read_timestamps" title="aligned.worker.StreamWorker.read_timestamps">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseinstancevariable">
+  
+  
+  <a name="aligned.worker.StreamWorker.should_prune_unused_features">
+    
+  </a>
+  <a name="should_prune_unused_features">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">should_prune_unused_features</span>: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/worker.py#L40">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#should_prune_unused_features" title="aligned.worker.StreamWorker.should_prune_unused_features">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div>
+        </div>
+      
+      </div>
+    </div>
+
+    <footer class="navbar navbar-default">
+
+  
+  <div class="container">
+    <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
+  generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
+    24.3.3 at 2024-11-25 22:52:40.
+  </div>
+
+  <!-- Search related scripts needs to be loaded at the end of HTML 
+    parsing not to introduce overhead and display HTML data asap -->
+  <script src="ajax.js" type="text/javascript"></script>
+  <script src="searchlib.js" type="text/javascript"></script>
+  <script src="search.js" type="text/javascript"></script>
+
+</footer>
+  
+    <script src="pydoctor.js" type="text/javascript"></script>
+
+  </body>
+</html>

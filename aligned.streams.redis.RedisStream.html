@@ -1,0 +1,615 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+          "DTD/xhtml1-strict.dtd">
+<html>
+  
+
+  <head>
+    
+    <title>aligned.streams.redis.RedisStream</title>
+    <meta name="generator" content="pydoctor 24.3.3"> 
+        
+    </meta>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1 maximum-scale=1" />
+    <link rel="stylesheet" type="text/css" href="bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="apidocs.css" />
+    <link rel="stylesheet" type="text/css" href="extra.css" />
+</head>
+
+  <body>
+
+    
+
+    <nav class="navbar navbar-default mainnavbar">
+      
+  
+  <div class="container-fluid">
+
+
+    <div class="navbar-header">
+      
+      <div class="navlinks">
+        <span class="navbar-brand">
+          <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a> <a href="index.html">API Documentation</a>
+        </span>
+
+        <a href="moduleIndex.html">
+          Modules
+        </a>
+
+        <a href="classIndex.html">
+          Classes
+        </a>
+
+        <a href="nameIndex.html">
+          Names
+        </a>
+
+        <div id="search-box-container">
+          <div class="input-group">
+            <input id="search-box" type="search" name="search-query" placeholder="Search..." aria-label="Search" minlength="2" class="form-control" autocomplete="off" />
+            
+            <span class="input-group-btn">
+              <a style="display: none;" class="btn btn-default" id="search-clear-button" title="Clear" onclick="clearSearch()"><img src="fonts/x-circle.svg" alt="Clear" /></a>
+              <a class="btn btn-default" id="search-help-button" title="Help" onclick="toggleSearchHelpText()"><img src="fonts/info.svg" alt="Help" /></a>
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="search-results-container" style="display: none;">
+        
+        <div id="search-buttons">
+          <span class="label label-default" id="search-docstrings-button">
+          <label class="checkbox-inline">
+            <input type="checkbox" id="toggle-search-in-docstrings-checkbox" value="false" onclick="toggleSearchInDocstrings()">
+              search in docstrings
+            </input>
+          </label>
+          </span>
+          
+        </div>
+        
+        <noscript>
+            <h1>Cannot search: JavaScript is not supported/enabled in your browser.</h1>
+        </noscript>
+
+        <div class="hint" id="search-help-box">
+          <p class="rst-last">
+      
+            Search bar offers the following options:
+            <ul>   
+                <li>
+                  <strong>Term presence.</strong> The below example searches for documents that 
+                    must contain “foo”, might contain “bar” and must not contain “baz”: <code>+foo bar -baz</code>
+                </li> 
+
+                <li>
+                  <strong>Wildcards.</strong> The below example searches for documents with words beginning with “foo”: <code>foo*</code>
+                </li> 
+
+                <li>
+                  <strong>Search in specific fields.</strong> The following search matches all objects 
+                  in "twisted.mail" that matches “search”: <code>+qname:twisted.mail.* +search</code>
+
+                  <p>
+                    Possible fields: 'name', 'qname' (fully qualified name), 'docstring', and 'kind'.
+                    Last two fields are only applicable if "search in docstrings" is enabled.
+                  </p>
+                </li>
+
+                <li>
+                  <strong>Fuzzy matches.</strong> The following search matches all documents 
+                  that have a word within 1 edit distance of “foo”: <code>foo~1</code>
+                </li>
+            </ul>
+
+          </p>
+        </div>
+
+        <div id="search-status"> </div>
+
+        <div class="warning" id="search-warn-box" style="display: none;">
+          <p class="rst-last"><span id="search-warn"></span></p>
+        </div>
+
+        <table id="search-results">
+          <!-- Filled dynamically by JS -->
+        </table>
+        
+        <div style="margin-top: 8px;">
+          <p>Results provided by <a href="https://lunrjs.com">Lunr.js</a></p>
+        </div>
+      </div>
+
+    </div>
+
+
+  </div>
+</nav>
+    
+    <div class="container-fluid">
+
+      <!-- Side navigation -->
+      <div class="sidebarcontainer" style="display: none;">
+        
+        <div class="sidebar"><nav class="sidebar">
+  
+
+  <div>
+
+      <div class="thingTitle">
+        <span>Class</span>
+        <code class="thisobject"><a href="aligned.streams.redis.RedisStream.html" class="internal-link" title="This class"><wbr></wbr>Redis<wbr></wbr>Stream</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        
+        
+
+        <div class="childrenKindTitle">Methods</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#read" class="internal-link" title="aligned.streams.redis.RedisStream.read">read</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#sink" class="internal-link" title="aligned.streams.redis.RedisStream.sink">sink</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+
+        <div class="childrenKindTitle">Attributes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#client" class="internal-link" title="aligned.streams.redis.RedisStream.client">client</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#mappings" class="internal-link" title="aligned.streams.redis.RedisStream.mappings">mappings</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#record_coder" class="internal-link" title="aligned.streams.redis.RedisStream.record_coder">record<wbr></wbr>_coder</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#stream_name" class="internal-link" title="aligned.streams.redis.RedisStream.stream_name">stream<wbr></wbr>_name</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#read_timestamp" class="internal-link" title="aligned.streams.redis.RedisStream.read_timestamp">read<wbr></wbr>_timestamp</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div><div>
+
+      <div class="thingTitle">
+        <span>Module</span>
+        <code><a href="aligned.streams.redis.html" class="internal-link" title="The parent of this class">redis</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        <div class="childrenKindTitle">Classes</div>
+        <ul>
+    
+    <li class=" thisobject">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.streams.redis.RedisStream.html" class="internal-link" title="aligned.streams.redis.RedisStream"><wbr></wbr>Redis<wbr></wbr>Stream</a></code>
+            </div>
+        
+
+    </li>
+</ul>
+
+        
+         
+
+        
+         
+
+        
+         
+
+        
+         
+        
+      </div>
+  </div>
+
+</nav>
+        </div>
+        <div id="collapseSideBar">
+          <a class="btn btn-link" onclick="toggleSideBarCollapse()" title="Toggle Sidebar Collapse">
+          </a>
+        </div> 
+        <script src="sidebartoggle.js" type="text/javascript"></script>
+       
+      </div>
+
+      <div id="main" class="">
+        
+
+        
+
+        <div class="page-header">
+          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.streams.html" class="internal-link" title="aligned.streams">streams</a></code><wbr></wbr>.<code><a href="aligned.streams.redis.html" class="internal-link" title="aligned.streams.redis">redis</a></code><wbr></wbr>.<code><a href="aligned.streams.redis.RedisStream.html" class="internal-link" title="aligned.streams.redis.RedisStream">RedisStream</a></code></code></h1>
+          <div id="showPrivate">
+            <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
+          </div>
+        </div>
+
+        <div class="categoryHeader">
+          class documentation
+        </div>
+
+        <div class="extrasDocstring">
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">RedisStream</span>(<a href="aligned.streams.interface.ReadableStream.html" class="internal-link" title="aligned.streams.interface.ReadableStream">ReadableStream</a>, <a href="aligned.streams.interface.SinakableStream.html" class="internal-link" title="aligned.streams.interface.SinakableStream">SinakableStream</a>): <a href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/streams/redis.py#L18" class="sourceLink">(source)</a></code></p>
+          <p><a href="classIndex.html#aligned.streams.redis.RedisStream">View In Hierarchy</a></p>
+        </div>
+
+        <div class="moduleDocstring">
+          <div><p class="undocumented">Undocumented</p></div>
+        </div>
+
+        <div id="splitTables">
+          <table class="children sortable" id="id348">
+  
+  
+  <tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#read" class="internal-link" title="aligned.streams.redis.RedisStream.read">read</a></code></td>
+    <td>Reads a stream of data</td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#sink" class="internal-link" title="aligned.streams.redis.RedisStream.sink">sink</a></code></td>
+    <td>Sinkes a record to a stream</td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#client" class="internal-link" title="aligned.streams.redis.RedisStream.client">client</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#mappings" class="internal-link" title="aligned.streams.redis.RedisStream.mappings">mappings</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#record_coder" class="internal-link" title="aligned.streams.redis.RedisStream.record_coder">record<wbr></wbr>_coder</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#stream_name" class="internal-link" title="aligned.streams.redis.RedisStream.stream_name">stream<wbr></wbr>_name</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="instancevariable">
+    
+    <td>Instance Variable</td>
+    <td><code><a href="#read_timestamp" class="internal-link" title="aligned.streams.redis.RedisStream.read_timestamp">read<wbr></wbr>_timestamp</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr>
+</table>
+          
+
+            
+        </div>
+
+        <div id="childList">
+          <div class="basemethod">
+  
+  
+  <a name="aligned.streams.redis.RedisStream.read">
+    
+  </a>
+  <a name="read">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">read</span><span class="function-signature">(self, max_records: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, max_wait: <code><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>]</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/streams/redis.py#L27">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#read" title="aligned.streams.redis.RedisStream.read">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.streams.interface.ReadableStream.html#read" class="internal-link">aligned.streams.interface.ReadableStream.read</a></code></div>
+    <div><p>Reads a stream of data</p>
+<p>```python
+stream = RedisStream(...)</p>
+<p>records = await stream.read(max_records=10, max_wait=5)
+print(records[0])
+```
+&gt;&gt;&gt; {"passenger_id": 20, "age": 23, ...}</p>
+<dl class="rst-docutils">
+<dt>Args:</dt>
+<dd>max_records (int, optional): _description_. Defaults to None.
+max_wait (float, optional): _description_. Defaults to None.</dd>
+<dt>Returns:</dt>
+<dd>list[dict]: A list of the records returned</dd>
+</dl>
+</div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.streams.redis.RedisStream.sink">
+    
+  </a>
+  <a name="sink">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">sink</span><span class="function-signature">(self, records: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>]</code>)</span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/streams/redis.py#L44">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#sink" title="aligned.streams.redis.RedisStream.sink">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.streams.interface.SinakableStream.html#sink" class="internal-link">aligned.streams.interface.SinakableStream.sink</a></code></div>
+    <div><p>Sinkes a record to a stream</p>
+<p>```python
+stream_source = RedisStream(...)</p>
+<dl class="rst-docutils">
+<dt>await stream_source.sink(records=[</dt>
+<dd>{"passenger_id": 20, "age": 23, ...}</dd>
+</dl>
+<div class="rst-section" id="rst-section-1">
+<h2 class="heading">])</h2>
+<dl class="rst-docutils">
+<dt>Args:</dt>
+<dd>record (dict): The record to sink</dd>
+</dl>
+</div>
+</div>
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.streams.redis.RedisStream.client">
+    
+  </a>
+  <a name="client">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">client</span>: <code>Redis</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/streams/redis.py#L21">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#client" title="aligned.streams.redis.RedisStream.client">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.streams.redis.RedisStream.mappings">
+    
+  </a>
+  <a name="mappings">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">mappings</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/streams/redis.py#L24">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#mappings" title="aligned.streams.redis.RedisStream.mappings">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.streams.redis.RedisStream.record_coder">
+    
+  </a>
+  <a name="record_coder">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">record_coder</span>: <code>RecordCoder</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/streams/redis.py#L25">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#record_coder" title="aligned.streams.redis.RedisStream.record_coder">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.streams.redis.RedisStream.stream_name">
+    
+  </a>
+  <a name="stream_name">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">stream_name</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/streams/redis.py#L22">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#stream_name" title="aligned.streams.redis.RedisStream.stream_name">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseinstancevariable">
+  
+  
+  <a name="aligned.streams.redis.RedisStream.read_timestamp">
+    
+  </a>
+  <a name="read_timestamp">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">read_timestamp</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/streams/redis.py#L23">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#read_timestamp" title="aligned.streams.redis.RedisStream.read_timestamp">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div>
+        </div>
+      
+      </div>
+    </div>
+
+    <footer class="navbar navbar-default">
+
+  
+  <div class="container">
+    <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
+  generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
+    24.3.3 at 2024-11-25 22:52:40.
+  </div>
+
+  <!-- Search related scripts needs to be loaded at the end of HTML 
+    parsing not to introduce overhead and display HTML data asap -->
+  <script src="ajax.js" type="text/javascript"></script>
+  <script src="searchlib.js" type="text/javascript"></script>
+  <script src="search.js" type="text/javascript"></script>
+
+</footer>
+  
+    <script src="pydoctor.js" type="text/javascript"></script>
+
+  </body>
+</html>

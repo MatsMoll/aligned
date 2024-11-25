@@ -1,0 +1,1775 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+          "DTD/xhtml1-strict.dtd">
+<html>
+  
+
+  <head>
+    
+    <title>aligned.retrival_job.UpdateVectorIndexJob</title>
+    <meta name="generator" content="pydoctor 24.3.3"> 
+        
+    </meta>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1 maximum-scale=1" />
+    <link rel="stylesheet" type="text/css" href="bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="apidocs.css" />
+    <link rel="stylesheet" type="text/css" href="extra.css" />
+</head>
+
+  <body>
+
+    
+
+    <nav class="navbar navbar-default mainnavbar">
+      
+  
+  <div class="container-fluid">
+
+
+    <div class="navbar-header">
+      
+      <div class="navlinks">
+        <span class="navbar-brand">
+          <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a> <a href="index.html">API Documentation</a>
+        </span>
+
+        <a href="moduleIndex.html">
+          Modules
+        </a>
+
+        <a href="classIndex.html">
+          Classes
+        </a>
+
+        <a href="nameIndex.html">
+          Names
+        </a>
+
+        <div id="search-box-container">
+          <div class="input-group">
+            <input id="search-box" type="search" name="search-query" placeholder="Search..." aria-label="Search" minlength="2" class="form-control" autocomplete="off" />
+            
+            <span class="input-group-btn">
+              <a style="display: none;" class="btn btn-default" id="search-clear-button" title="Clear" onclick="clearSearch()"><img src="fonts/x-circle.svg" alt="Clear" /></a>
+              <a class="btn btn-default" id="search-help-button" title="Help" onclick="toggleSearchHelpText()"><img src="fonts/info.svg" alt="Help" /></a>
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="search-results-container" style="display: none;">
+        
+        <div id="search-buttons">
+          <span class="label label-default" id="search-docstrings-button">
+          <label class="checkbox-inline">
+            <input type="checkbox" id="toggle-search-in-docstrings-checkbox" value="false" onclick="toggleSearchInDocstrings()">
+              search in docstrings
+            </input>
+          </label>
+          </span>
+          
+        </div>
+        
+        <noscript>
+            <h1>Cannot search: JavaScript is not supported/enabled in your browser.</h1>
+        </noscript>
+
+        <div class="hint" id="search-help-box">
+          <p class="rst-last">
+      
+            Search bar offers the following options:
+            <ul>   
+                <li>
+                  <strong>Term presence.</strong> The below example searches for documents that 
+                    must contain “foo”, might contain “bar” and must not contain “baz”: <code>+foo bar -baz</code>
+                </li> 
+
+                <li>
+                  <strong>Wildcards.</strong> The below example searches for documents with words beginning with “foo”: <code>foo*</code>
+                </li> 
+
+                <li>
+                  <strong>Search in specific fields.</strong> The following search matches all objects 
+                  in "twisted.mail" that matches “search”: <code>+qname:twisted.mail.* +search</code>
+
+                  <p>
+                    Possible fields: 'name', 'qname' (fully qualified name), 'docstring', and 'kind'.
+                    Last two fields are only applicable if "search in docstrings" is enabled.
+                  </p>
+                </li>
+
+                <li>
+                  <strong>Fuzzy matches.</strong> The following search matches all documents 
+                  that have a word within 1 edit distance of “foo”: <code>foo~1</code>
+                </li>
+            </ul>
+
+          </p>
+        </div>
+
+        <div id="search-status"> </div>
+
+        <div class="warning" id="search-warn-box" style="display: none;">
+          <p class="rst-last"><span id="search-warn"></span></p>
+        </div>
+
+        <table id="search-results">
+          <!-- Filled dynamically by JS -->
+        </table>
+        
+        <div style="margin-top: 8px;">
+          <p>Results provided by <a href="https://lunrjs.com">Lunr.js</a></p>
+        </div>
+      </div>
+
+    </div>
+
+
+  </div>
+</nav>
+    
+    <div class="container-fluid">
+
+      <!-- Side navigation -->
+      <div class="sidebarcontainer" style="display: none;">
+        
+        <div class="sidebar"><nav class="sidebar">
+  
+
+  <div>
+
+      <div class="thingTitle">
+        <span>Class</span>
+        <code class="thisobject"><a href="aligned.retrival_job.UpdateVectorIndexJob.html" class="internal-link" title="This class"><wbr></wbr>Update<wbr></wbr>Vector<wbr></wbr>Index<wbr></wbr>Job</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        
+        
+
+        <div class="childrenKindTitle">Methods</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#to_lazy_polars" class="internal-link" title="aligned.retrival_job.UpdateVectorIndexJob.to_lazy_polars">to<wbr></wbr>_lazy<wbr></wbr>_polars</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#to_pandas" class="internal-link" title="aligned.retrival_job.UpdateVectorIndexJob.to_pandas">to<wbr></wbr>_pandas</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        <div class="childrenKindTitle">Inherited Methods</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#from_convertable" class="internal-link" title="aligned.retrival_job.RetrivalJob.from_convertable">from<wbr></wbr>_convertable</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#from_dict" class="internal-link" title="aligned.retrival_job.RetrivalJob.from_dict">from<wbr></wbr>_dict</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#from_lazy_function" class="internal-link" title="aligned.retrival_job.RetrivalJob.from_lazy_function">from<wbr></wbr>_lazy<wbr></wbr>_function</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#from_polars_df" class="internal-link" title="aligned.retrival_job.RetrivalJob.from_polars_df">from<wbr></wbr>_polars<wbr></wbr>_df</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.ModificationJob.html#copy_with" class="internal-link" title="aligned.retrival_job.ModificationJob.copy_with">copy<wbr></wbr>_with</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#aggregate" class="internal-link" title="aligned.retrival_job.RetrivalJob.aggregate">aggregate</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#cache_raw_data" class="internal-link" title="aligned.retrival_job.RetrivalJob.cache_raw_data">cache<wbr></wbr>_raw<wbr></wbr>_data</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#cached_at" class="internal-link" title="aligned.retrival_job.RetrivalJob.cached_at">cached<wbr></wbr>_at</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#chuncked" class="internal-link" title="aligned.retrival_job.RetrivalJob.chuncked">chuncked</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#combined_features" class="internal-link" title="aligned.retrival_job.RetrivalJob.combined_features">combined<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#derive_features" class="internal-link" title="aligned.retrival_job.RetrivalJob.derive_features">derive<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#describe" class="internal-link" title="aligned.retrival_job.RetrivalJob.describe">describe</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#drop_duplicate_entities" class="internal-link" title="aligned.retrival_job.RetrivalJob.drop_duplicate_entities">drop<wbr></wbr>_duplicate<wbr></wbr>_entities</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#drop_invalid" class="internal-link" title="aligned.retrival_job.RetrivalJob.drop_invalid">drop<wbr></wbr>_invalid</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#ensure_types" class="internal-link" title="aligned.retrival_job.RetrivalJob.ensure_types">ensure<wbr></wbr>_types</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#fill_missing_columns" class="internal-link" title="aligned.retrival_job.RetrivalJob.fill_missing_columns">fill<wbr></wbr>_missing<wbr></wbr>_columns</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#filter" class="internal-link" title="aligned.retrival_job.RetrivalJob.filter">filter</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#ignore_event_timestamp" class="internal-link" title="aligned.retrival_job.RetrivalJob.ignore_event_timestamp">ignore<wbr></wbr>_event<wbr></wbr>_timestamp</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#inject_store" class="internal-link" title="aligned.retrival_job.RetrivalJob.inject_store">inject<wbr></wbr>_store</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#join" class="internal-link" title="aligned.retrival_job.RetrivalJob.join">join</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#join_asof" class="internal-link" title="aligned.retrival_job.RetrivalJob.join_asof">join<wbr></wbr>_asof</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#listen_to_events" class="internal-link" title="aligned.retrival_job.RetrivalJob.listen_to_events">listen<wbr></wbr>_to<wbr></wbr>_events</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#log_each_job" class="internal-link" title="aligned.retrival_job.RetrivalJob.log_each_job">log<wbr></wbr>_each<wbr></wbr>_job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#monitor_time_used" class="internal-link" title="aligned.retrival_job.RetrivalJob.monitor_time_used">monitor<wbr></wbr>_time<wbr></wbr>_used</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#on_load" class="internal-link" title="aligned.retrival_job.RetrivalJob.on_load">on<wbr></wbr>_load</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#polars_method" class="internal-link" title="aligned.retrival_job.RetrivalJob.polars_method">polars<wbr></wbr>_method</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#remove_derived_features" class="internal-link" title="aligned.retrival_job.RetrivalJob.remove_derived_features">remove<wbr></wbr>_derived<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#rename" class="internal-link" title="aligned.retrival_job.RetrivalJob.rename">rename</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#return_invalid" class="internal-link" title="aligned.retrival_job.RetrivalJob.return_invalid">return<wbr></wbr>_invalid</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#select" class="internal-link" title="aligned.retrival_job.RetrivalJob.select">select</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#select_columns" class="internal-link" title="aligned.retrival_job.RetrivalJob.select_columns">select<wbr></wbr>_columns</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#split" class="internal-link" title="aligned.retrival_job.RetrivalJob.split">split</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#to_polars" class="internal-link" title="aligned.retrival_job.RetrivalJob.to_polars">to<wbr></wbr>_polars</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#train_test" class="internal-link" title="aligned.retrival_job.RetrivalJob.train_test">train<wbr></wbr>_test</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#train_test_validate" class="internal-link" title="aligned.retrival_job.RetrivalJob.train_test_validate">train<wbr></wbr>_test<wbr></wbr>_validate</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#transform_polars" class="internal-link" title="aligned.retrival_job.RetrivalJob.transform_polars">transform<wbr></wbr>_polars</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#unique_entities" class="internal-link" title="aligned.retrival_job.RetrivalJob.unique_entities">unique<wbr></wbr>_entities</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#unique_on" class="internal-link" title="aligned.retrival_job.RetrivalJob.unique_on">unique<wbr></wbr>_on</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#unpack_embeddings" class="internal-link" title="aligned.retrival_job.RetrivalJob.unpack_embeddings">unpack<wbr></wbr>_embeddings</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#update_vector_index" class="internal-link" title="aligned.retrival_job.RetrivalJob.update_vector_index">update<wbr></wbr>_vector<wbr></wbr>_index</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#validate_entites" class="internal-link" title="aligned.retrival_job.RetrivalJob.validate_entites">validate<wbr></wbr>_entites</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#with_request" class="internal-link" title="aligned.retrival_job.RetrivalJob.with_request">with<wbr></wbr>_request</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#with_subfeatures" class="internal-link" title="aligned.retrival_job.RetrivalJob.with_subfeatures">with<wbr></wbr>_subfeatures</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#without_derived_features" class="internal-link" title="aligned.retrival_job.RetrivalJob.without_derived_features">without<wbr></wbr>_derived<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#write_to_source" class="internal-link" title="aligned.retrival_job.RetrivalJob.write_to_source">write<wbr></wbr>_to<wbr></wbr>_source</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        <div class="childrenKindTitle">Attributes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#indexes" class="internal-link" title="aligned.retrival_job.UpdateVectorIndexJob.indexes">indexes</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#job" class="internal-link" title="aligned.retrival_job.UpdateVectorIndexJob.job">job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#request_result" class="internal-link" title="aligned.retrival_job.UpdateVectorIndexJob.request_result">request<wbr></wbr>_result</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#retrival_requests" class="internal-link" title="aligned.retrival_job.UpdateVectorIndexJob.retrival_requests">retrival<wbr></wbr>_requests</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        <div class="childrenKindTitle">Inherited Attributes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html#loaded_columns" class="internal-link" title="aligned.retrival_job.RetrivalJob.loaded_columns">loaded<wbr></wbr>_columns</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+        
+      </div>
+  </div><div>
+
+      <div class="thingTitle">
+        <span>Module</span>
+        <code><a href="aligned.retrival_job.html" class="internal-link" title="The parent of this class">retrival<wbr></wbr>_job</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        <div class="childrenKindTitle">Classes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.AggregateJob.html" class="internal-link" title="aligned.retrival_job.AggregateJob"><wbr></wbr>Aggregate<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.CombineFactualJob.html" class="internal-link" title="aligned.retrival_job.CombineFactualJob"><wbr></wbr>Combine<wbr></wbr>Factual<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.CustomLazyPolarsJob.html" class="internal-link" title="aligned.retrival_job.CustomLazyPolarsJob"><wbr></wbr>Custom<wbr></wbr>Lazy<wbr></wbr>Polars<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.CustomPolarsJob.html" class="internal-link" title="aligned.retrival_job.CustomPolarsJob"><wbr></wbr>Custom<wbr></wbr>Polars<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.DataLoaderJob.html" class="internal-link" title="aligned.retrival_job.DataLoaderJob"><wbr></wbr>Data<wbr></wbr>Loader<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.DerivedFeatureJob.html" class="internal-link" title="aligned.retrival_job.DerivedFeatureJob"><wbr></wbr>Derived<wbr></wbr>Feature<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.DropDuplicateEntities.html" class="internal-link" title="aligned.retrival_job.DropDuplicateEntities"><wbr></wbr>Drop<wbr></wbr>Duplicate<wbr></wbr>Entities</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.DropInvalidJob.html" class="internal-link" title="aligned.retrival_job.DropInvalidJob"><wbr></wbr>Drop<wbr></wbr>Invalid<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.EncodeDatesJob.html" class="internal-link" title="aligned.retrival_job.EncodeDatesJob"><wbr></wbr>Encode<wbr></wbr>Dates<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.EnsureTypesJob.html" class="internal-link" title="aligned.retrival_job.EnsureTypesJob"><wbr></wbr>Ensure<wbr></wbr>Types<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.FileCachedJob.html" class="internal-link" title="aligned.retrival_job.FileCachedJob"><wbr></wbr>File<wbr></wbr>Cached<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.FillMissingColumnsJob.html" class="internal-link" title="aligned.retrival_job.FillMissingColumnsJob"><wbr></wbr>Fill<wbr></wbr>Missing<wbr></wbr>Columns<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.FilteredJob.html" class="internal-link" title="aligned.retrival_job.FilteredJob"><wbr></wbr>Filtered<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.InMemoryCacheJob.html" class="internal-link" title="aligned.retrival_job.InMemoryCacheJob"><wbr></wbr>In<wbr></wbr>Memory<wbr></wbr>Cache<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.InMemorySplitCacheJob.html" class="internal-link" title="aligned.retrival_job.InMemorySplitCacheJob"><wbr></wbr>In<wbr></wbr>Memory<wbr></wbr>Split<wbr></wbr>Cache<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.JoinAsofJob.html" class="internal-link" title="aligned.retrival_job.JoinAsofJob"><wbr></wbr>Join<wbr></wbr>Asof<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.JoinJobs.html" class="internal-link" title="aligned.retrival_job.JoinJobs"><wbr></wbr>Join<wbr></wbr>Jobs</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.ListenForTriggers.html" class="internal-link" title="aligned.retrival_job.ListenForTriggers"><wbr></wbr>Listen<wbr></wbr>For<wbr></wbr>Triggers</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.LiteralDictJob.html" class="internal-link" title="aligned.retrival_job.LiteralDictJob"><wbr></wbr>Literal<wbr></wbr>Dict<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.LoadedAtJob.html" class="internal-link" title="aligned.retrival_job.LoadedAtJob"><wbr></wbr>Loaded<wbr></wbr>At<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.LogJob.html" class="internal-link" title="aligned.retrival_job.LogJob"><wbr></wbr>Log<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.ModificationJob.html" class="internal-link" title="aligned.retrival_job.ModificationJob"><wbr></wbr>Modification<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.OnLoadJob.html" class="internal-link" title="aligned.retrival_job.OnLoadJob"><wbr></wbr>On<wbr></wbr>Load<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.PredictionJob.html" class="internal-link" title="aligned.retrival_job.PredictionJob"><wbr></wbr>Prediction<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RawFileCachedJob.html" class="internal-link" title="aligned.retrival_job.RawFileCachedJob"><wbr></wbr>Raw<wbr></wbr>File<wbr></wbr>Cached<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RenameJob.html" class="internal-link" title="aligned.retrival_job.RenameJob"><wbr></wbr>Rename<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob"><wbr></wbr>Retrival<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.ReturnInvalidJob.html" class="internal-link" title="aligned.retrival_job.ReturnInvalidJob"><wbr></wbr>Return<wbr></wbr>Invalid<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.SelectColumnsJob.html" class="internal-link" title="aligned.retrival_job.SelectColumnsJob"><wbr></wbr>Select<wbr></wbr>Columns<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.SplitConfig.html" class="internal-link" title="aligned.retrival_job.SplitConfig"><wbr></wbr>Split<wbr></wbr>Config</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.StackJob.html" class="internal-link" title="aligned.retrival_job.StackJob"><wbr></wbr>Stack<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.StackSourceColumn.html" class="internal-link" title="aligned.retrival_job.StackSourceColumn"><wbr></wbr>Stack<wbr></wbr>Source<wbr></wbr>Column</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.StreamAggregationJob.html" class="internal-link" title="aligned.retrival_job.StreamAggregationJob"><wbr></wbr>Stream<wbr></wbr>Aggregation<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.SubsetJob.html" class="internal-link" title="aligned.retrival_job.SubsetJob"><wbr></wbr>Subset<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.SupervisedJob.html" class="internal-link" title="aligned.retrival_job.SupervisedJob"><wbr></wbr>Supervised<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.TimeMetricLoggerJob.html" class="internal-link" title="aligned.retrival_job.TimeMetricLoggerJob"><wbr></wbr>Time<wbr></wbr>Metric<wbr></wbr>Logger<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.TrainTestJob.html" class="internal-link" title="aligned.retrival_job.TrainTestJob"><wbr></wbr>Train<wbr></wbr>Test<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.TrainTestValidateJob.html" class="internal-link" title="aligned.retrival_job.TrainTestValidateJob"><wbr></wbr>Train<wbr></wbr>Test<wbr></wbr>Validate<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.UniqueRowsJob.html" class="internal-link" title="aligned.retrival_job.UniqueRowsJob"><wbr></wbr>Unique<wbr></wbr>Rows<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.UnpackEmbedding.html" class="internal-link" title="aligned.retrival_job.UnpackEmbedding"><wbr></wbr>Unpack<wbr></wbr>Embedding</a></code>
+            </div>
+        
+
+    </li><li class=" thisobject">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.UpdateVectorIndexJob.html" class="internal-link" title="aligned.retrival_job.UpdateVectorIndexJob"><wbr></wbr>Update<wbr></wbr>Vector<wbr></wbr>Index<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.ValidateEntitiesJob.html" class="internal-link" title="aligned.retrival_job.ValidateEntitiesJob"><wbr></wbr>Validate<wbr></wbr>Entities<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.WithRequests.html" class="internal-link" title="aligned.retrival_job.WithRequests"><wbr></wbr>With<wbr></wbr>Requests</a></code>
+            </div>
+        
+
+    </li>
+</ul>
+
+        <div class="childrenKindTitle">Functions</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.html#fraction_from_job" class="internal-link" title="aligned.retrival_job.fraction_from_job">fraction<wbr></wbr>_from<wbr></wbr>_job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.html#polars_filter_expressions_from" class="internal-link" title="aligned.retrival_job.polars_filter_expressions_from">polars<wbr></wbr>_filter<wbr></wbr>_expressions<wbr></wbr>_from</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.html#split" class="internal-link" title="aligned.retrival_job.split">split</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.html#subset_polars" class="internal-link" title="aligned.retrival_job.subset_polars">subset<wbr></wbr>_polars</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+
+        <div class="childrenKindTitle">Variables</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.html#JobType" class="internal-link" title="aligned.retrival_job.JobType"><wbr></wbr>Job<wbr></wbr>Type</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.html#ConvertableToRetrivalJob" class="internal-link" title="aligned.retrival_job.ConvertableToRetrivalJob"><wbr></wbr>Convertable<wbr></wbr>To<wbr></wbr>Retrival<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.html#SplitterCallable" class="internal-link" title="aligned.retrival_job.SplitterCallable"><wbr></wbr>Splitter<wbr></wbr>Callable</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.html#CustomPolarsTransform" class="internal-link" title="aligned.retrival_job.CustomPolarsTransform"><wbr></wbr>Custom<wbr></wbr>Polars<wbr></wbr>Transform</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrival_job.html#logger" class="internal-link" title="aligned.retrival_job.logger">logger</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div>
+
+</nav>
+        </div>
+        <div id="collapseSideBar">
+          <a class="btn btn-link" onclick="toggleSideBarCollapse()" title="Toggle Sidebar Collapse">
+          </a>
+        </div> 
+        <script src="sidebartoggle.js" type="text/javascript"></script>
+       
+      </div>
+
+      <div id="main" class="">
+        
+
+        
+
+        <div class="page-header">
+          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.retrival_job.html" class="internal-link" title="aligned.retrival_job">retrival_job</a></code><wbr></wbr>.<code><a href="aligned.retrival_job.UpdateVectorIndexJob.html" class="internal-link" title="aligned.retrival_job.UpdateVectorIndexJob">UpdateVectorIndexJob</a></code></code></h1>
+          <div id="showPrivate">
+            <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
+          </div>
+        </div>
+
+        <div class="categoryHeader">
+          class documentation
+        </div>
+
+        <div class="extrasDocstring">
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">UpdateVectorIndexJob</span>(<a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a>, <a href="aligned.retrival_job.ModificationJob.html" class="internal-link" title="aligned.retrival_job.ModificationJob">ModificationJob</a>): <a href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/retrival_job.py#L1591" class="sourceLink">(source)</a></code></p>
+          <p><a href="classIndex.html#aligned.retrival_job.UpdateVectorIndexJob">View In Hierarchy</a></p>
+        </div>
+
+        <div class="moduleDocstring">
+          <div><p class="undocumented">Undocumented</p></div>
+        </div>
+
+        <div id="splitTables">
+          <table class="children sortable" id="id145">
+  
+  
+  <tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#to_lazy_polars" class="internal-link" title="aligned.retrival_job.UpdateVectorIndexJob.to_lazy_polars">to<wbr></wbr>_lazy<wbr></wbr>_polars</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#to_pandas" class="internal-link" title="aligned.retrival_job.UpdateVectorIndexJob.to_pandas">to<wbr></wbr>_pandas</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#indexes" class="internal-link" title="aligned.retrival_job.UpdateVectorIndexJob.indexes">indexes</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="instancevariable">
+    
+    <td>Instance Variable</td>
+    <td><code><a href="#job" class="internal-link" title="aligned.retrival_job.UpdateVectorIndexJob.job">job</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="property">
+    
+    <td>Property</td>
+    <td><code><a href="#request_result" class="internal-link" title="aligned.retrival_job.UpdateVectorIndexJob.request_result">request<wbr></wbr>_result</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="property">
+    
+    <td>Property</td>
+    <td><code><a href="#retrival_requests" class="internal-link" title="aligned.retrival_job.UpdateVectorIndexJob.retrival_requests">retrival<wbr></wbr>_requests</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr>
+</table>
+          
+            <p class="inheritedFrom">
+              Inherited from <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>:
+            </p>
+            <table class="children sortable" id="id146">
+  
+  
+  <tr class="basestaticmethod">
+    
+    <td>Static Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#from_convertable" class="internal-link" title="aligned.retrival_job.RetrivalJob.from_convertable">from<wbr></wbr>_convertable</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basestaticmethod">
+    
+    <td>Static Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#from_dict" class="internal-link" title="aligned.retrival_job.RetrivalJob.from_dict">from<wbr></wbr>_dict</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basestaticmethod">
+    
+    <td>Static Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#from_lazy_function" class="internal-link" title="aligned.retrival_job.RetrivalJob.from_lazy_function">from<wbr></wbr>_lazy<wbr></wbr>_function</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basestaticmethod">
+    
+    <td>Static Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#from_polars_df" class="internal-link" title="aligned.retrival_job.RetrivalJob.from_polars_df">from<wbr></wbr>_polars<wbr></wbr>_df</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#aggregate" class="internal-link" title="aligned.retrival_job.RetrivalJob.aggregate">aggregate</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#cache_raw_data" class="internal-link" title="aligned.retrival_job.RetrivalJob.cache_raw_data">cache<wbr></wbr>_raw<wbr></wbr>_data</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#cached_at" class="internal-link" title="aligned.retrival_job.RetrivalJob.cached_at">cached<wbr></wbr>_at</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#chuncked" class="internal-link" title="aligned.retrival_job.RetrivalJob.chuncked">chuncked</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#combined_features" class="internal-link" title="aligned.retrival_job.RetrivalJob.combined_features">combined<wbr></wbr>_features</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#derive_features" class="internal-link" title="aligned.retrival_job.RetrivalJob.derive_features">derive<wbr></wbr>_features</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#describe" class="internal-link" title="aligned.retrival_job.RetrivalJob.describe">describe</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#drop_duplicate_entities" class="internal-link" title="aligned.retrival_job.RetrivalJob.drop_duplicate_entities">drop<wbr></wbr>_duplicate<wbr></wbr>_entities</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#drop_invalid" class="internal-link" title="aligned.retrival_job.RetrivalJob.drop_invalid">drop<wbr></wbr>_invalid</a></code></td>
+    <td>Drops invalid row based on the defined features.</td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#ensure_types" class="internal-link" title="aligned.retrival_job.RetrivalJob.ensure_types">ensure<wbr></wbr>_types</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#fill_missing_columns" class="internal-link" title="aligned.retrival_job.RetrivalJob.fill_missing_columns">fill<wbr></wbr>_missing<wbr></wbr>_columns</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#filter" class="internal-link" title="aligned.retrival_job.RetrivalJob.filter">filter</a></code></td>
+    <td>Filters based on a condition referencing either a feature, a feature name, or an polars expression to filter on.</td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#ignore_event_timestamp" class="internal-link" title="aligned.retrival_job.RetrivalJob.ignore_event_timestamp">ignore<wbr></wbr>_event<wbr></wbr>_timestamp</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#inject_store" class="internal-link" title="aligned.retrival_job.RetrivalJob.inject_store">inject<wbr></wbr>_store</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#join" class="internal-link" title="aligned.retrival_job.RetrivalJob.join">join</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#join_asof" class="internal-link" title="aligned.retrival_job.RetrivalJob.join_asof">join<wbr></wbr>_asof</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#listen_to_events" class="internal-link" title="aligned.retrival_job.RetrivalJob.listen_to_events">listen<wbr></wbr>_to<wbr></wbr>_events</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#log_each_job" class="internal-link" title="aligned.retrival_job.RetrivalJob.log_each_job">log<wbr></wbr>_each<wbr></wbr>_job</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#monitor_time_used" class="internal-link" title="aligned.retrival_job.RetrivalJob.monitor_time_used">monitor<wbr></wbr>_time<wbr></wbr>_used</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#on_load" class="internal-link" title="aligned.retrival_job.RetrivalJob.on_load">on<wbr></wbr>_load</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#polars_method" class="internal-link" title="aligned.retrival_job.RetrivalJob.polars_method">polars<wbr></wbr>_method</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#remove_derived_features" class="internal-link" title="aligned.retrival_job.RetrivalJob.remove_derived_features">remove<wbr></wbr>_derived<wbr></wbr>_features</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#rename" class="internal-link" title="aligned.retrival_job.RetrivalJob.rename">rename</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#return_invalid" class="internal-link" title="aligned.retrival_job.RetrivalJob.return_invalid">return<wbr></wbr>_invalid</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#select" class="internal-link" title="aligned.retrival_job.RetrivalJob.select">select</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#select_columns" class="internal-link" title="aligned.retrival_job.RetrivalJob.select_columns">select<wbr></wbr>_columns</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#split" class="internal-link" title="aligned.retrival_job.RetrivalJob.split">split</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Async Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#to_polars" class="internal-link" title="aligned.retrival_job.RetrivalJob.to_polars">to<wbr></wbr>_polars</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#train_test" class="internal-link" title="aligned.retrival_job.RetrivalJob.train_test">train<wbr></wbr>_test</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#train_test_validate" class="internal-link" title="aligned.retrival_job.RetrivalJob.train_test_validate">train<wbr></wbr>_test<wbr></wbr>_validate</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#transform_polars" class="internal-link" title="aligned.retrival_job.RetrivalJob.transform_polars">transform<wbr></wbr>_polars</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#unique_entities" class="internal-link" title="aligned.retrival_job.RetrivalJob.unique_entities">unique<wbr></wbr>_entities</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#unique_on" class="internal-link" title="aligned.retrival_job.RetrivalJob.unique_on">unique<wbr></wbr>_on</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#unpack_embeddings" class="internal-link" title="aligned.retrival_job.RetrivalJob.unpack_embeddings">unpack<wbr></wbr>_embeddings</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#update_vector_index" class="internal-link" title="aligned.retrival_job.RetrivalJob.update_vector_index">update<wbr></wbr>_vector<wbr></wbr>_index</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#validate_entites" class="internal-link" title="aligned.retrival_job.RetrivalJob.validate_entites">validate<wbr></wbr>_entites</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#with_request" class="internal-link" title="aligned.retrival_job.RetrivalJob.with_request">with<wbr></wbr>_request</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#with_subfeatures" class="internal-link" title="aligned.retrival_job.RetrivalJob.with_subfeatures">with<wbr></wbr>_subfeatures</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#without_derived_features" class="internal-link" title="aligned.retrival_job.RetrivalJob.without_derived_features">without<wbr></wbr>_derived<wbr></wbr>_features</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Async Method</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#write_to_source" class="internal-link" title="aligned.retrival_job.RetrivalJob.write_to_source">write<wbr></wbr>_to<wbr></wbr>_source</a></code></td>
+    <td>Writes the output of the retrival job to the passed source.</td>
+  </tr><tr class="baseproperty">
+    
+    <td>Property</td>
+    <td><code><a href="aligned.retrival_job.RetrivalJob.html#loaded_columns" class="internal-link" title="aligned.retrival_job.RetrivalJob.loaded_columns">loaded<wbr></wbr>_columns</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr>
+</table>
+            
+            <p class="inheritedFrom">
+              Inherited from <code><a href="aligned.retrival_job.ModificationJob.html" class="internal-link" title="aligned.retrival_job.ModificationJob">ModificationJob</a></code> (via <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>):
+            </p>
+            <table class="children sortable" id="id147">
+  
+  
+  <tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrival_job.ModificationJob.html#copy_with" class="internal-link" title="aligned.retrival_job.ModificationJob.copy_with">copy<wbr></wbr>_with</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr>
+</table>
+            
+
+            
+        </div>
+
+        <div id="childList">
+          <div class="basemethod">
+  
+  
+  <a name="aligned.retrival_job.UpdateVectorIndexJob.to_lazy_polars">
+    
+  </a>
+  <a name="to_lazy_polars">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">to_lazy_polars</span><span class="function-signature">(self) -&gt; <code>pl.LazyFrame</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/retrival_job.py#L1608">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#to_lazy_polars" title="aligned.retrival_job.UpdateVectorIndexJob.to_lazy_polars">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.retrival_job.RetrivalJob.html#to_lazy_polars" class="internal-link">aligned.retrival_job.RetrivalJob.to_lazy_polars</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrival_job.UpdateVectorIndexJob.to_pandas">
+    
+  </a>
+  <a name="to_pandas">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">to_pandas</span><span class="function-signature">(self) -&gt; <code>pd.DataFrame</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/retrival_job.py#L1605">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#to_pandas" title="aligned.retrival_job.UpdateVectorIndexJob.to_pandas">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.retrival_job.RetrivalJob.html#to_pandas" class="internal-link">aligned.retrival_job.RetrivalJob.to_pandas</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.retrival_job.UpdateVectorIndexJob.indexes">
+    
+  </a>
+  <a name="indexes">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">indexes</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>VectorIndex]</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/retrival_job.py#L1595">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#indexes" title="aligned.retrival_job.UpdateVectorIndexJob.indexes">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseinstancevariable">
+  
+  
+  <a name="aligned.retrival_job.UpdateVectorIndexJob.job">
+    
+  </a>
+  <a name="job">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">job</span>: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/retrival_job.py#L1594">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#job" title="aligned.retrival_job.UpdateVectorIndexJob.job">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.retrival_job.ModificationJob.html#job" class="internal-link">aligned.retrival_job.ModificationJob.job</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseproperty">
+  
+  
+  <a name="aligned.retrival_job.UpdateVectorIndexJob.request_result">
+    
+  </a>
+  <a name="request_result">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">request_result</span>: <code>RequestResult</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/retrival_job.py#L1597">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#request_result" title="aligned.retrival_job.UpdateVectorIndexJob.request_result">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.retrival_job.RetrivalJob.html#request_result" class="internal-link">aligned.retrival_job.RetrivalJob.request_result</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseproperty">
+  
+  
+  <a name="aligned.retrival_job.UpdateVectorIndexJob.retrival_requests">
+    
+  </a>
+  <a name="retrival_requests">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">retrival_requests</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrivalRequest]</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/retrival_job.py#L1601">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#retrival_requests" title="aligned.retrival_job.UpdateVectorIndexJob.retrival_requests">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.retrival_job.RetrivalJob.html#retrival_requests" class="internal-link">aligned.retrival_job.RetrivalJob.retrival_requests</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div>
+        </div>
+      
+      </div>
+    </div>
+
+    <footer class="navbar navbar-default">
+
+  
+  <div class="container">
+    <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
+  generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
+    24.3.3 at 2024-11-25 22:52:40.
+  </div>
+
+  <!-- Search related scripts needs to be loaded at the end of HTML 
+    parsing not to introduce overhead and display HTML data asap -->
+  <script src="ajax.js" type="text/javascript"></script>
+  <script src="searchlib.js" type="text/javascript"></script>
+  <script src="search.js" type="text/javascript"></script>
+
+</footer>
+  
+    <script src="pydoctor.js" type="text/javascript"></script>
+
+  </body>
+</html>
