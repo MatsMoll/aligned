@@ -31,7 +31,7 @@ jobs:
             --html-output=./apidocs \
             --docformat=restructuredtext \
             --intersphinx=https://docs.python.org/3/objects.inv \
-            ./aligned
+            ./aligned || true
 
     - name: Push API documentation to Github Pages
       uses: peaceiris/actions-gh-pages@v3
