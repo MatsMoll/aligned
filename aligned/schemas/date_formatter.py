@@ -1,9 +1,11 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
+from typing import Literal
 import polars as pl
-from polars.type_aliases import TimeUnit
 from aligned.schemas.codable import Codable
 from mashumaro.types import SerializableType
+
+TimeUnit = Literal['ns', 'us', 'ms']
 
 
 @dataclass

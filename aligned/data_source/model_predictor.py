@@ -95,9 +95,10 @@ class PredictModelSource(BatchDataSource):
                     missing_features.select(request.entity_names)
                 ).to_polars()
 
+                full_schema = full_features.collect_schema()
                 return (
                     full_features.collect()
-                    .vstack(preds.select(full_features.columns).cast(full_features.schema))  # type: ignore
+                    .vstack(preds.select(full_features.columns).cast(full_schema))  # type: ignore
                     .lazy()
                 )
 

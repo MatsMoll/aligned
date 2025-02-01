@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Protocol
 from uuid import uuid4
 
+from aligned.config_value import ConfigValue, PathResolver, PlaceholderValue
 from aligned.lazy_imports import pandas as pd
 import polars as pl
 from httpx import HTTPStatusError
@@ -171,7 +172,7 @@ class CsvFileSource(
     A source pointing to a CSV file
     """
 
-    path: str
+    path: PathResolver
     mapping_keys: dict[str, str] = field(default_factory=dict)
     csv_config: CsvConfig = field(default_factory=CsvConfig)
     formatter: DateFormatter = field(default_factory=DateFormatter.iso_8601)
@@ -180,7 +181,7 @@ class CsvFileSource(
     type_name: str = 'csv'
 
     def job_group_key(self) -> str:
-        return f'{self.type_name}/{self.path}'
+        return f'{self.type_name}/{self.path.as_posix()}'
 
     def __hash__(self) -> int:
         return hash(self.job_group_key())
@@ -200,40 +201,40 @@ class CsvFileSource(
 
 *Renames*: {self.mapping_keys}
 
-*File*: {self.path}
+*File*: {self.path.as_posix()}
 
 *CSV Config*: {self.csv_config}
 
 *Datetime Formatter*: {self.formatter}
 
-[Go to file]({self.path})
+[Go to file]({self.path.as_posix()})
 """  # noqa
 
     async def delete(self) -> None:
-        delete_path(self.path)
+        delete_path(self.path.as_posix())
 
     async def read_pandas(self) -> pd.DataFrame:
+        path = self.path.as_posix()
         try:
-            return pd.read_csv(
-                self.path, sep=self.csv_config.seperator, compression=self.csv_config.compression
-            )
+            return pd.read_csv(path, sep=self.csv_config.seperator, compression=self.csv_config.compression)
         except FileNotFoundError:
-            raise UnableToFindFileException(self.path)
+            raise UnableToFindFileException(path)
         except HTTPStatusError:
-            raise UnableToFindFileException(self.path)
+            raise UnableToFindFileException(path)
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
 
-        if self.path.startswith('http'):
+        path = self.path.as_posix()
+        if path.startswith('http'):
             from io import BytesIO
 
-            buffer = await HttpStorage().read(self.path)
+            buffer = await HttpStorage().read(path)
             io_buffer = BytesIO(buffer)
             io_buffer.seek(0)
             return pl.read_csv(io_buffer, separator=self.csv_config.seperator).lazy()
 
-        if not do_file_exist(self.path):
-            raise UnableToFindFileException(self.path)
+        if not do_file_exist(path):
+            raise UnableToFindFileException(path)
 
         try:
             schema: dict[str, pl.PolarsDataType] | None = None
@@ -248,9 +249,9 @@ class CsvFileSource(
                     reverse_mapping = {v: k for k, v in self.mapping_keys.items()}
                     schema = {reverse_mapping.get(name, name): dtype for name, dtype in schema.items()}
 
-            return pl.scan_csv(self.path, schema_overrides=schema, separator=self.csv_config.seperator)
+            return pl.scan_csv(path, schema_overrides=schema, separator=self.csv_config.seperator)
         except OSError:
-            raise UnableToFindFileException(self.path)
+            raise UnableToFindFileException(path)
 
     async def upsert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         data = (await job.to_lazy_polars()).select(request.all_returned_columns)
@@ -316,17 +317,23 @@ class CsvFileSource(
         await self.write_polars(data)
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
-        create_parent_dir(self.path)
+        create_parent_dir(self.path.as_posix())
         df.to_csv(
-            self.path,
+            self.path.as_posix(),
             sep=self.csv_config.seperator,
             compression=self.csv_config.compression,
             index=self.csv_config.should_write_index,
         )
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
-        create_parent_dir(self.path)
-        await self.write_pandas(df.collect().to_pandas())
+        create_parent_dir(self.path.as_posix())
+        if self.csv_config.compression == 'infer':
+            df.collect().write_csv(
+                self.path.as_posix(),
+                separator=self.csv_config.seperator,
+            )
+        else:
+            await self.write_pandas(df.collect().to_pandas())
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         with_schema = CsvFileSource(
@@ -412,7 +419,7 @@ class PartitionedParquetFileSource(
     A source pointing to a Parquet file
     """
 
-    directory: str
+    directory: PathResolver
     partition_keys: list[str]
     mapping_keys: dict[str, str] = field(default_factory=dict)
     config: ParquetConfig = field(default_factory=ParquetConfig)
@@ -427,9 +434,9 @@ class PartitionedParquetFileSource(
 
 *Renames*: {self.mapping_keys}
 
-*Directory*: {self.directory}
+*Directory*: {self.directory.as_posix()}
 
-[Go to directory]({self.directory})'''  # noqa
+[Go to directory]({self.directory.as_posix()})'''  # noqa
 
     def job_group_key(self) -> str:
         return f'{self.type_name}/{self.directory}'
@@ -448,7 +455,7 @@ class PartitionedParquetFileSource(
         )
 
     async def delete(self) -> None:
-        delete_path(self.directory)
+        delete_path(self.directory.as_posix())
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
@@ -458,12 +465,12 @@ class PartitionedParquetFileSource(
         try:
             return pl.scan_parquet(glob_path, retries=3, hive_partitioning=True)
         except (OSError, FileNotFoundError):
-            raise UnableToFindFileException(self.directory)
+            raise UnableToFindFileException(glob_path)
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
-        create_parent_dir(self.directory)
+        create_parent_dir(self.directory.as_posix())
         df.collect().write_parquet(
-            self.directory,
+            self.directory.as_posix(),
             compression=self.config.compression,
             use_pyarrow=True,
             pyarrow_options={
@@ -489,18 +496,40 @@ class PartitionedParquetFileSource(
     def multi_source_features_for(  # type: ignore
         cls, facts: RetrivalJob, requests: list[tuple[ParquetFileSource, RetrivalRequest]]
     ) -> RetrivalJob:
+        from aligned.data_source.batch_data_source import CustomMethodDataSource
 
-        source = requests[0][0]
+        assert len(requests) == 1
+
+        source, request = requests[0]
         if not isinstance(source, cls):
             raise ValueError(f'Only {cls} is supported, recived: {source}')
 
-        # Group based on config
-        return FileFactualJob(
-            source=source,
-            requests=[request for _, request in requests],
-            facts=facts,
-            date_formatter=source.date_formatter,
-        )
+        async def features_for(facts: RetrivalJob, request: RetrivalRequest) -> pl.LazyFrame:
+            facts_df = await facts.to_lazy_polars()
+            partitions = (
+                await facts_df.unique(source.partition_keys).select(source.partition_keys).collect_async()
+            )
+
+            filter_pl = pl.lit(False)
+            for partition in partitions.iter_rows(named=True):
+                partition_expr: pl.Expr = pl.lit(True)
+                for key, value in partition.items():
+                    partition_expr = partition_expr & (pl.col(key) == value)
+
+                filter_pl = filter_pl | partition_expr
+
+            source_values = await source.to_lazy_polars()
+            filtered_values = source_values.filter(filter_pl)
+
+            return await FileFactualJob(
+                RetrivalJob.from_polars_df(filtered_values, [request]),
+                requests=[request],
+                facts=RetrivalJob.from_polars_df(facts_df, facts.retrival_requests),
+            ).to_lazy_polars()
+
+        return CustomMethodDataSource.from_methods(
+            features_for=features_for,
+        ).features_for(facts, request)
 
     async def schema(self) -> dict[str, FeatureType]:
         glob_path = f'{self.directory}/**/*.parquet'
@@ -551,7 +580,7 @@ class PartitionedParquetFileSource(
             write_df = df.lazy()
 
         for row in unique_partitions.iter_rows(named=True):
-            dir = Path(self.directory)
+            dir = Path(self.directory.as_posix())
             for partition_key in self.partition_keys:
                 dir = dir / f"{partition_key}={row[partition_key]}"
 
@@ -563,8 +592,9 @@ class PartitionedParquetFileSource(
     async def overwrite(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         import shutil
 
-        if Path(self.directory).exists():
-            shutil.rmtree(self.directory)
+        posix_dir = self.directory.as_posix()
+        if Path(posix_dir).exists():
+            shutil.rmtree(posix_dir)
 
         await self.insert(job, request)
 
@@ -575,7 +605,7 @@ class ParquetFileSource(CodableBatchDataSource, ColumnFeatureMappable, DataFileR
     A source pointing to a Parquet file
     """
 
-    path: str
+    path: PathResolver
     mapping_keys: dict[str, str] = field(default_factory=dict)
     config: ParquetConfig = field(default_factory=ParquetConfig)
     date_formatter: DateFormatter = field(default_factory=lambda: DateFormatter.noop())
@@ -587,9 +617,9 @@ class ParquetFileSource(CodableBatchDataSource, ColumnFeatureMappable, DataFileR
         return f'''#### Parquet File
 *Renames*: {self.mapping_keys}
 
-*File*: {self.path}
+*File*: {self.path.as_posix()}
 
-[Go to file]({self.path})'''  # noqa
+[Go to file]({self.path.as_posix()})'''  # noqa
 
     def with_view(self, view: CompiledFeatureView) -> ParquetFileSource:
         schema_hash = view.schema_hash()
@@ -607,33 +637,38 @@ class ParquetFileSource(CodableBatchDataSource, ColumnFeatureMappable, DataFileR
         return hash(self.job_group_key())
 
     async def delete(self) -> None:
-        delete_path(self.path)
+        delete_path(self.path.as_posix())
 
     async def read_pandas(self) -> pd.DataFrame:
+        path = self.path.as_posix()
         try:
-            return pd.read_parquet(self.path)
+            return pd.read_parquet(path)
         except FileNotFoundError:
-            raise UnableToFindFileException()
+            raise UnableToFindFileException(path)
         except HTTPStatusError:
-            raise UnableToFindFileException()
+            raise UnableToFindFileException(path)
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
-        create_parent_dir(self.path)
-        df.to_parquet(self.path, engine=self.config.engine, compression=self.config.compression, index=False)
+        create_parent_dir(self.path.as_posix())
+        df.to_parquet(
+            self.path.as_posix(), engine=self.config.engine, compression=self.config.compression, index=False
+        )
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
 
-        if (not self.path.startswith('http')) and (not do_file_exist(self.path)):
-            raise UnableToFindFileException(self.path)
+        path = self.path.as_posix()
+        if (not path.startswith('http')) and (not do_file_exist(path)):
+            raise UnableToFindFileException(path)
 
         try:
-            return pl.scan_parquet(self.path)
+            return pl.scan_parquet(path)
         except OSError:
-            raise UnableToFindFileException(self.path)
+            raise UnableToFindFileException(path)
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
-        create_parent_dir(self.path)
-        df.collect().write_parquet(self.path, compression=self.config.compression)
+        path = self.path.as_posix()
+        create_parent_dir(path)
+        df.collect().write_parquet(path, compression=self.config.compression)
 
     def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
         return FileFullJob(self, request, limit, date_formatter=self.date_formatter)
@@ -667,10 +702,11 @@ class ParquetFileSource(CodableBatchDataSource, ColumnFeatureMappable, DataFileR
         )
 
     async def schema(self) -> dict[str, FeatureType]:
-        if self.path.startswith('http'):
-            parquet_schema = pl.scan_parquet(self.path).schema
+        path = self.path.as_posix()
+        if path.startswith('http'):
+            parquet_schema = pl.scan_parquet(path).schema
         else:
-            parquet_schema = pl.read_parquet_schema(self.path)
+            parquet_schema = pl.read_parquet_schema(path)
 
         return {name: FeatureType.from_polars(pl_type) for name, pl_type in parquet_schema.items()}
 
@@ -862,40 +898,30 @@ class Directory(Protocol):
     ) -> CodableBatchDataSource:
         ...
 
-    def sub_directory(self, path: str) -> Directory:
+    def sub_directory(self, path: str | ConfigValue) -> Directory:
         ...
 
-    def with_schema_version(self, sub_directory: str | None = None) -> Directory:
+    def with_schema_version(self, sub_directory: str | ConfigValue | None = None) -> Directory:
         ...
 
 
 @dataclass
 class FileDirectory(Codable, Directory):
 
-    dir_path: Path
+    path: PathResolver
 
     @classmethod
-    def schema_placeholder(cls) -> str:
-        return '{_schema_version_placeholder}'
-
-    def path_string(self, path: str) -> str:
-        string_value = (self.dir_path / path).as_posix()
-        if string_value.startswith('http:/') and not string_value.startswith('http://'):
-            return string_value.replace('http:/', 'http://')
-
-        if string_value.startswith('https:/') and not string_value.startswith('https://'):
-            return string_value.replace('https:/', 'https://')
-
-        return string_value
+    def schema_placeholder(cls) -> PlaceholderValue:
+        return PlaceholderValue('schema_version_placeholder')
 
     def json_at(self, path: str) -> StorageFileSource:
-        return StorageFileSource(path=self.path_string(path))
+        return StorageFileSource(path=path)
 
     def csv_at(
         self, path: str, mapping_keys: dict[str, str] | None = None, csv_config: CsvConfig | None = None
     ) -> CsvFileSource:
         return CsvFileSource(
-            self.path_string(path), mapping_keys=mapping_keys or {}, csv_config=csv_config or CsvConfig()
+            self.path.append(path), mapping_keys=mapping_keys or {}, csv_config=csv_config or CsvConfig()
         )
 
     def parquet_at(
@@ -906,7 +932,7 @@ class FileDirectory(Codable, Directory):
         date_formatter: DateFormatter | None = None,
     ) -> ParquetFileSource:
         return ParquetFileSource(
-            path=self.path_string(path),
+            path=self.path.append(path),
             mapping_keys=mapping_keys or {},
             config=config or ParquetConfig(),
             date_formatter=date_formatter or DateFormatter.noop(),
@@ -922,7 +948,7 @@ class FileDirectory(Codable, Directory):
     ) -> PartitionedParquetFileSource:
 
         return PartitionedParquetFileSource(
-            directory=self.path_string(directory),
+            directory=self.path.append(directory),
             partition_keys=partition_keys,
             mapping_keys=mapping_keys or {},
             config=config or ParquetConfig(),
@@ -932,18 +958,18 @@ class FileDirectory(Codable, Directory):
     def delta_at(
         self, path: str, mapping_keys: dict[str, str] | None = None, config: DeltaFileConfig | None = None
     ) -> DeltaFileSource:
-        return DeltaFileSource(self.path_string(path), mapping_keys or {}, config=config or DeltaFileConfig())
+        return DeltaFileSource(path, mapping_keys or {}, config=config or DeltaFileConfig())
 
-    def sub_directory(self, path: str) -> FileDirectory:
-        return FileDirectory(self.dir_path / path)
+    def sub_directory(self, path: str | ConfigValue) -> FileDirectory:
+        return FileDirectory(self.path.append(path))
 
-    def with_schema_version(self, sub_directory: str | None = None) -> Directory:
+    def with_schema_version(self, sub_directory: str | ConfigValue | None = None) -> Directory:
         if sub_directory:
-            return FileDirectory(self.dir_path / sub_directory / FileDirectory.schema_placeholder())
+            return FileDirectory(self.path.append(sub_directory).append(FileDirectory.schema_placeholder()))
         else:
-            return FileDirectory(self.dir_path / FileDirectory.schema_placeholder())
+            return FileDirectory(self.path.append(FileDirectory.schema_placeholder()))
 
-    def directory(self, path: str) -> FileDirectory:
+    def directory(self, path: str | ConfigValue) -> FileDirectory:
         return self.sub_directory(path)
 
     def repo_from_dir(self, dir: str, exclude: list[str] | None = None) -> AsRepoDefinition:
@@ -970,7 +996,7 @@ class FileSource:
         date_formatter: DateFormatter | None = None,
     ) -> CsvFileSource:
         return CsvFileSource(
-            path,
+            PathResolver.from_value(path),
             mapping_keys=mapping_keys or {},
             csv_config=csv_config or CsvConfig(),
             formatter=date_formatter or DateFormatter.iso_8601(),
@@ -986,7 +1012,7 @@ class FileSource:
     ) -> PartitionedParquetFileSource:
 
         return PartitionedParquetFileSource(
-            directory=directory,
+            directory=PathResolver.from_value(directory),
             partition_keys=partition_keys,
             mapping_keys=mapping_keys or {},
             config=config or ParquetConfig(),
@@ -1001,7 +1027,7 @@ class FileSource:
         date_formatter: DateFormatter | None = None,
     ) -> ParquetFileSource:
         return ParquetFileSource(
-            path=path,
+            path=PathResolver.from_value(path),
             mapping_keys=mapping_keys or {},
             config=config or ParquetConfig(),
             date_formatter=date_formatter or DateFormatter.noop(),
@@ -1022,18 +1048,19 @@ class FileSource:
         )
 
     @staticmethod
-    def directory(path: str) -> FileDirectory:
-        return FileDirectory(Path(path))
+    def directory(path: str | ConfigValue) -> FileDirectory:
+        return FileDirectory(PathResolver.from_value(path))
 
-    def with_schema_version(self, sub_directory: str | None = None) -> Directory:
+    def with_schema_version(self, sub_directory: str | ConfigValue | None = None) -> Directory:
         if sub_directory:
-            return FileDirectory(Path(sub_directory) / FileDirectory.schema_placeholder())
+            return FileDirectory(
+                PathResolver.from_value(sub_directory).append(FileDirectory.schema_placeholder())
+            )
         else:
-            return FileDirectory(Path('.') / FileDirectory.schema_placeholder())
+            return FileDirectory(PathResolver.from_value('.').append(FileDirectory.schema_placeholder()))
 
     @staticmethod
     def repo_from_dir(dir: str, exclude: list[str] | None = None) -> AsRepoDefinition:
-
         return DirectoryRepo(Path(dir), exclude)
 
 

@@ -2529,6 +2529,7 @@ class Split(Transformation):
     key: str
     separator: str
     name = 'split'
+    dtype: FeatureType = FeatureType.array(FeatureType.string())
 
     async def transform_pandas(self, df: pd.DataFrame, store: ContractStore) -> pd.Series:
         return df[self.key].str.split(self.separator)
@@ -2545,6 +2546,7 @@ class LoadFeature(Transformation):
     entities: dict[str, str]
     feature: FeatureReference
     explode_key: str | None
+    dtype: FeatureType
     name = 'load_feature'
 
     async def transform_pandas(self, df: pd.DataFrame, store: ContractStore) -> pd.Series:

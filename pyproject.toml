@@ -1,9 +1,9 @@
 [tool.poetry]
 name = "aligned"
-version = "0.0.113"
+version = "0.0.114"
 description = "A data managment and lineage tool for ML applications."
 authors = ["Mats E. Mollestad <mats@mollestad.no>"]
-license = "Apache-2.0"
+license = "FSL-1.1-ALv2"
 readme = "README.md"
 homepage = "https://github.com/MatsMoll/aligned"
 repository = "https://github.com/MatsMoll/aligned"
@@ -50,7 +50,6 @@ httpx = "^0.27.0"
 mashumaro = "^3.0.1"
 dill = "^0.3.4"
 pydantic = "^2.0.0"
-prometheus_client = "^0.16.0"
 polars = { version = "^1.10.0", extras = ["pyarrow"] }
 
 openai = { version = "^1.52.0", optional = true }
@@ -62,7 +61,6 @@ aioaws = { version = "^0.12", optional = true }
 asgi-correlation-id = { version = "^3.0.0", optional = true }
 pandera = { version = "^0.17.0", optional = true}
 pillow = { version = "^9.4.0", optional = true }
-prometheus-fastapi-instrumentator = { version="^5.9.1", optional = true }
 kafka-python = { version= "^2.0.2", optional = true }
 connectorx = { version = "^0.3.2", optional = true }
 asyncpg = { version = "^0.29.0", optional = true }
@@ -80,7 +78,7 @@ tiktoken = { version = "^0.8.0", optional = true }
 aws = ["aioaws", "connectorx"]
 psql = ["connectorx", "asyncpg", "psycopg2"]
 redis = ["redis"]
-server = ["asgi-correlation-id", "fastapi", "uvicorn", "prometheus-fastapi-instrumentator"]
+server = ["asgi-correlation-id", "fastapi", "uvicorn"]
 pandera = ["pandera"]
 image = ["pillow"]
 kafka = ["kafka-python"]

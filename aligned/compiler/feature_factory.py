@@ -191,7 +191,7 @@ class RecommendationTarget(FeatureReferencable):
             raise ValueError('Missing name, can not create reference')
         if not self._location:
             raise ValueError('Missing location, can not create reference')
-        return FeatureReference(self._name, self._location, self.feature.dtype)
+        return FeatureReference(self._name, self._location)
 
     def estemating_rank(self, feature: FeatureFactory) -> RecommendationTarget:
         self.rank_feature = feature
@@ -223,7 +223,7 @@ class RegressionLabel(FeatureReferencable):
             raise ValueError('Missing name, can not create reference')
         if not self._location:
             raise ValueError('Missing location, can not create reference')
-        return FeatureReference(self._name, self._location, self.feature.dtype)
+        return FeatureReference(self._name, self._location)
 
     def listen_to_ground_truth_event(self, stream: StreamDataSource) -> RegressionLabel:
         return RegressionLabel(
@@ -422,7 +422,7 @@ class FeatureFactory(FeatureReferencable):
                 f'_location is not set for {self.name}. '
                 'Therefore, making it impossible to create a referance.'
             )
-        return FeatureReference(self.name, self._location, self.dtype)
+        return FeatureReference(self.name, self._location)
 
     def with_tag(self: T, key: str) -> T:
         if self.tags is None:
@@ -641,7 +641,7 @@ class FeatureFactory(FeatureReferencable):
         from aligned.compiler.transformation_factory import LoadFeature
 
         new = self.copy_type()
-        new.transformation = LoadFeature(entities, self.feature_reference())
+        new.transformation = LoadFeature(entities, self.feature_reference(), self.dtype)
         new._loads_feature = self.feature_reference()
         return new
 
@@ -1299,6 +1299,33 @@ class String(
         return image_url
 
 
+@dataclass
+class Struct(FeatureFactory):
+
+    subtype: Any
+
+    def copy_type(self: Struct) -> Struct:
+        if self.constraints and Optional() in self.constraints:
+            return Struct(self.subtype).is_optional()
+        return Struct(self.subtype)
+
+    def as_input_features(self) -> Struct:
+        return self.with_tag(StaticFeatureTags.is_input_features)
+
+    @property
+    def dtype(self) -> FeatureType:
+        dtype = FeatureType.from_type(self.subtype)
+        assert dtype, f"Was unable to find type for {self.subtype}"
+        return dtype
+
+    def field(self, field: str, as_type: T) -> T:
+        from aligned.compiler.transformation_factory import StructFieldFactory
+
+        feature = as_type.copy_type()
+        feature.transformation = StructFieldFactory(self, field)
+        return feature
+
+
 class Json(FeatureFactory):
     def copy_type(self: Json) -> Json:
         if self.constraints and Optional() in self.constraints:
@@ -1340,6 +1367,12 @@ class ModelVersion(FeatureFactory):
 
     def aggregate(self) -> CategoricalAggregation:
         return CategoricalAggregation(self)
+
+
+class Date(DateFeature, ArithmeticFeature):
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType.date()
 
 
 class Timestamp(DateFeature, ArithmeticFeature):

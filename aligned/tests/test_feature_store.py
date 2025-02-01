@@ -8,7 +8,7 @@ def test_update_source(titanic_feature_store: ContractStore) -> None:
     sources = []
 
     def update_parquet_source(source: ParquetFileSource, loc: FeatureLocation) -> None:
-        source.path = 'updated.parquet'
+        # Some code that updates the source
         sources.append(loc)
 
     titanic_feature_store.sources_of_type(ParquetFileSource, update_parquet_source)

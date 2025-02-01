@@ -23,7 +23,9 @@ class LiteralRetrivalJob(RetrivalJob):
     df: pl.LazyFrame
     requests: list[RetrivalRequest]
 
-    def __init__(self, df: pl.LazyFrame | pd.DataFrame, requests: list[RetrivalRequest]) -> None:
+    def __init__(
+        self, df: pl.LazyFrame | pd.DataFrame | pl.DataFrame, requests: list[RetrivalRequest]
+    ) -> None:
         self.requests = requests
 
         if isinstance(df, pl.DataFrame):
@@ -37,7 +39,7 @@ class LiteralRetrivalJob(RetrivalJob):
 
     @property
     def loaded_columns(self) -> list[str]:
-        return self.df.columns
+        return self.df.collect_schema().names()
 
     @property
     def retrival_requests(self) -> list[RetrivalRequest]:
@@ -48,7 +50,7 @@ class LiteralRetrivalJob(RetrivalJob):
         return RequestResult.from_request_list(self.requests)
 
     def describe(self) -> str:
-        return f'Using literal data frame with columns {self.df.columns}'
+        return f'Using literal data frame with columns {self.df.collect_schema().names()}'
 
     async def to_pandas(self) -> pd.DataFrame:
         return self.df.collect().to_pandas()
@@ -149,7 +151,7 @@ def decode_timestamps(df: pl.LazyFrame, request: RetrivalRequest, formatter: Dat
     decode_columns: dict[str, str | None] = {}
     check_timezone_columns: dict[str, str | None] = {}
 
-    dtypes = dict(zip(df.columns, df.dtypes))
+    dtypes = df.collect_schema()
 
     all_features = request.all_features
 
@@ -157,7 +159,7 @@ def decode_timestamps(df: pl.LazyFrame, request: RetrivalRequest, formatter: Dat
         all_features.add(request.event_timestamp.as_feature())
 
     for feature in all_features:
-        if feature.dtype.is_datetime and feature.name in df.columns:
+        if feature.dtype.is_datetime and feature.name in dtypes:
 
             if not isinstance(dtypes[feature.name], pl.Datetime):
                 decode_columns[feature.name] = feature.dtype.datetime_timezone
@@ -219,7 +221,7 @@ class FileFullJob(RetrivalJob):
 
         if self.request.aggregated_features:
             first_feature = list(self.request.aggregated_features)[0]
-            if first_feature.name in df.columns:
+            if first_feature.name in df.collect_schema().names():
                 return df
 
         entity_names = self.request.entity_names
@@ -433,8 +435,10 @@ class FileFactualJob(RetrivalJob):
                 feature_column_map = dict(zip(all_names, request_features))
 
             df = fill_missing_in_request(request, df, feature_column_map)
+            df_columns = df.collect_schema().names()
+
             for derived_feature in request.derived_features:
-                if derived_feature.name in df.columns:
+                if derived_feature.name in df_columns:
                     all_names.add(derived_feature.name)
 
             column_selects = list(entity_names.union({'row_id'}))
@@ -451,7 +455,7 @@ class FileFactualJob(RetrivalJob):
                 column_selects.append(event_timestamp_col)
 
             missing_agg_features = [
-                feat for feat in request.aggregated_features if feat.name not in df.columns
+                feat for feat in request.aggregated_features if feat.name not in df_columns
             ]
             if request.aggregated_features and not missing_agg_features:
                 new_result = result.join(
@@ -490,7 +494,9 @@ class FileFactualJob(RetrivalJob):
 
                 for group, features in request.aggregate_over().items():
                     missing_features = [
-                        feature.name for feature in features if feature.name not in df.columns
+                        feature.name
+                        for feature in features
+                        if feature.name not in df.collect_schema().names()
                     ]
                     if missing_features:
                         aggregated_df = await aggregate_over(group, features, new_result, event_timestamp_col)

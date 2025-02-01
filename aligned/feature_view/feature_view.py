@@ -7,7 +7,7 @@ import polars as pl
 from datetime import timedelta
 from abc import ABC, abstractproperty
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, TypeVar, Generic, Type, Callable
+from typing import TYPE_CHECKING, Any, Awaitable, TypeVar, Generic, Type, Callable, Union
 from uuid import uuid4
 
 from aligned.lazy_imports import pandas as pd
@@ -19,6 +19,7 @@ from aligned.compiler.feature_factory import (
 )
 from aligned.data_source.batch_data_source import (
     CodableBatchDataSource,
+    CustomMethodDataSource,
     JoinAsofDataSource,
     JoinDataSource,
     join_asof_source,
@@ -26,6 +27,7 @@ from aligned.data_source.batch_data_source import (
     resolve_keys,
 )
 from aligned.data_source.stream_data_source import StreamDataSource
+from aligned.request.retrival_request import RetrivalRequest
 from aligned.retrival_job import ConvertableToRetrivalJob, RetrivalJob
 from aligned.schemas.derivied_feature import (
     AggregatedFeature,
@@ -33,10 +35,10 @@ from aligned.schemas.derivied_feature import (
 from aligned.schemas.feature import FeatureLocation, FeatureReference, StaticFeatureTags
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.compiler.feature_factory import FeatureFactory
+from datetime import datetime
 
 if TYPE_CHECKING:
     from aligned.feature_store import FeatureViewStore
-    from datetime import datetime
     from aligned.validation.interface import Validator
 
 # Enables code compleation in the select method
@@ -78,7 +80,16 @@ class FeatureViewMetadata:
         )
 
 
-def resolve_source(source: CodableBatchDataSource | FeatureViewWrapper) -> CodableBatchDataSource:
+PureLoadFunctions = Union[
+    Callable[[RetrivalRequest, datetime, datetime], Awaitable[pl.LazyFrame]],
+    Callable[[RetrivalRequest, int | None], Awaitable[pl.LazyFrame]],
+    Callable[[RetrivalRequest, int], Awaitable[pl.LazyFrame]],
+]
+
+
+def resolve_source(
+    source: CodableBatchDataSource | FeatureViewWrapper | PureLoadFunctions,
+) -> CodableBatchDataSource:
     if isinstance(source, FeatureViewWrapper):
         from aligned.schemas.feature_view import FeatureViewReferenceSource
 
@@ -87,12 +98,26 @@ def resolve_source(source: CodableBatchDataSource | FeatureViewWrapper) -> Codab
 
     elif isinstance(source, CodableBatchDataSource):
         return source
-    else:
-        raise ValueError(f'Unable to use source: {type(source)} - {source}')
+
+    import inspect
+
+    signature = inspect.signature(source)
+    params = signature.parameters
+
+    if len(params) == 1:
+        return CustomMethodDataSource.from_load(source)  # type: ignore
+
+    if len(params) == 3 and 'request' in params and 'start_date' in params:
+        return CustomMethodDataSource.from_methods(all_between_dates=source)  # type: ignore
+
+    if len(params) == 2 and 'request' in params and 'limit' in params:
+        return CustomMethodDataSource.from_methods(all_data=source)  # type: ignore
+
+    raise ValueError(f"Unable to use function with signature {signature} as source.")
 
 
 def feature_view(
-    source: CodableBatchDataSource | FeatureViewWrapper,
+    source: CodableBatchDataSource | FeatureViewWrapper | PureLoadFunctions,
     name: str | None = None,
     description: str | None = None,
     stream_source: StreamDataSource | None = None,
@@ -189,6 +214,10 @@ class FeatureViewWrapper(Generic[T]):
     @property
     def location(self) -> FeatureLocation:
         return FeatureLocation.feature_view(self.metadata.name)
+
+    @property
+    def request(self) -> RetrivalRequest:
+        return self.compile().retrival_request
 
     def __call__(self) -> T:
         view = copy.deepcopy(self.view)
@@ -424,7 +453,7 @@ class FeatureViewWrapper(Generic[T]):
             b = Int32()
 
         data = await SomeView.query().features_for({
-            "id": [1, 2, 3],
+            "id": [1, 2, 3]
         }).to_pandas()
         ```
 
@@ -436,6 +465,16 @@ class FeatureViewWrapper(Generic[T]):
         store = ContractStore.experimental()
         store.add_compiled_view(self.compile())
         return store.feature_view(self.metadata.name)
+
+    async def materialize_all(self) -> None:
+        """
+        Loads all the data from source, and writes it to the materialized source
+        """
+        if not self.metadata.materialized_source:
+            return
+
+        store = self.query()
+        await store.overwrite(store.using_source(self.metadata.source).all())
 
     def process_input(self, data: ConvertableToRetrivalJob) -> RetrivalJob:
         return self.query().process_input(data)
@@ -725,11 +764,9 @@ class FeatureView(ABC):
                 view.features.add(compiled_feature)
 
         loc = FeatureLocation.feature_view(view.name)
-        aggregation_group_by = [FeatureReference(entity.name, loc, entity.dtype) for entity in view.entities]
+        aggregation_group_by = [FeatureReference(entity.name, loc) for entity in view.entities]
         event_timestamp_ref = (
-            FeatureReference(view.event_timestamp.name, loc, view.event_timestamp.dtype)
-            if view.event_timestamp
-            else None
+            FeatureReference(view.event_timestamp.name, loc) if view.event_timestamp else None
         )
 
         for aggr in aggregations:

@@ -4,7 +4,8 @@ from aligned import ExposedModel, model_contract, String, Int32, EventTimestamp,
 from aligned.feature_store import ContractStore
 from aligned.sources.in_mem_source import InMemorySource
 from aligned.sources.random_source import RandomDataSource
-from aligned.exposed_model.interface import python_function
+from aligned.exposed_model.interface import partitioned_on, python_function
+import polars as pl
 
 
 @pytest.mark.asyncio
@@ -279,9 +280,9 @@ async def test_if_is_missing() -> None:
         model_version = String().as_model_version()
 
     store = ContractStore.empty()
-    store.add_view(InputFeatureView)
-    store.add_model(MyModelContract)
-    store.add_model(MyModelContract2)
+    store.add(InputFeatureView)
+    store.add(MyModelContract)
+    store.add(MyModelContract2)
 
     predict_when_missing = store.predict_when_missing()
     preds = (
@@ -295,3 +296,52 @@ async def test_if_is_missing() -> None:
     )
     assert preds['other_pred'].null_count() == 0
     assert preds['prediction'].null_count() == 0
+
+
+@pytest.mark.asyncio
+async def test_partitioned_model() -> None:
+    @feature_view(
+        name='input',
+        source=FileSource.parquet_at('non-existing-data'),
+    )
+    class InputFeatureView:
+        entity_id = String().as_entity()
+        x = Int32()
+        other = Int32()
+
+    input = InputFeatureView()
+
+    @model_contract(
+        input_features=[InputFeatureView().x], exposed_model=python_function(lambda df: df['x'] * 2)
+    )
+    class MyModelContract:
+        entity_id = String().as_entity()
+
+        prediction = input.x.as_regression_target()
+
+    @model_contract(
+        input_features=[InputFeatureView().x, MyModelContract().prediction],
+        exposed_model=partitioned_on(
+            'key',
+            partitions={
+                'a': python_function(lambda df: df['x'] * 2 + df['prediction']),
+                'b': python_function(lambda df: df['x'] + df['prediction'] * 2),
+            },
+            default_partition='a',
+        ),
+    )
+    class MyModelContract2:
+        entity_id = String().as_entity()
+        key = String()
+
+        other_pred = input.other.as_regression_target()
+
+    inputs = {'key': ['a', 'a', 'b', 'b', 'c'], 'x': [1, 2, 1, 2, 2], 'entity_id': ['a', 'b', 'c', 'd', 'e']}
+    expected_output = [4, 8, 5, 10, 8]
+
+    preds = await MyModelContract2.predict_over(
+        inputs, needed_views=[InputFeatureView, MyModelContract]
+    ).to_polars()
+
+    assert preds.sort('entity_id', descending=False)['other_pred'].equals(pl.Series(expected_output))
+    assert 'key' in preds

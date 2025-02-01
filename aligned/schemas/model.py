@@ -200,7 +200,7 @@ class PredictionsView(Codable):
         elif self.recommendation_targets:
             return {feature.estimating for feature in self.recommendation_targets}
         else:
-            raise ValueError('Found no targets in the model')
+            return set()
 
     def labels(self) -> set[Feature]:
         if self.classification_targets:
@@ -210,7 +210,7 @@ class PredictionsView(Codable):
         elif self.recommendation_targets:
             return {feature.feature for feature in self.recommendation_targets}
         else:
-            raise ValueError('Found no targets in the model')
+            return set()
 
 
 @dataclass

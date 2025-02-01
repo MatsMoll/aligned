@@ -561,9 +561,7 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
             dtype=transformation.dtype,
             transformation=transformation,
             depending_on={
-                FeatureReference(
-                    feat, FeatureLocation.model(metadata.name), dtype=FeatureType.floating_point()
-                )
+                FeatureReference(feat, FeatureLocation.model(metadata.name))
                 for feat in transformation.column_mappings.keys()
             },
             depth=1,

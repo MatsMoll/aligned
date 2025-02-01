@@ -6,6 +6,7 @@ from io import BytesIO
 import polars as pl
 from httpx import HTTPStatusError
 
+from aligned.config_value import ConfigValue
 from aligned.lazy_imports import pandas as pd
 from aligned.data_source.batch_data_source import CodableBatchDataSource, ColumnFeatureMappable
 from aligned.exceptions import UnableToFindFileException
@@ -81,11 +82,20 @@ class AwsS3Config(Codable):
             config=self, path=path, mapping_keys=mapping_keys or {}, parquet_config=config or ParquetConfig()
         )
 
-    def sub_directory(self, path: str) -> 'AwsS3Directory':
+    def sub_directory(self, path: str | ConfigValue) -> 'AwsS3Directory':
+        assert isinstance(path, str)
         return AwsS3Directory(config=self, path=path)
 
-    def directory(self, path: str) -> 'AwsS3Directory':
+    def directory(self, path: str | ConfigValue) -> 'AwsS3Directory':
         return self.sub_directory(path)
+
+    def with_schema_version(self, sub_directory: str | ConfigValue | None = None) -> Directory:
+        raise NotImplementedError(type(self))
+
+    def delta_at(
+        self, path: str, mapping_keys: dict[str, str] | None = None, config: DeltaFileConfig | None = None
+    ) -> CodableBatchDataSource:
+        raise NotImplementedError(type(self))
 
     @property
     def storage(self) -> Storage:
@@ -112,7 +122,11 @@ class AwsS3Directory(Directory):
         )
 
     def parquet_at(
-        self, path: str, mapping_keys: dict[str, str] | None = None, config: ParquetConfig | None = None
+        self,
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        config: ParquetConfig | None = None,
+        date_formatter: DateFormatter | None = None,
     ) -> 'AwsS3ParquetDataSource':
         return AwsS3ParquetDataSource(
             config=self.config,
@@ -131,16 +145,19 @@ class AwsS3Directory(Directory):
     ) -> PartitionedParquetFileSource:
         raise NotImplementedError(type(self))
 
+    def sub_directory(self, path: str | ConfigValue) -> 'AwsS3Directory':
+        return AwsS3Directory(config=self.config, path=f'{self.path}/{path}')
+
+    def directory(self, path: str | ConfigValue) -> 'AwsS3Directory':
+        return self.sub_directory(path)
+
+    def with_schema_version(self, sub_directory: str | ConfigValue | None = None) -> Directory:
+        raise NotImplementedError(type(self))
+
     def delta_at(
         self, path: str, mapping_keys: dict[str, str] | None = None, config: DeltaFileConfig | None = None
     ) -> CodableBatchDataSource:
         raise NotImplementedError(type(self))
-
-    def sub_directory(self, path: str) -> 'AwsS3Directory':
-        return AwsS3Directory(config=self.config, path=f'{self.path}/{path}')
-
-    def directory(self, path: str) -> 'AwsS3Directory':
-        return self.sub_directory(path)
 
 
 @dataclass

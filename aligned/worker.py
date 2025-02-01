@@ -6,8 +6,6 @@ from dataclasses import dataclass, field
 
 from typing import TYPE_CHECKING
 
-from prometheus_client import Counter, Histogram
-
 from aligned.data_source.batch_data_source import ColumnFeatureMappable
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.feature_source import WritableFeatureSource
@@ -20,13 +18,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 logger = logging.getLogger(__name__)
-
-processed_rows_count = Counter(
-    name='aligned_processed_rows', documentation='Number of processed rows', labelnames=['feature_view']
-)
-process_time = Histogram(
-    'aligned_process_time', documentation='Time used to process the records', labelnames=['feature_view']
-)
 
 # Very experimental, so can contain a lot of bugs
 
@@ -148,8 +139,6 @@ class StreamWorker:
         return feature_views
 
     async def start(self) -> None:
-        from prometheus_client import start_http_server
-
         assert isinstance(self.sink_source, FeatureSourceable)
 
         store = await self.repo_definition.feature_store()
@@ -166,9 +155,6 @@ class StreamWorker:
                 self.read_timestamps.get(topic_name, self.default_start_timestamp)
             )
             processes.append(process(stream_consumer, topic_name, process_views))
-
-        if self.metric_logging_port:
-            start_http_server(self.metric_logging_port)
 
         if len(processes) == 0:
             raise ValueError('No processes to start')
@@ -212,10 +198,8 @@ def stream_job(values: list[dict], feature_view: FeatureViewStore) -> RetrivalJo
 
 
 async def monitor_process(values: list[dict], view: FeatureViewStore):
-    job = stream_job(values, view).monitor_time_used(process_time, labels=[view.view.name])
+    job = stream_job(values, view).monitor_time_used(print)
     await view.batch_write(job)
-    record_count = len(values)
-    processed_rows_count.labels(view.view.name).inc(record_count)
 
 
 async def multi_processing(

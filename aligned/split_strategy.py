@@ -36,19 +36,19 @@ class SupervisedDataSet(Generic[DatasetType]):
     @property
     def entities(self) -> DatasetType:
         if isinstance(self.data, (pl.LazyFrame, pl.DataFrame)):
-            return self.data.select(list(self.entity_columns))
+            return self.data.select(list(self.entity_columns))  # type: ignore
         return self.data[list(self.entity_columns)]  # type: ignore
 
     @property
     def input(self) -> DatasetType:
         if isinstance(self.data, (pl.LazyFrame, pl.DataFrame)):
-            return self.data.select(self.sorted_features)
+            return self.data.select(self.sorted_features)  # type: ignore
         return self.data[self.sorted_features]  # type: ignore
 
     @property
     def labels(self) -> DatasetType:
         if isinstance(self.data, (pl.LazyFrame, pl.DataFrame)):
-            return self.data.select(list(self.target_columns))
+            return self.data.select(list(self.target_columns))  # type: ignore
         return self.data[list(self.target_columns)]  # type: ignore
 
 
@@ -92,13 +92,13 @@ class TrainTestValidateSet(Generic[DatasetType]):
     @property
     def input(self) -> DatasetType:
         if isinstance(self.data, pl.LazyFrame):
-            return self.data.select(self.sorted_features)
+            return self.data.select(self.sorted_features)  # type: ignore
         return self.data[self.sorted_features]  # type: ignore
 
     @property
     def labels(self) -> DatasetType:
         if isinstance(self.data, pl.LazyFrame):
-            return self.data.select(sorted(self.target_columns))
+            return self.data.select(sorted(self.target_columns))  # type: ignore
         return self.data[sorted(self.target_columns)]  # type: ignore
 
     @property

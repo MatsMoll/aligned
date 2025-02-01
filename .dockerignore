@@ -1,15 +1,12 @@
+tests
+
 # Dont check-in database folder
 .pg/*
 .DS_STORE
 
-mlflow
 mlruns
-docs
-
-test_data/feature-store.json
-test_data/mlruns
-test_data/temp
-test_data
+.git
+.github
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

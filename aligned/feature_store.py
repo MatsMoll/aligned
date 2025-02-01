@@ -1,16 +1,17 @@
 from __future__ import annotations
 from copy import copy
 
+from aligned.compiler.feature_factory import FeatureReferencable
 import polars as pl
+from aligned.config_value import ConfigValue
+
 from aligned.lazy_imports import pandas as pd
 
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Union, TypeVar, Callable
-
-from prometheus_client import Histogram
+from typing import Iterable, Union, TypeVar, Callable
 
 from aligned.compiler.model import ModelContractWrapper
 from aligned.data_file import DataFileReference, upsert_on_column
@@ -19,7 +20,7 @@ from aligned.data_source.batch_data_source import (
     ColumnFeatureMappable,
     BatchDataSource,
 )
-from aligned.exceptions import UnableToFindFileException
+from aligned.exceptions import ConfigurationError, UnableToFindFileException
 from aligned.feature_source import (
     BatchFeatureSource,
     FeatureSource,
@@ -30,29 +31,23 @@ from aligned.feature_source import (
 from aligned.feature_view.feature_view import FeatureView, FeatureViewWrapper
 from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
 from aligned.retrival_job import (
-    PredictionJob,
     SelectColumnsJob,
     RetrivalJob,
     StreamAggregationJob,
-    SupervisedJob,
     ConvertableToRetrivalJob,
     CustomLazyPolarsJob,
 )
 from aligned.schemas.feature import FeatureLocation, Feature, FeatureReference
 from aligned.schemas.feature_view import CompiledFeatureView
-from aligned.schemas.folder import DatasetStore
 from aligned.schemas.model import EventTrigger
 from aligned.schemas.model import Model as ModelSchema
 from aligned.schemas.repo_definition import RepoDefinition, RepoMetadata
+from aligned.sources.local import StorageFileReference
 from aligned.sources.vector_index import VectorIndex
+from aligned.model_store import ModelFeatureStore
 
 logger = logging.getLogger(__name__)
 
-feature_view_write_time = Histogram(
-    'feature_view_write_time',
-    'The time used to write data related to a feature view',
-    labelnames=['feature_view'],
-)
 
 FeatureSourceable = Union[FeatureSource, FeatureSourceFactory, None]
 T = TypeVar('T')
@@ -131,14 +126,17 @@ class ContractStore:
         """
         Creates a feature store with no features or models.
 
-        ```python
-        store = ContractStore.empty()
+        Examples:
+            ```python
+            store = ContractStore.empty()
 
-        store.add_compiled_view(MyFeatureView.compile())
-        store.add_compiled_model(MyModel.compile())
+            store.add(MyFeatureView)
+            store.add(MyModel)
 
-        df = await store.execute_sql("SELECT * FROM my_view LIMIT 10").to_polars()
-        ```
+            df = await store.execute_sql("SELECT * FROM my_view LIMIT 10").to_polars()
+            ```
+        Returns:
+            ContractStore: An empty store with new views or models
         """
         return ContractStore.from_definition(
             RepoDefinition(
@@ -181,6 +179,17 @@ class ContractStore:
             store.add_compiled_model(model)
 
         return store
+
+    async def write_to(self, file: StorageFileReference) -> None:
+        repo_def = self.repo_definition()
+
+        data = repo_def.to_json(omit_none=True)
+        if isinstance(data, str):
+            data_bytes = data.encode('utf-8')
+        else:
+            data_bytes = data
+
+        await file.write(data_bytes)  # type: ignore
 
     def dummy_store(self) -> ContractStore:
         """
@@ -430,7 +439,7 @@ class ContractStore:
     def features_for(
         self,
         entities: ConvertableToRetrivalJob | RetrivalJob,
-        features: list[str] | list[FeatureReference],
+        features: list[str] | list[FeatureReference] | list[FeatureReferencable],
         event_timestamp_column: str | None = None,
         model_version_as_entity: bool | None = None,
     ) -> RetrivalJob:
@@ -451,7 +460,12 @@ class ContractStore:
             RetrivalJob: A job that knows how to fetch the features
         """
         assert features, 'One or more features are needed'
-        raw_features = {feat.identifier if isinstance(feat, FeatureReference) else feat for feat in features}
+        raw_features = {
+            feat.identifier
+            if isinstance(feat, FeatureReference)
+            else (feat.feature_reference().identifier if isinstance(feat, FeatureReferencable) else feat)
+            for feat in features
+        }
         feature_request = RawStringFeatureRequest(features=raw_features)
         requests = self.requests_for(feature_request, event_timestamp_column, model_version_as_entity)
 
@@ -493,6 +507,42 @@ class ContractStore:
 
         new_request = FeatureRequest(requests.location, requests.features_to_include, loaded_requests)
         return self.features_for_request(new_request, entities, feature_names).inject_store(self)
+
+    def needed_configs_for(self, location: FeatureLocation) -> list[ConfigValue]:
+        if location.location_type == 'feature_view':
+            source = self.source_for(location)
+            if source:
+                return source.needed_configs()
+            else:
+                return []
+        elif location.location_type == 'model':
+
+            model_store = self.model(location.name)
+            model = model_store.model
+
+            model_source = self.source_for(location)
+            configs = model_source.needed_configs() if model_source else []
+
+            if model.exposed_model:
+                configs.extend(model.exposed_model.needed_configs())
+
+            for loc in model_store.depends_on():
+                source = self.source_for(loc)
+                configs.extend(model_source.needed_configs() if model_source else [])
+            return configs
+        return []
+
+    def raise_on_missing_config_for(self, location: FeatureLocation) -> None:
+        missing_configs = []
+        for config in self.needed_configs_for(location):
+            try:
+                _ = config.read()
+            except ValueError as error:
+                missing_configs.append(error)
+
+        if missing_configs:
+            missing_config_error = '- ' + '\n- '.join([str(config) for config in missing_configs])
+            raise ConfigurationError(missing_config_error)
 
     def model(self, model: str | ModelContractWrapper) -> ModelFeatureStore:
         """
@@ -653,16 +703,17 @@ class ContractStore:
         """
         Compiles and adds the feature view to the store
 
-        ```python
-        @feature_view(...)
-        class MyFeatureView:
+        Examples:
+            ```python
+            @feature_view(...)
+            class MyFeatureView:
 
-            id = Int32().as_entity()
+                id = Int32().as_entity()
 
-            my_feature = String()
+                my_feature = String()
 
-        store.add_compiled_view(MyFeatureView.compile())
-        ```
+            store.add_compiled_view(MyFeatureView.compile())
+            ```
 
         Args:
             view (CompiledFeatureView): The feature view to add
@@ -673,16 +724,17 @@ class ContractStore:
         """
         Compiles and adds the feature view to the store
 
-        ```python
-        @feature_view(...)
-        class MyFeatureView:
+        Examples:
+            ```python
+            @feature_view(...)
+            class MyFeatureView:
 
-            id = Int32().as_entity()
+                id = Int32().as_entity()
 
-            my_feature = String()
+                my_feature = String()
 
-        store.add_compiled_view(MyFeatureView.compile())
-        ```
+            store.add_compiled_view(MyFeatureView.compile())
+            ```
 
         Args:
             view (CompiledFeatureView): The feature view to add
@@ -692,7 +744,7 @@ class ContractStore:
 
         if isinstance(view.source, VectorIndex):
             index_name = view.source.vector_index_name() or view.name
-            self.vector_indexes[index_name] = view
+            self.vector_indexes[index_name] = view  # type: ignore
 
         self.feature_views[view.name] = view
         if isinstance(self.feature_source, BatchFeatureSource):
@@ -733,17 +785,18 @@ class ContractStore:
         """
         Adds a feature view or a model contract
 
-        ```python
-        @feature_view(...)
-        class MyFeatures:
-            feature_id = String().as_entity()
-            feature = Int32()
-
-        store.add(MyFeatures)
-        ```
-
         Args:
             contract (FeatureViewWrapper | ModelContractWrappe): The contract to add
+
+        Examples:
+            ```python
+            @feature_view(...)
+            class MyFeatures:
+                feature_id = String().as_entity()
+                feature = Int32()
+
+            store.add(MyFeatures)
+            ```
         """
         if isinstance(contract, FeatureViewWrapper):
             self.add_feature_view(contract)
@@ -1030,652 +1083,11 @@ class ContractStore:
         else:
             raise ValueError(f'The source {type(source)} do not support writes')
 
+    def needed_entities_for(self, features: list[FeatureReference]) -> set[Feature]:
+        return self.requests_for_features(features).entities()
+
 
 FeatureStore = ContractStore
-
-
-@dataclass
-class ModelFeatureStore:
-
-    model: ModelSchema
-    store: ContractStore
-    selected_version: str | None = None
-
-    @property
-    def location(self) -> FeatureLocation:
-        return FeatureLocation.model(self.model.name)
-
-    @property
-    def dataset_store(self) -> DatasetStore | None:
-        return self.model.dataset_store
-
-    def has_one_source_for_input_features(self) -> bool:
-        """
-        If the input features are from the same source.
-
-        This can be interesting to know in order to automatically predict over
-        the input.
-        E.g. predict over all data in the source.
-        """
-        version = self.selected_version or self.model.features.default_version
-        features = self.model.features.features_for(version)
-        locations = {feature.location for feature in features}
-        return len(locations) == 1
-
-    def raw_string_features(self, except_features: set[str]) -> set[str]:
-
-        version = self.selected_version or self.model.features.default_version
-        features = self.model.features.features_for(version)
-
-        return {
-            f'{feature.location.identifier}:{feature.name}'
-            for feature in features
-            if feature.name not in except_features
-        }
-
-    def using_version(self, version: str) -> ModelFeatureStore:
-        return ModelFeatureStore(self.model, self.store, version)
-
-    def request(
-        self, except_features: set[str] | None = None, event_timestamp_column: str | None = None
-    ) -> FeatureRequest:
-        return self.input_request(except_features, event_timestamp_column)
-
-    def input_request(
-        self, except_features: set[str] | None = None, event_timestamp_column: str | None = None
-    ) -> FeatureRequest:
-        feature_refs = self.raw_string_features(except_features or set())
-        if not feature_refs:
-            raise ValueError(f"No features to request for model '{self.model.name}'")
-
-        return self.store.requests_for(
-            RawStringFeatureRequest(feature_refs),
-            event_timestamp_column,
-        )
-
-    def prediction_request(
-        self, exclude_features: set[str] | None = None, model_version_as_entity: bool = False
-    ) -> RetrivalRequest:
-        if not self.model.predictions_view:
-            raise ValueError(f'Model {self.model.name} has no predictions view')
-
-        if exclude_features is None:
-            exclude_features = set()
-
-        features = {
-            feature.name
-            for feature in self.model.predictions_view.full_schema
-            if feature.name not in exclude_features
-        }
-
-        return self.model.predictions_view.request_for(
-            features, self.model.name, model_version_as_entity=model_version_as_entity
-        )
-
-    def needed_entities(self) -> set[Feature]:
-        return self.request().request_result.entities
-
-    def feature_references_for(self, version: str) -> list[FeatureReference]:
-        return self.model.features.features_for(version)
-
-    def has_exposed_model(self) -> bool:
-        return self.model.exposed_model is not None
-
-    def predict_over(
-        self,
-        entities: ConvertableToRetrivalJob | RetrivalJob,
-    ) -> PredictionJob:
-        predictor = self.model.exposed_model
-        if not predictor:
-            raise ValueError(
-                f'Model {self.model.name} has no predictor set. '
-                'This can be done by setting the `exposed_at` value'
-            )
-
-        returned_request = self.request().needed_requests
-
-        if not isinstance(entities, RetrivalJob):
-            entities = RetrivalJob.from_convertable(entities, returned_request)
-
-        return PredictionJob(entities, self.model, self.store, returned_request)
-
-    def features_for(
-        self, entities: ConvertableToRetrivalJob | RetrivalJob, event_timestamp_column: str | None = None
-    ) -> RetrivalJob:
-        """Returns the features for the given entities
-
-        ```python
-        store = await FileSource.json_at("features-latest.json").feature_store()
-
-        df = store.model("titanic")\\
-            .features_for({"passenger_id": [1, 2, 3]})\\
-            .to_polars()
-
-        print(df.collect())
-        >>> ┌──────────────┬───────┬─────────┬─────────────────────┬──────────────┐
-        >>> │ passenger_id ┆ is_mr ┆ is_male ┆ constant_filled_age ┆ has_siblings │
-        >>> │ ---          ┆ ---   ┆ ---     ┆ ---                 ┆ ---          │
-        >>> │ i32          ┆ bool  ┆ bool    ┆ f64                 ┆ bool         │
-        >>> ╞══════════════╪═══════╪═════════╪═════════════════════╪══════════════╡
-        >>> │ 1            ┆ true  ┆ true    ┆ 22.0                ┆ true         │
-        >>> │ 2            ┆ false ┆ false   ┆ 38.0                ┆ true         │
-        >>> │ 3            ┆ false ┆ false   ┆ 26.0                ┆ false        │
-        >>> └──────────────┴───────┴─────────┴─────────────────────┴──────────────┘
-        ```
-
-        Args:
-            entities (dict[str, list] | RetrivalJob): The entities to fetch features for
-
-        Returns:
-            RetrivalJob: A retrival job that can be used to fetch the features
-        """
-        request = self.request(event_timestamp_column=event_timestamp_column)
-        if isinstance(entities, dict):
-            features = self.raw_string_features(set(entities.keys()))
-        else:
-            features = self.raw_string_features(set())
-
-        job = None
-
-        if isinstance(entities, (dict, pl.DataFrame, pd.DataFrame)):
-
-            existing_keys = set()
-            if isinstance(entities, dict):
-                existing_keys = set(entities.keys())
-            elif isinstance(entities, (pl.DataFrame, pd.DataFrame)):
-                existing_keys = set(entities.columns)
-
-            subset_request = self.request(existing_keys, event_timestamp_column)
-
-            needs_core_features = False
-
-            for req in subset_request.needed_requests:
-                missing_keys = set(req.feature_names) - existing_keys
-                if missing_keys:
-                    needs_core_features = True
-                    break
-
-            if not needs_core_features:
-                job = (
-                    RetrivalJob.from_convertable(entities, request)
-                    .derive_features(request.needed_requests)
-                    .inject_store(self.store)
-                )
-
-        if job is None:
-            job = self.store.features_for(
-                entities, list(features), event_timestamp_column=event_timestamp_column
-            )
-
-        return job
-
-    async def freshness(self) -> dict[FeatureLocation, datetime | None]:
-        return await self.input_freshness()
-
-    async def input_freshness(self) -> dict[FeatureLocation, datetime | None]:
-        locs: dict[FeatureLocation, Feature] = {}
-
-        other_locs: set[FeatureLocation] = set()
-
-        for req in self.request().needed_requests:
-            if req.event_timestamp:
-                locs[req.location] = req.event_timestamp.as_feature()
-
-            for feature in req.derived_features:
-                if feature.loads_feature:
-                    other_locs.add(feature.loads_feature.location)
-
-        if self.model.exposed_model:
-            other_locs.update(await self.model.exposed_model.depends_on())
-
-        for loc in other_locs:
-            if loc in locs:
-                continue
-
-            if loc.location_type == 'model':
-                event_timestamp = (
-                    self.store.model(loc.name).model.predictions_view.as_view(loc.name).freshness_feature
-                )
-            else:
-                event_timestamp = self.store.feature_view(loc.name).view.freshness_feature
-
-            if event_timestamp:
-                locs[loc] = event_timestamp
-
-        return await self.store.feature_source.freshness_for(locs)
-
-    async def prediction_freshness(self) -> datetime | None:
-        feature = (
-            self.store.model(self.model.name)
-            .model.predictions_view.as_view(self.model.name)
-            .freshness_feature
-        )
-        if not feature:
-            return None
-        freshness = await self.store.feature_source.freshness_for({self.location: feature})
-        return freshness[self.location]
-
-    def with_labels(self, label_refs: set[FeatureReference] | None = None) -> SupervisedModelFeatureStore:
-        """Will also load the labels for the model
-
-        ```python
-        store = await FileSource.json_at("features-latest.json").feature_store()
-
-        data = store.model("titanic")\\
-            .with_labels()\\
-            .features_for({"passenger_id": [1, 2, 3]})\\
-            .to_polars()
-
-        print(data.labels.collect(), data.input.collect())
-        >>> ┌──────────┐ ┌───────┬─────────┬─────────────────────┬──────────────┐
-        >>> │ survived │ │ is_mr ┆ is_male ┆ constant_filled_age ┆ has_siblings │
-        >>> │ ---      │ │ ---   ┆ ---     ┆ ---                 ┆ ---          │
-        >>> │ bool     │ │ bool  ┆ bool    ┆ f64                 ┆ bool         │
-        >>> ╞══════════╡ ╞═══════╪═════════╪═════════════════════╪══════════════╡
-        >>> │ false    │ │ true  ┆ true    ┆ 22.0                ┆ true         │
-        >>> │ true     │ │ false ┆ false   ┆ 38.0                ┆ true         │
-        >>> │ true     │ │ false ┆ false   ┆ 26.0                ┆ false        │
-        >>> └──────────┘ └───────┴─────────┴─────────────────────┴──────────────┘
-        ```
-
-        Returns:
-            SupervisedModelFeatureStore: A new queryable feature store
-        """
-        return SupervisedModelFeatureStore(
-            self.model,
-            self.store,
-            label_refs or self.model.predictions_view.labels_estimates_refs(),
-            self.selected_version,
-        )
-
-    def cached_at(self, location: DataFileReference) -> RetrivalJob:
-        """Loads the model features from a pre computed location
-
-        ```python
-        from aligned import FileSource
-
-        store = await FileSource.json_at("features-latest.json").feature_store()
-
-        cached_features = FileSource.parquet_at("titanic_features.parquet")
-
-        df = store.model("titanic")\\
-            .cached_at(cached_features)\\
-            .to_polars()
-
-        print(df.collect())
-        >>> ┌──────────────┬───────┬─────────┬─────────────────────┬──────────────┐
-        >>> │ passenger_id ┆ is_mr ┆ is_male ┆ constant_filled_age ┆ has_siblings │
-        >>> │ ---          ┆ ---   ┆ ---     ┆ ---                 ┆ ---          │
-        >>> │ i32          ┆ bool  ┆ bool    ┆ f64                 ┆ bool         │
-        >>> ╞══════════════╪═══════╪═════════╪═════════════════════╪══════════════╡
-        >>> │ 1            ┆ true  ┆ true    ┆ 22.0                ┆ true         │
-        >>> │ 2            ┆ false ┆ false   ┆ 38.0                ┆ true         │
-        >>> │ 3            ┆ false ┆ false   ┆ 26.0                ┆ false        │
-        >>> └──────────────┴───────┴─────────┴─────────────────────┴──────────────┘
-        ```
-
-        Args:
-            location (DataFileReference): _description_
-
-        Returns:
-            RetrivalJob: _description_
-        """
-        from aligned.local.job import FileFullJob
-
-        references = self.model.feature_references(self.selected_version)
-        features = {f'{feature.location.identifier}:{feature.name}' for feature in references}
-        request = self.store.requests_for(RawStringFeatureRequest(features))
-
-        return FileFullJob(location, RetrivalRequest.unsafe_combine(request.needed_requests)).select_columns(
-            request.features_to_include
-        )
-
-    def process_features(self, input: RetrivalJob | ConvertableToRetrivalJob) -> RetrivalJob:
-        request = self.request()
-
-        if isinstance(input, RetrivalJob):
-            job = input.select_columns(request.features_to_include)
-        else:
-            job = RetrivalJob.from_convertable(input, request=request.needed_requests)
-
-        return (
-            job.ensure_types(request.needed_requests)
-            .derive_features(request.needed_requests)
-            .select_columns(request.features_to_include)
-        )
-
-    def predictions_for(
-        self,
-        entities: ConvertableToRetrivalJob | RetrivalJob,
-        event_timestamp_column: str | None = None,
-        model_version_as_entity: bool | None = None,
-    ) -> RetrivalJob:
-
-        location_id = self.location.identifier
-        return self.store.features_for(
-            entities,
-            features=[f'{location_id}:*'],
-            event_timestamp_column=event_timestamp_column,
-            model_version_as_entity=model_version_as_entity,
-        )
-
-    def predictions_between(self, start_date: datetime, end_date: datetime) -> RetrivalJob:
-
-        selected_source = self.store.feature_source
-
-        if not isinstance(selected_source, BatchFeatureSource):
-            raise ValueError(
-                f'Unable to load all predictions for selected feature source {type(selected_source)}'
-            )
-
-        location = FeatureLocation.model(self.model.name)
-        if location.identifier not in selected_source.sources:
-            raise ValueError(
-                f'Unable to find source for {location.identifier}. Either set through a `prediction_source`'
-                'in the model contract, or use the `using_source` method on the store object.'
-            )
-
-        source = selected_source.sources[location.identifier]
-        request = self.model.predictions_view.request(self.model.name)
-
-        return source.all_between_dates(request, start_date, end_date).select_columns(
-            set(request.all_returned_columns)
-        )
-
-    def all_predictions(self, limit: int | None = None) -> RetrivalJob:
-
-        selected_source = self.store.feature_source
-
-        if not isinstance(selected_source, BatchFeatureSource):
-            raise ValueError(
-                f'Unable to load all predictions for selected feature source {type(selected_source)}'
-            )
-
-        location = FeatureLocation.model(self.model.name)
-        if location.identifier not in selected_source.sources:
-            raise ValueError(
-                f'Unable to find source for {location.identifier}. Either set through a `prediction_source`'
-                'in the model contract, or use the `using_source` method on the store object.'
-            )
-
-        source = selected_source.sources[location.identifier]
-        request = self.model.predictions_view.request(self.model.name)
-
-        return (
-            source.all_data(request, limit=limit)
-            .inject_store(self.store)
-            .select_columns(set(request.all_returned_columns))
-        )
-
-    def using_source(self, source: FeatureSourceable | BatchDataSource) -> ModelFeatureStore:
-
-        model_source: FeatureSourceable
-
-        if isinstance(source, BatchDataSource):
-            model_source = BatchFeatureSource({FeatureLocation.model(self.model.name).identifier: source})
-        else:
-            model_source = source
-
-        return ModelFeatureStore(self.model, self.store.with_source(model_source))
-
-    def depends_on(self) -> set[FeatureLocation]:
-        """
-        Returns the views and models that the model depend on to compute it's output.
-
-        ```python
-        @feature_view(name="passenger", ...)
-        class Passenger:
-            passenger_id = Int32().as_entity()
-
-            age = Float()
-
-        @feature_view(name="location", ...)
-        class Location:
-            location_id = String().as_entity()
-
-            location_area = Float()
-
-
-        @model_contract(name="some_model", ...)
-        class SomeModel:
-            some_id = String().as_entity()
-
-            some_computed_metric = Int32()
-
-        @model_contract(
-            name="new_model",
-            features=[
-                Passenger().age,
-                Location().location_area,
-                SomeModel().some_computed_metric
-            ]
-        )
-        class NewModel:
-            ...
-
-        print(store.model("new_model").depends_on())
-        >>> {
-        >>>     FeatureLocation(location="feature_view", name="passenger"),
-        >>>     FeatureLocation(location="feature_view", name="location"),
-        >>>     FeatureLocation(location="model", name="some_model")
-        >>> }
-
-        ```
-        """
-        locs = {req.location for req in self.request().needed_requests}
-        label_refs = self.model.predictions_view.labels_estimates_refs()
-        if label_refs:
-            for ref in label_refs:
-                locs.add(ref.location)
-        return locs
-
-    async def upsert_predictions(self, predictions: ConvertableToRetrivalJob | RetrivalJob) -> None:
-        """
-        Upserts data to a source defined as a prediction source
-
-        ```python
-        @model_contract(
-            name="taxi_eta",
-            features=[...]
-            predictions_source=FileSource.parquet_at("predictions.parquet")
-        )
-        class TaxiEta:
-            trip_id = Int32().as_entity()
-
-            duration = Int32()
-
-        ...
-
-        store = FeatureStore.from_dir(".")
-
-        await store.model("taxi_eta").upsert_predictions({
-            "trip_id": [1, 2, 3, ...],
-            "duration": [20, 33, 42, ...]
-        })
-        ```
-        """
-        await self.store.upsert_into(FeatureLocation.model(self.model.name), predictions)
-
-    async def insert_predictions(self, predictions: ConvertableToRetrivalJob | RetrivalJob) -> None:
-        """
-        Writes data to a source defined as a prediction source
-
-        ```python
-        @model_contract(
-            name="taxi_eta",
-            features=[...]
-            predictions_source=FileSource.parquet_at("predictions.parquet")
-        )
-        class TaxiEta:
-            trip_id = Int32().as_entity()
-
-            duration = Int32()
-
-        ...
-
-        store = FeatureStore.from_dir(".")
-
-        await store.model("taxi_eta").insert_predictions({
-            "trip_id": [1, 2, 3, ...],
-            "duration": [20, 33, 42, ...]
-        })
-        ```
-        """
-        await self.store.insert_into(FeatureLocation.model(self.model.name), predictions)
-
-
-@dataclass
-class SupervisedModelFeatureStore:
-
-    model: ModelSchema
-    store: ContractStore
-    labels_estimates_refs: set[FeatureReference]
-
-    selected_version: str | None = None
-
-    def features_for(
-        self,
-        entities: ConvertableToRetrivalJob | RetrivalJob,
-        event_timestamp_column: str | None = None,
-        target_event_timestamp_column: str | None = None,
-    ) -> SupervisedJob:
-        """Loads the features and labels for a model
-
-        ```python
-        store = await FileSource.json_at("features-latest.json").feature_store()
-
-        data = store.model("titanic")\\
-            .with_labels()\\
-            .features_for({"passenger_id": [1, 2, 3]})\\
-            .to_polars()
-
-        print(data.labels.collect(), data.input.collect())
-        >>> ┌──────────┐ ┌───────┬─────────┬─────────────────────┬──────────────┐
-        >>> │ survived │ │ is_mr ┆ is_male ┆ constant_filled_age ┆ has_siblings │
-        >>> │ ---      │ │ ---   ┆ ---     ┆ ---                 ┆ ---          │
-        >>> │ bool     │ │ bool  ┆ bool    ┆ f64                 ┆ bool         │
-        >>> ╞══════════╡ ╞═══════╪═════════╪═════════════════════╪══════════════╡
-        >>> │ false    │ │ true  ┆ true    ┆ 22.0                ┆ true         │
-        >>> │ true     │ │ false ┆ false   ┆ 38.0                ┆ true         │
-        >>> │ true     │ │ false ┆ false   ┆ 26.0                ┆ false        │
-        >>> └──────────┘ └───────┴─────────┴─────────────────────┴──────────────┘
-        ```
-
-        Args:
-            entities (dict[str, list] | RetrivalJob): A dictionary of entity names to lists of entity values
-
-        Returns:
-            SupervisedJob: A object that will load the features and lables in your desired format
-        """
-        feature_refs = self.model.feature_references(self.selected_version)
-        features = {f'{feature.location.identifier}:{feature.name}' for feature in feature_refs}
-        pred_view = self.model.predictions_view
-
-        target_feature_refs = self.labels_estimates_refs
-        target_features = {feature.identifier for feature in target_feature_refs}
-
-        targets = set()
-        if pred_view.classification_targets:
-            targets = {feature.estimating.name for feature in pred_view.classification_targets}
-        elif pred_view.regression_targets:
-            targets = {feature.estimating.name for feature in pred_view.regression_targets}
-        else:
-            raise ValueError('Found no targets in the model')
-
-        if event_timestamp_column == target_event_timestamp_column:
-            request = self.store.requests_for(
-                RawStringFeatureRequest(features.union(target_features)),
-                event_timestamp_column=event_timestamp_column,
-            )
-            job = self.store.features_for_request(request, entities, request.features_to_include)
-            return SupervisedJob(
-                job.select_columns(request.features_to_include),
-                target_columns=targets,
-            )
-
-        request = self.store.requests_for(
-            RawStringFeatureRequest(features), event_timestamp_column=event_timestamp_column
-        )
-        target_request = self.store.requests_for(
-            RawStringFeatureRequest(target_features), event_timestamp_column=target_event_timestamp_column
-        ).with_sufix('target')
-
-        total_request = FeatureRequest(
-            FeatureLocation.model(self.model.name),
-            request.features_to_include.union(target_request.features_to_include),
-            request.needed_requests + target_request.needed_requests,
-        )
-        job = self.store.features_for_request(total_request, entities, total_request.features_to_include)
-        return SupervisedJob(
-            job.select_columns(total_request.features_to_include),
-            target_columns=targets,
-        )
-
-    def predictions_for(
-        self,
-        entities: ConvertableToRetrivalJob | RetrivalJob,
-        event_timestamp_column: str | None = None,
-        target_event_timestamp_column: str | None = None,
-    ) -> RetrivalJob:
-        """Loads the predictions and labels / ground truths for a model
-
-        ```python
-        entities = {
-            "trip_id": ["ea6b8d5d-62fd-4664-a112-4889ebfcdf2b", ...],
-            "vendor_id": [2, ...],
-        }
-        preds = await store.model("taxi")\\
-            .with_labels()\\
-            .predictions_for(entities)\\
-            .to_polars()
-
-        print(preds.collect())
-        >>> ┌──────────┬───────────┬────────────────────┬───────────────────────────────────┐
-        >>> │ duration ┆ vendor_id ┆ predicted_duration ┆ trip_id                           │
-        >>> │ ---      ┆ ---       ┆ ---                ┆ ---                               │
-        >>> │ i64      ┆ i32       ┆ i64                ┆ str                               │
-        >>> ╞══════════╪═══════════╪════════════════════╪═══════════════════════════════════╡
-        >>> │ 408      ┆ 2         ┆ 500                ┆ ea6b8d5d-62fd-4664-a112-4889ebfc… │
-        >>> │ 280      ┆ 1         ┆ 292                ┆ 64c4c94f-2a85-406f-86e6-082f1f7a… │
-        >>> │ 712      ┆ 4         ┆ 689                ┆ 3258461f-6113-4c5e-864b-75a0dee8… │
-        >>> └──────────┴───────────┴────────────────────┴───────────────────────────────────┘
-        ```
-
-        Args:
-            entities (dict[str, list] | RetrivalJob): A dictionary of entity names to lists of entity values
-
-        Returns:
-            RetrivalJob: A object that will load the features and lables in your desired format
-        """
-
-        pred_view = self.model.predictions_view
-        if pred_view.source is None:
-            raise ValueError(
-                'Model does not have a prediction source. '
-                'This can be set in the metadata for a model contract.'
-            )
-
-        request = pred_view.request(self.model.name)
-
-        target_features = pred_view.labels_estimates_refs()
-        target_features = {feature.identifier for feature in target_features}
-
-        labels = pred_view.labels()
-        pred_features = {f'model:{self.model.name}:{feature.name}' for feature in labels}
-        request = self.store.requests_for(
-            RawStringFeatureRequest(pred_features), event_timestamp_column=event_timestamp_column
-        )
-        target_request = self.store.requests_for(
-            RawStringFeatureRequest(target_features),
-            event_timestamp_column=target_event_timestamp_column,
-        ).with_sufix('target')
-
-        total_request = FeatureRequest(
-            FeatureLocation.model(self.model.name),
-            request.features_to_include.union(target_request.features_to_include),
-            request.needed_requests + target_request.needed_requests,
-        )
-        return self.store.features_for_request(total_request, entities, total_request.features_to_include)
 
 
 @dataclass
@@ -1808,15 +1220,18 @@ class FeatureViewStore:
             event_timestamp_column=event_timestamp_column,
         )
 
-    def select(self, features: set[str]) -> FeatureViewStore:
+    def select(self, features: Iterable[str]) -> FeatureViewStore:
         logger.info(f'Selecting features {features}')
-        return FeatureViewStore(self.store, self.view, self.event_triggers, features)
+        return FeatureViewStore(self.store, self.view, self.event_triggers, set(features))
 
     async def upsert(self, values: RetrivalJob | ConvertableToRetrivalJob) -> None:
         await self.store.upsert_into(FeatureLocation.feature_view(self.name), values)
 
     async def insert(self, values: RetrivalJob | ConvertableToRetrivalJob) -> None:
         await self.store.insert_into(FeatureLocation.feature_view(self.name), values)
+
+    async def overwrite(self, values: RetrivalJob | ConvertableToRetrivalJob) -> None:
+        await self.store.overwrite(FeatureLocation.feature_view(self.name), values)
 
     @property
     def write_input(self) -> set[str]:
@@ -1918,8 +1333,7 @@ class FeatureViewStore:
         #     logger.info(f'Only writing features used by models: {self.feature_filter}')
         #     job = job.filter(self.feature_filter)
 
-        with feature_view_write_time.labels(self.view.name).time():
-            await self.source.insert(job, job.retrival_requests[0])
+        await self.source.insert(job, job.retrival_requests[0])
 
     async def freshness(self) -> datetime | None:
 
@@ -1986,9 +1400,7 @@ class VectorIndexStore:
             features: RetrivalJob = model_store.predict_over(entities)
         else:
             # Assumes that we can lookup the embeddings from the source
-            feature_ref = FeatureReference(
-                embedding.name, FeatureLocation.model(self.model.name), dtype=embedding.dtype
-            )
+            feature_ref = FeatureReference(embedding.name, FeatureLocation.model(self.model.name))
             features: RetrivalJob = self.store.features_for(entities, features=[feature_ref.identifier])
 
         return source.nearest_n_to(features, number_of_records, response)

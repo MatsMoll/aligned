@@ -97,6 +97,7 @@ class LangChain(ExposedModel, StreamablePredictor):
     output_key: str
 
     depends_on_data: list[FeatureLocation] = field(default_factory=list)
+    model_type: str = 'langchain'
 
     @property
     def chain(self) -> LanguageModelLike:

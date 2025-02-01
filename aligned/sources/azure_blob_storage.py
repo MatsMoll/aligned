@@ -31,6 +31,7 @@ from aligned.sources.local import (
 from aligned.storage import Storage
 from httpx import HTTPStatusError
 from aligned.lazy_imports import pandas as pd
+from aligned.config_value import ConfigValue, EnvironmentValue, NothingValue, PathResolver, PlaceholderValue
 
 if TYPE_CHECKING:
     from azure.storage.blob import BlobServiceClient
@@ -51,11 +52,12 @@ def azure_container_blob(path: str) -> AzurePath:
 
 @dataclass
 class AzureBlobConfig(Directory):
-    account_id_env: str
-    tenant_id_env: str
-    client_id_env: str
-    client_secret_env: str
-    account_name_env: str
+
+    account_id: ConfigValue
+    tenant_id: ConfigValue
+    client_id: ConfigValue
+    client_secret: ConfigValue
+    account_name: ConfigValue
 
     @property
     def to_markdown(self) -> str:
@@ -65,18 +67,47 @@ You can choose between two ways of authenticating with Azure Blob Storage.
 
 1. Using Account Name and Account Key
 
-- Account Name Env: `{self.account_name_env}`
-- Account Id Env: `{self.account_id_env}`
+- Account Name: `{self.account_name}`
+- Account Id: `{self.account_id}`
 
 2. Using Tenant Id, Client Id and Client Secret
 
-- Tenant Id Env: `{self.tenant_id_env}`
-- Client Id Env: `{self.client_id_env}`
-- Client Secret Env: `{self.client_secret_env}`
+- Tenant Id: `{self.tenant_id}`
+- Client Id: `{self.client_id}`
+- Client Secret: `{self.client_secret}`
 """
 
+    @staticmethod
+    def from_account_id(account_id: str | ConfigValue, account_name: str | ConfigValue) -> AzureBlobConfig:
+        return AzureBlobConfig(
+            account_id=ConfigValue.from_value(account_id),
+            account_name=ConfigValue.from_value(account_name),
+            tenant_id=NothingValue(),
+            client_id=NothingValue(),
+            client_secret=NothingValue(),
+        )
+
+    @staticmethod
+    def from_tenant(
+        tenant_id: str | ConfigValue,
+        account_name: str | ConfigValue,
+        client_id: str | ConfigValue,
+        client_secret: str | ConfigValue,
+    ) -> AzureBlobConfig:
+        return AzureBlobConfig(
+            account_id=NothingValue(),
+            account_name=ConfigValue.from_value(account_name),
+            tenant_id=ConfigValue.from_value(tenant_id),
+            client_id=ConfigValue.from_value(client_id),
+            client_secret=ConfigValue.from_value(client_secret),
+        )
+
+    def needed_configs(self) -> list[ConfigValue]:
+        potential = [self.account_id, self.tenant_id, self.client_id, self.client_secret, self.account_name]
+        return [val for val in potential if isinstance(val, EnvironmentValue)]
+
     def json_at(self, path: str) -> StorageFileReference:
-        return AzureBlobDirectory(self, Path('')).json_at(path)
+        return AzureBlobDirectory(self, PathResolver.from_value('')).json_at(path)
 
     def parquet_at(
         self,
@@ -87,7 +118,7 @@ You can choose between two ways of authenticating with Azure Blob Storage.
     ) -> AzureBlobParquetDataSource:
         return AzureBlobParquetDataSource(
             self,
-            path,
+            PathResolver.from_value(path),
             mapping_keys=mapping_keys or {},
             parquet_config=config or ParquetConfig(),
             date_formatter=date_formatter or DateFormatter.noop(),
@@ -103,7 +134,7 @@ You can choose between two ways of authenticating with Azure Blob Storage.
     ) -> AzureBlobPartitionedParquetDataSource:
         return AzureBlobPartitionedParquetDataSource(
             self,
-            directory,
+            PathResolver.from_value(directory),
             partition_keys,
             mapping_keys=mapping_keys or {},
             parquet_config=config or ParquetConfig(),
@@ -119,7 +150,7 @@ You can choose between two ways of authenticating with Azure Blob Storage.
     ) -> AzureBlobCsvDataSource:
         return AzureBlobCsvDataSource(
             self,
-            path,
+            PathResolver.from_value(path),
             mapping_keys=mapping_keys or {},
             date_formatter=date_formatter or DateFormatter.unix_timestamp(),
             csv_config=csv_config or CsvConfig(),
@@ -134,15 +165,15 @@ You can choose between two ways of authenticating with Azure Blob Storage.
     ) -> AzureBlobDeltaDataSource:
         return AzureBlobDeltaDataSource(
             self,
-            path,
+            PathResolver.from_value(path),
             mapping_keys=mapping_keys or {},
             date_formatter=date_formatter or DateFormatter.unix_timestamp(),
         )
 
-    def directory(self, path: str) -> AzureBlobDirectory:
-        return AzureBlobDirectory(self, Path(path))
+    def directory(self, path: str | ConfigValue) -> AzureBlobDirectory:
+        return AzureBlobDirectory(self, PathResolver.from_value(path))
 
-    def sub_directory(self, path: str) -> Directory:
+    def sub_directory(self, path: str | ConfigValue) -> Directory:
         return self.directory(path)
 
     def client(self) -> BlobServiceClient:
@@ -166,25 +197,19 @@ You can choose between two ways of authenticating with Azure Blob Storage.
             return BlobServiceClient(account_url=account_url, credential=creds)
 
     def read_creds(self) -> dict[str, str]:
-        import os
-
-        account_name = os.environ[self.account_name_env]
-
-        if self.account_id_env in os.environ:
+        account_name = self.account_name.read()
+        try:
+            return {'account_name': account_name, 'account_key': self.account_id.read()}
+        except ValueError:
             return {
                 'account_name': account_name,
-                'account_key': os.environ[self.account_id_env],
-            }
-        else:
-            return {
-                'account_name': account_name,
-                'tenant_id': os.environ[self.tenant_id_env],
-                'client_id': os.environ[self.client_id_env],
-                'client_secret': os.environ[self.client_secret_env],
+                'tenant_id': self.tenant_id.read(),
+                'client_id': self.client_id.read(),
+                'client_secret': self.client_secret.read(),
             }
 
-    def with_schema_version(self, sub_directory: str | None = None) -> Directory:
-        return AzureBlobDirectory(self, Path('')).with_schema_version(sub_directory)
+    def with_schema_version(self, sub_directory: str | ConfigValue | None = None) -> Directory:
+        return AzureBlobDirectory(self, PathResolver.from_value('')).with_schema_version(sub_directory)
 
     @property
     def storage(self) -> BlobStorage:
@@ -200,14 +225,14 @@ class AzureConfigurable:
 class AzureBlobDirectory(Directory):
 
     config: AzureBlobConfig
-    sub_path: Path
+    components: PathResolver
 
     @classmethod
-    def schema_placeholder(cls) -> str:
-        return '{_schema_version_placeholder}'
+    def schema_placeholder(cls) -> ConfigValue:
+        return PlaceholderValue('schema_version_placeholder')
 
     def json_at(self, path: str) -> StorageFileReference:
-        return AzureBlobDataSource(self.config, (self.sub_path / path).as_posix())
+        return AzureBlobDataSource(self.config, self.components.append(path))
 
     def parquet_at(
         self,
@@ -216,9 +241,9 @@ class AzureBlobDirectory(Directory):
         config: ParquetConfig | None = None,
         date_formatter: DateFormatter | None = None,
     ) -> AzureBlobParquetDataSource:
-        sub_path = self.sub_path / path
+        sub_path = self.components.append(path)
         return self.config.parquet_at(
-            sub_path.as_posix(),
+            sub_path,  # type: ignore
             mapping_keys=mapping_keys,
             config=config,
             date_formatter=date_formatter or DateFormatter.noop(),
@@ -232,9 +257,9 @@ class AzureBlobDirectory(Directory):
         config: ParquetConfig | None = None,
         date_formatter: DateFormatter | None = None,
     ) -> AzureBlobPartitionedParquetDataSource:
-        sub_path = self.sub_path / directory
+        sub_path = self.components.append(directory)
         return self.config.partitioned_parquet_at(
-            sub_path.as_posix(),
+            sub_path,  # type: ignore
             partition_keys,
             mapping_keys=mapping_keys,
             config=config,
@@ -248,9 +273,9 @@ class AzureBlobDirectory(Directory):
         csv_config: CsvConfig | None = None,
         date_formatter: DateFormatter | None = None,
     ) -> AzureBlobCsvDataSource:
-        sub_path = self.sub_path / path
+        sub_path = self.components.append(path)
         return self.config.csv_at(
-            sub_path.as_posix(),
+            sub_path,  # type: ignore
             mapping_keys=mapping_keys,
             date_formatter=date_formatter or DateFormatter.unix_timestamp(),
             csv_config=csv_config or CsvConfig(),
@@ -263,24 +288,27 @@ class AzureBlobDirectory(Directory):
         config: DeltaFileConfig | None = None,
         date_formatter: DateFormatter | None = None,
     ) -> AzureBlobDeltaDataSource:
-        sub_path = self.sub_path / path
+        sub_path = self.components.append(path)
         return self.config.delta_at(
-            sub_path.as_posix(), mapping_keys, config=config, date_formatter=date_formatter
+            sub_path, mapping_keys, config=config, date_formatter=date_formatter  # type: ignore
         )
 
-    def sub_directory(self, path: str) -> AzureBlobDirectory:
-        return AzureBlobDirectory(self.config, self.sub_path / path)
+    def sub_directory(self, path: str | ConfigValue) -> AzureBlobDirectory:
+        return AzureBlobDirectory(self.config, self.components.append(path))
 
-    def directory(self, path: str) -> AzureBlobDirectory:
-        return AzureBlobDirectory(self.config, self.sub_path / path)
+    def directory(self, path: str | ConfigValue) -> AzureBlobDirectory:
+        return AzureBlobDirectory(self.config, self.components.append(path))
 
-    def with_schema_version(self, sub_directory: str | None = None) -> Directory:
+    def with_schema_version(self, sub_directory: str | ConfigValue | None = None) -> Directory:
         if sub_directory:
             return AzureBlobDirectory(
-                self.config, self.sub_path / sub_directory / AzureBlobDirectory.schema_placeholder()
+                self.config,
+                self.components.append(sub_directory).append(AzureBlobDirectory.schema_placeholder()),
             )
         else:
-            return AzureBlobDirectory(self.config, self.sub_path / AzureBlobDirectory.schema_placeholder())
+            return AzureBlobDirectory(
+                self.config, self.components.append(AzureBlobDirectory.schema_placeholder())
+            )
 
 
 @dataclass
@@ -307,22 +335,22 @@ class BlobStorage(Storage):
 @dataclass
 class AzureBlobDataSource(StorageFileReference, ColumnFeatureMappable):
     config: AzureBlobConfig
-    path: str
+    path: PathResolver
 
     type_name: str = 'azure_blob'
 
     def job_group_key(self) -> str:
-        return f"{self.type_name}/{self.path}"
+        return f"{self.type_name}/{self.path.as_posix()}"
 
     @property
     def storage(self) -> Storage:
         return self.config.storage
 
     async def read(self) -> bytes:
-        return await self.storage.read(self.path)
+        return await self.storage.read(self.path.as_posix())
 
     async def write(self, content: bytes) -> None:
-        return await self.storage.write(self.path, content)
+        return await self.storage.write(self.path.as_posix(), content)
 
 
 @dataclass
@@ -330,7 +358,7 @@ class AzureBlobCsvDataSource(
     CodableBatchDataSource, DataFileReference, ColumnFeatureMappable, AzureConfigurable
 ):
     config: AzureBlobConfig
-    path: str
+    path: PathResolver
     mapping_keys: dict[str, str] = field(default_factory=dict)
     csv_config: CsvConfig = field(default_factory=CsvConfig)
     date_formatter: DateFormatter = field(default_factory=lambda: DateFormatter.unix_timestamp())
@@ -346,7 +374,10 @@ Path: *{self.path}*
 {self.config.to_markdown}"""
 
     def job_group_key(self) -> str:
-        return f"{self.type_name}/{self.path}"
+        return f"{self.type_name}/{self.path.as_posix()}"
+
+    def needed_configs(self) -> list[ConfigValue]:
+        return self.config.needed_configs()
 
     @property
     def storage(self) -> Storage:
@@ -381,8 +412,9 @@ Path: *{self.path}*
         )
 
     async def to_pandas(self) -> pd.DataFrame:
+        path = self.path.as_posix()
         try:
-            data = await self.storage.read(self.path)
+            data = await self.storage.read(path)
             buffer = BytesIO(data)
             return pd.read_csv(
                 buffer,
@@ -390,9 +422,9 @@ Path: *{self.path}*
                 compression=self.csv_config.compression,
             )
         except FileNotFoundError as error:
-            raise UnableToFindFileException() from error
+            raise UnableToFindFileException(path) from error
         except HTTPStatusError as error:
-            raise UnableToFindFileException() from error
+            raise UnableToFindFileException(path) from error
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
         url = f"az://{self.path}"
@@ -462,7 +494,7 @@ class AzureBlobPartitionedParquetDataSource(
     AzureConfigurable,
 ):
     config: AzureBlobConfig
-    directory: str
+    directory: PathResolver
     partition_keys: list[str]
     mapping_keys: dict[str, str] = field(default_factory=dict)
     parquet_config: ParquetConfig = field(default_factory=ParquetConfig)
@@ -478,8 +510,11 @@ Partition Keys: *{self.partition_keys}*
 
 {self.config.to_markdown}"""
 
+    def needed_configs(self) -> list[ConfigValue]:
+        return self.config.needed_configs()
+
     def job_group_key(self) -> str:
-        return f"{self.type_name}/{self.directory}"
+        return f"{self.type_name}/{self.directory.as_posix()}"
 
     def __hash__(self) -> int:
         return hash(self.job_group_key())
@@ -633,7 +668,7 @@ Partition Keys: *{self.partition_keys}*
 
         for row in unique_partitions.iter_rows(named=True):
 
-            dir = Path(self.directory)
+            dir = Path(self.directory.as_posix())
             for partition_key in self.partition_keys:
                 dir = dir / f"{partition_key}={row[partition_key]}"
 
@@ -658,7 +693,7 @@ Partition Keys: *{self.partition_keys}*
 
             fs.rmdir(directory_path)
 
-        delete_directory_recursively(self.directory)
+        delete_directory_recursively(self.directory.as_posix())
 
     async def overwrite(self, job: RetrivalJob, request: RetrivalRequest) -> None:
         await self.delete()
@@ -670,7 +705,7 @@ class AzureBlobParquetDataSource(
     CodableBatchDataSource, DataFileReference, ColumnFeatureMappable, AzureConfigurable
 ):
     config: AzureBlobConfig
-    path: str
+    path: PathResolver
     mapping_keys: dict[str, str] = field(default_factory=dict)
     parquet_config: ParquetConfig = field(default_factory=ParquetConfig)
     date_formatter: DateFormatter = field(default_factory=lambda: DateFormatter.noop())
@@ -684,8 +719,11 @@ Path: *{self.path}*
 
 {self.config.to_markdown}"""
 
+    def needed_configs(self) -> list[ConfigValue]:
+        return self.config.needed_configs()
+
     def job_group_key(self) -> str:
-        return f"{self.type_name}/{self.path}"
+        return f"{self.type_name}/{self.path.as_posix()}"
 
     def __hash__(self) -> int:
         return hash(self.job_group_key())
@@ -714,26 +752,27 @@ Path: *{self.path}*
             raise UnableToFindFileException() from error
 
     async def read_pandas(self) -> pd.DataFrame:
+        path = self.path.as_posix()
         try:
-            data = await self.storage.read(self.path)
+            data = await self.storage.read(path)
             buffer = BytesIO(data)
             return pd.read_parquet(buffer)
         except FileNotFoundError as error:
-            raise UnableToFindFileException(self.path) from error
+            raise UnableToFindFileException(path) from error
         except HTTPStatusError as error:
-            raise UnableToFindFileException(self.path) from error
+            raise UnableToFindFileException(path) from error
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
+        url = f"az://{self.path}"
         try:
-            url = f"az://{self.path}"
             creds = self.config.read_creds()
             return pl.scan_parquet(url, storage_options=creds)
         except FileNotFoundError as error:
-            raise UnableToFindFileException(self.path) from error
+            raise UnableToFindFileException(url) from error
         except HTTPStatusError as error:
-            raise UnableToFindFileException(self.path) from error
+            raise UnableToFindFileException(url) from error
         except pl.ComputeError as error:
-            raise UnableToFindFileException(self.path) from error
+            raise UnableToFindFileException(url) from error
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
         buffer = BytesIO()
@@ -743,7 +782,7 @@ Path: *{self.path}*
             engine=self.parquet_config.engine,
         )
         buffer.seek(0)
-        await self.storage.write(self.path, buffer.read())
+        await self.storage.write(self.path.as_posix(), buffer.read())
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
         url = f"az://{self.path}"
@@ -798,13 +837,13 @@ class AzureBlobDeltaDataSource(
     AzureConfigurable,
 ):
     config: AzureBlobConfig
-    path: str
+    path: PathResolver
     mapping_keys: dict[str, str] = field(default_factory=dict)
     date_formatter: DateFormatter = field(default_factory=lambda: DateFormatter.unix_timestamp('ms'))
     type_name: str = 'azure_blob_delta'
 
     def job_group_key(self) -> str:
-        return f"{self.type_name}/{self.path}"
+        return f"{self.type_name}/{self.path.as_posix()}"
 
     @property
     def to_markdown(self) -> str:
@@ -813,6 +852,9 @@ class AzureBlobDeltaDataSource(
 Path: *{self.path}*
 
 {self.config.to_markdown}"""
+
+    def needed_configs(self) -> list[ConfigValue]:
+        return self.config.needed_configs()
 
     @property
     def storage(self) -> Storage:
@@ -965,7 +1007,7 @@ Path: *{self.path}*
         import pyarrow as pa
 
         df = await job.to_polars()
-        url = f"az://{self.path}"
+        url = f"az://{self.path.as_posix()}"
 
         df, schemas = self.df_to_deltalake_compatible(df, request)
 
@@ -984,7 +1026,7 @@ Path: *{self.path}*
 
         df = await job.to_polars()
 
-        url = f"az://{self.path}"
+        url = f"az://{self.path.as_posix()}"
         merge_on = request.entity_names
 
         df, schemas = self.df_to_deltalake_compatible(df, request)
@@ -1022,7 +1064,7 @@ Path: *{self.path}*
     async def delete(self) -> None:
         from deltalake import DeltaTable
 
-        url = f"az://{self.path}"
+        url = f"az://{self.path.as_posix()}"
         table = DeltaTable(url, storage_options=self.config.read_creds())
         table.delete()
 

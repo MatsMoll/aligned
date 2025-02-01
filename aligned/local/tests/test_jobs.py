@@ -34,7 +34,7 @@ async def test_file_full_job_polars(retrival_request_without_derived: RetrivalRe
         }
     )
     job = FileFullJob(source=LiteralReference(frame), request=retrival_request_without_derived)
-    data = (await job.to_lazy_polars()).collect()
+    data = await job.to_polars()
 
     assert set(data.columns) == {'id', 'a', 'b'}
     assert data.shape[0] == 5

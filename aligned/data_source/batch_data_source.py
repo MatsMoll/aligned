@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Awaitable, TypeVar, Any, Callable, Coroutine
 from dataclasses import dataclass
 
 from mashumaro.types import SerializableType
+from aligned.config_value import ConfigValue
 from aligned.data_file import DataFileReference
 
 from aligned.schemas.codable import Codable
@@ -114,6 +115,9 @@ class BatchDataSource:
         An id that identifies a source from others.
         """
         return self.job_group_key()
+
+    def needed_configs(self) -> list[ConfigValue]:
+        return []
 
     def with_view(self: T, view: CompiledFeatureView) -> T:
         return self
@@ -478,7 +482,7 @@ class FilteredDataSource(CodableBatchDataSource):
         elif isinstance(self.condition, str):
             try:
                 return pl.Expr.deserialize(self.condition, format='json')
-            except:
+            except:  # noqa: E722
                 return pl.col(self.condition)
         elif isinstance(self.condition, (DerivedFeature, Feature)):
             return pl.col(self.condition.name)

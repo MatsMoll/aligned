@@ -74,12 +74,10 @@ def retrival_request_with_derived() -> RetrivalRequest:
                     FeatureReference(
                         name='c',
                         location=FeatureLocation.feature_view('test_with_ts'),
-                        dtype=FeatureType.int32(),
                     ),
                     FeatureReference(
                         name='d',
                         location=FeatureLocation.feature_view('test_with_ts'),
-                        dtype=FeatureType.int32(),
                     ),
                 },
                 transformation=Addition(front='c', behind='d'),
@@ -131,11 +129,8 @@ def combined_retrival_request() -> RetrivalRequest:
                     FeatureReference(
                         name='c+d',
                         location=FeatureLocation.feature_view('test_with_ts'),
-                        dtype=FeatureType.int32(),
                     ),
-                    FeatureReference(
-                        name='a', location=FeatureLocation.feature_view('test'), dtype=FeatureType.int32()
-                    ),
+                    FeatureReference(name='a', location=FeatureLocation.feature_view('test')),
                 },
                 transformation=Addition(front='c+d', behind='a'),
                 depth=2,
@@ -648,7 +643,7 @@ def point_in_time_data_test() -> DataTest:
 
     placeholder_ds = FileSource.parquet_at('placeholder')
 
-    @feature_view(name='credit_history', description='', source=placeholder_ds)
+    @feature_view(name='credit_history', source=placeholder_ds)
     class CreditHistory:
 
         dob_ssn = String().as_entity()
@@ -660,7 +655,7 @@ def point_in_time_data_test() -> DataTest:
 
         bankruptcies = Int32()
 
-    @feature_view(name='credit_history_agg', description='', source=placeholder_ds)
+    @feature_view(name='credit_history_agg', source=placeholder_ds)
     class CreditHistoryAggregate:
         dob_ssn = String().as_entity()
         event_timestamp = EventTimestamp()
@@ -668,7 +663,7 @@ def point_in_time_data_test() -> DataTest:
 
         credit_sum = credit_card_due.aggregate().over(weeks=1).sum()
 
-    @feature_view(name='loan', description='', source=placeholder_ds)
+    @feature_view(name='loan', source=placeholder_ds)
     class Loan:
 
         loan_id = Int32().as_entity()

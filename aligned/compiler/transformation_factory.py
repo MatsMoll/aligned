@@ -10,7 +10,7 @@ import polars as pl
 from aligned import AwsS3Config
 from aligned.lazy_imports import pandas as pd
 from aligned.compiler.feature_factory import FeatureFactory, Transformation, TransformationFactory
-from aligned.schemas.feature import FeatureReference
+from aligned.schemas.feature import FeatureReference, FeatureType
 from aligned.schemas.transformation import FillNaValuesColumns, LiteralValue, EmbeddingModel
 
 if TYPE_CHECKING:
@@ -1013,6 +1013,7 @@ class LoadFeature(TransformationFactory):
 
     entities: dict[str, FeatureFactory]
     feature: FeatureReference
+    dtype: FeatureType
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -1028,7 +1029,10 @@ class LoadFeature(TransformationFactory):
                 explode_key = feature.name
 
         return LoadFeature(
-            {key: value.name for key, value in self.entities.items()}, self.feature, explode_key
+            {key: value.name for key, value in self.entities.items()},
+            self.feature,
+            explode_key,
+            dtype=self.dtype,
         )
 
 

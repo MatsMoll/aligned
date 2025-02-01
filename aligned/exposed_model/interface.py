@@ -3,12 +3,13 @@ from __future__ import annotations
 import polars as pl
 from typing import TYPE_CHECKING, Any, AsyncIterable, Callable, Coroutine
 from dataclasses import dataclass
+from aligned.config_value import ConfigValue
 from aligned.retrival_job import RetrivalJob
 from aligned.schemas.codable import Codable
 from mashumaro.types import SerializableType
 import logging
 
-from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference
+from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference, FeatureType
 
 if TYPE_CHECKING:
     from aligned.feature_store import ModelFeatureStore
@@ -26,6 +27,8 @@ class PredictorFactory:
         from aligned.exposed_model.mlflow import MLFlowServer, InMemMLFlowAlias
         from aligned.exposed_model.ollama import OllamaGeneratePredictor, OllamaEmbeddingPredictor
         from aligned.exposed_model.sentence_transformer import SentenceTransformerPredictor
+        from aligned.exposed_model.langchain import LangChain
+        from aligned.exposed_model.partitioned import PartitionedModel
 
         self.supported_predictors = {}
 
@@ -39,6 +42,8 @@ class PredictorFactory:
             ABTestModel,
             DillPredictor,
             SentenceTransformerPredictor,
+            LangChain,
+            PartitionedModel,
         ]
         for predictor in types:
             self.supported_predictors[predictor.model_type] = predictor
@@ -80,6 +85,10 @@ class ExposedModel(Codable, SerializableType):
     @property
     def as_markdown(self) -> str:
         raise NotImplementedError(type(self))
+
+    def needed_configs(self) -> list[ConfigValue]:
+        'Returns the config variables to set in order to use the model.'
+        return []
 
     async def depends_on(self) -> list[FeatureLocation]:
         """
@@ -191,7 +200,7 @@ class ExposedModel(Codable, SerializableType):
     @staticmethod
     def mlflow_server(
         host: str,
-        model_alias: str | None = None,
+        model_alias: str = 'champion',
         model_name: str | None = None,
         timeout: int = 30,
     ) -> 'ExposedModel':
@@ -471,4 +480,42 @@ def openai_embedding(
 
     return OpenAiEmbeddingPredictor(
         model=model, batch_on_n_chunks=batch_on_n_chunks, prompt_template=prompt_template or ''
+    )
+
+
+def partitioned_on(
+    key: str, partitions: dict[str, ExposedModel], default_partition: str | None = None
+) -> ExposedModel:
+    """Returns an model that routes the inference request to a new model based on a partition key
+
+    ```python
+    @model_contract(
+        input_features=[MyFeature().name],
+        exposed_model=partitioned_on(
+            "lang",
+            partitions={
+                "no": openai_embedding("text-embedding-3-large"),
+                "en": openai_embedding("text-embedding-ada-002"),
+            },
+            default_partition="no"
+        ),
+    )
+    class MyEmbedding:
+        my_entity = Int32().as_entity()
+        name = String()
+        lang = String()
+        embedding = Embedding(1536)
+        predicted_at = EventTimestamp()
+
+    embeddings = await store.model(MyEmbedding).predict_over({
+        "my_entity": [1, 2, 3],
+        "name": ["Hello", "Hei", "Hola"],
+        "lang": ["en", "no", "es"]
+    }).to_polars()
+    ```
+    """
+    from aligned.exposed_model.partitioned import PartitionedModel
+
+    return PartitionedModel(
+        Feature(key, FeatureType.string()), partitions=partitions, default_partition=default_partition
     )

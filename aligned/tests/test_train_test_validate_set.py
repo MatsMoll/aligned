@@ -54,7 +54,12 @@ async def test_train_test_validate_set_new(titanic_feature_store: ContractStore)
     test_source = FileSource.csv_at('test_data/temp/titanic-test.csv')
     validate_source = FileSource.csv_at('test_data/temp/titanic-validate.csv')
 
-    delete_files = [dataset_store.path, train_source.path, test_source.path, validate_source.path]
+    delete_files = [
+        dataset_store.path,
+        train_source.path.as_posix(),
+        test_source.path.as_posix(),
+        validate_source.path.as_posix(),
+    ]
 
     for file in delete_files:
         path = Path(file)

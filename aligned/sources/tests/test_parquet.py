@@ -76,6 +76,7 @@ async def test_partition_parquet(point_in_time_data_test: DataTest) -> None:
         [feat for feat in point_in_time_data_test.feature_reference if '_agg' not in feat],
         event_timestamp_column='event_timestamp',
     )
+
     data = (await job.to_lazy_polars()).collect()
 
     expected = point_in_time_data_test.expected_output.drop(agg_features)
@@ -244,13 +245,13 @@ async def test_read_csv(point_in_time_data_test: DataTest) -> None:
 
         store.add_compiled_view(compiled)
 
-        Path(file_source.path).unlink(missing_ok=True)
+        Path(file_source.path.as_posix()).unlink(missing_ok=True)
 
         await store.feature_view(compiled.name).insert(
             store.feature_view(compiled.name).process_input(source.data)
         )
 
-        csv = pl.read_csv(file_source.path)
+        csv = pl.read_csv(file_source.path.as_posix())
         schemas = dict(csv.schema)
 
         for feature in view.compile().request_all.request_result.features:

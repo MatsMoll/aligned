@@ -1,4 +1,9 @@
 class UnableToFindFileException(Exception):
+    def __init__(self, file: str | None) -> None:
+        super().__init__(f'Unable to find file "{file}".')
+
+
+class ConfigurationError(Exception):
     pass
 
 
