@@ -22,13 +22,16 @@ jobs:
 
       mlflow:
         image: ghcr.io/mlflow/mlflow:v2.15.0
-        options: >
-          --entrypoint '/bin/sh -c "mlflow server --backend-store-uri file:///app/mlflow-server/experiments --artifacts-destination file:///app/mlflow-server/artifacts --host 0.0.0.0 --port 8000"'
+        options: --entrypoint /bin/sh
+
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+
+      - name: Start MLflow service
+        run: docker exec mlflow /bin/sh -c 'mlflow server --backend-store-uri file:///app/mlflow-server/experiments --artifacts-destination file:///app/mlflow-server/artifacts --host 0.0.0.0 --port 8000'
 
       - uses: actions/cache@v3
         id: cache-venv
