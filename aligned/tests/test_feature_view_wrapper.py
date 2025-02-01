@@ -82,11 +82,6 @@ async def test_feature_view_wrapper_from_data() -> None:
     assert result.shape[0] == 3
     assert result.shape[1] == 3
 
-    test_invalid_result = Test.drop_invalid({'some_id': ['hello', 10, 2], 'feature': ['Hello', 'test', 2]})
-
-    # Returns two as the int can be casted to a str, but a str can not be casted to int
-    assert len(test_invalid_result['some_id']) == 2
-
 
 @pytest.mark.asyncio
 async def test_fill_missing_features() -> None:

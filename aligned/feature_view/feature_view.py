@@ -185,7 +185,7 @@ def set_location_for_features_in(view: Any, location: FeatureLocation) -> Any:
         value = getattr(view, attribute)
         if isinstance(value, FeatureFactory):
             value._location = location
-            copied = copy.deepcopy(value)
+            copied = copy.copy(value)
 
             setattr(view, attribute, copied)
     return view
@@ -551,24 +551,24 @@ class FeatureViewWrapper(Generic[T]):
         from aligned.retrival_job import DropInvalidJob
 
         if not validator:
-            from aligned.validation.pandera import PanderaValidator
+            from aligned.validation.interface import PolarsValidator
 
-            validator = PanderaValidator()
+            validator = PolarsValidator()
 
         features = list(DropInvalidJob.features_to_validate(self.compile().request_all.needed_requests))
 
         if isinstance(data, dict):
-            validate_data = pd.DataFrame(data)
+            validate_data = pl.DataFrame(data, strict=False)
         else:
             validate_data = data
 
         if isinstance(validate_data, pl.DataFrame):
-            return validator.validate_polars(features, validate_data.lazy()).collect()
-        elif isinstance(validate_data, pd.DataFrame):
-            validated = validator.validate_pandas(features, validate_data)
+            validated = validator.validate_polars(features, validate_data.lazy()).collect()
             if isinstance(data, dict):
-                return validated.to_dict(orient='list')
+                return validated.to_dict(as_series=False)
             return validated  # type: ignore
+        elif isinstance(validate_data, pd.DataFrame):
+            return validator.validate_pandas(features, validate_data)
         else:
             raise ValueError(f'Invalid data type: {type(data)}')
 

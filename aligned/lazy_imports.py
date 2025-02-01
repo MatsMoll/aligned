@@ -131,17 +131,14 @@ def _lazy_import(module_name: str) -> tuple[ModuleType, bool]:
 
 
 _PANDAS_AVAILABLE = True
-_PANDERA_AVAILABLE = True
 _SENTENCE_TRANSFORMERS = True
 _MLFLOW_AVAILABLE = True
 
 if TYPE_CHECKING:
     import pandas
-    import pandera
     import sentence_transformers
     import mlflow
 else:
     pandas, _PANDAS_AVAILABLE = _lazy_import('pandas')
-    pandera, _PANDERA_AVAILABLE = _lazy_import('pandera')
     sentence_transformers, _SENTENCE_TRANSFORMERS = _lazy_import('sentence_transformers')
     mlflow, _MLFLOW_AVAILABLE = _lazy_import('mlflow')

@@ -2389,17 +2389,6 @@ files = [
 typing-extensions = {version = ">=4.1.0", markers = "python_version < \"3.11\""}
 
 [[package]]
-name = "multimethod"
-version = "2.0"
-description = "Multiple argument dispatching."
-optional = true
-python-versions = ">=3.9"
-files = [
-    {file = "multimethod-2.0-py3-none-any.whl", hash = "sha256:45aa231dc9dbb7f980c0f2ad8179e2c2b72a8cd5c7d7534337be66dde29d35be"},
-    {file = "multimethod-2.0.tar.gz", hash = "sha256:c628b6d2e7d61fbe58484dd884d990901e8314faf58af062e72b65e3423cb109"},
-]
-
-[[package]]
 name = "mypy-extensions"
 version = "1.0.0"
 description = "Type system extensions for programs checked with the mypy type checker."
@@ -2846,41 +2835,6 @@ test = ["hypothesis (>=6.46.1)", "pytest (>=7.3.2)", "pytest-xdist (>=2.2.0)"]
 xml = ["lxml (>=4.9.2)"]
 
 [[package]]
-name = "pandera"
-version = "0.17.2"
-description = "A light-weight and flexible data validation and testing tool for statistical data objects."
-optional = true
-python-versions = ">=3.7"
-files = [
-    {file = "pandera-0.17.2-py3-none-any.whl", hash = "sha256:8e4e7b279c62f6d4b5109801544bf8d46e1c9fdf7ceceb8fedd5f3dad0c1bea1"},
-    {file = "pandera-0.17.2.tar.gz", hash = "sha256:67515984f855ba14d12443f893b5ff90ae6796f613d5f3df43abad406a48c373"},
-]
-
-[package.dependencies]
-multimethod = "*"
-numpy = ">=1.19.0"
-packaging = ">=20.0"
-pandas = ">=1.2.0"
-pydantic = "*"
-typeguard = ">=3.0.2"
-typing-inspect = ">=0.6.0"
-wrapt = "*"
-
-[package.extras]
-all = ["black", "dask", "fastapi", "frictionless (<=4.40.8)", "geopandas", "hypothesis (>=5.41.1)", "modin", "pandas-stubs", "pyspark (>=3.2.0)", "pyyaml (>=5.1)", "ray", "scipy", "shapely"]
-dask = ["dask"]
-fastapi = ["fastapi"]
-geopandas = ["geopandas", "shapely"]
-hypotheses = ["scipy"]
-io = ["black", "frictionless (<=4.40.8)", "pyyaml (>=5.1)"]
-modin = ["dask", "modin", "ray"]
-modin-dask = ["dask", "modin"]
-modin-ray = ["modin", "ray"]
-mypy = ["pandas-stubs"]
-pyspark = ["pyspark (>=3.2.0)"]
-strategies = ["hypothesis (>=5.41.1)"]
-
-[[package]]
 name = "pathspec"
 version = "0.12.1"
 description = "Utility library for gitignore style pattern matching of file paths."
@@ -3003,18 +2957,17 @@ testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
 name = "polars"
-version = "1.21.0"
+version = "1.17.1"
 description = "Blazingly fast DataFrame library"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "polars-1.21.0-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:063f8807f633f8fd15458a43971d930f6ee568b8e95936d7736c9054fc4f6f52"},
-    {file = "polars-1.21.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:519863e0990e3323e7a32fc66bac3ad9da51938a1ffce6c09a92e0b1adb026a5"},
-    {file = "polars-1.21.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bbecddca35c57efde99070517db5d2c63d4c6d0e3c992123ba3be93e86e7bfac"},
-    {file = "polars-1.21.0-cp39-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:d9ce8e6f0d8140e67b0f7c276d22bb5f3345ce7412558643c8b5c270db254b64"},
-    {file = "polars-1.21.0-cp39-abi3-win_amd64.whl", hash = "sha256:c4517abb008af890e4ca8fb6bb0372868381017af0ecadf9d062e2f91f50b276"},
-    {file = "polars-1.21.0-cp39-abi3-win_arm64.whl", hash = "sha256:6bb0ba805defb05b76fdca392e48d84d1f16403de5be25d4dd8cdc7fccfd4251"},
-    {file = "polars-1.21.0.tar.gz", hash = "sha256:7692d0fe0fb4faac18ef9423de55789e289f4d3f26d42519bd23ef8afb672d62"},
+    {file = "polars-1.17.1-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:d3a2172f7cf332010f0b034345111e9c86d59b5a5b0fc5aa0509121f40d9e43c"},
+    {file = "polars-1.17.1-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:82e98c69197df0d8ddc341a6175008508ceaea88f723f32044027810bcdb43fa"},
+    {file = "polars-1.17.1-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:59abdab015ed2ecfa0c63862b960816c35096e1f4df057dde3c44cd973af5029"},
+    {file = "polars-1.17.1-cp39-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:6d2f922c403b8900b3ae3c23a27b2cae3a2db40ad790cc4fc368402b92629b11"},
+    {file = "polars-1.17.1-cp39-abi3-win_amd64.whl", hash = "sha256:d38156c8259554cbcb17874d91e6dfa9c404335f08a3307496aadfdee46baa31"},
+    {file = "polars-1.17.1.tar.gz", hash = "sha256:5a3dac3cb7cbe174d1fa898cba9afbede0c08e8728feeeab515554d762127019"},
 ]
 
 [package.dependencies]
@@ -3027,7 +2980,7 @@ async = ["gevent"]
 calamine = ["fastexcel (>=0.9)"]
 cloudpickle = ["cloudpickle"]
 connectorx = ["connectorx (>=0.3.2)"]
-database = ["polars[adbc,connectorx,sqlalchemy]"]
+database = ["nest-asyncio", "polars[adbc,connectorx,sqlalchemy]"]
 deltalake = ["deltalake (>=0.19.0)"]
 excel = ["polars[calamine,openpyxl,xlsx2csv,xlsxwriter]"]
 fsspec = ["fsspec"]
@@ -3042,7 +2995,7 @@ pyarrow = ["pyarrow (>=7.0.0)"]
 pydantic = ["pydantic"]
 sqlalchemy = ["polars[pandas]", "sqlalchemy"]
 style = ["great-tables (>=0.8.0)"]
-timezone = ["tzdata"]
+timezone = ["backports-zoneinfo", "tzdata"]
 xlsx2csv = ["xlsx2csv (>=0.8.0)"]
 xlsxwriter = ["xlsxwriter"]
 
@@ -4596,24 +4549,6 @@ tests = ["autopep8", "flake8", "isort", "llnl-hatchet", "numpy", "pytest", "scip
 tutorials = ["matplotlib", "pandas", "tabulate"]
 
 [[package]]
-name = "typeguard"
-version = "4.4.1"
-description = "Run-time type checker for Python"
-optional = true
-python-versions = ">=3.9"
-files = [
-    {file = "typeguard-4.4.1-py3-none-any.whl", hash = "sha256:9324ec07a27ec67fc54a9c063020ca4c0ae6abad5e9f0f9804ca59aee68c6e21"},
-    {file = "typeguard-4.4.1.tar.gz", hash = "sha256:0d22a89d00b453b47c49875f42b6601b961757541a2e1e0ef517b6e24213c21b"},
-]
-
-[package.dependencies]
-typing-extensions = ">=4.10.0"
-
-[package.extras]
-doc = ["Sphinx (>=7)", "packaging", "sphinx-autodoc-typehints (>=1.2.0)", "sphinx-rtd-theme (>=1.3.0)"]
-test = ["coverage[toml] (>=7)", "mypy (>=1.2.0)", "pytest (>=7)"]
-
-[[package]]
 name = "types-cffi"
 version = "1.16.0.20241221"
 description = "Typing stubs for cffi"
@@ -4678,21 +4613,6 @@ files = [
     {file = "typing_extensions-4.12.2-py3-none-any.whl", hash = "sha256:04e5ca0351e0f3f85c6853954072df659d0d13fac324d0072316b67d7794700d"},
     {file = "typing_extensions-4.12.2.tar.gz", hash = "sha256:1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8"},
 ]
-
-[[package]]
-name = "typing-inspect"
-version = "0.9.0"
-description = "Runtime inspection utilities for typing module."
-optional = true
-python-versions = "*"
-files = [
-    {file = "typing_inspect-0.9.0-py3-none-any.whl", hash = "sha256:9ee6fc59062311ef8547596ab6b955e1b8aa46242d854bfc78f4f6b0eff35f9f"},
-    {file = "typing_inspect-0.9.0.tar.gz", hash = "sha256:b23fc42ff6f6ef6954e4852c1fb512cdd18dbea03134f91f856a95ccc9461f78"},
-]
-
-[package.dependencies]
-mypy-extensions = ">=0.3.0"
-typing-extensions = ">=3.7.4"
 
 [[package]]
 name = "tzdata"
@@ -4987,7 +4907,6 @@ mlflow = ["mlflow"]
 ollama = ["ollama"]
 openai = ["openai", "tiktoken"]
 pandas = ["pandas"]
-pandera = ["pandera"]
 psql = ["asyncpg", "connectorx", "psycopg2"]
 redis = ["redis"]
 sentence-transformers = ["sentence-transformers"]
@@ -4997,4 +4916,4 @@ sql = ["sqlglot"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "5b40e7d3292ddb10d801cb5945ee4c6fd96e0356dfe7c8cfe9bd9c0bc542f8ac"
+content-hash = "b746ea71c2a370baa11794c8223f6d91ba8301ae89815c2c5845473673bdb195"

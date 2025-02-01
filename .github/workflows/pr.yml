@@ -26,25 +26,6 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Start MLflow service
-        run: |
-          docker network create mlflow || true
-          docker run -d --rm \
-            --name mlflow \
-            --network mlflow \
-            -p 8000:8000 \
-            ghcr.io/mlflow/mlflow:v2.15.0 \
-            /bin/sh -c "mlflow server --backend-store-uri file:///app/mlflow-server/experiments --artifacts-destination file:///app/mlflow-server/artifacts --host 0.0.0.0 --port 8000"
-
-      - name: Verify MLflow server is running
-        run: |
-          for i in {1..10}; do
-            curl -s http://localhost:8000 && break
-            echo "Waiting for MLflow server..."
-            sleep 5
-          done
-          curl http://localhost:8000
-
       - uses: actions/cache@v3
         id: cache-venv
         with:
@@ -63,6 +44,25 @@ jobs:
           source .venv/bin/activate
           poetry install --no-interaction --all-extras
         if: steps.cache-venv.outputs.cache-hit != 'true'
+
+      - name: Start MLflow service
+        run: |
+          docker network create mlflow || true
+          docker run -d --rm \
+            --name mlflow \
+            --network mlflow \
+            -p 8000:8000 \
+            ghcr.io/mlflow/mlflow:v2.15.0 \
+            /bin/sh -c "mlflow server --backend-store-uri file:///app/mlflow-server/experiments --artifacts-destination file:///app/mlflow-server/artifacts --host 0.0.0.0 --port 8000"
+
+      - name: Verify MLflow server is running
+        run: |
+          for i in {1..10}; do
+            curl -s http://localhost:8000 && break
+            echo "Waiting for MLflow server..."
+            sleep 5
+          done
+          curl http://localhost:8000
 
       - name: Run tests
         env:

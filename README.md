@@ -274,8 +274,6 @@ class TitanicPassenger:
 Then since our feature view have a `is_optional` and a `lower_bound`, will the `.validate(...)` command filter out the entites that do not follow that behavior.
 
 ```python
-from aligned.validation.pandera import PanderaValidator
-
 df = await store.model("titanic_model").features_for({
     "passenger_id": [1, 50, 110]
 }).drop_invalid().to_pandas()

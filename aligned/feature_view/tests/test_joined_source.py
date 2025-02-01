@@ -1,6 +1,7 @@
 import pytest
 from aligned import feature_view, Int32, FileSource, model_contract
 import polars as pl
+from polars.testing.asserts import assert_frame_equal
 
 
 @feature_view(name='left', source=FileSource.csv_at('test_data/test.csv'))
@@ -139,7 +140,7 @@ async def test_unique_entities() -> None:
     result = await data.unique_on(['some_id'], sort_key='feature').to_lazy_polars()
     sorted = result.sort('some_id').select(['some_id', 'feature']).collect()
 
-    assert sorted.equals(expected_df)
+    assert_frame_equal(sorted, expected_df)
 
 
 @pytest.mark.asyncio

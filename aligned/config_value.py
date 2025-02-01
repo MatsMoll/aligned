@@ -80,7 +80,7 @@ class EnvironmentValue(ConfigValue, Codable):
 
         try:
             return os.environ[self.env]
-        except AttributeError as error:
+        except KeyError as error:
             raise ValueError(f"Missing environment value {self.env}") from error
 
 

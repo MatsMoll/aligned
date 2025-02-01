@@ -180,8 +180,8 @@ async def test_load_features() -> None:
         age_value = Test().age.for_entities({'passenger_id': lookup_id})
 
     store = ContractStore.empty()
-    store.add_feature_view(Test)
-    store.add_feature_view(Other)
+    store.add(Test)
+    store.add(Other)
 
     df = await store.feature_view(Other).features_for({'some_value': [1, 10, 5]}).to_polars()
 

@@ -187,6 +187,7 @@ class SupportedTransformations:
             PandasLambdaTransformation,
             PandasFunctionTransformation,
             PolarsLambdaTransformation,
+            PolarsExpression,
             Ratio,
             StructField,
             DivideDenumeratorValue,
@@ -424,6 +425,24 @@ class PolarsFunctionTransformation(Transformation):
             return await loaded(df, alias, store)
         else:
             return loaded(df, alias, store)
+
+
+@dataclass
+class PolarsExpression(Transformation):
+
+    polars_expression: str
+    dtype: FeatureType
+    name: str = 'polars_expression'
+
+    async def transform_pandas(self, df: pd.DataFrame, store: ContractStore) -> pd.Series:
+        pl_df = pl.from_pandas(df)
+        pl_df = pl_df.with_columns(pl.Expr.from_json(self.polars_expression).alias('polars_tran_column'))
+        return pl_df['polars_tran_column'].to_pandas()
+
+    async def transform_polars(
+        self, df: pl.LazyFrame, alias: str, store: ContractStore
+    ) -> pl.LazyFrame | pl.Expr:
+        return pl.Expr.from_json(self.polars_expression)
 
 
 @dataclass

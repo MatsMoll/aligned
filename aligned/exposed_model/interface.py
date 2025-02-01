@@ -14,6 +14,7 @@ from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference, 
 if TYPE_CHECKING:
     from aligned.feature_store import ModelFeatureStore
     from aligned.schemas.model import Model
+    from aligned.exposed_model.mlflow import MlflowConfig
 
 logger = logging.getLogger(__name__)
 
@@ -186,15 +187,17 @@ class ExposedModel(Codable, SerializableType):
     @staticmethod
     def in_memory_mlflow(
         model_name: str,
-        model_alias: str,
-        model_contract_version_tag: str | None = None,
+        model_alias: str = 'champion',
+        reference_tag: str = 'feature_refs',
+        mlflow_config: MlflowConfig | None = None,
     ) -> 'ExposedModel':
         from aligned.exposed_model.mlflow import in_memory_mlflow
 
         return in_memory_mlflow(
             model_name=model_name,
             model_alias=model_alias,
-            model_contract_version_tag=model_contract_version_tag,
+            reference_tag=reference_tag,
+            mlflow_config=mlflow_config,
         )
 
     @staticmethod

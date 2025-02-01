@@ -808,8 +808,10 @@ class RetrivalJob(ABC):
     def validate_entites(self) -> RetrivalJob:
         return ValidateEntitiesJob(self)
 
-    def unique_on(self, unique_on: list[str], sort_key: str | None = None) -> RetrivalJob:
-        return UniqueRowsJob(job=self, unique_on=unique_on, sort_key=sort_key)
+    def unique_on(
+        self, unique_on: list[str], sort_key: str | None = None, descending: bool = True
+    ) -> RetrivalJob:
+        return UniqueRowsJob(job=self, unique_on=unique_on, sort_key=sort_key, descending=descending)
 
     def unique_entities(self) -> RetrivalJob:
         request = self.request_result
@@ -1879,6 +1881,7 @@ class UniqueRowsJob(RetrivalJob, ModificationJob):
     job: RetrivalJob
     unique_on: list[str]  # type: ignore
     sort_key: str | None = field(default=None)
+    descending: bool = field(default=True)
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
@@ -1887,9 +1890,9 @@ class UniqueRowsJob(RetrivalJob, ModificationJob):
         data = await self.job.to_lazy_polars()
 
         if self.sort_key:
-            data = data.sort(self.sort_key, descending=True)
+            data = data.sort(self.sort_key, descending=self.descending)
 
-        return data.unique(self.unique_on, keep='first').lazy()
+        return data.unique(self.unique_on, keep='first', maintain_order=True)
 
 
 @dataclass

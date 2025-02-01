@@ -756,14 +756,14 @@ class PolarsTransformationFactory(TransformationFactory):
 
         import dill
 
-        from aligned.schemas.transformation import PolarsFunctionTransformation, PolarsLambdaTransformation
+        from aligned.schemas.transformation import (
+            PolarsFunctionTransformation,
+            PolarsLambdaTransformation,
+            PolarsExpression,
+        )
 
         if isinstance(self.method, pl.Expr):
-
-            def method(df: pl.DataFrame, alias: str, store: ContractStore) -> pl.Expr:
-                return self.method  # type: ignore
-
-            return PolarsLambdaTransformation(method=dill.dumps(method), code='', dtype=self.dtype.dtype)
+            return PolarsExpression(self.method.meta.write_json(), dtype=self.dtype.dtype)
         else:
             function_name = dill.source.getname(self.method)
             assert isinstance(function_name, str), 'Need a function name'
