@@ -23,7 +23,7 @@ jobs:
       mlflow:
         image: ghcr.io/mlflow/mlflow:v2.15.0
         options: >
-          --entrypoint "sh"
+          --entrypoint "/bin/sh"
         ports:
           - 8000:8000
 
@@ -37,7 +37,7 @@ jobs:
       - name: Start MLflow service
         run: |
           docker exec mlflow \
-            sh -c "mlflow server --backend-store-uri file:///app/mlflow-server/experiments --artifacts-destination file:///app/mlflow-server/artifacts --host 0.0.0.0 --port 8000"
+            /bin/sh-c "mlflow server --backend-store-uri file:///app/mlflow-server/experiments --artifacts-destination file:///app/mlflow-server/artifacts --host 0.0.0.0 --port 8000"
 
       - uses: actions/cache@v3
         id: cache-venv
