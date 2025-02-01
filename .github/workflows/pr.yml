@@ -20,12 +20,6 @@ jobs:
         ports:
           - '127.0.0.1:5432:5432'
 
-      mlflow:
-        image: ghcr.io/mlflow/mlflow:v2.15.0
-        ports:
-          - 8000:8000
-
-
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -34,8 +28,16 @@ jobs:
 
       - name: Start MLflow service
         run: |
-          docker exec mlflow \
-            /bin/bash -c "mlflow server --backend-store-uri file:///app/mlflow-server/experiments --artifacts-destination file:///app/mlflow-server/artifacts --host 0.0.0.0 --port 8000"
+          docker network create mlflow || true
+          docker run -d --rm \
+            --name mlflow \
+            --network mlflow \
+            -p 8000:8000 \
+            ghcr.io/mlflow/mlflow:v2.15.0 \
+            /bin/sh -c "mlflow server --backend-store-uri file:///app/mlflow-server/experiments --artifacts-destination file:///app/mlflow-server/artifacts --host 0.0.0.0 --port 8000"
+
+      - name: Verify MLflow server is running
+        run: curl http://localhost:8000
 
       - uses: actions/cache@v3
         id: cache-venv
@@ -59,8 +61,8 @@ jobs:
       - name: Run tests
         env:
           PSQL_DATABASE_TEST: postgresql://postgres:postgres@localhost:5432/postgres
-          MLFLOW_TRACKING_URI: http://mlflow-tracker:8000
-          MLFLOW_REGISTRY_URI: http://mlflow-tracker:8000
+          MLFLOW_TRACKING_URI: http://localhost:8000
+          MLFLOW_REGISTRY_URI: http://localhost:8000
         run: |
           source .venv/bin/activate
           pytest
