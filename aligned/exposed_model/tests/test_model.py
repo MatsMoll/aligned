@@ -10,30 +10,31 @@ import polars as pl
 
 @pytest.mark.asyncio
 async def test_mlflow() -> None:
-    from mlflow.tracking import MlflowClient
+    from aligned.exposed_model.mlflow import MlflowConfig
     import mlflow
 
-    mlflow.set_tracking_uri('test_data/mlruns')
+    config = MlflowConfig()
 
     model_name = 'test_model'
     model_alias = 'Champion'
 
-    mlflow_client = MlflowClient()
+    with config as mlflow_client:
+        mlflow_client = config.client()
 
-    with suppress(mlflow.MlflowException):
-        mlflow_client.delete_registered_model(model_name)
+        with suppress(mlflow.MlflowException):
+            mlflow_client.delete_registered_model(model_name)
 
-    def predict(data):
-        return data * 2
+        def predict(data):
+            return data * 2
 
-    with mlflow.start_run():
-        mlflow.pyfunc.log_model(
-            artifact_path='model',
-            python_model=predict,
-            registered_model_name=model_name,
-            input_example=[1, 2, 3],
-        )
-        mlflow_client.set_registered_model_alias(name=model_name, alias=model_alias, version=1)  # type: ignore
+        with mlflow.start_run():
+            mlflow.pyfunc.log_model(
+                artifact_path='model',
+                python_model=predict,
+                registered_model_name=model_name,
+                input_example=[1, 2, 3],
+            )
+            mlflow_client.set_registered_model_alias(name=model_name, alias=model_alias, version=1)  # type: ignore
 
     @feature_view(
         name='input',
@@ -48,8 +49,7 @@ async def test_mlflow() -> None:
     @model_contract(
         input_features=[InputFeatureView().x],
         exposed_model=ExposedModel.in_memory_mlflow(
-            model_name=model_name,
-            model_alias=model_alias,
+            model_name=model_name, model_alias=model_alias, mlflow_config=config
         ),
     )
     class MyModelContract:
