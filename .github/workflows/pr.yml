@@ -22,8 +22,6 @@ jobs:
 
       mlflow:
         image: ghcr.io/mlflow/mlflow:v2.15.0
-        options: >
-          --entrypoint "/bin/bash"
         ports:
           - 8000:8000
 
