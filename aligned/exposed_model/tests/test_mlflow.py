@@ -61,6 +61,7 @@ async def test_mlflow_referencing():
     model_name = 'custom-model'
     model_store = store.model(MyModelContract2)
 
+    mlflow.start_run()
     model_info: ModelInfo = mlflow.pyfunc.log_model(
         model_name,
         python_model=model,
@@ -68,6 +69,7 @@ async def test_mlflow_referencing():
         metadata={'feature_refs': reference_metadata_for_features(model_store.input_features())},
         registered_model_name=model_name,
     )
+    mlflow.end_run()
 
     client = mlflow.MlflowClient()
     assert model_info.registered_model_version
@@ -100,6 +102,7 @@ async def test_mlflow_out_of_date_referencing():
         outputs=[MyModelContract2().other_pred.compile().feature],
     )
 
+    mlflow.start_run()
     model_info: ModelInfo = mlflow.pyfunc.log_model(
         model_name,
         python_model=model,
@@ -111,6 +114,7 @@ async def test_mlflow_out_of_date_referencing():
         },
         registered_model_name=model_name,
     )
+    mlflow.end_run()
 
     client = mlflow.MlflowClient()
     assert model_info.registered_model_version

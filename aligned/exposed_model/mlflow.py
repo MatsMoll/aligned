@@ -218,7 +218,7 @@ class InMemMLFlowAlias(ExposedModel):
         return client.get_model_version_by_alias(self.model_name, self.model_alias)
 
     def feature_refs(
-        self, client: mlflow.MlflowClient, model: PyFuncModel | None = None
+        self, client: mlflow.MlflowClient, store: ModelFeatureStore, model: PyFuncModel | None = None
     ) -> list[FeatureReference]:
 
         if model is not None and model.metadata.metadata is not None:
@@ -229,10 +229,14 @@ class InMemMLFlowAlias(ExposedModel):
                 return refs
 
         version = client.get_model_version_by_alias(self.model_name, self.model_alias)
-        return references_from_metadata(version.tags, self.reference_tag) or []
+        refs = references_from_metadata(version.tags, self.reference_tag)
+        if refs:
+            return refs
+
+        return store.input_features()
 
     async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
-        return self.feature_refs(self.mlflow_config.client(), None)
+        return self.feature_refs(self.mlflow_config.client(), store, None)
 
     async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
         refs = await self.needed_features(store)
@@ -253,7 +257,7 @@ class InMemMLFlowAlias(ExposedModel):
 
             model_uri = f"models:/{self.model_name}@{self.model_alias}"
             model = mlflow.pyfunc.load_model(model_uri)
-            feature_refs = self.feature_refs(client, model)
+            feature_refs = self.feature_refs(client, store, model)
 
         job = store.store.features_for(values, feature_refs)
         df = await job.to_polars()
@@ -262,7 +266,7 @@ class InMemMLFlowAlias(ExposedModel):
         try:
             predictions = model.predict(df[features])
         except MlflowException:
-            predictions = model.predict(df[features].to_pandas())
+            predictions = pl.from_pandas(model.predict(df[features].to_pandas()), include_index=False)
 
         if pred_at:
             df = df.with_columns(

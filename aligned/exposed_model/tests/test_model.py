@@ -27,14 +27,17 @@ async def test_mlflow() -> None:
         def predict(data):
             return data * 2
 
-        with mlflow.start_run():
-            mlflow.pyfunc.log_model(
-                artifact_path='model',
-                python_model=predict,
-                registered_model_name=model_name,
-                input_example=[1, 2, 3],
-            )
-            mlflow_client.set_registered_model_alias(name=model_name, alias=model_alias, version=1)  # type: ignore
+        mlflow.start_run()
+        model_info = mlflow.pyfunc.log_model(
+            artifact_path='model',
+            python_model=predict,
+            registered_model_name=model_name,
+            input_example=[1, 2, 3],
+        )
+        mlflow_client.set_registered_model_alias(
+            name=model_name, alias=model_alias, version=str(model_info.registered_model_version)
+        )  # type: ignore
+        mlflow.end_run()
 
     @feature_view(
         name='input',

@@ -25,7 +25,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.test
-    command: "pytest aligned/exposed_model/tests/test_mlflow.py"
+    command: "pytest"
     environment:
       - PSQL_DATABASE_TEST=postgresql://postgres:postgres@psql_app_db:5432/aligned-test
       - MLFLOW_TRACKING_URI=http://mlflow-tracker:8000
