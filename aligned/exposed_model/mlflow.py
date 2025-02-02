@@ -246,6 +246,7 @@ class InMemMLFlowAlias(ExposedModel):
 
     async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
         import polars as pl
+        import pandas as pd
         from datetime import datetime, timezone
 
         pred_label = list(store.model.predictions_view.labels())[0]
@@ -270,7 +271,10 @@ class InMemMLFlowAlias(ExposedModel):
         try:
             predictions = model.predict(df[features])
         except MlflowException:
-            predictions = pl.from_pandas(model.predict(df[features].to_pandas()), include_index=False)
+            predictions = model.predict(df[features].to_pandas())
+            if not isinstance(predictions, pd.Series):
+                predictions = pd.Series(predictions)
+            predictions = pl.from_pandas(predictions, include_index=False)
 
         if pred_at:
             df = df.with_columns(
