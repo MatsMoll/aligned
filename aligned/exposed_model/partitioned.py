@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import polars as pl
 
+from aligned.config_value import ConfigValue
 from aligned.exposed_model.interface import ExposedModel
 from aligned.feature_store import ModelFeatureStore
 from aligned.schemas.feature import Feature, FeatureReference
@@ -9,6 +10,34 @@ from aligned.retrival_job import RetrivalJob
 
 @dataclass
 class PartitionedModel(ExposedModel):
+    """Returns an model that routes the inference request to a new model based on a partition key
+
+    ```python
+    @model_contract(
+        input_features=[MyFeature().name],
+        exposed_model=partitioned_on(
+            "lang",
+            partitions={
+                "no": openai_embedding("text-embedding-3-large"),
+                "en": openai_embedding("text-embedding-ada-002"),
+            },
+            default_partition="no"
+        ),
+    )
+    class MyEmbedding:
+        my_entity = Int32().as_entity()
+        name = String()
+        lang = String()
+        embedding = Embedding(1536)
+        predicted_at = EventTimestamp()
+
+    embeddings = await store.model(MyEmbedding).predict_over({
+        "my_entity": [1, 2, 3],
+        "name": ["Hello", "Hei", "Hola"],
+        "lang": ["en", "no", "es"]
+    }).to_polars()
+    ```
+    """
 
     partition_key: Feature
     partitions: dict[str, ExposedModel]
@@ -23,6 +52,12 @@ class PartitionedModel(ExposedModel):
 Partitione key: {self.partition_key.name}
 
 Partitions: {self.partitions}"""
+
+    def needed_configs(self) -> list[ConfigValue]:
+        configs = []
+        for partition in self.partitions.values():
+            configs.extend(partition.needed_configs())
+        return configs
 
     async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
 

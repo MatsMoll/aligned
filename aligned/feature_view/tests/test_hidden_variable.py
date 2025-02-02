@@ -2,7 +2,7 @@ import pytest
 
 from aligned import (
     Bool,
-    Float,
+    Float32,
     PostgreSQLConfig,
     String,
     feature_view,
@@ -26,8 +26,8 @@ class TestView:
     is_not_true_other = some_bool & (~(variable == 'true'))
     is_true = variable == 'True'
 
-    y_value = Float()
-    x_value = Float()
+    y_value = Float32()
+    x_value = Float32()
 
     some_ratio = (y_value - x_value) / x_value
 
@@ -81,7 +81,7 @@ async def test_core_feature_as_hidden() -> None:
     class Test:
         PassengerId = String().as_entity()
 
-        Age = Float().fill_na(10)
+        Age = Float32().fill_na(10)
 
     compiled = Test.compile()  # type: ignore
     assert len(compiled.derived_features) == 1

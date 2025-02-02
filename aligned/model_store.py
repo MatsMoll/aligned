@@ -69,7 +69,6 @@ class ModelFeatureStore:
         return self.model.features.features_for(version)
 
     def raw_string_features(self, except_features: set[str]) -> set[str]:
-
         features = self.input_features()
         return {
             f'{feature.location.identifier}:{feature.name}'

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from pydantic import BaseModel, Field
-from aligned import feature_view, UUID, String, PostgreSQLConfig, Float
+from aligned import feature_view, UUID, String, PostgreSQLConfig, Float32
 from aligned.schemas.feature import FeatureType
 
 source = PostgreSQLConfig.localhost('test')
@@ -12,7 +12,7 @@ class Test:
     id = UUID().as_entity()
 
     x = String()
-    y = Float()
+    y = Float32()
 
     z = y**2
 

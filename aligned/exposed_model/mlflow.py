@@ -262,7 +262,7 @@ class InMemMLFlowAlias(ExposedModel):
         job = store.store.features_for(values, feature_refs)
         df = await job.to_polars()
 
-        features = job.request_result.feature_columns
+        features = [feat.name for feat in feature_refs]
         try:
             predictions = model.predict(df[features])
         except MlflowException:

@@ -1,10 +1,22 @@
 from __future__ import annotations
-from typing import Generic, TypeVar
+from typing import Generic, TypeVar, overload
 
 import polars as pl
 from aligned.lazy_imports import pandas as pd
 
-DatasetType = TypeVar('DatasetType')
+DatasetType = TypeVar('DatasetType', pl.DataFrame, pd.DataFrame, pl.LazyFrame)
+
+
+def column_for(data: DatasetType, column: str) -> pl.Series | pd.Series:
+    if isinstance(data, pl.DataFrame):
+        return data[column]
+    elif isinstance(data, pl.LazyFrame):
+        return data.select(column).collect()[column]
+    elif isinstance(data, pd.DataFrame):
+        col: pd.Series = data[column]  # type: ignore
+        return col
+
+    raise NotImplementedError(f"Unsupported type {type(data)}")
 
 
 class SupervisedDataSet(Generic[DatasetType]):
@@ -45,11 +57,43 @@ class SupervisedDataSet(Generic[DatasetType]):
             return self.data.select(self.sorted_features)  # type: ignore
         return self.data[self.sorted_features]  # type: ignore
 
+    @overload
+    def label(self: 'SupervisedDataSet[pl.DataFrame]') -> pl.Series:
+        ...
+
+    @overload
+    def label(self: 'SupervisedDataSet[pl.LazyFrame]') -> pl.Series:
+        ...
+
+    @overload
+    def label(self: 'SupervisedDataSet[pd.DataFrame]') -> pd.Series:
+        ...
+
+    def label(self) -> pl.Series | pd.Series:
+        assert len(self.target_columns) == 1
+        return column_for(self.data, next(iter(self.target_columns)))
+
     @property
     def labels(self) -> DatasetType:
         if isinstance(self.data, (pl.LazyFrame, pl.DataFrame)):
             return self.data.select(list(self.target_columns))  # type: ignore
         return self.data[list(self.target_columns)]  # type: ignore
+
+    @overload
+    def target(self: 'SupervisedDataSet[pl.DataFrame]') -> pl.Series:
+        ...
+
+    @overload
+    def target(self: 'SupervisedDataSet[pl.LazyFrame]') -> pl.Series:
+        ...
+
+    @overload
+    def target(self: 'SupervisedDataSet[pd.DataFrame]') -> pd.Series:
+        ...
+
+    def target(self) -> pl.Series | pd.Series:
+        assert len(self.target_columns) == 1
+        return column_for(self.data, next(iter(self.target_columns)))
 
 
 class TrainTestValidateSet(Generic[DatasetType]):

@@ -35,8 +35,9 @@ NAME_POLARS_MAPPING = [
     ('uint16', pl.UInt16),
     ('uint32', pl.UInt32),
     ('uint64', pl.UInt64),
-    ('float', pl.Float64),
     ('float', pl.Float32),
+    ('float32', pl.Float32),
+    ('float64', pl.Float64),
     ('double', pl.Float64),
     ('bool', pl.Boolean),
     ('date', pl.Date),
@@ -69,6 +70,8 @@ class FeatureType(Codable):
             'uint32',
             'uint64',
             'float',
+            'float32',
+            'float64',
             'double',
         }  # Can be represented as an int
 
@@ -120,6 +123,8 @@ class FeatureType(Codable):
             'int32': int,
             'int64': int,
             'float': float,
+            'float32': float,
+            'float64': double,
             'double': double,
             'bool': bool,
             'date': date,
@@ -143,6 +148,8 @@ class FeatureType(Codable):
             'int32': 'Int32',
             'int64': 'Int64',
             'float': np.float32,
+            'float32': np.float32,
+            'float64': np.float64,
             'double': np.float64,
             'bool': 'boolean',
             'date': np.datetime64,
@@ -204,8 +211,10 @@ class FeatureType(Codable):
             'uint16': ff.UInt16(),
             'uint32': ff.UInt32(),
             'uint64': ff.UInt64(),
-            'float': ff.Float(),
-            'double': ff.Float(),
+            'float': ff.Float32(),
+            'float32': ff.Float32(),
+            'float64': ff.Float64(),
+            'double': ff.Float64(),
             'bool': ff.Bool(),
             'date': ff.Timestamp(),
             'datetime': ff.Timestamp(),
@@ -349,6 +358,14 @@ class FeatureType(Codable):
     @staticmethod
     def int64() -> FeatureType:
         return FeatureType(name='int64')
+
+    @staticmethod
+    def float64() -> FeatureType:
+        return FeatureType(name='float64')
+
+    @staticmethod
+    def float32() -> FeatureType:
+        return FeatureType(name='float32')
 
     @staticmethod
     def floating_point() -> FeatureType:

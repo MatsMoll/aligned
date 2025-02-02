@@ -103,6 +103,12 @@ class TrainTestJob:
     def test(self) -> SupervisedJob:
         return SupervisedJob(self.test_job, self.target_columns)
 
+    @property
+    def input_features(self) -> list[Feature]:
+        return [
+            feat for feat in self.train_job.request_result.features if feat.name not in self.target_columns
+        ]
+
     async def store_dataset_at_directory(
         self,
         directory: Directory,
@@ -225,6 +231,11 @@ class TrainTestValidateJob:
     @property
     def validate(self) -> SupervisedJob:
         return SupervisedJob(self.validate_job, self.target_columns, self.should_filter_out_null_targets)
+
+    def input_features(self) -> list[Feature]:
+        return [
+            feat for feat in self.train_job.request_result.features if feat.name not in self.target_columns
+        ]
 
     async def store_dataset_at_directory(
         self,
@@ -409,6 +420,10 @@ class SupervisedJob:
     @property
     def request_result(self) -> RequestResult:
         return self.job.request_result
+
+    @property
+    def input_features(self) -> list[Feature]:
+        return [feat for feat in self.job.request_result.features if feat.name not in self.target_columns]
 
     def train_test(
         self, train_size: float, splitter_factory: Callable[[SplitConfig], SplitterCallable] | None = None
@@ -2649,7 +2664,7 @@ class PredictionJob(RetrivalJob):
         )
 
     async def to_pandas(self) -> pd.DataFrame:
-        return await self.job.to_pandas()
+        return (await self.to_polars()).to_pandas()
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         from aligned.exposed_model.interface import VersionedModel
@@ -2679,12 +2694,15 @@ class PredictionJob(RetrivalJob):
         return df.lazy()
 
     def log_each_job(self, logger_func: Callable[[object], None] | None = None) -> RetrivalJob:
-        return PredictionJob(
-            self.job.log_each_job(logger_func),
-            self.model,
-            self.store,
-            output_requests=self.output_requests,
-            predictor=self.predictor,
+        return LogJob(
+            PredictionJob(
+                self.job.log_each_job(logger_func),
+                self.model,
+                self.store,
+                output_requests=self.output_requests,
+                predictor=self.predictor,
+            ),
+            logger_func or logger.debug,
         )
 
     def filter(self, condition: str | Feature | DerivedFeature | pl.Expr) -> RetrivalJob:

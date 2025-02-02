@@ -1,5 +1,5 @@
 import pytest
-from aligned import Bool, Float, String, feature_view, FileSource
+from aligned import Bool, Float32, String, feature_view, FileSource
 from aligned.feature_view.feature_view import check_schema
 from typing import Annotated
 from aligned.lazy_imports import pandas as pd
@@ -15,7 +15,7 @@ class TestView:
 
     a = String()
     b = Bool()
-    c = Float()
+    c = Float32()
 
 
 @check_schema()

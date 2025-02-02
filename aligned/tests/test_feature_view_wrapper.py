@@ -1,5 +1,5 @@
 import pytest
-from aligned import feature_view, String, Int32, FileSource, Float
+from aligned import feature_view, String, Int32, FileSource, Float32
 from aligned.compiler.feature_factory import EventTimestamp
 from aligned.schemas.feature import FeatureLocation
 
@@ -14,7 +14,7 @@ class DefaultValueTest:
     other_value = String().default_value('Hello')
     optional_value = Int32().is_optional()
 
-    other_default = Float().default_value(0)
+    other_default = Float32().default_value(0)
 
 
 @feature_view(name='test', source=FileSource.csv_at('some_file.csv'))

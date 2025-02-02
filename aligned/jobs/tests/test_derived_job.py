@@ -6,7 +6,7 @@ import polars as pl
 import pytest
 
 from aligned.lazy_imports import pandas as pd
-from aligned import feature_view, Float, String, FileSource
+from aligned import feature_view, Float32, String, FileSource
 from aligned.compiler.model import model_contract
 from aligned.feature_store import ContractStore
 from aligned.local.job import FileFullJob
@@ -75,7 +75,7 @@ class Transaction:
 
     user_id = String().fill_na('some_user_id')
 
-    amount = Float()
+    amount = Float32()
     abs_amount = abs(amount)
 
     is_expence = amount < 0
@@ -152,7 +152,7 @@ def test_with_schema() -> None:
             other_id=String(),
         ),
         additional_features=dict(  # noqa: C408
-            other=Float(),
+            other=Float32(),
         ),
     )
     transaction = Transaction.compile()
