@@ -198,6 +198,8 @@ class InMemMLFlowAlias(ExposedModel):
     model_alias: str
 
     mlflow_config: MlflowConfig
+
+    drop_invalid_rows: bool = True
     reference_tag: str = 'feature_refs'
     model_type: str = 'latest_mlflow'
 
@@ -260,6 +262,8 @@ class InMemMLFlowAlias(ExposedModel):
             feature_refs = self.feature_refs(client, store, model)
 
         job = store.store.features_for(values, feature_refs)
+        if self.drop_invalid_rows:
+            job = job.drop_invalid()
         df = await job.to_polars()
 
         features = [feat.name for feat in feature_refs]
