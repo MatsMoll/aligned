@@ -58,6 +58,12 @@ class FeatureType(Codable):
     name: str
 
     @property
+    def is_categorical_representable(self) -> bool:
+        if 'int' in self.name:
+            return True
+        return self.name in ['string', 'bool']
+
+    @property
     def is_numeric(self) -> bool:
         return self.name in {
             'bool',

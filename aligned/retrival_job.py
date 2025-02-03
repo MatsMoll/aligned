@@ -63,20 +63,46 @@ def split(
 
 
 def subset_polars(
-    data: pl.DataFrame, start_ratio: float, end_ratio: float, event_timestamp_column: str | None = None
+    data: pl.DataFrame,
+    start_ratio: float,
+    end_ratio: float,
+    event_timestamp_column: str | None = None,
+    strategies_on: list[str] | None = None,
 ) -> pl.DataFrame:
 
     if event_timestamp_column:
         data = data.sort(event_timestamp_column)
 
-    group_size = data.height
-    start_index = round(group_size * start_ratio)
-    end_index = round(group_size * end_ratio)
+    if strategies_on is None:
+        strategies_on = []
 
-    if end_index >= group_size:
-        return data[start_index:]
+    if not strategies_on:
+        datasets: list[pl.DataFrame] = [data]
     else:
-        return data[start_index:end_index]
+        datasets: list[pl.DataFrame] = []
+
+        for cats in data.select(strategies_on).unique(strategies_on).rows(named=True):
+            datasets.append(data.filter(*[pl.col(key) == val for key, val in cats.items()]))
+
+    ret_dataset: pl.DataFrame | None = None
+
+    for dataset in datasets:
+        group_size = dataset.height
+        start_index = round(group_size * start_ratio)
+        end_index = round(group_size * end_ratio)
+
+        if end_index >= group_size:
+            subset = dataset[start_index:]
+        else:
+            subset = dataset[start_index:end_index]
+
+        if ret_dataset is None:
+            ret_dataset = subset
+        else:
+            ret_dataset = ret_dataset.vstack(subset)
+
+    assert ret_dataset is not None
+    return ret_dataset
 
 
 def fraction_from_job(job: RetrivalJob) -> float | None:
@@ -426,12 +452,22 @@ class SupervisedJob:
         return [feat for feat in self.job.request_result.features if feat.name not in self.target_columns]
 
     def train_test(
-        self, train_size: float, splitter_factory: Callable[[SplitConfig], SplitterCallable] | None = None
+        self,
+        train_size: float,
+        splitter_factory: Callable[[SplitConfig], SplitterCallable] | None = None,
     ) -> TrainTestJob:
+
+        if len(self.target_columns) == 1:
+            return self.job.train_test(
+                train_size=train_size,
+                target_column=next(iter(self.target_columns)),
+                splitter_factory=splitter_factory,
+            )
 
         cached_job = InMemoryCacheJob(self.job)
 
-        event_timestamp = self.job.request_result.event_timestamp
+        result = self.job.request_result
+        event_timestamp = result.event_timestamp
 
         train_config = SplitConfig(
             left_size=train_size,
@@ -443,11 +479,16 @@ class SupervisedJob:
         if splitter_factory:
             train_splitter = splitter_factory(train_config)  # type: ignore
         else:
+            strategies_on = [
+                feat.name
+                for feat in result.features.union(result.entities)
+                if feat.name in self.target_columns and feat.dtype.is_categorical_representable
+            ]
 
             def train_splitter(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
                 return (
-                    subset_polars(df, 0, train_config.left_size, event_timestamp),
-                    subset_polars(df, train_config.left_size, 1, event_timestamp),
+                    subset_polars(df, 0, train_config.left_size, event_timestamp, strategies_on),
+                    subset_polars(df, train_config.left_size, 1, event_timestamp, strategies_on),
                 )
 
         train_job, test_job = cached_job.split(train_splitter, (train_size, 1 - train_size))
@@ -464,11 +505,21 @@ class SupervisedJob:
         splitter_factory: Callable[[SplitConfig], SplitterCallable] | None = None,
     ) -> TrainTestValidateJob:
 
+        if len(self.target_columns) == 1:
+            return self.job.train_test_validate(
+                train_size=train_size,
+                validate_size=validate_size,
+                target_column=next(iter(self.target_columns)),
+                splitter_factory=splitter_factory,
+                should_filter_out_null_targets=self.should_filter_out_null_targets,
+            )
+
         job_to_cache = self.job
         if self.should_filter_out_null_targets:
             job_to_cache = self.job.polars_method(lambda df: df.drop_nulls(self.target_columns))
 
-        event_timestamp = self.job.request_result.event_timestamp
+        result = self.job.request_result
+        event_timestamp = result.event_timestamp
 
         leftover_size = 1 - train_size
 
@@ -489,17 +540,22 @@ class SupervisedJob:
             train_splitter = splitter_factory(train_config)  # type: ignore
             validate_splitter = splitter_factory(test_config)  # type: ignore
         else:
+            strategies_on = [
+                feat.name
+                for feat in result.features.union(result.entities)
+                if feat.name in self.target_columns and feat.dtype.is_categorical_representable
+            ]
 
             def train_splitter(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
                 return (
-                    subset_polars(df, 0, train_config.left_size, event_timestamp),
-                    subset_polars(df, train_config.left_size, 1, event_timestamp),
+                    subset_polars(df, 0, train_config.left_size, event_timestamp, strategies_on),
+                    subset_polars(df, train_config.left_size, 1, event_timestamp, strategies_on),
                 )
 
             def validate_splitter(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
                 return (
-                    subset_polars(df, 0, test_config.left_size, event_timestamp),
-                    subset_polars(df, test_config.left_size, 1, event_timestamp),
+                    subset_polars(df, 0, test_config.left_size, event_timestamp, strategies_on),
+                    subset_polars(df, test_config.left_size, 1, event_timestamp, strategies_on),
                 )
 
         train_job, rem_job = job_to_cache.split(train_splitter, (train_size, 1 - train_size))
@@ -714,32 +770,118 @@ class RetrivalJob(ABC):
         else:
             return FileCachedJob(location, self).derive_features()
 
-    def train_test(self, train_size: float, target_column: str) -> TrainTestJob:
-        cached = InMemoryCacheJob(self)
+    def train_test(
+        self,
+        train_size: float,
+        target_column: str,
+        splitter_factory: Callable[[SplitConfig], SplitterCallable] | None = None,
+    ) -> TrainTestJob:
+        cached_job = InMemoryCacheJob(self)
 
-        event_timestamp = self.request_result.event_timestamp
+        result = self.request_result
+        event_timestamp = result.event_timestamp
 
+        train_config = SplitConfig(
+            left_size=train_size,
+            right_size=1 - train_size,
+            event_timestamp_column=event_timestamp,
+            target_columns=[target_column],
+        )
+
+        if splitter_factory:
+            train_splitter = splitter_factory(train_config)  # type: ignore
+        else:
+            strategies_on = [
+                next(
+                    iter(
+                        feat.name
+                        for feat in result.features.union(result.entities)
+                        if feat.name == target_column and feat.dtype.is_categorical_representable
+                    )
+                )
+            ]
+
+            def train_splitter(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
+                return (
+                    subset_polars(df, 0, train_config.left_size, event_timestamp, strategies_on),
+                    subset_polars(df, train_config.left_size, 1, event_timestamp, strategies_on),
+                )
+
+        train_job, test_job = cached_job.split(train_splitter, (train_size, 1 - train_size))
         return TrainTestJob(
-            train_job=SubsetJob(cached, 0, train_size, event_timestamp),
-            test_job=SubsetJob(cached, train_size, 1, event_timestamp),
+            train_job=train_job,
+            test_job=test_job,
             target_columns={target_column},
         )
 
     def train_test_validate(
-        self, train_size: float, validate_size: float, target_column: str
+        self,
+        train_size: float,
+        validate_size: float,
+        target_column: str,
+        splitter_factory: Callable[[SplitConfig], SplitterCallable] | None = None,
+        should_filter_out_null_targets: bool = True,
     ) -> TrainTestValidateJob:
 
-        cached = InMemoryCacheJob(self)
+        job_to_cache = self
+        if should_filter_out_null_targets:
+            job_to_cache = job_to_cache.polars_method(lambda df: df.drop_nulls(target_column))
 
-        event_timestamp = self.request_result.event_timestamp
+        result = self.request_result
+        event_timestamp = result.event_timestamp
 
-        validate_ratio_start = train_size + validate_size
+        leftover_size = 1 - train_size
+
+        train_config = SplitConfig(
+            left_size=train_size,
+            right_size=leftover_size,
+            event_timestamp_column=event_timestamp,
+            target_columns=[target_column],
+        )
+        test_config = SplitConfig(
+            left_size=(leftover_size - validate_size) / leftover_size,
+            right_size=validate_size / leftover_size,
+            event_timestamp_column=event_timestamp,
+            target_columns=[target_column],
+        )
+
+        if splitter_factory:
+            train_splitter = splitter_factory(train_config)  # type: ignore
+            validate_splitter = splitter_factory(test_config)  # type: ignore
+        else:
+            strategies_on = [
+                next(
+                    iter(
+                        feat.name
+                        for feat in result.features.union(result.entities)
+                        if feat.name == target_column and feat.dtype.is_categorical_representable
+                    )
+                )
+            ]
+
+            def train_splitter(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
+                return (
+                    subset_polars(df, 0, train_config.left_size, event_timestamp, strategies_on),
+                    subset_polars(df, train_config.left_size, 1, event_timestamp, strategies_on),
+                )
+
+            def validate_splitter(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
+                return (
+                    subset_polars(df, 0, test_config.left_size, event_timestamp, strategies_on),
+                    subset_polars(df, test_config.left_size, 1, event_timestamp, strategies_on),
+                )
+
+        train_job, rem_job = job_to_cache.split(train_splitter, (train_size, 1 - train_size))
+        test_job, validate_job = rem_job.split(
+            validate_splitter, (1 - train_size - validate_size, validate_size)
+        )
 
         return TrainTestValidateJob(
-            train_job=SubsetJob(cached, 0, train_size, event_timestamp),
-            test_job=SubsetJob(cached, train_size, validate_ratio_start, event_timestamp),
-            validate_job=SubsetJob(cached, validate_ratio_start, 1, event_timestamp),
+            train_job=train_job,
+            test_job=test_job,
+            validate_job=validate_job,
             target_columns={target_column},
+            should_filter_out_null_targets=should_filter_out_null_targets,
         )
 
     def drop_invalid(self, validator: Validator | None = None) -> RetrivalJob:

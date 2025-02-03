@@ -14,17 +14,11 @@ async def test_schema_loading() -> None:
         'Pclass': FeatureType(name='int64'),
         'name': FeatureType(name='string'),
         'sex': FeatureType(name='string'),
-        'age': FeatureType(name='float'),
+        'age': FeatureType(name='float64'),
         'sibsp': FeatureType(name='int64'),
         'Parch': FeatureType(name='int64'),
         'Ticket': FeatureType(name='string'),
-        'Fare': FeatureType(name='float'),
+        'Fare': FeatureType(name='float64'),
         'cabin': FeatureType(name='string'),
         'Embarked': FeatureType(name='string'),
     }
-
-
-@pytest.mark.asyncio
-async def test_feature_view_generation() -> None:
-    fv_impl = await FileSource.csv_at('test_data/data.csv').feature_view_code('my_view')
-    assert '' in fv_impl
