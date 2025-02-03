@@ -6,38 +6,18 @@ from aligned.sources.in_mem_source import InMemorySource
 from aligned.sources.random_source import RandomDataSource
 from aligned.exposed_model.interface import partitioned_on, python_function
 import polars as pl
+import pandas as pd
 
 
 @pytest.mark.asyncio
 async def test_mlflow() -> None:
-    from aligned.exposed_model.mlflow import MlflowConfig
+    from aligned.exposed_model.mlflow import MlflowConfig, signature_for_contract
     import mlflow
 
     config = MlflowConfig()
 
     model_name = 'test_model'
-    model_alias = 'Champion'
-
-    with config as mlflow_client:
-        mlflow_client = config.client()
-
-        with suppress(mlflow.MlflowException):
-            mlflow_client.delete_registered_model(model_name)
-
-        def predict(data):
-            return data * 2
-
-        mlflow.start_run()
-        model_info = mlflow.pyfunc.log_model(
-            artifact_path='model',
-            python_model=predict,
-            registered_model_name=model_name,
-            input_example=[1, 2, 3],
-        )
-        mlflow_client.set_registered_model_alias(
-            name=model_name, alias=model_alias, version=str(model_info.registered_model_version)
-        )  # type: ignore
-        mlflow.end_run()
+    model_alias = 'champion'
 
     @feature_view(
         name='input',
@@ -60,6 +40,31 @@ async def test_mlflow() -> None:
         predicted_at = EventTimestamp()
         prediction = input.x.as_regression_target()
         model_version = String().as_model_version()
+
+    with config as mlflow_client:
+        mlflow_client = config.client()
+
+        with suppress(mlflow.MlflowException):
+            mlflow_client.delete_registered_model(model_name)
+
+        def predict(data):
+            return data.sum(axis=1) * 2
+
+        example = pd.DataFrame({'x': [1, 2, 3]})
+        example['x'] = example['x'].astype('int32')
+
+        mlflow.start_run()
+        model_info = mlflow.pyfunc.log_model(
+            artifact_path='model',
+            python_model=predict,
+            registered_model_name=model_name,
+            input_example=example,
+            signature=signature_for_contract(MyModelContract.query([InputFeatureView])),
+        )
+        mlflow_client.set_registered_model_alias(
+            name=model_name, alias=model_alias, version=str(model_info.registered_model_version)
+        )  # type: ignore
+        mlflow.end_run()
 
     preds = await MyModelContract.predict_over(
         values={'entity_id': ['a', 'b'], 'x': [1, 2]}, needed_views=[InputFeatureView]

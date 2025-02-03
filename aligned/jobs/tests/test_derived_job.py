@@ -225,11 +225,13 @@ async def test_model_with_label_multiple_views() -> None:
             'amount': [-20.0, -100.0, -20.0, -100.0],
         }
     )
+    expected_df['total_amount'] = expected_df['total_amount'].astype('float32')
+    expected_df['abs_amount'] = expected_df['abs_amount'].astype('float32')
+    expected_df['amount'] = expected_df['amount'].astype('float32')
 
     assert data.labels.shape[0] != 0
     assert data.input.shape[1] == 3
     assert data.input.shape[0] != 0
 
-    assert data.data.sort_values(['user_id', 'transaction_id'])[expected_df.columns].equals(
-        expected_df.sort_values(['user_id', 'transaction_id'])
-    )
+    result = data.data.sort_values(['user_id', 'transaction_id'])[expected_df.columns]
+    assert result.equals(expected_df.sort_values(['user_id', 'transaction_id']))
