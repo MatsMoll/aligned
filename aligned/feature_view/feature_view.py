@@ -600,7 +600,7 @@ class FeatureView(ABC):
                 f'The feature view: {view.name}, needs an event timestamp',
                 'to compute the freshness of a source',
             )
-        return await source.freshness(view.event_timestamp)
+        return await source.freshness(view.event_timestamp.as_feature())
 
     @staticmethod
     def compile_with_metadata(feature_view: Any, metadata: FeatureViewMetadata) -> CompiledFeatureView:
