@@ -21,6 +21,7 @@ class StaticFeatureTags:
     is_model_version = 'is_model_version'
     is_entity = 'is_entity'
     is_annotated_by = 'is_annotated_by'
+    is_annotated_feature = 'is_annotated_feature'
     is_input_features = 'is_input_features'
     is_freshness = 'is_updated_at_feature'
 

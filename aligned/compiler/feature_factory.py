@@ -464,6 +464,9 @@ class FeatureFactory(FeatureReferencable):
     def as_annotated_by(self: T) -> T:
         return self.with_tag(StaticFeatureTags.is_annotated_by)
 
+    def as_annotated_feature(self: T) -> T:
+        return self.with_tag(StaticFeatureTags.is_annotated_feature)
+
     def compile(self) -> DerivedFeature:
 
         if not self.transformation:

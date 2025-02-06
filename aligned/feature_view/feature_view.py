@@ -152,31 +152,6 @@ def feature_view(
     return decorator
 
 
-def annotated_feature_view(
-    annotation_source: FeatureLocation,
-    annotated_source: CodableBatchDataSource | FeatureViewWrapper,
-    name: str | None = None,
-    description: str | None = None,
-    contacts: list[str] | None = None,
-    tags: list[str] | None = None,
-) -> Callable[[Type[T]], FeatureViewWrapper[T]]:
-    def decorator(cls: Type[T]) -> FeatureViewWrapper[T]:
-
-        used_name = name or str(cls.__name__).lower()
-        used_description = description or str(cls.__doc__)
-
-        metadata = FeatureViewMetadata(
-            used_name,
-            resolve_source(annotated_source),
-            description=used_description,
-            contacts=contacts,
-            tags=tags,
-        )
-        return FeatureViewWrapper(metadata, cls())
-
-    return decorator
-
-
 def set_location_for_features_in(view: Any, location: FeatureLocation) -> Any:
     for attribute in dir(view):
         if attribute.startswith('__'):
@@ -189,20 +164,6 @@ def set_location_for_features_in(view: Any, location: FeatureLocation) -> Any:
 
             setattr(view, attribute, copied)
     return view
-
-
-@dataclass
-class AnnotatedViewWrapper(Generic[T]):
-
-    annotated_view: FeatureLocation
-    view_wrapper: FeatureViewWrapper[T]
-
-    def compile(self) -> None:
-        view = self.view_wrapper.compile()
-        annotated_by = [
-            feat for feat in view.features if feat.tags and StaticFeatureTags.is_annotated_by in feat.tags
-        ]
-        assert len(annotated_by) <= 1
 
 
 @dataclass
