@@ -7,7 +7,7 @@
   <head>
     
     <title>aligned.sources.in_mem_source.InMemorySource</title>
-    <meta name="generator" content="pydoctor 24.3.3"> 
+    <meta name="generator" content="pydoctor 24.11.2"> 
         
     </meta>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
@@ -15,6 +15,7 @@
     <link rel="stylesheet" type="text/css" href="bootstrap.min.css" />
     <link rel="stylesheet" type="text/css" href="apidocs.css" />
     <link rel="stylesheet" type="text/css" href="extra.css" />
+    
 </head>
 
   <body>
@@ -52,7 +53,7 @@
             
             <span class="input-group-btn">
               <a style="display: none;" class="btn btn-default" id="search-clear-button" title="Clear" onclick="clearSearch()"><img src="fonts/x-circle.svg" alt="Clear" /></a>
-              <a class="btn btn-default" id="search-help-button" title="Help" onclick="toggleSearchHelpText()"><img src="fonts/info.svg" alt="Help" /></a>
+              <a class="btn btn-default" id="apidocs-help-button" title="Help" href="apidocs-help.html"><img src="fonts/info.svg" alt="Help" /></a>
             </span>
           </div>
         </div>
@@ -76,39 +77,6 @@
             <h1>Cannot search: JavaScript is not supported/enabled in your browser.</h1>
         </noscript>
 
-        <div class="hint" id="search-help-box">
-          <p class="rst-last">
-      
-            Search bar offers the following options:
-            <ul>   
-                <li>
-                  <strong>Term presence.</strong> The below example searches for documents that 
-                    must contain “foo”, might contain “bar” and must not contain “baz”: <code>+foo bar -baz</code>
-                </li> 
-
-                <li>
-                  <strong>Wildcards.</strong> The below example searches for documents with words beginning with “foo”: <code>foo*</code>
-                </li> 
-
-                <li>
-                  <strong>Search in specific fields.</strong> The following search matches all objects 
-                  in "twisted.mail" that matches “search”: <code>+qname:twisted.mail.* +search</code>
-
-                  <p>
-                    Possible fields: 'name', 'qname' (fully qualified name), 'docstring', and 'kind'.
-                    Last two fields are only applicable if "search in docstrings" is enabled.
-                  </p>
-                </li>
-
-                <li>
-                  <strong>Fuzzy matches.</strong> The following search matches all documents 
-                  that have a word within 1 edit distance of “foo”: <code>foo~1</code>
-                </li>
-            </ul>
-
-          </p>
-        </div>
-
         <div id="search-status"> </div>
 
         <div class="warning" id="search-warn-box" style="display: none;">
@@ -119,8 +87,8 @@
           <!-- Filled dynamically by JS -->
         </table>
         
-        <div style="margin-top: 8px;">
-          <p>Results provided by <a href="https://lunrjs.com">Lunr.js</a></p>
+        <div style="margin-top: 10px;">
+          <p>For more information on the search, visit the <a href="apidocs-help.html#rst-search">help page</a>.</p>
         </div>
       </div>
 
@@ -637,7 +605,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">InMemorySource</span>(<a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a>, <a href="aligned.data_file.DataFileReference.html" class="internal-link" title="aligned.data_file.DataFileReference">DataFileReference</a>, <a href="aligned.feature_source.WritableFeatureSource.html" class="internal-link" title="aligned.feature_source.WritableFeatureSource">WritableFeatureSource</a>, <a href="aligned.sources.vector_index.VectorIndex.html" class="internal-link" title="aligned.sources.vector_index.VectorIndex">VectorIndex</a>): <a href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L17" class="sourceLink">(source)</a></code></p><p>Constructors: <code><a href="#empty" class="internal-link" title="aligned.sources.in_mem_source.InMemorySource.empty">InMemorySource.empty()</a></code>, <code><a href="#from_values" class="internal-link" title="aligned.sources.in_mem_source.InMemorySource.from_values">InMemorySource.from_values(values)</a></code>, <code><a href="#__init__" class="internal-link" title="aligned.sources.in_mem_source.InMemorySource.__init__">InMemorySource(data)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">InMemorySource</span>(<a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a>, <a href="aligned.data_file.DataFileReference.html" class="internal-link" title="aligned.data_file.DataFileReference">DataFileReference</a>, <a href="aligned.feature_source.WritableFeatureSource.html" class="internal-link" title="aligned.feature_source.WritableFeatureSource">WritableFeatureSource</a>, <a href="aligned.sources.vector_index.VectorIndex.html" class="internal-link" title="aligned.sources.vector_index.VectorIndex">VectorIndex</a>): <a href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L17" class="sourceLink">(source)</a></code></p><p>Constructors: <code><a href="#empty" class="internal-link" title="aligned.sources.in_mem_source.InMemorySource.empty">InMemorySource.empty()</a></code>, <code><a href="#from_values" class="internal-link" title="aligned.sources.in_mem_source.InMemorySource.from_values">InMemorySource.from_values(values)</a></code>, <code><a href="#__init__" class="internal-link" title="aligned.sources.in_mem_source.InMemorySource.__init__">InMemorySource(data)</a></code></p>
           <p><a href="classIndex.html#aligned.sources.in_mem_source.InMemorySource">View In Hierarchy</a></p>
         </div>
 
@@ -892,7 +860,7 @@
     
     @<a href="https://docs.python.org/3/library/functions.html#classmethod" class="intersphinx-link">classmethod</a><br />
     <span class="py-keyword">def</span> <span class="py-defname">multi_source_features_for</span><span class="function-signature">(cls: <code><a href="https://docs.python.org/3/library/functions.html#type" class="intersphinx-link">type</a>[<wbr></wbr><a href="aligned.sources.in_mem_source.InMemorySource.html" class="internal-link" title="aligned.sources.in_mem_source.InMemorySource">InMemorySource</a>]</code>, facts: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, requests: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr><a href="aligned.sources.in_mem_source.InMemorySource.html" class="internal-link" title="aligned.sources.in_mem_source.InMemorySource">InMemorySource</a>, <wbr></wbr>RetrivalRequest]]</code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L133">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L133">
       
       (source)
     </a>
@@ -919,7 +887,7 @@
     
     @<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br />
     <span class="py-keyword">def</span> <span class="py-defname">empty</span><span class="function-signature">() -&gt; <code><a href="aligned.sources.in_mem_source.InMemorySource.html" class="internal-link" title="aligned.sources.in_mem_source.InMemorySource">InMemorySource</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L155">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L155">
       
       (source)
     </a>
@@ -946,7 +914,7 @@
     
     @<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br />
     <span class="py-keyword">def</span> <span class="py-defname">from_values</span><span class="function-signature">(values: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/functions.html#object" class="intersphinx-link">object</a>]</code>) -&gt; <code><a href="aligned.sources.in_mem_source.InMemorySource.html" class="internal-link" title="aligned.sources.in_mem_source.InMemorySource">InMemorySource</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L151">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L151">
       
       (source)
     </a>
@@ -973,7 +941,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">__init__</span><span class="function-signature">(self, data: <code>pl.DataFrame</code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L21">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L21">
       
       (source)
     </a>
@@ -1000,7 +968,7 @@
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">insert</span><span class="function-signature">(self, job: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, request: <code>RetrivalRequest</code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L35">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L35">
       
       (source)
     </a>
@@ -1027,7 +995,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">job_group_key</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L29">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L29">
       
       (source)
     </a>
@@ -1054,7 +1022,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">nearest_n_to</span><span class="function-signature">(self, data: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, number_of_records: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code>, request: <code>RetrivalRequest</code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L55">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L55">
       
       (source)
     </a>
@@ -1081,7 +1049,7 @@
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">overwrite</span><span class="function-signature">(self, job: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, request: <code>RetrivalRequest</code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L49">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L49">
       
       (source)
     </a>
@@ -1108,7 +1076,7 @@
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">to_lazy_polars</span><span class="function-signature">(self) -&gt; <code>pl.LazyFrame</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L32">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L32">
       
       (source)
     </a>
@@ -1135,7 +1103,7 @@
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">upsert</span><span class="function-signature">(self, job: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, request: <code>RetrivalRequest</code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L42">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L42">
       
       (source)
     </a>
@@ -1162,7 +1130,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">vector_index_name</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L26">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L26">
       
       (source)
     </a>
@@ -1189,7 +1157,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">with_view</span><span class="function-signature">(self, view: <code>CompiledFeatureView</code>) -&gt; <code><a href="aligned.sources.in_mem_source.InMemorySource.html" class="internal-link" title="aligned.sources.in_mem_source.InMemorySource">InMemorySource</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L124">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L124">
       
       (source)
     </a>
@@ -1216,7 +1184,7 @@
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">write_polars</span><span class="function-signature">(self, df: <code>pl.LazyFrame</code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L52">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L52">
       
       (source)
     </a>
@@ -1242,7 +1210,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">type_name</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L19">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L19">
       
       (source)
     </a>
@@ -1269,7 +1237,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">data</span> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L22">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L22">
       
       (source)
     </a>
@@ -1296,7 +1264,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">job_key</span> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L23">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L23">
       
       (source)
     </a>
@@ -1323,7 +1291,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">_vector_index_name</span> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/in_mem_source.py#L24">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/in_mem_source.py#L24">
       
       (source)
     </a>
@@ -1347,10 +1315,10 @@
     <footer class="navbar navbar-default">
 
   
-  <div class="container">
+  <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    24.3.3 at 2024-11-25 22:52:40.
+    24.11.2 at 2025-02-18 12:41:13.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

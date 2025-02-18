@@ -7,7 +7,7 @@
   <head>
     
     <title>aligned.psql.jobs.FactPsqlJob</title>
-    <meta name="generator" content="pydoctor 24.3.3"> 
+    <meta name="generator" content="pydoctor 24.11.2"> 
         
     </meta>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
@@ -15,6 +15,7 @@
     <link rel="stylesheet" type="text/css" href="bootstrap.min.css" />
     <link rel="stylesheet" type="text/css" href="apidocs.css" />
     <link rel="stylesheet" type="text/css" href="extra.css" />
+    
 </head>
 
   <body>
@@ -52,7 +53,7 @@
             
             <span class="input-group-btn">
               <a style="display: none;" class="btn btn-default" id="search-clear-button" title="Clear" onclick="clearSearch()"><img src="fonts/x-circle.svg" alt="Clear" /></a>
-              <a class="btn btn-default" id="search-help-button" title="Help" onclick="toggleSearchHelpText()"><img src="fonts/info.svg" alt="Help" /></a>
+              <a class="btn btn-default" id="apidocs-help-button" title="Help" href="apidocs-help.html"><img src="fonts/info.svg" alt="Help" /></a>
             </span>
           </div>
         </div>
@@ -76,39 +77,6 @@
             <h1>Cannot search: JavaScript is not supported/enabled in your browser.</h1>
         </noscript>
 
-        <div class="hint" id="search-help-box">
-          <p class="rst-last">
-      
-            Search bar offers the following options:
-            <ul>   
-                <li>
-                  <strong>Term presence.</strong> The below example searches for documents that 
-                    must contain “foo”, might contain “bar” and must not contain “baz”: <code>+foo bar -baz</code>
-                </li> 
-
-                <li>
-                  <strong>Wildcards.</strong> The below example searches for documents with words beginning with “foo”: <code>foo*</code>
-                </li> 
-
-                <li>
-                  <strong>Search in specific fields.</strong> The following search matches all objects 
-                  in "twisted.mail" that matches “search”: <code>+qname:twisted.mail.* +search</code>
-
-                  <p>
-                    Possible fields: 'name', 'qname' (fully qualified name), 'docstring', and 'kind'.
-                    Last two fields are only applicable if "search in docstrings" is enabled.
-                  </p>
-                </li>
-
-                <li>
-                  <strong>Fuzzy matches.</strong> The following search matches all documents 
-                  that have a word within 1 edit distance of “foo”: <code>foo~1</code>
-                </li>
-            </ul>
-
-          </p>
-        </div>
-
         <div id="search-status"> </div>
 
         <div class="warning" id="search-warn-box" style="display: none;">
@@ -119,8 +87,8 @@
           <!-- Filled dynamically by JS -->
         </table>
         
-        <div style="margin-top: 8px;">
-          <p>Results provided by <a href="https://lunrjs.com">Lunr.js</a></p>
+        <div style="margin-top: 10px;">
+          <p>For more information on the search, visit the <a href="apidocs-help.html#rst-search">help page</a>.</p>
         </div>
       </div>
 
@@ -996,7 +964,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">FactPsqlJob</span>(<a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a>): <a href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L226" class="sourceLink">(source)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">FactPsqlJob</span>(<a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a>): <a href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L226" class="sourceLink">(source)</a></code></p>
           <p><a href="classIndex.html#aligned.psql.jobs.FactPsqlJob">View In Hierarchy</a></p>
         </div>
 
@@ -1357,7 +1325,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
     
     
     <span class="py-keyword">def</span> <span class="py-defname">aggregated_values_from_request</span><span class="function-signature">(self, request: <code>RetrivalRequest</code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="aligned.psql.jobs.TableFetch.html" class="internal-link" title="aligned.psql.jobs.TableFetch">TableFetch</a>]</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L467">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L467">
       
       (source)
     </a>
@@ -1384,7 +1352,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
     
     
     <span class="py-keyword">def</span> <span class="py-defname">build_entities_from_values</span><span class="function-signature">(self, values: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="aligned.psql.jobs.SqlValue.html" class="internal-link" title="aligned.psql.jobs.SqlValue">SqlValue</a>]]</code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L582">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L582">
       
       (source)
     </a>
@@ -1411,7 +1379,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">build_request</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L495">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L495">
       
       (source)
     </a>
@@ -1438,7 +1406,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
     
     
     <span class="py-keyword">def</span> <span class="py-defname">build_request_from_facts</span><span class="function-signature">(self, facts: <code>pl.LazyFrame</code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L499">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L499">
       
       (source)
     </a>
@@ -1465,7 +1433,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
     
     
     <span class="py-keyword">def</span> <span class="py-defname">build_sql_entity_query</span><span class="function-signature">(self, sql_facts: <code><a href="aligned.psql.jobs.PostgreSqlJob.html" class="internal-link" title="aligned.psql.jobs.PostgreSqlJob">PostgreSqlJob</a></code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L593">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L593">
       
       (source)
     </a>
@@ -1492,7 +1460,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
     
     
     <span class="py-keyword">def</span> <span class="py-defname">describe</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L252">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L252">
       
       (source)
     </a>
@@ -1519,7 +1487,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
     
     
     <span class="py-keyword">def</span> <span class="py-defname">dtype_to_sql_type</span><span class="function-signature">(self, dtype: <code><a href="https://docs.python.org/3/library/functions.html#object" class="intersphinx-link">object</a></code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L283">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L283">
       
       (source)
     </a>
@@ -1546,7 +1514,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
     
     
     <span class="py-keyword">def</span> <span class="py-defname">generate_query</span><span class="function-signature">(self, entity_columns: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>, entity_query: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, tables: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="aligned.psql.jobs.TableFetch.html" class="internal-link" title="aligned.psql.jobs.TableFetch">TableFetch</a>]</code>, aggregates: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="aligned.psql.jobs.TableFetch.html" class="internal-link" title="aligned.psql.jobs.TableFetch">TableFetch</a>]</code>, final_select: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>, final_joins: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L661">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L661">
       
       (source)
     </a>
@@ -1573,7 +1541,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
     
     
     <span class="py-keyword">def</span> <span class="py-defname">ignore_event_timestamp</span><span class="function-signature">(self) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L278">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L278">
       
       (source)
     </a>
@@ -1600,7 +1568,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">psql_job</span><span class="function-signature">(self) -&gt; <code><a href="aligned.psql.jobs.PostgreSqlJob.html" class="internal-link" title="aligned.psql.jobs.PostgreSqlJob">PostgreSqlJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L272">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L272">
       
       (source)
     </a>
@@ -1627,7 +1595,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
     
     
     <span class="py-keyword">def</span> <span class="py-defname">sql_aggregated_request</span><span class="function-signature">(self, window: <code>AggregateOver</code>, features: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>AggregatedFeature]</code>, request: <code>RetrivalRequest</code>) -&gt; <code><a href="aligned.psql.jobs.TableFetch.html" class="internal-link" title="aligned.psql.jobs.TableFetch">TableFetch</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L363">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L363">
       
       (source)
     </a>
@@ -1654,7 +1622,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">to_lazy_polars</span><span class="function-signature">(self) -&gt; <code>pl.LazyFrame</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L268">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L268">
       
       (source)
     </a>
@@ -1681,7 +1649,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">to_pandas</span><span class="function-signature">(self) -&gt; <code>pd.DataFrame</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L264">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L264">
       
       (source)
     </a>
@@ -1708,7 +1676,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
     
     
     <span class="py-keyword">def</span> <span class="py-defname">value_selection</span><span class="function-signature">(self, request: <code>RetrivalRequest</code>, entities_has_event_timestamp: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code>) -&gt; <code><a href="aligned.psql.jobs.TableFetch.html" class="internal-link" title="aligned.psql.jobs.TableFetch">TableFetch</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L296">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L296">
       
       (source)
     </a>
@@ -1734,7 +1702,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
   <div class="functionHeader">
     
     <span class="py-defname">facts</span>: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L238">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L238">
       
       (source)
     </a>
@@ -1761,7 +1729,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
   <div class="functionHeader">
     
     <span class="py-defname">requests</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrivalRequest]</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L237">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L237">
       
       (source)
     </a>
@@ -1788,7 +1756,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
   <div class="functionHeader">
     
     <span class="py-defname">sources</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr>FeatureLocation, <wbr></wbr><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link" title="aligned.sources.psql.PostgreSQLDataSource">PostgreSQLDataSource</a>]</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L236">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L236">
       
       (source)
     </a>
@@ -1815,7 +1783,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
   <div class="functionHeader">
     @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
     <span class="py-defname">config</span>: <code>PostgreSQLConfig</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L248">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L248">
       
       (source)
     </a>
@@ -1842,7 +1810,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
   <div class="functionHeader">
     @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
     <span class="py-defname">request_result</span>: <code>RequestResult</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L240">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L240">
       
       (source)
     </a>
@@ -1869,7 +1837,7 @@ This is hy the <code>source</code> property is a dict with sources</p>
   <div class="functionHeader">
     @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
     <span class="py-defname">retrival_requests</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrivalRequest]</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/psql/jobs.py#L244">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/psql/jobs.py#L244">
       
       (source)
     </a>
@@ -1893,10 +1861,10 @@ This is hy the <code>source</code> property is a dict with sources</p>
     <footer class="navbar navbar-default">
 
   
-  <div class="container">
+  <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    24.3.3 at 2024-11-25 22:52:40.
+    24.11.2 at 2025-02-18 12:41:13.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

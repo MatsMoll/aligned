@@ -7,7 +7,7 @@
   <head>
     
     <title>aligned.sources.redis.RedisSource</title>
-    <meta name="generator" content="pydoctor 24.3.3"> 
+    <meta name="generator" content="pydoctor 24.11.2"> 
         
     </meta>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
@@ -15,6 +15,7 @@
     <link rel="stylesheet" type="text/css" href="bootstrap.min.css" />
     <link rel="stylesheet" type="text/css" href="apidocs.css" />
     <link rel="stylesheet" type="text/css" href="extra.css" />
+    
 </head>
 
   <body>
@@ -52,7 +53,7 @@
             
             <span class="input-group-btn">
               <a style="display: none;" class="btn btn-default" id="search-clear-button" title="Clear" onclick="clearSearch()"><img src="fonts/x-circle.svg" alt="Clear" /></a>
-              <a class="btn btn-default" id="search-help-button" title="Help" onclick="toggleSearchHelpText()"><img src="fonts/info.svg" alt="Help" /></a>
+              <a class="btn btn-default" id="apidocs-help-button" title="Help" href="apidocs-help.html"><img src="fonts/info.svg" alt="Help" /></a>
             </span>
           </div>
         </div>
@@ -76,39 +77,6 @@
             <h1>Cannot search: JavaScript is not supported/enabled in your browser.</h1>
         </noscript>
 
-        <div class="hint" id="search-help-box">
-          <p class="rst-last">
-      
-            Search bar offers the following options:
-            <ul>   
-                <li>
-                  <strong>Term presence.</strong> The below example searches for documents that 
-                    must contain “foo”, might contain “bar” and must not contain “baz”: <code>+foo bar -baz</code>
-                </li> 
-
-                <li>
-                  <strong>Wildcards.</strong> The below example searches for documents with words beginning with “foo”: <code>foo*</code>
-                </li> 
-
-                <li>
-                  <strong>Search in specific fields.</strong> The following search matches all objects 
-                  in "twisted.mail" that matches “search”: <code>+qname:twisted.mail.* +search</code>
-
-                  <p>
-                    Possible fields: 'name', 'qname' (fully qualified name), 'docstring', and 'kind'.
-                    Last two fields are only applicable if "search in docstrings" is enabled.
-                  </p>
-                </li>
-
-                <li>
-                  <strong>Fuzzy matches.</strong> The following search matches all documents 
-                  that have a word within 1 edit distance of “foo”: <code>foo~1</code>
-                </li>
-            </ul>
-
-          </p>
-        </div>
-
         <div id="search-status"> </div>
 
         <div class="warning" id="search-warn-box" style="display: none;">
@@ -119,8 +87,8 @@
           <!-- Filled dynamically by JS -->
         </table>
         
-        <div style="margin-top: 8px;">
-          <p>Results provided by <a href="https://lunrjs.com">Lunr.js</a></p>
+        <div style="margin-top: 10px;">
+          <p>For more information on the search, visit the <a href="apidocs-help.html#rst-search">help page</a>.</p>
         </div>
       </div>
 
@@ -370,7 +338,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">RedisSource</span>(<a href="aligned.feature_source.FeatureSource.html" class="internal-link" title="aligned.feature_source.FeatureSource">FeatureSource</a>, <a href="aligned.feature_source.WritableFeatureSource.html" class="internal-link" title="aligned.feature_source.WritableFeatureSource">WritableFeatureSource</a>): <a href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/redis.py#L157" class="sourceLink">(source)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">RedisSource</span>(<a href="aligned.feature_source.FeatureSource.html" class="internal-link" title="aligned.feature_source.FeatureSource">FeatureSource</a>, <a href="aligned.feature_source.WritableFeatureSource.html" class="internal-link" title="aligned.feature_source.WritableFeatureSource">WritableFeatureSource</a>): <a href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/redis.py#L157" class="sourceLink">(source)</a></code></p>
           <p><a href="classIndex.html#aligned.sources.redis.RedisSource">View In Hierarchy</a></p>
         </div>
 
@@ -461,7 +429,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">all_for</span><span class="function-signature">(self, request: <code>FeatureRequest</code>, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/redis.py#L163">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/redis.py#L163">
       
       (source)
     </a>
@@ -488,7 +456,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">features_for</span><span class="function-signature">(self, facts: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, request: <code>FeatureRequest</code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/redis.py#L166">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/redis.py#L166">
       
       (source)
     </a>
@@ -515,7 +483,7 @@
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">insert</span><span class="function-signature">(self, job: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, request: <code>RetrivalRequest</code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/redis.py#L175">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/redis.py#L175">
       
       (source)
     </a>
@@ -542,7 +510,7 @@
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">upsert</span><span class="function-signature">(self, job: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, request: <code>RetrivalRequest</code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/redis.py#L221">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/redis.py#L221">
       
       (source)
     </a>
@@ -568,7 +536,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">batch_size</span>: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/redis.py#L161">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/redis.py#L161">
       
       (source)
     </a>
@@ -595,7 +563,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">config</span>: <code><a href="aligned.RedisConfig.html" class="internal-link" title="aligned.RedisConfig">RedisConfig</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/sources/redis.py#L160">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/redis.py#L160">
       
       (source)
     </a>
@@ -619,10 +587,10 @@
     <footer class="navbar navbar-default">
 
   
-  <div class="container">
+  <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    24.3.3 at 2024-11-25 22:52:40.
+    24.11.2 at 2025-02-18 12:41:13.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

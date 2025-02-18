@@ -7,7 +7,7 @@
   <head>
     
     <title>aligned.feature_store.FeatureViewStore</title>
-    <meta name="generator" content="pydoctor 24.3.3"> 
+    <meta name="generator" content="pydoctor 24.11.2"> 
         
     </meta>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
@@ -15,6 +15,7 @@
     <link rel="stylesheet" type="text/css" href="bootstrap.min.css" />
     <link rel="stylesheet" type="text/css" href="apidocs.css" />
     <link rel="stylesheet" type="text/css" href="extra.css" />
+    
 </head>
 
   <body>
@@ -52,7 +53,7 @@
             
             <span class="input-group-btn">
               <a style="display: none;" class="btn btn-default" id="search-clear-button" title="Clear" onclick="clearSearch()"><img src="fonts/x-circle.svg" alt="Clear" /></a>
-              <a class="btn btn-default" id="search-help-button" title="Help" onclick="toggleSearchHelpText()"><img src="fonts/info.svg" alt="Help" /></a>
+              <a class="btn btn-default" id="apidocs-help-button" title="Help" href="apidocs-help.html"><img src="fonts/info.svg" alt="Help" /></a>
             </span>
           </div>
         </div>
@@ -76,39 +77,6 @@
             <h1>Cannot search: JavaScript is not supported/enabled in your browser.</h1>
         </noscript>
 
-        <div class="hint" id="search-help-box">
-          <p class="rst-last">
-      
-            Search bar offers the following options:
-            <ul>   
-                <li>
-                  <strong>Term presence.</strong> The below example searches for documents that 
-                    must contain “foo”, might contain “bar” and must not contain “baz”: <code>+foo bar -baz</code>
-                </li> 
-
-                <li>
-                  <strong>Wildcards.</strong> The below example searches for documents with words beginning with “foo”: <code>foo*</code>
-                </li> 
-
-                <li>
-                  <strong>Search in specific fields.</strong> The following search matches all objects 
-                  in "twisted.mail" that matches “search”: <code>+qname:twisted.mail.* +search</code>
-
-                  <p>
-                    Possible fields: 'name', 'qname' (fully qualified name), 'docstring', and 'kind'.
-                    Last two fields are only applicable if "search in docstrings" is enabled.
-                  </p>
-                </li>
-
-                <li>
-                  <strong>Fuzzy matches.</strong> The following search matches all documents 
-                  that have a word within 1 edit distance of “foo”: <code>foo~1</code>
-                </li>
-            </ul>
-
-          </p>
-        </div>
-
         <div id="search-status"> </div>
 
         <div class="warning" id="search-warn-box" style="display: none;">
@@ -119,8 +87,8 @@
           <!-- Filled dynamically by JS -->
         </table>
         
-        <div style="margin-top: 8px;">
-          <p>Results provided by <a href="https://lunrjs.com">Lunr.js</a></p>
+        <div style="margin-top: 10px;">
+          <p>For more information on the search, visit the <a href="apidocs-help.html#rst-search">help page</a>.</p>
         </div>
       </div>
 
@@ -577,7 +545,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">FeatureViewStore</span>: <a href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1681" class="sourceLink">(source)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">FeatureViewStore</span>: <a href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1681" class="sourceLink">(source)</a></code></p>
           <p><a href="classIndex.html#aligned.feature_store.FeatureViewStore">View In Hierarchy</a></p>
         </div>
 
@@ -730,7 +698,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">all</span><span class="function-signature">(self, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1750">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1750">
       
       (source)
     </a>
@@ -757,7 +725,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">all_columns</span><span class="function-signature">(self, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1756">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1756">
       
       (source)
     </a>
@@ -784,7 +752,7 @@
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">batch_write</span><span class="function-signature">(self, values: <code><a href="aligned.retrival_job.html#ConvertableToRetrivalJob" class="internal-link" title="aligned.retrival_job.ConvertableToRetrivalJob">ConvertableToRetrivalJob</a> | <a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1886">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1886">
       
       (source)
     </a>
@@ -818,7 +786,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">between_dates</span><span class="function-signature">(self, start_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>, end_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1777">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1777">
       
       (source)
     </a>
@@ -845,7 +813,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">features_for</span><span class="function-signature">(self, entities: <code><a href="aligned.retrival_job.html#ConvertableToRetrivalJob" class="internal-link" title="aligned.retrival_job.ConvertableToRetrivalJob">ConvertableToRetrivalJob</a> | <a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, event_timestamp_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1797">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1797">
       
       (source)
     </a>
@@ -872,7 +840,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">filter</span><span class="function-signature">(self, filter: <code>pl.Expr | <a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1753">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1753">
       
       (source)
     </a>
@@ -899,7 +867,7 @@
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">freshness</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1924">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1924">
       
       (source)
     </a>
@@ -926,7 +894,7 @@
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">insert</span><span class="function-signature">(self, values: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a> | <a href="aligned.retrival_job.html#ConvertableToRetrivalJob" class="internal-link" title="aligned.retrival_job.ConvertableToRetrivalJob">ConvertableToRetrivalJob</a></code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1818">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1818">
       
       (source)
     </a>
@@ -953,7 +921,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">previous</span><span class="function-signature">(self, days: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code> = 0, minutes: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code> = 0, seconds: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code> = 0) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1792">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1792">
       
       (source)
     </a>
@@ -980,7 +948,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">process_input</span><span class="function-signature">(self, values: <code><a href="aligned.retrival_job.html#ConvertableToRetrivalJob" class="internal-link" title="aligned.retrival_job.ConvertableToRetrivalJob">ConvertableToRetrivalJob</a></code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1876">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1876">
       
       (source)
     </a>
@@ -1007,7 +975,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">select</span><span class="function-signature">(self, features: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>) -&gt; <code><a href="aligned.feature_store.FeatureViewStore.html" class="internal-link" title="aligned.feature_store.FeatureViewStore">FeatureViewStore</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1811">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1811">
       
       (source)
     </a>
@@ -1034,7 +1002,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">select_columns</span><span class="function-signature">(self, columns: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1747">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1747">
       
       (source)
     </a>
@@ -1061,7 +1029,7 @@
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">upsert</span><span class="function-signature">(self, values: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a> | <a href="aligned.retrival_job.html#ConvertableToRetrivalJob" class="internal-link" title="aligned.retrival_job.ConvertableToRetrivalJob">ConvertableToRetrivalJob</a></code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1815">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1815">
       
       (source)
     </a>
@@ -1088,7 +1056,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">using_source</span><span class="function-signature">(self, source: <code><a href="aligned.feature_store.html#FeatureSourceable" class="internal-link" title="aligned.feature_store.FeatureSourceable">FeatureSourceable</a> | <a href="aligned.data_source.batch_data_source.BatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource">BatchDataSource</a></code>) -&gt; <code><a href="aligned.feature_store.FeatureViewStore.html" class="internal-link" title="aligned.feature_store.FeatureViewStore">FeatureViewStore</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1706">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1706">
       
       (source)
     </a>
@@ -1133,7 +1101,7 @@ custom_source = PostgreSQLConfig.localhost("test")</p>
     
     
     <span class="py-keyword">def</span> <span class="py-defname">with_optimised_write</span><span class="function-signature">(self) -&gt; <code><a href="aligned.feature_store.FeatureViewStore.html" class="internal-link" title="aligned.feature_store.FeatureViewStore">FeatureViewStore</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1743">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1743">
       
       (source)
     </a>
@@ -1160,7 +1128,7 @@ custom_source = PostgreSQLConfig.localhost("test")</p>
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">write</span><span class="function-signature">(self, values: <code><a href="aligned.retrival_job.html#ConvertableToRetrivalJob" class="internal-link" title="aligned.retrival_job.ConvertableToRetrivalJob">ConvertableToRetrivalJob</a></code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1831">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1831">
       
       (source)
     </a>
@@ -1186,7 +1154,7 @@ custom_source = PostgreSQLConfig.localhost("test")</p>
   <div class="functionHeader">
     
     <span class="py-defname">event_triggers</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>EventTrigger]</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1686">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1686">
       
       (source)
     </a>
@@ -1213,7 +1181,7 @@ custom_source = PostgreSQLConfig.localhost("test")</p>
   <div class="functionHeader">
     
     <span class="py-defname">feature_filter</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1687">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1687">
       
       (source)
     </a>
@@ -1240,7 +1208,7 @@ custom_source = PostgreSQLConfig.localhost("test")</p>
   <div class="functionHeader">
     
     <span class="py-defname">store</span>: <code><a href="aligned.ContractStore.html" class="internal-link" title="aligned.ContractStore">ContractStore</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1684">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1684">
       
       (source)
     </a>
@@ -1267,7 +1235,7 @@ custom_source = PostgreSQLConfig.localhost("test")</p>
   <div class="functionHeader">
     
     <span class="py-defname">view</span>: <code>CompiledFeatureView</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1685">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1685">
       
       (source)
     </a>
@@ -1294,7 +1262,7 @@ custom_source = PostgreSQLConfig.localhost("test")</p>
   <div class="functionHeader">
     @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
     <span class="py-defname">name</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1689">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1689">
       
       (source)
     </a>
@@ -1321,7 +1289,7 @@ custom_source = PostgreSQLConfig.localhost("test")</p>
   <div class="functionHeader">
     @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
     <span class="py-defname">request</span>: <code>RetrivalRequest</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1693">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1693">
       
       (source)
     </a>
@@ -1348,7 +1316,7 @@ custom_source = PostgreSQLConfig.localhost("test")</p>
   <div class="functionHeader">
     @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
     <span class="py-defname">source</span>: <code><a href="aligned.feature_source.FeatureSource.html" class="internal-link" title="aligned.feature_source.FeatureSource">FeatureSource</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1702">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1702">
       
       (source)
     </a>
@@ -1375,7 +1343,7 @@ custom_source = PostgreSQLConfig.localhost("test")</p>
   <div class="functionHeader">
     @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
     <span class="py-defname">write_input</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5053735e40ec88988d49166a28d131635d8c64a2/aligned/feature_store.py#L1821">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1821">
       
       (source)
     </a>
@@ -1399,10 +1367,10 @@ custom_source = PostgreSQLConfig.localhost("test")</p>
     <footer class="navbar navbar-default">
 
   
-  <div class="container">
+  <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    24.3.3 at 2024-11-25 22:52:40.
+    24.11.2 at 2025-02-18 12:41:13.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 
