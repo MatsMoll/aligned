@@ -5,19 +5,22 @@ import pyarrow as pa
 import polars as pl
 
 from aligned.schemas.codable import Codable
-from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver, DerivedFeature
+from aligned.schemas.derivied_feature import (
+    AggregatedFeature,
+    AggregateOver,
+    DerivedFeature,
+)
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
 
 
 @dataclass
 class EventTimestampRequest(Codable):
-
     event_timestamp: EventTimestamp
     entity_column: str | None = field(default=None)
 
 
 @dataclass
-class RetrivalRequest(Codable):
+class RetrievalRequest(Codable):
     """
     Describes all the information needed for a request to be successful.
 
@@ -36,7 +39,11 @@ class RetrivalRequest(Codable):
 
     @property
     def event_timestamp(self) -> EventTimestamp | None:
-        return self.event_timestamp_request.event_timestamp if self.event_timestamp_request else None
+        return (
+            self.event_timestamp_request.event_timestamp
+            if self.event_timestamp_request
+            else None
+        )
 
     def __init__(
         self,
@@ -65,8 +72,8 @@ class RetrivalRequest(Codable):
             )
         self.features_to_include = features_to_include or self.all_feature_names
 
-    def filter_features(self, feature_names: set[str]) -> 'RetrivalRequest':
-        return RetrivalRequest(
+    def filter_features(self, feature_names: set[str]) -> "RetrievalRequest":
+        return RetrievalRequest(
             name=self.name,
             location=self.location,
             entities=self.entities,
@@ -82,7 +89,10 @@ class RetrivalRequest(Codable):
         result = self.entities
 
         if self.event_timestamp and (
-            all(agg.aggregate_over.window is not None for agg in self.aggregated_features)
+            all(
+                agg.aggregate_over.window is not None
+                for agg in self.aggregated_features
+            )
             or len(self.aggregated_features) == 0
         ):
             result = result.union({self.event_timestamp.as_feature()})
@@ -99,7 +109,9 @@ class RetrivalRequest(Codable):
                         return True
 
                 for dep in feature.depending_on_names:
-                    if dep in derived_features and is_dependent_on_agg_feature(derived_features[dep]):
+                    if dep in derived_features and is_dependent_on_agg_feature(
+                        derived_features[dep]
+                    ):
                         return True
 
                 return False
@@ -113,24 +125,37 @@ class RetrivalRequest(Codable):
         return list(result.union(self.all_features))
 
     @property
+    def intermediate_columns(self) -> list[str]:
+        return [
+            feat.name
+            for feat in self.derived_features
+            if feat.name not in self.features_to_include
+        ]
+
+    @property
     def all_returned_columns(self) -> list[str]:
         return sorted([feature.name for feature in self.all_returned_features])
 
     @property
     def returned_features(self) -> set[Feature]:
-        return {feature for feature in self.all_features if feature.name in self.features_to_include}
+        return {
+            feature
+            for feature in self.all_features
+            if feature.name in self.features_to_include
+        }
 
     @property
     def feature_names(self) -> list[str]:
         return [feature.name for feature in self.features]
 
     @property
-    def request_result(self) -> 'RequestResult':
+    def request_result(self) -> "RequestResult":
         return RequestResult.from_request(self)
 
     def derived_feature_map(self) -> dict[str, DerivedFeature]:
         return {
-            feature.name: feature for feature in self.derived_features.union(self.derived_aggregated_features)
+            feature.name: feature
+            for feature in self.derived_features.union(self.derived_aggregated_features)
         }
 
     @property
@@ -150,7 +175,11 @@ class RetrivalRequest(Codable):
         return self.features.union(
             {feat for feat in self.derived_features if not feat.name.isnumeric()}
         ).union(
-            {feature.derived_feature for feature in self.aggregated_features if not feature.name.isnumeric()}
+            {
+                feature.derived_feature
+                for feature in self.aggregated_features
+                if not feature.name.isnumeric()
+            }
         )
 
     @property
@@ -193,11 +222,15 @@ class RetrivalRequest(Codable):
     def pyarrow_schema(self) -> pa.Schema:
         from aligned.schemas.vector_storage import pyarrow_schema
 
-        sorted_features = sorted(self.all_returned_features, key=lambda feature: feature.name)
+        sorted_features = sorted(
+            self.all_returned_features, key=lambda feature: feature.name
+        )
         return pyarrow_schema(sorted_features)
 
     def polars_schema(self) -> dict[str, pl.DataType]:
-        sorted_features = sorted(self.all_returned_features, key=lambda feature: feature.name)
+        sorted_features = sorted(
+            self.all_returned_features, key=lambda feature: feature.name
+        )
         return {feat.name: feat.dtype.polars_type for feat in sorted_features}
 
     def aggregate_over(self) -> dict[AggregateOver, set[AggregatedFeature]]:
@@ -206,10 +239,9 @@ class RetrivalRequest(Codable):
             features[feature.aggregate_over].add(feature)
         return features
 
-    def with_sufix(self, sufix: str) -> 'RetrivalRequest':
-
-        return RetrivalRequest(
-            name=f'{self.name}{sufix}',
+    def with_sufix(self, sufix: str) -> "RetrievalRequest":
+        return RetrievalRequest(
+            name=f"{self.name}{sufix}",
             location=self.location,
             entities=self.entities,
             features=self.features,
@@ -218,17 +250,20 @@ class RetrivalRequest(Codable):
             event_timestamp_request=self.event_timestamp_request,
         )
 
-    def without_event_timestamp(self, name_sufix: str | None = None) -> 'RetrivalRequest':
-
+    def without_event_timestamp(
+        self, name_sufix: str | None = None
+    ) -> "RetrievalRequest":
         request = None
         if self.event_timestamp_request:
-            request = EventTimestampRequest(self.event_timestamp_request.event_timestamp, None)
+            request = EventTimestampRequest(
+                self.event_timestamp_request.event_timestamp, None
+            )
 
         name = self.name
         if name_sufix:
-            name = f'{name}{name_sufix}'
+            name = f"{name}{name_sufix}"
 
-        return RetrivalRequest(
+        return RetrievalRequest(
             name=name,
             location=self.location,
             entities=self.entities,
@@ -238,11 +273,13 @@ class RetrivalRequest(Codable):
             event_timestamp_request=request,
         )
 
-    def with_event_timestamp_column(self, column: str) -> 'RetrivalRequest':
+    def with_event_timestamp_column(self, column: str) -> "RetrievalRequest":
         et_request = None
         if self.event_timestamp_request:
-            et_request = EventTimestampRequest(self.event_timestamp_request.event_timestamp, column)
-        return RetrivalRequest(
+            et_request = EventTimestampRequest(
+                self.event_timestamp_request.event_timestamp, column
+            )
+        return RetrievalRequest(
             name=self.name,
             location=self.location,
             entities=self.entities,
@@ -253,13 +290,13 @@ class RetrivalRequest(Codable):
         )
 
     @staticmethod
-    def all_data() -> 'RetrivalRequest':
+    def all_data() -> "RetrievalRequest":
         """
         This is a hack to tell aligned that we want all the data, and no filtering should be done.
         """
-        return RetrivalRequest(
-            name='',
-            location=FeatureLocation.feature_view(''),
+        return RetrievalRequest(
+            name="",
+            location=FeatureLocation.feature_view(""),
             entities=set(),
             features=set(),
             derived_features=set(),
@@ -268,15 +305,15 @@ class RetrivalRequest(Codable):
         )
 
     @staticmethod
-    def combine(requests: list['RetrivalRequest']) -> list['RetrivalRequest']:
-        grouped_requests: dict[FeatureLocation, RetrivalRequest] = {}
+    def combine(requests: list["RetrievalRequest"]) -> list["RetrievalRequest"]:
+        grouped_requests: dict[FeatureLocation, RetrievalRequest] = {}
         returned_features: dict[FeatureLocation, set[Feature]] = {}
         entities = set()
         for request in requests:
             entities.update(request.entities)
             fv_name = request.location
             if fv_name not in grouped_requests:
-                grouped_requests[fv_name] = RetrivalRequest(
+                grouped_requests[fv_name] = RetrievalRequest(
                     name=request.name,
                     location=fv_name,
                     entities=request.entities,
@@ -284,28 +321,36 @@ class RetrivalRequest(Codable):
                     derived_features=request.derived_features,
                     aggregated_features=request.aggregated_features,
                     event_timestamp_request=request.event_timestamp_request,
+                    features_to_include=request.features_to_include,
                 )
                 returned_features[fv_name] = request.returned_features
             else:
-                grouped_requests[fv_name].derived_features.update(request.derived_features)
+                grouped_requests[fv_name].derived_features.update(
+                    request.derived_features
+                )
                 grouped_requests[fv_name].features.update(request.features)
-                grouped_requests[fv_name].aggregated_features.update(request.aggregated_features)
+                grouped_requests[fv_name].aggregated_features.update(
+                    request.aggregated_features
+                )
                 grouped_requests[fv_name].entities.update(request.entities)
                 returned_features[fv_name].update(request.returned_features)
 
         for request in grouped_requests.values():
             request.features_to_include = request.features_to_include.union(
-                request.all_feature_names - {feature.name for feature in returned_features[request.location]}
+                request.all_feature_names
+                - {feature.name for feature in returned_features[request.location]}
             )
 
         return list(grouped_requests.values())
 
-    def rename_entities(self, mapping: dict[str, str]) -> 'RetrivalRequest':
-
-        return RetrivalRequest(
+    def rename_entities(self, mapping: dict[str, str]) -> "RetrievalRequest":
+        return RetrievalRequest(
             name=self.name,
             location=self.location,
-            entities={entity.renamed(mapping.get(entity.name, entity.name)) for entity in self.entities},
+            entities={
+                entity.renamed(mapping.get(entity.name, entity.name))
+                for entity in self.entities
+            },
             features=self.features,
             derived_features=self.derived_features,
             aggregated_features=self.aggregated_features,
@@ -313,8 +358,7 @@ class RetrivalRequest(Codable):
         )
 
     @staticmethod
-    def unsafe_combine(requests: list['RetrivalRequest']) -> 'RetrivalRequest':
-
+    def unsafe_combine(requests: list["RetrievalRequest"]) -> "RetrievalRequest":
         entities = set()
         features = set()
         derived_features = set()
@@ -330,7 +374,7 @@ class RetrivalRequest(Codable):
             if event_timestamp_request is None:
                 event_timestamp_request = request.event_timestamp_request
 
-        return RetrivalRequest(
+        return RetrievalRequest(
             name=requests[0].name,
             location=requests[0].location,
             entities=entities,
@@ -344,7 +388,7 @@ class RetrivalRequest(Codable):
 @dataclass
 class RequestResult(Codable):
     """
-    Describes the returend response of a request
+    Describes the returned response of a request
     """
 
     entities: set[Feature]
@@ -367,41 +411,48 @@ class RequestResult(Codable):
     def entity_columns(self) -> list[str]:
         return [entity.name for entity in self.entities]
 
-    def __add__(self, obj: 'RequestResult') -> 'RequestResult':
-
+    def __add__(self, obj: "RequestResult") -> "RequestResult":
         return RequestResult(
             entities=self.entities.union(obj.entities),
             features=self.features.union(obj.features),
             event_timestamp=self.event_timestamp or obj.event_timestamp,
         )
 
-    def filter_features(self, features_to_include: set[str]) -> 'RequestResult':
+    def filter_features(self, features_to_include: set[str]) -> "RequestResult":
         return RequestResult(
             entities=self.entities,
-            features={feature for feature in self.features if feature.name in features_to_include},
+            features={
+                feature
+                for feature in self.features
+                if feature.name in features_to_include
+            },
             event_timestamp=self.event_timestamp,
         )
 
     @staticmethod
-    def all_data() -> 'RequestResult':
+    def all_data() -> "RequestResult":
         return RequestResult(entities=set(), features=set(), event_timestamp=None)
 
     @staticmethod
-    def from_request(request: RetrivalRequest) -> 'RequestResult':
+    def from_request(request: RetrievalRequest) -> "RequestResult":
         return RequestResult(
             entities=request.entities,
-            features=request.all_features - request.entities,
-            event_timestamp=request.event_timestamp.name if request.event_timestamp else None,
+            features=request.returned_features - request.entities,
+            event_timestamp=request.event_timestamp.name
+            if request.event_timestamp
+            else None,
         )
 
     @staticmethod
-    def from_request_list(requests: list[RetrivalRequest]) -> 'RequestResult':
+    def from_request_list(requests: list[RetrievalRequest]) -> "RequestResult":
         request_len = len(requests)
         if request_len == 0:
             return RequestResult(entities=set(), features=set(), event_timestamp=None)
         elif request_len > 1:
             event_timestamp = None
-            requests_with_event = [req.event_timestamp for req in requests if req.event_timestamp]
+            requests_with_event = [
+                req.event_timestamp for req in requests if req.event_timestamp
+            ]
             if requests_with_event:
                 event_timestamp = requests_with_event[0].name
             return RequestResult(
@@ -410,7 +461,7 @@ class RequestResult(Codable):
                     *[
                         {
                             feature
-                            for feature in request.all_features
+                            for feature in request.returned_features
                             if feature.name in request.features_to_include
                         }
                         - request.entities
@@ -423,13 +474,15 @@ class RequestResult(Codable):
             return RequestResult.from_request(requests[0])
 
     @staticmethod
-    def from_result_list(requests: list['RequestResult']) -> 'RequestResult':
+    def from_result_list(requests: list["RequestResult"]) -> "RequestResult":
         request_len = len(requests)
         if request_len == 0:
             return RequestResult(entities=set(), features=set(), event_timestamp=None)
         elif request_len > 1:
             event_timestamp = None
-            requests_with_event = [req.event_timestamp for req in requests if req.event_timestamp]
+            requests_with_event = [
+                req.event_timestamp for req in requests if req.event_timestamp
+            ]
             if requests_with_event:
                 event_timestamp = requests_with_event[0]
             return RequestResult(
@@ -440,8 +493,10 @@ class RequestResult(Codable):
         else:
             return requests[0]
 
-    def as_retrival_request(self, name: str, location: FeatureLocation) -> RetrivalRequest:
-        return RetrivalRequest(
+    def as_retrieval_request(
+        self, name: str, location: FeatureLocation
+    ) -> RetrievalRequest:
+        return RetrievalRequest(
             name=name,
             location=location,
             entities=self.entities,
@@ -449,7 +504,8 @@ class RequestResult(Codable):
             derived_features=set(),
             aggregated_features=set(),
             event_timestamp_request=EventTimestampRequest(
-                event_timestamp=EventTimestamp(name=self.event_timestamp), entity_column=None
+                event_timestamp=EventTimestamp(name=self.event_timestamp),
+                entity_column=None,
             )
             if self.event_timestamp
             else None,
@@ -489,7 +545,7 @@ class FeatureRequest(Codable):
 
     location: FeatureLocation
     features_to_include: set[str]
-    needed_requests: list[RetrivalRequest]
+    needed_requests: list[RetrievalRequest]
 
     @property
     def needs_event_timestamp(self) -> bool:
@@ -497,7 +553,9 @@ class FeatureRequest(Codable):
 
     @property
     def request_result(self) -> RequestResult:
-        return RequestResult.from_request_list(self.needed_requests).filter_features(self.features_to_include)
+        return RequestResult.from_request_list(self.needed_requests).filter_features(
+            self.features_to_include
+        )
 
     def entities(self) -> set[Feature]:
         features = set()
@@ -505,23 +563,32 @@ class FeatureRequest(Codable):
             features.update(req.entities)
         return features
 
-    def without_event_timestamp(self, name_sufix: str | None = None) -> 'FeatureRequest':
+    def without_event_timestamp(
+        self, name_sufix: str | None = None
+    ) -> "FeatureRequest":
         return FeatureRequest(
             location=self.location,
-            features_to_include=self.features_to_include - {'event_timestamp'},
-            needed_requests=[request.without_event_timestamp(name_sufix) for request in self.needed_requests],
+            features_to_include=self.features_to_include - {"event_timestamp"},
+            needed_requests=[
+                request.without_event_timestamp(name_sufix)
+                for request in self.needed_requests
+            ],
         )
 
-    def with_sufix(self, sufix: str) -> 'FeatureRequest':
+    def with_sufix(self, sufix: str) -> "FeatureRequest":
         return FeatureRequest(
             location=self.location,
             features_to_include=self.features_to_include,
-            needed_requests=[request.with_sufix(sufix) for request in self.needed_requests],
+            needed_requests=[
+                request.with_sufix(sufix) for request in self.needed_requests
+            ],
         )
 
-    def rename_entities(self, mappings: dict[str, str]) -> 'FeatureRequest':
+    def rename_entities(self, mappings: dict[str, str]) -> "FeatureRequest":
         return FeatureRequest(
             location=self.location,
             features_to_include=self.features_to_include,
-            needed_requests=[request.rename_entities(mappings) for request in self.needed_requests],
+            needed_requests=[
+                request.rename_entities(mappings) for request in self.needed_requests
+            ],
         )

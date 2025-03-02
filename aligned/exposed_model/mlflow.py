@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from mlflow.exceptions import MlflowException
 import polars as pl
 from typing import TYPE_CHECKING, Any, Iterable
 from dataclasses import dataclass, field
 from aligned.config_value import ConfigValue, EnvironmentValue, LiteralValue
-from aligned.request.retrival_request import RetrivalRequest
-from aligned.retrival_job import RetrivalJob
+from aligned.request.retrieval_request import RetrievalRequest
+from aligned.retrieval_job import RetrievalJob
 from aligned.exposed_model.interface import ExposedModel
 
 from aligned.lazy_imports import mlflow
@@ -24,16 +23,16 @@ try:
     def mlflow_spec(feature: Feature) -> ColSpec | TensorSpec | str:
         dtype = feature.dtype
 
-        if dtype.name == 'float':
-            return ColSpec('float', name=feature.name)
-        elif dtype.name == 'double':
-            return ColSpec('double', name=feature.name)
-        elif dtype.name == 'string':
-            return ColSpec('string', name=feature.name)
+        if dtype.name == "float":
+            return ColSpec("float", name=feature.name)
+        elif dtype.name == "double":
+            return ColSpec("double", name=feature.name)
+        elif dtype.name == "string":
+            return ColSpec("string", name=feature.name)
         elif dtype.is_numeric:
-            return ColSpec('integer', name=feature.name)
+            return ColSpec("integer", name=feature.name)
         elif dtype.is_datetime:
-            return ColSpec('datetime', name=feature.name)
+            return ColSpec("datetime", name=feature.name)
         elif dtype.is_embedding:
             import numpy as np
 
@@ -44,8 +43,9 @@ try:
             )
         return dtype.name
 
-    def signature_for_features(inputs: Iterable[Feature], outputs: Iterable[Feature]) -> ModelSignature:
-
+    def signature_for_features(
+        inputs: Iterable[Feature], outputs: Iterable[Feature]
+    ) -> ModelSignature:
         output_schema: Schema | None = None
         if outputs:
             output_schema = Schema([mlflow_spec(label) for label in outputs])  # type: ignore
@@ -78,18 +78,22 @@ def reference_metadata_for_features(features: list[FeatureReference]) -> list[st
     return [feat.identifier for feat in sorted(features, key=lambda feat: feat.name)]
 
 
-def reference_metadata_for_input(requests: list[RetrivalRequest] | RetrivalRequest) -> list[str]:
-    if isinstance(requests, RetrivalRequest):
+def reference_metadata_for_input(
+    requests: list[RetrievalRequest] | RetrievalRequest,
+) -> list[str]:
+    if isinstance(requests, RetrievalRequest):
         requests = [requests]
 
     all_features: list[FeatureReference] = []
     for req in requests:
-        all_features.extend(feat.as_reference(req.location) for feat in req.returned_features)
+        all_features.extend(
+            feat.as_reference(req.location) for feat in req.returned_features
+        )
     return reference_metadata_for_features(all_features)
 
 
 def references_from_metadata(
-    metadata: dict[str, Any], reference_key: str = 'feature_refs'
+    metadata: dict[str, Any], reference_key: str = "feature_refs"
 ) -> list[FeatureReference] | None:
     """
     Decodes the feature references in stored in a metadata key.
@@ -111,9 +115,12 @@ def references_from_metadata(
 
 @dataclass
 class MlflowConfig:
-
-    tracking_uri: ConfigValue = field(default_factory=lambda: EnvironmentValue('MLFLOW_TRACKING_URI'))
-    registry_uri: ConfigValue = field(default_factory=lambda: EnvironmentValue('MLFLOW_REGISTRY_URI'))
+    tracking_uri: ConfigValue = field(
+        default_factory=lambda: EnvironmentValue("MLFLOW_TRACKING_URI")
+    )
+    registry_uri: ConfigValue = field(
+        default_factory=lambda: EnvironmentValue("MLFLOW_REGISTRY_URI")
+    )
 
     def configs(self) -> list[ConfigValue]:
         return [self.tracking_uri, self.registry_uri]
@@ -148,15 +155,15 @@ class MlflowConfig:
     @staticmethod
     def databricks_unity_catalog() -> MlflowConfig:
         return MlflowConfig(
-            tracking_uri=LiteralValue('databricks'),
-            registry_uri=LiteralValue('databricks-uc'),
+            tracking_uri=LiteralValue("databricks"),
+            registry_uri=LiteralValue("databricks-uc"),
         )
 
 
 def in_memory_mlflow(
     model_name: str,
-    model_alias: str = 'champion',
-    reference_tag: str = 'feature_refs',
+    model_alias: str = "champion",
+    reference_tag: str = "feature_refs",
     mlflow_config: MlflowConfig | None = None,
 ) -> ExposedModel:
     """A model that is loaded from MLFlow using the given model name and alias.
@@ -173,7 +180,7 @@ def in_memory_mlflow(
 
 def mlflow_server(
     host: str,
-    model_alias: str = 'champion',
+    model_alias: str = "champion",
     model_name: str | None = None,
     timeout: int = 30,
     mlflow_config: MlflowConfig | None = None,
@@ -193,15 +200,14 @@ def mlflow_server(
 
 @dataclass
 class InMemMLFlowAlias(ExposedModel):
-
     model_name: str
     model_alias: str
 
     mlflow_config: MlflowConfig
 
     drop_invalid_rows: bool = True
-    reference_tag: str = 'feature_refs'
-    model_type: str = 'latest_mlflow'
+    reference_tag: str = "feature_refs"
+    model_type: str = "latest_mlflow"
 
     @property
     def exposed_at_url(self) -> str | None:
@@ -220,9 +226,11 @@ class InMemMLFlowAlias(ExposedModel):
         return client.get_model_version_by_alias(self.model_name, self.model_alias)
 
     def feature_refs(
-        self, client: mlflow.MlflowClient, store: ModelFeatureStore, model: PyFuncModel | None = None
+        self,
+        client: mlflow.MlflowClient,
+        store: ModelFeatureStore,
+        model: PyFuncModel | None = None,
     ) -> list[FeatureReference]:
-
         if model is not None and model.metadata.metadata is not None:
             refs = references_from_metadata(
                 metadata=model.metadata.metadata, reference_key=self.reference_tag
@@ -244,10 +252,13 @@ class InMemMLFlowAlias(ExposedModel):
         refs = await self.needed_features(store)
         return store.store.requests_for_features(refs).entities()
 
-    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+    async def run_polars(
+        self, values: RetrievalJob, store: ModelFeatureStore
+    ) -> pl.DataFrame:
         import polars as pl
         import pandas as pd
         from datetime import datetime, timezone
+        from mlflow.exceptions import MlflowException
 
         pred_label = list(store.model.predictions_view.labels())[0]
         pred_at = store.model.predictions_view.event_timestamp
@@ -308,7 +319,7 @@ class MLFlowServer(ExposedModel):
     mlflow_config: MlflowConfig
     timeout: int = field(default=30)
 
-    model_type: str = 'mlflow_server'
+    model_type: str = "mlflow_server"
 
     @property
     def exposed_at_url(self) -> str | None:
@@ -318,24 +329,31 @@ class MLFlowServer(ExposedModel):
     def as_markdown(self) -> str:
         return f"""Using a MLFlow server at `{self.host}`.
 Assumes that it is the model: `{self.model_name}` with alias: `{self.model_alias}`.
-This assums that the model signature are feature references on the aligned format.
+This assumes that the model signature are feature references on the aligned format.
 Meaning each feature is on the following format `(feature_view|model):<contract name>:<feature name>`."""  # noqa: E501
 
     def get_model_version(self, model_name: str):
         mlflow_client = self.mlflow_config.client()
-        return mlflow_client.get_model_version_by_alias(self.model_name or model_name, self.model_alias)
+        return mlflow_client.get_model_version_by_alias(
+            self.model_name or model_name, self.model_alias
+        )
 
     def feature_refs(self) -> list[FeatureReference]:
         import json
 
         with self.mlflow_config as _:
-            info = mlflow.models.get_model_info(f"models:/{self.model_name}@{self.model_alias}")
+            info = mlflow.models.get_model_info(  # type: ignore
+                f"models:/{self.model_name}@{self.model_alias}"
+            )
             signature = info.signature_dict
 
         if not signature:
             return []
 
-        refs = [FeatureReference.from_string(feature['name']) for feature in json.loads(signature['inputs'])]
+        refs = [
+            FeatureReference.from_string(feature["name"])
+            for feature in json.loads(signature["inputs"])
+        ]
 
         return [ref for ref in refs if ref]
 
@@ -350,7 +368,9 @@ Meaning each feature is on the following format `(feature_view|model):<contract 
         req = store.store.requests_for_features(features)
         return req.request_result.entities
 
-    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+    async def run_polars(
+        self, values: RetrievalJob, store: ModelFeatureStore
+    ) -> pl.DataFrame:
         import polars as pl
         from httpx import AsyncClient
         from datetime import datetime, timezone
@@ -371,10 +391,10 @@ Meaning each feature is on the following format `(feature_view|model):<contract 
         async with AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
                 f"{self.host}/invocations",
-                json={'dataframe_records': df[features].to_dicts()},
+                json={"dataframe_records": df[features].to_dicts()},
             )
             response.raise_for_status()
-            preds = response.json()['predictions']
+            preds = response.json()["predictions"]
 
         if pred_at:
             df = df.with_columns(

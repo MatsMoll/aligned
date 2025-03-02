@@ -9,9 +9,17 @@ import polars as pl
 
 from aligned import AwsS3Config
 from aligned.lazy_imports import pandas as pd
-from aligned.compiler.feature_factory import FeatureFactory, Transformation, TransformationFactory
+from aligned.compiler.feature_factory import (
+    FeatureFactory,
+    Transformation,
+    TransformationFactory,
+)
 from aligned.schemas.feature import FeatureReference, FeatureType
-from aligned.schemas.transformation import FillNaValuesColumns, LiteralValue, EmbeddingModel
+from aligned.schemas.transformation import (
+    FillNaValuesColumns,
+    LiteralValue,
+    EmbeddingModel,
+)
 
 if TYPE_CHECKING:
     from aligned.feature_store import ContractStore
@@ -21,7 +29,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class EqualsFactory(TransformationFactory):
-
     left: FeatureFactory
     right: FeatureFactory | Any
 
@@ -43,7 +50,6 @@ class EqualsFactory(TransformationFactory):
 
 @dataclass
 class NotNullFactory(TransformationFactory):
-
     value: FeatureFactory
 
     @property
@@ -58,7 +64,6 @@ class NotNullFactory(TransformationFactory):
 
 @dataclass
 class RatioFactory(TransformationFactory):
-
     numerator: FeatureFactory
     denumerator: FeatureFactory | LiteralValue
 
@@ -79,7 +84,6 @@ class RatioFactory(TransformationFactory):
 
 @dataclass
 class OrdinalFactory(TransformationFactory):
-
     orders: list[str]
     feature: FeatureFactory
 
@@ -95,7 +99,6 @@ class OrdinalFactory(TransformationFactory):
 
 @dataclass
 class ArrayAtIndexFactory(TransformationFactory):
-
     feature: FeatureFactory
     index: int
 
@@ -111,7 +114,6 @@ class ArrayAtIndexFactory(TransformationFactory):
 
 @dataclass
 class ArrayContainsFactory(TransformationFactory):
-
     value: LiteralValue
     in_feature: FeatureFactory
 
@@ -127,7 +129,6 @@ class ArrayContainsFactory(TransformationFactory):
 
 @dataclass
 class ContainsFactory(TransformationFactory):
-
     text: str
     in_feature: FeatureFactory
 
@@ -143,7 +144,6 @@ class ContainsFactory(TransformationFactory):
 
 @dataclass
 class NotEqualsFactory(TransformationFactory):
-
     value: Any | FeatureFactory
     in_feature: FeatureFactory
 
@@ -152,17 +152,21 @@ class NotEqualsFactory(TransformationFactory):
         return [self.in_feature]
 
     def compile(self) -> Transformation:
-        from aligned.schemas.transformation import NotEqualsLiteral, NotEquals as NotEqualsTransformation
+        from aligned.schemas.transformation import (
+            NotEqualsLiteral,
+            NotEquals as NotEqualsTransformation,
+        )
 
         if isinstance(self.value, FeatureFactory):
             return NotEqualsTransformation(self.in_feature.name, self.value.name)
         else:
-            return NotEqualsLiteral(self.in_feature.name, LiteralValue.from_value(self.value))
+            return NotEqualsLiteral(
+                self.in_feature.name, LiteralValue.from_value(self.value)
+            )
 
 
 @dataclass
 class GreaterThenFactory(TransformationFactory):
-
     left_feature: FeatureFactory
     right: Any
 
@@ -184,7 +188,6 @@ class GreaterThenFactory(TransformationFactory):
 
 @dataclass
 class GreaterThenOrEqualFactory(TransformationFactory):
-
     value: Any
     in_feature: FeatureFactory
 
@@ -193,14 +196,15 @@ class GreaterThenOrEqualFactory(TransformationFactory):
         return [self.in_feature]
 
     def compile(self) -> Transformation:
-        from aligned.schemas.transformation import GreaterThenOrEqual as GTETransformation
+        from aligned.schemas.transformation import (
+            GreaterThenOrEqual as GTETransformation,
+        )
 
         return GTETransformation(self.in_feature.name, self.value)
 
 
 @dataclass
 class LowerThenFactory(TransformationFactory):
-
     value: Any
     in_feature: FeatureFactory
 
@@ -220,7 +224,6 @@ class LowerThenFactory(TransformationFactory):
 
 @dataclass
 class LowerThenOrEqualFactory(TransformationFactory):
-
     value: Any
     in_feature: FeatureFactory
 
@@ -240,7 +243,6 @@ class LowerThenOrEqualFactory(TransformationFactory):
 
 @dataclass
 class Split(TransformationFactory):
-
     pattern: str
     from_feature: FeatureFactory
 
@@ -256,7 +258,6 @@ class Split(TransformationFactory):
 
 @dataclass
 class OllamaEmbedding(TransformationFactory):
-
     model: str
     from_feature: FeatureFactory
     host_env: str | None
@@ -266,14 +267,17 @@ class OllamaEmbedding(TransformationFactory):
         return [self.from_feature]
 
     def compile(self) -> Transformation:
-        from aligned.schemas.transformation import OllamaEmbedding as OllamaEmbeddingTransformation
+        from aligned.schemas.transformation import (
+            OllamaEmbedding as OllamaEmbeddingTransformation,
+        )
 
-        return OllamaEmbeddingTransformation(self.from_feature.name, self.model, self.host_env)
+        return OllamaEmbeddingTransformation(
+            self.from_feature.name, self.model, self.host_env
+        )
 
 
 @dataclass
 class OllamaGenerate(TransformationFactory):
-
     model: str
     system: str | None
     prompt_feature: FeatureFactory
@@ -284,10 +288,12 @@ class OllamaGenerate(TransformationFactory):
         return [self.prompt_feature]
 
     def compile(self) -> Transformation:
-        from aligned.schemas.transformation import OllamaGenerate as OllamaGenerateTransformation
+        from aligned.schemas.transformation import (
+            OllamaGenerate as OllamaGenerateTransformation,
+        )
 
         return OllamaGenerateTransformation(
-            self.prompt_feature.name, self.model, self.system or '', self.host_env
+            self.prompt_feature.name, self.model, self.system or "", self.host_env
         )
 
 
@@ -330,7 +336,6 @@ class OllamaGenerate(TransformationFactory):
 
 @dataclass
 class DateComponentFactory(TransformationFactory):
-
     component: str
     feature: FeatureFactory
 
@@ -346,7 +351,6 @@ class DateComponentFactory(TransformationFactory):
 
 @dataclass
 class DifferanceBetweenFactory(TransformationFactory):
-
     first_feature: FeatureFactory
     second_feature: FeatureFactory | LiteralValue
 
@@ -368,7 +372,6 @@ class DifferanceBetweenFactory(TransformationFactory):
 
 @dataclass
 class AdditionBetweenFactory(TransformationFactory):
-
     first_feature: FeatureFactory
     second_feature: FeatureFactory | Any
 
@@ -385,12 +388,13 @@ class AdditionBetweenFactory(TransformationFactory):
         if isinstance(self.second_feature, FeatureFactory):
             return Addition(self.first_feature.name, self.second_feature.name)
         else:
-            return AdditionValue(self.first_feature.name, LiteralValue.from_value(self.second_feature))
+            return AdditionValue(
+                self.first_feature.name, LiteralValue.from_value(self.second_feature)
+            )
 
 
 @dataclass
 class PowerFactory(TransformationFactory):
-
     first: FeatureFactory
     second: FeatureFactory | Any
 
@@ -412,7 +416,6 @@ class PowerFactory(TransformationFactory):
 
 @dataclass
 class TimeDifferanceFactory(TransformationFactory):
-
     first_feature: FeatureFactory
     second_feature: FeatureFactory
 
@@ -428,7 +431,6 @@ class TimeDifferanceFactory(TransformationFactory):
 
 @dataclass
 class LogTransformFactory(TransformationFactory):
-
     feature: FeatureFactory
 
     @property
@@ -443,7 +445,6 @@ class LogTransformFactory(TransformationFactory):
 
 @dataclass
 class ReplaceFactory(TransformationFactory):
-
     values: dict[str, str]
     source_feature: FeatureFactory
 
@@ -460,7 +461,6 @@ class ReplaceFactory(TransformationFactory):
 
 @dataclass
 class ToNumericalFactory(TransformationFactory):
-
     from_feature: FeatureFactory
 
     @property
@@ -468,14 +468,15 @@ class ToNumericalFactory(TransformationFactory):
         return [self.from_feature]
 
     def compile(self) -> Transformation:
-        from aligned.schemas.transformation import ToNumerical as ToNumericalTransformation
+        from aligned.schemas.transformation import (
+            ToNumerical as ToNumericalTransformation,
+        )
 
         return ToNumericalTransformation(self.from_feature.name)
 
 
 @dataclass
 class IsInFactory(TransformationFactory):
-
     feature: FeatureFactory
     values: list
 
@@ -491,7 +492,6 @@ class IsInFactory(TransformationFactory):
 
 @dataclass
 class AndFactory(TransformationFactory):
-
     first_feature: FeatureFactory
     second_feature: FeatureFactory
 
@@ -507,7 +507,6 @@ class AndFactory(TransformationFactory):
 
 @dataclass
 class OrFactory(TransformationFactory):
-
     first_feature: FeatureFactory
     second_feature: FeatureFactory
 
@@ -523,7 +522,6 @@ class OrFactory(TransformationFactory):
 
 @dataclass
 class InverseFactory(TransformationFactory):
-
     from_feature: FeatureFactory
 
     @property
@@ -551,7 +549,6 @@ class ConstantFillNaStrategy(FillNaStrategy):
 
 @dataclass
 class FillMissingFactory(TransformationFactory):
-
     feature: FeatureFactory
     value: LiteralValue | FeatureFactory
 
@@ -566,16 +563,19 @@ class FillMissingFactory(TransformationFactory):
         from aligned.schemas.transformation import FillNaValues
 
         if isinstance(self.value, LiteralValue):
-            return FillNaValues(key=self.feature.name, value=self.value, dtype=self.feature.dtype)
+            return FillNaValues(
+                key=self.feature.name, value=self.value, dtype=self.feature.dtype
+            )
         else:
             return FillNaValuesColumns(
-                key=self.feature.name, fill_key=self.value.name, dtype=self.feature.dtype
+                key=self.feature.name,
+                fill_key=self.value.name,
+                dtype=self.feature.dtype,
             )
 
 
 @dataclass
 class FloorFactory(TransformationFactory):
-
     feature: FeatureFactory
 
     @property
@@ -590,7 +590,6 @@ class FloorFactory(TransformationFactory):
 
 @dataclass
 class CeilFactory(TransformationFactory):
-
     feature: FeatureFactory
 
     @property
@@ -605,7 +604,6 @@ class CeilFactory(TransformationFactory):
 
 @dataclass
 class RoundFactory(TransformationFactory):
-
     feature: FeatureFactory
 
     @property
@@ -620,7 +618,6 @@ class RoundFactory(TransformationFactory):
 
 @dataclass
 class AbsoluteFactory(TransformationFactory):
-
     feature: FeatureFactory
 
     @property
@@ -635,9 +632,10 @@ class AbsoluteFactory(TransformationFactory):
 
 @dataclass
 class MapRowTransformation(TransformationFactory):
-
     dtype: FeatureFactory
-    method: Callable[[dict], Any]
+    method: (
+        Callable[[Any, dict, ContractStore], Any] | Callable[[dict, ContractStore], Any]
+    )
     _using_features: list[FeatureFactory]
 
     @property
@@ -650,31 +648,39 @@ class MapRowTransformation(TransformationFactory):
         import dill
         from aligned.schemas.transformation import PolarsMapRowTransformation
 
-        if isinstance(self.method, types.LambdaType) and self.method.__name__ == '<lambda>':
+        if (
+            isinstance(self.method, types.LambdaType)
+            and self.method.__name__ == "<lambda>"
+        ):
             raise NotImplementedError(type(self))
 
         function_name = dill.source.getname(self.method)
-        assert isinstance(function_name, str), 'Need a function name'
+        assert isinstance(function_name, str), "Need a function name"
         raw_code = inspect.getsource(self.method)
 
-        code = ''
+        code = ""
 
         indents: int | None = None
         start_signature = f"def {function_name}"
+        strip_self = False
 
         for line in raw_code.splitlines(keepends=True):
+            if strip_self:
+                code += line.replace("self,", "")
+                strip_self = False
+            elif start_signature in line:
+                stripped = line.lstrip()
+                indents = len(line) - len(stripped)
+                stripped = stripped.replace("self,", "")
+                code += stripped
 
-            if indents:
+                if line.endswith("(\n"):
+                    strip_self = True
+            elif indents:
                 if len(line) > indents:
                     code += line[:indents].lstrip() + line[indents:]
                 else:
                     code += line
-
-            if start_signature in line:
-                stripped = line.lstrip()
-                indents = len(line) - len(stripped)
-                stripped = stripped.replace(f"{start_signature}(self,", f"{start_signature}(")
-                code += stripped
 
         return PolarsMapRowTransformation(
             code=code,
@@ -685,7 +691,6 @@ class MapRowTransformation(TransformationFactory):
 
 @dataclass
 class PandasTransformationFactory(TransformationFactory):
-
     dtype: FeatureFactory
     method: Callable[[pd.DataFrame, ContractStore], pd.Series]
     _using_features: list[FeatureFactory]
@@ -700,9 +705,15 @@ class PandasTransformationFactory(TransformationFactory):
 
         import dill
 
-        from aligned.schemas.transformation import PandasFunctionTransformation, PandasLambdaTransformation
+        from aligned.schemas.transformation import (
+            PandasFunctionTransformation,
+            PandasLambdaTransformation,
+        )
 
-        if isinstance(self.method, types.LambdaType) and self.method.__name__ == '<lambda>':
+        if (
+            isinstance(self.method, types.LambdaType)
+            and self.method.__name__ == "<lambda>"
+        ):
             return PandasLambdaTransformation(
                 method=dill.dumps(self.method),
                 code=inspect.getsource(self.method).strip(),
@@ -710,16 +721,15 @@ class PandasTransformationFactory(TransformationFactory):
             )
         else:
             function_name = dill.source.getname(self.method)
-            assert isinstance(function_name, str), 'Need a function name'
+            assert isinstance(function_name, str), "Need a function name"
             raw_code = inspect.getsource(self.method)
 
-            code = ''
+            code = ""
 
             indents: int | None = None
             start_signature = f"def {function_name}"
 
             for line in raw_code.splitlines(keepends=True):
-
                 if indents:
                     if len(line) > indents:
                         code += line[:indents].lstrip() + line[indents:]
@@ -729,7 +739,9 @@ class PandasTransformationFactory(TransformationFactory):
                 if start_signature in line:
                     stripped = line.lstrip()
                     indents = len(line) - len(stripped)
-                    stripped = stripped.replace(f"{start_signature}(self,", f"{start_signature}(")
+                    stripped = stripped.replace(
+                        f"{start_signature}(self,", f"{start_signature}("
+                    )
                     code += stripped
 
             return PandasFunctionTransformation(
@@ -741,7 +753,6 @@ class PandasTransformationFactory(TransformationFactory):
 
 @dataclass
 class PolarsTransformationFactory(TransformationFactory):
-
     dtype: FeatureFactory
     method: pl.Expr | Callable[[pl.LazyFrame, pl.Expr, ContractStore], pl.LazyFrame]
     _using_features: list[FeatureFactory]
@@ -763,38 +774,52 @@ class PolarsTransformationFactory(TransformationFactory):
         )
 
         if isinstance(self.method, pl.Expr):
-            return PolarsExpression(self.method.meta.write_json(), dtype=self.dtype.dtype)
+            return PolarsExpression(
+                self.method.meta.write_json(), dtype=self.dtype.dtype
+            )
         else:
             function_name = dill.source.getname(self.method)
-            assert isinstance(function_name, str), 'Need a function name'
+            assert isinstance(function_name, str), "Need a function name"
             raw_code = inspect.getsource(self.method)
 
-            code = ''
+            code = ""
 
             indents: int | None = None
+            strip_self = False
             start_signature = f"def {function_name}"
 
             for line in raw_code.splitlines(keepends=True):
+                if strip_self:
+                    code += line.replace("self,", "")
+                    strip_self = False
+                elif start_signature in line:
+                    stripped = line.lstrip()
+                    indents = len(line) - len(stripped)
+                    stripped = stripped.replace("self,", "")
+                    code += stripped
 
-                if indents:
+                    if line.endswith("(\n"):
+                        strip_self = True
+                elif indents:
                     if len(line) > indents:
                         code += line[:indents].lstrip() + line[indents:]
                     else:
                         code += line
 
-                if start_signature in line:
-                    stripped = line.lstrip()
-                    indents = len(line) - len(stripped)
-                    stripped = stripped.replace(f"{start_signature}(self,", f"{start_signature}(")
-                    code += stripped
-
-        if isinstance(self.method, types.LambdaType) and self.method.__name__ == '<lambda>':
+        if (
+            isinstance(self.method, types.LambdaType)
+            and self.method.__name__ == "<lambda>"
+        ):
             return PolarsLambdaTransformation(
-                method=dill.dumps(self.method), code=code.strip(), dtype=self.dtype.dtype
+                method=dill.dumps(self.method),
+                code=code.strip(),
+                dtype=self.dtype.dtype,
             )
         else:
             function_name = dill.source.getname(self.method)
-            assert isinstance(function_name, str), f"Expected string got {type(function_name)}"
+            assert isinstance(
+                function_name, str
+            ), f"Expected string got {type(function_name)}"
             return PolarsFunctionTransformation(
                 code=code,
                 function_name=function_name,
@@ -803,13 +828,12 @@ class PolarsTransformationFactory(TransformationFactory):
 
 
 class AggregatableTransformation:
-    def copy(self) -> 'AggregatableTransformation':
+    def copy(self) -> "AggregatableTransformation":
         raise NotImplementedError(type(self))
 
 
 @dataclass
 class MeanTransfomrationFactory(TransformationFactory, AggregatableTransformation):
-
     feature: FeatureFactory
     over: timedelta | None = field(default=None)
     group_by: list[FeatureFactory] | None = field(default=None)
@@ -826,13 +850,12 @@ class MeanTransfomrationFactory(TransformationFactory, AggregatableTransformatio
 
         return MeanAggregation(key=self.feature.name)
 
-    def copy(self) -> 'MeanTransfomrationFactory':
+    def copy(self) -> "MeanTransfomrationFactory":
         return MeanTransfomrationFactory(self.feature, self.over, self.group_by)
 
 
 @dataclass
 class WordVectoriserFactory(TransformationFactory):
-
     feature: FeatureFactory
     model: EmbeddingModel
 
@@ -847,8 +870,21 @@ class WordVectoriserFactory(TransformationFactory):
 
 
 @dataclass
-class LoadImageFactory(TransformationFactory):
+class LoadImageBytesFactory(TransformationFactory):
+    url_feature: FeatureFactory
 
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.url_feature]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import LoadImageUrlBytes
+
+        return LoadImageUrlBytes(self.url_feature.name)
+
+
+@dataclass
+class LoadImageFactory(TransformationFactory):
     url_feature: FeatureFactory
 
     @property
@@ -863,7 +899,6 @@ class LoadImageFactory(TransformationFactory):
 
 @dataclass
 class GrayscaleImageFactory(TransformationFactory):
-
     image_feature: FeatureFactory
 
     @property
@@ -878,10 +913,9 @@ class GrayscaleImageFactory(TransformationFactory):
 
 @dataclass
 class AppendStrings(TransformationFactory):
-
     first_feature: FeatureFactory
     second_feature: FeatureFactory | LiteralValue
-    separator: str = field(default='')
+    separator: str = field(default="")
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -894,14 +928,17 @@ class AppendStrings(TransformationFactory):
         from aligned.schemas.transformation import AppendConstString, AppendStrings
 
         if isinstance(self.second_feature, LiteralValue):
-            return AppendConstString(self.first_feature.name, self.second_feature.python_value)
+            return AppendConstString(
+                self.first_feature.name, self.second_feature.python_value
+            )
         else:
-            return AppendStrings(self.first_feature.name, self.second_feature.name, self.separator)
+            return AppendStrings(
+                self.first_feature.name, self.second_feature.name, self.separator
+            )
 
 
 @dataclass
 class StructFieldFactory(TransformationFactory):
-
     struct_feature: FeatureFactory
     field_name: str
 
@@ -917,7 +954,6 @@ class StructFieldFactory(TransformationFactory):
 
 @dataclass
 class JsonPathFactory(TransformationFactory):
-
     json_feature: FeatureFactory
     path: str
 
@@ -933,7 +969,6 @@ class JsonPathFactory(TransformationFactory):
 
 @dataclass
 class PresignedAwsUrlFactory(TransformationFactory):
-
     aws_config: AwsS3Config
     url_feature: FeatureFactory
     max_age_seconds: int = field(default=30)
@@ -945,15 +980,16 @@ class PresignedAwsUrlFactory(TransformationFactory):
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import PresignedAwsUrl
 
-        return PresignedAwsUrl(self.aws_config, self.url_feature.name, self.max_age_seconds)
+        return PresignedAwsUrl(
+            self.aws_config, self.url_feature.name, self.max_age_seconds
+        )
 
 
 @dataclass
 class PrependConstString(TransformationFactory):
-
     first_feature: str
     second_feature: FeatureFactory
-    separator: str = field(default='')
+    separator: str = field(default="")
 
     @property
     def using_features(self) -> list[FeatureFactory]:
@@ -967,7 +1003,6 @@ class PrependConstString(TransformationFactory):
 
 @dataclass
 class ClipFactory(TransformationFactory):
-
     feature: FeatureFactory
     lower_bound: int | float
     upper_bound: int | float
@@ -988,7 +1023,6 @@ class ClipFactory(TransformationFactory):
 
 @dataclass
 class MultiplyFactory(TransformationFactory):
-
     first: FeatureFactory
     behind: FeatureFactory | LiteralValue
 
@@ -1010,7 +1044,6 @@ class MultiplyFactory(TransformationFactory):
 
 @dataclass
 class LoadFeature(TransformationFactory):
-
     entities: dict[str, FeatureFactory]
     feature: FeatureReference
     dtype: FeatureType
@@ -1038,7 +1071,6 @@ class LoadFeature(TransformationFactory):
 
 @dataclass
 class FormatString(TransformationFactory):
-
     format: str
     features: list[FeatureFactory]
 
@@ -1049,12 +1081,13 @@ class FormatString(TransformationFactory):
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import FormatStringTransformation
 
-        return FormatStringTransformation(self.format, [feature.name for feature in self.features])
+        return FormatStringTransformation(
+            self.format, [feature.name for feature in self.features]
+        )
 
 
 @dataclass
 class ListDotProduct(TransformationFactory):
-
     left: FeatureFactory
     right: FeatureFactory
 

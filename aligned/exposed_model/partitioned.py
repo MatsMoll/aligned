@@ -5,7 +5,7 @@ from aligned.config_value import ConfigValue
 from aligned.exposed_model.interface import ExposedModel
 from aligned.feature_store import ModelFeatureStore
 from aligned.schemas.feature import Feature, FeatureReference
-from aligned.retrival_job import RetrivalJob
+from aligned.retrieval_job import RetrievalJob
 
 
 @dataclass
@@ -44,7 +44,7 @@ class PartitionedModel(ExposedModel):
 
     default_partition: str | None
 
-    model_type = 'partitioned'
+    model_type = "partitioned"
 
     @property
     def as_markdown(self) -> str:
@@ -60,7 +60,6 @@ Partitions: {self.partitions}"""
         return configs
 
     async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
-
         all_features: set[FeatureReference] = set()
 
         for model in self.partitions.values():
@@ -74,15 +73,18 @@ Partitions: {self.partitions}"""
         entities.add(self.partition_key)
         return entities
 
-    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+    async def run_polars(
+        self, values: RetrievalJob, store: ModelFeatureStore
+    ) -> pl.DataFrame:
         df = await values.to_lazy_polars()
 
-        partitions = df.select(partition=pl.col(self.partition_key.name).unique()).collect()
+        partitions = df.select(
+            partition=pl.col(self.partition_key.name).unique()
+        ).collect()
 
         outputs: pl.DataFrame | None = None
 
-        for partition_value in partitions['partition'].to_list():
-
+        for partition_value in partitions["partition"].to_list():
             model = self.partitions.get(partition_value)
 
             if model is None and self.default_partition:
@@ -91,19 +93,23 @@ Partitions: {self.partitions}"""
             if model is None:
                 raise ValueError(
                     f"Unable to find model for partition {partition_value} for model {store.model.name}.\n\n"
-                    'Either add an additional model, or a default partition to use.'
+                    "Either add an additional model, or a default partition to use."
                 )
 
             subset = df.filter(pl.col(self.partition_key.name) == partition_value)
             if outputs is None:
                 outputs = await model.run_polars(
-                    RetrivalJob.from_polars_df(subset, values.retrival_requests), store
+                    RetrievalJob.from_polars_df(subset, values.retrieval_requests),
+                    store,
                 )
             else:
                 preds = await model.run_polars(
-                    RetrivalJob.from_polars_df(subset, values.retrival_requests), store
+                    RetrievalJob.from_polars_df(subset, values.retrieval_requests),
+                    store,
                 )
-                outputs = pl.concat([outputs, preds.select(outputs.columns)], how='vertical_relaxed')
+                outputs = pl.concat(
+                    [outputs, preds.select(outputs.columns)], how="vertical_relaxed"
+                )
 
         assert outputs is not None
         return outputs

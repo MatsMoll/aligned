@@ -2,32 +2,24 @@ from dataclasses import dataclass, field
 
 from aligned.schemas.record_coders import PassthroughRecordCoder, RecordCoder
 from aligned.streams.interface import ReadableStream, SinakableStream
-
-try:
-    from redis.asyncio import Redis  # type: ignore
-except ModuleNotFoundError:
-
-    class Redis:  # type: ignore
-        async def xread(self, streams: dict[str, str], count: int | None, block: int) -> list:
-            raise NotImplementedError()
-
-        async def xadd(self, stream: str, record: dict) -> None:
-            pass
+from aligned.lazy_imports import redis
 
 
 @dataclass
 class RedisStream(ReadableStream, SinakableStream):
-
-    client: Redis
+    client: redis.Redis
     stream_name: str
-    read_timestamp: str = field(default='0-0')
+    read_timestamp: str = field(default="0-0")
     mappings: dict[str, str] = field(default_factory=dict)
     record_coder: RecordCoder = field(default_factory=lambda: PassthroughRecordCoder())
 
-    async def read(self, max_records: int | None = None, max_wait: float | None = None) -> list[dict]:
-
+    async def read(
+        self, max_records: int | None = None, max_wait: float | None = None
+    ) -> list[dict]:
         stream_values = await self.client.xread(
-            streams={self.stream_name: self.read_timestamp}, count=max_records, block=int(max_wait or 1000)
+            streams={self.stream_name: self.read_timestamp},
+            count=max_records,
+            block=int(max_wait or 1000),
         )
 
         if not stream_values:

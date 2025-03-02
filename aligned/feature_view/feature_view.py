@@ -7,7 +7,17 @@ import polars as pl
 from datetime import timedelta
 from abc import ABC, abstractproperty
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Awaitable, TypeVar, Generic, Type, Callable, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Literal,
+    TypeVar,
+    Generic,
+    Type,
+    Callable,
+    Union,
+)
 from uuid import uuid4
 
 from aligned.lazy_imports import pandas as pd
@@ -27,8 +37,8 @@ from aligned.data_source.batch_data_source import (
     resolve_keys,
 )
 from aligned.data_source.stream_data_source import StreamDataSource
-from aligned.request.retrival_request import RetrivalRequest
-from aligned.retrival_job import ConvertableToRetrivalJob, RetrivalJob
+from aligned.request.retrieval_request import RetrievalRequest
+from aligned.retrieval_job import ConvertableToRetrievalJob, RetrievalJob
 from aligned.schemas.derivied_feature import (
     AggregatedFeature,
 )
@@ -41,10 +51,10 @@ if TYPE_CHECKING:
     from aligned.feature_store import FeatureViewStore
     from aligned.validation.interface import Validator
 
-# Enables code compleation in the select method
-T = TypeVar('T')
+# Enables code completion in the select method
+T = TypeVar("T")
 
-ConvertableData = TypeVar('ConvertableData', dict, pl.DataFrame, 'pd.DataFrame')
+ConvertableData = TypeVar("ConvertableData", dict, pl.DataFrame, "pd.DataFrame")
 
 
 logger = logging.getLogger(__name__)
@@ -81,9 +91,9 @@ class FeatureViewMetadata:
 
 
 PureLoadFunctions = Union[
-    Callable[[RetrivalRequest, datetime, datetime], Awaitable[pl.LazyFrame]],
-    Callable[[RetrivalRequest, int | None], Awaitable[pl.LazyFrame]],
-    Callable[[RetrivalRequest, int], Awaitable[pl.LazyFrame]],
+    Callable[[RetrievalRequest, datetime, datetime], Awaitable[pl.LazyFrame]],
+    Callable[[RetrievalRequest, int | None], Awaitable[pl.LazyFrame]],
+    Callable[[RetrievalRequest, int], Awaitable[pl.LazyFrame]],
 ]
 
 
@@ -94,7 +104,9 @@ def resolve_source(
         from aligned.schemas.feature_view import FeatureViewReferenceSource
 
         compiled = source.compile()
-        return FeatureViewReferenceSource(compiled, FeatureLocation.feature_view(compiled.name))
+        return FeatureViewReferenceSource(
+            compiled, FeatureLocation.feature_view(compiled.name)
+        )
 
     elif isinstance(source, CodableBatchDataSource):
         return source
@@ -107,10 +119,10 @@ def resolve_source(
     if len(params) == 1:
         return CustomMethodDataSource.from_load(source)  # type: ignore
 
-    if len(params) == 3 and 'request' in params and 'start_date' in params:
+    if len(params) == 3 and "request" in params and "start_date" in params:
         return CustomMethodDataSource.from_methods(all_between_dates=source)  # type: ignore
 
-    if len(params) == 2 and 'request' in params and 'limit' in params:
+    if len(params) == 2 and "request" in params and "limit" in params:
         return CustomMethodDataSource.from_methods(all_data=source)  # type: ignore
 
     raise ValueError(f"Unable to use function with signature {signature} as source.")
@@ -130,8 +142,9 @@ def feature_view(
     unacceptable_freshness: timedelta | None = None,
 ) -> Callable[[Type[T]], FeatureViewWrapper[T]]:
     def decorator(cls: Type[T]) -> FeatureViewWrapper[T]:
+        from aligned.sources.renamer import camel_to_snake_case
 
-        used_name = name or str(cls.__name__).lower()
+        used_name = name or camel_to_snake_case(str(cls.__name__))
         used_description = description or str(cls.__doc__)
 
         metadata = FeatureViewMetadata(
@@ -154,7 +167,7 @@ def feature_view(
 
 def set_location_for_features_in(view: Any, location: FeatureLocation) -> Any:
     for attribute in dir(view):
-        if attribute.startswith('__'):
+        if attribute.startswith("__"):
             continue
 
         value = getattr(view, attribute)
@@ -168,7 +181,6 @@ def set_location_for_features_in(view: Any, location: FeatureLocation) -> Any:
 
 @dataclass
 class FeatureViewWrapper(Generic[T]):
-
     metadata: FeatureViewMetadata
     view: T
 
@@ -177,28 +189,36 @@ class FeatureViewWrapper(Generic[T]):
         return FeatureLocation.feature_view(self.metadata.name)
 
     @property
-    def request(self) -> RetrivalRequest:
-        return self.compile().retrival_request
+    def request(self) -> RetrievalRequest:
+        return self.compile().retrieval_request
 
     def __call__(self) -> T:
         view = copy.deepcopy(self.view)
-        view = set_location_for_features_in(view, FeatureLocation.feature_view(self.metadata.name))
+        view = set_location_for_features_in(
+            view, FeatureLocation.feature_view(self.metadata.name)
+        )
         _ = FeatureView.compile_with_metadata(view, self.metadata)
-        setattr(view, '__view_wrapper__', self)
+        setattr(view, "__view_wrapper__", self)
         return view
 
     def compile(self) -> CompiledFeatureView:
         view = copy.deepcopy(self.view)
-        view = set_location_for_features_in(view, FeatureLocation.feature_view(self.metadata.name))
+        view = set_location_for_features_in(
+            view, FeatureLocation.feature_view(self.metadata.name)
+        )
         return FeatureView.compile_with_metadata(view, self.metadata)
 
     def vstack(
-        self, source: CodableBatchDataSource | FeatureViewWrapper, source_column: str | None = None
+        self,
+        source: CodableBatchDataSource | FeatureViewWrapper,
+        source_column: str | None = None,
     ) -> CodableBatchDataSource:
         from aligned.data_source.batch_data_source import StackSource
 
         return StackSource(
-            top=resolve_source(self), bottom=resolve_source(source), source_column=source_column
+            top=resolve_source(self),
+            bottom=resolve_source(source),
+            source_column=source_column,
         )
 
     def filter(
@@ -207,7 +227,6 @@ class FeatureViewWrapper(Generic[T]):
         where: Callable[[T], Bool] | pl.Expr,
         materialize_source: CodableBatchDataSource | None = None,
     ) -> FeatureViewWrapper[T]:
-
         from aligned.data_source.batch_data_source import FilteredDataSource
         from aligned.schemas.feature_view import FeatureViewReferenceSource
 
@@ -241,19 +260,26 @@ class FeatureViewWrapper(Generic[T]):
         on: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
         on_left: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
         on_right: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
-        how: str = 'inner',
+        how: Literal["inner", "left", "outer"] = "inner",
     ) -> JoinDataSource:
         from aligned.schemas.feature_view import FeatureViewReferenceSource
 
         compiled_view = self.compile()
-        source = FeatureViewReferenceSource(compiled_view, FeatureLocation.feature_view(compiled_view.name))
+        source = FeatureViewReferenceSource(
+            compiled_view, FeatureLocation.feature_view(compiled_view.name)
+        )
 
         if on:
             on_left = on
             on_right = on
 
         return join_source(
-            source, view, on_left, on_right, how, left_request=compiled_view.request_all.needed_requests[0]
+            source,
+            view,
+            on_left,
+            on_right,
+            how,
+            left_request=compiled_view.request_all.needed_requests[0],
         )
 
     def join_asof(
@@ -262,7 +288,9 @@ class FeatureViewWrapper(Generic[T]):
         from aligned.schemas.feature_view import FeatureViewReferenceSource
 
         compiled_view = self.compile()
-        source = FeatureViewReferenceSource(compiled_view, FeatureLocation.feature_view(compiled_view.name))
+        source = FeatureViewReferenceSource(
+            compiled_view, FeatureLocation.feature_view(compiled_view.name)
+        )
 
         left_on = None
         right_on = None
@@ -288,7 +316,6 @@ class FeatureViewWrapper(Generic[T]):
         copy_default_values: bool = False,
         copy_transformations: bool = False,
     ) -> FeatureViewWrapper[T]:
-
         meta = copy.deepcopy(self.metadata)
         meta.name = name
         meta.source = resolve_source(source)
@@ -303,7 +330,9 @@ class FeatureViewWrapper(Generic[T]):
         for agg_feature in compiled.aggregated_features:
             if agg_feature.name.isdigit():
                 continue
-            org_feature: FeatureFactory = getattr(view, agg_feature.derived_feature.name)
+            org_feature: FeatureFactory = getattr(
+                view, agg_feature.derived_feature.name
+            )
             feature = org_feature.copy_type()
             feature.transformation = None
             feature.tags = set(agg_feature.derived_feature.tags or [])
@@ -358,7 +387,9 @@ class FeatureViewWrapper(Generic[T]):
 
         return FeatureViewWrapper(metadata=meta, view=self.view)
 
-    def with_entity_renaming(self, named: str, renames: dict[str, str] | str) -> FeatureViewWrapper[T]:
+    def with_entity_renaming(
+        self, named: str, renames: dict[str, str] | str
+    ) -> FeatureViewWrapper[T]:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
 
         compiled_view = self.compile()
@@ -377,7 +408,7 @@ class FeatureViewWrapper(Generic[T]):
             if not len(compiled_view.entities) == 1:
                 raise ValueError(
                     f"Renaming entities for {compiled_view.name} with a string '{renames}'"
-                    'is impossible. Need to setup a dict to know which entity to rename.'
+                    "is impossible. Need to setup a dict to know which entity to rename."
                 )
 
             entity_name = list(compiled_view.entitiy_names)[0]
@@ -386,8 +417,8 @@ class FeatureViewWrapper(Generic[T]):
         for source in all_data_sources:
             if not isinstance(source, ColumnFeatureMappable):
                 logger.info(
-                    f'Source {type(source)} do not conform to ColumnFeatureMappable,'
-                    'which could lead to problems'
+                    f"Source {type(source)} do not conform to ColumnFeatureMappable,"
+                    "which could lead to problems"
                 )
                 continue
             for key, value in renames.items():
@@ -437,14 +468,16 @@ class FeatureViewWrapper(Generic[T]):
         store = self.query()
         await store.overwrite(store.using_source(self.metadata.source).all())
 
-    def process_input(self, data: ConvertableToRetrivalJob) -> RetrivalJob:
+    def process_input(self, data: ConvertableToRetrievalJob) -> RetrievalJob:
         return self.query().process_input(data)
 
-    async def process(self, data: ConvertableToRetrivalJob) -> list[dict]:
+    async def process(self, data: ConvertableToRetrievalJob) -> list[dict]:
         df = await self.query().process_input(data).to_lazy_polars()
         return df.collect().to_dicts()
 
-    async def freshness_in_source(self, source: CodableBatchDataSource) -> datetime | None:
+    async def freshness_in_source(
+        self, source: CodableBatchDataSource
+    ) -> datetime | None:
         """
         Returns the freshest datetime for a provided source
 
@@ -504,19 +537,25 @@ class FeatureViewWrapper(Generic[T]):
         compiled = self.compile()
         return await FeatureView.freshness_in_source(compiled, compiled.source)
 
-    def from_data(self, data: ConvertableToRetrivalJob) -> RetrivalJob:
+    def from_data(self, data: ConvertableToRetrievalJob) -> RetrievalJob:
         request = self.compile().request_all
-        return RetrivalJob.from_convertable(data, request)
+        return RetrievalJob.from_convertable(data, request)
 
-    def drop_invalid(self, data: ConvertableData, validator: Validator | None = None) -> ConvertableData:
-        from aligned.retrival_job import DropInvalidJob
+    def drop_invalid(
+        self, data: ConvertableData, validator: Validator | None = None
+    ) -> ConvertableData:
+        from aligned.retrieval_job import DropInvalidJob
 
         if not validator:
             from aligned.validation.interface import PolarsValidator
 
             validator = PolarsValidator()
 
-        features = list(DropInvalidJob.features_to_validate(self.compile().request_all.needed_requests))
+        features = list(
+            DropInvalidJob.features_to_validate(
+                self.compile().request_all.needed_requests
+            )
+        )
 
         if isinstance(data, dict):
             validate_data = pl.DataFrame(data, strict=False)
@@ -524,20 +563,26 @@ class FeatureViewWrapper(Generic[T]):
             validate_data = data
 
         if isinstance(validate_data, pl.DataFrame):
-            validated = validator.validate_polars(features, validate_data.lazy()).collect()
+            validated = validator.validate_polars(
+                features, validate_data.lazy()
+            ).collect()
             if isinstance(data, dict):
                 return validated.to_dict(as_series=False)
             return validated  # type: ignore
         elif isinstance(validate_data, pd.DataFrame):
             return validator.validate_pandas(features, validate_data)
         else:
-            raise ValueError(f'Invalid data type: {type(data)}')
+            raise ValueError(f"Invalid data type: {type(data)}")
 
-    def as_source(self, renames: dict[str, str] | None = None) -> CodableBatchDataSource:
+    def as_source(
+        self, renames: dict[str, str] | None = None
+    ) -> CodableBatchDataSource:
         from aligned.schemas.feature_view import FeatureViewReferenceSource
 
         return FeatureViewReferenceSource(
-            self.compile(), FeatureLocation.feature_view(self.metadata.name), renames=renames or {}
+            self.compile(),
+            FeatureLocation.feature_view(self.metadata.name),
+            renames=renames or {},
         )
 
 
@@ -597,19 +642,23 @@ class FeatureView(ABC):
     ) -> datetime | None:
         if not view.event_timestamp:
             raise ValueError(
-                f'The feature view: {view.name}, needs an event timestamp',
-                'to compute the freshness of a source',
+                f"The feature view: {view.name}, needs an event timestamp",
+                "to compute the freshness of a source",
             )
         return await source.freshness(view.event_timestamp.as_feature())
 
     @staticmethod
-    def compile_with_metadata(feature_view: Any, metadata: FeatureViewMetadata) -> CompiledFeatureView:
+    def compile_with_metadata(
+        feature_view: Any, metadata: FeatureViewMetadata
+    ) -> CompiledFeatureView:
         from aligned.compiler.feature_factory import FeatureFactory
 
         # Used to deterministicly init names for hidden features
         hidden_features = 0
 
-        var_names = [name for name in feature_view.__dir__() if not name.startswith('_')]
+        var_names = [
+            name for name in feature_view.__dir__() if not name.startswith("_")
+        ]
 
         view = CompiledFeatureView(
             name=metadata.name,
@@ -638,6 +687,9 @@ class FeatureView(ABC):
             if not isinstance(feature, FeatureFactory):
                 continue
 
+            if feature._description is None:
+                feature._description = feature.__doc__
+
             feature._name = var_name
             feature._location = FeatureLocation.feature_view(metadata.name)
             compiled_feature = feature.feature()
@@ -645,7 +697,9 @@ class FeatureView(ABC):
             if isinstance(feature, Embedding) and feature.indexes:
                 view.indexes.extend(
                     [
-                        index.compile(feature._location, compiled_feature, view.entities)
+                        index.compile(
+                            feature._location, compiled_feature, view.entities
+                        )
                         for index in feature.indexes
                     ]
                 )
@@ -668,17 +722,20 @@ class FeatureView(ABC):
                 #     z = (x & y) | x
                 #
                 # Here will (x & y)'s result be a 'hidden' feature
-                feature_deps = [(feat.depth(), feat) for feat in feature.feature_dependencies()]
+                feature_deps = [
+                    (feat.depth(), feat) for feat in feature.feature_dependencies()
+                ]
 
-                # Sorting by key in order to instanciate the "core" features first
+                # Sorting by key so the "core" features are first
                 # And then making it possible for other features to reference them
                 def sort_key(x: tuple[int, FeatureFactory]) -> int:
                     return x[0]
 
                 for depth, feature_dep in sorted(feature_deps, key=sort_key):
-
                     if not feature_dep._location:
-                        feature_dep._location = FeatureLocation.feature_view(metadata.name)
+                        feature_dep._location = FeatureLocation.feature_view(
+                            metadata.name
+                        )
                     elif feature_dep._location.name != metadata.name:
                         continue
 
@@ -699,10 +756,14 @@ class FeatureView(ABC):
                         feature_dep._name = str(hidden_features)
                         hidden_features += 1
 
-                    if isinstance(feature_dep.transformation, AggregationTransformationFactory):
+                    if isinstance(
+                        feature_dep.transformation, AggregationTransformationFactory
+                    ):
                         aggregations.append(feature_dep)
                     else:
-                        feature_graph = feature_dep.compile()  # Should decide on which payload to send
+                        feature_graph = (
+                            feature_dep.compile()
+                        )  # Should decide on which payload to send
                         if feature_graph in view.derived_features:
                             continue
 
@@ -711,23 +772,29 @@ class FeatureView(ABC):
                 if isinstance(feature.transformation, AggregationTransformationFactory):
                     aggregations.append(feature)
                 else:
-                    view.derived_features.add(feature.compile())  # Should decide on which payload to send
+                    view.derived_features.add(
+                        feature.compile()
+                    )  # Should decide on which payload to send
 
             elif isinstance(feature, EventTimestamp):
                 if view.event_timestamp is not None:
                     raise Exception(
-                        'Can only have one EventTimestamp for each'
-                        ' FeatureViewDefinition. Check that this is the case for'
-                        f' {type(view).__name__}'
+                        "Can only have one EventTimestamp for each"
+                        " FeatureViewDefinition. Check that this is the case for"
+                        f" {type(view).__name__}"
                     )
                 view.event_timestamp = feature.event_timestamp()
             else:
                 view.features.add(compiled_feature)
 
         loc = FeatureLocation.feature_view(view.name)
-        aggregation_group_by = [FeatureReference(entity.name, loc) for entity in view.entities]
+        aggregation_group_by = [
+            FeatureReference(entity.name, loc) for entity in view.entities
+        ]
         event_timestamp_ref = (
-            FeatureReference(view.event_timestamp.name, loc) if view.event_timestamp else None
+            FeatureReference(view.event_timestamp.name, loc)
+            if view.event_timestamp
+            else None
         )
 
         for aggr in aggregations:
@@ -786,7 +853,10 @@ class FeatureView(ABC):
 
     @staticmethod
     def feature_view_code_template(
-        schema: dict[str, FeatureFactory], batch_source_code: str, view_name: str, imports: str | None = None
+        schema: dict[str, FeatureFactory],
+        batch_source_code: str,
+        view_name: str,
+        imports: str | None = None,
     ) -> str:
         """Setup the code needed to represent the data source as a feature view
 
@@ -824,13 +894,13 @@ class FeatureView(ABC):
             str: The code needed to setup a basic feature view
         """
         data_types: set[str] = set()
-        feature_code = ''
+        feature_code = ""
         for name, dtype in schema.items():
             type_name = dtype.__class__.__name__
             data_types.add(type_name)
-            feature_code += f'{name} = {type_name}()\n    '
+            feature_code += f"{name} = {type_name}()\n    "
 
-        all_types = ', '.join(data_types)
+        all_types = ", ".join(data_types)
 
         return f"""
 from aligned import feature_view, {all_types}
@@ -912,7 +982,7 @@ def check_schema() -> Callable:
                 elif isinstance(df, dict):
                     columns = list(df.keys())
                 else:
-                    raise ValueError(f'Invalid data type: {type(df)}')
+                    raise ValueError(f"Invalid data type: {type(df)}")
 
                 for feature in view.request_all.needed_requests[0].all_features:
                     if feature.name not in columns:

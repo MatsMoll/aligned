@@ -4,7 +4,7 @@ import polars as pl
 from datetime import datetime
 from aligned.data_source.batch_data_source import CodableBatchDataSource
 from aligned.feature_source import WritableFeatureSource
-from aligned.request.retrival_request import RetrivalRequest
+from aligned.request.retrieval_request import RetrievalRequest
 from aligned.schemas.feature import Feature
 from aligned.sources.local import Deletable
 import logging
@@ -12,7 +12,7 @@ import logging
 from aligned.sources.vector_index import VectorIndex
 
 if TYPE_CHECKING:
-    from aligned.retrival_job import RetrivalJob
+    from aligned.retrieval_job import RetrievalJob
 
 
 try:
@@ -25,30 +25,30 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class LanceDBConfig:
-
     path: str
 
-    async def connect(self) -> 'lancedb.AsyncConnection':  # type: ignore
-        assert lancedb is not None, '`lancedb` is not installed'
+    async def connect(self) -> "lancedb.AsyncConnection":  # type: ignore
+        assert lancedb is not None, "`lancedb` is not installed"
         return await lancedb.connect_async(self.path)
 
-    async def connect_to_table(self, table: str) -> 'lancedb.AsyncTable':  # type: ignore
+    async def connect_to_table(self, table: str) -> "lancedb.AsyncTable":  # type: ignore
         conn = await self.connect()
         return await conn.open_table(table)
 
-    def table(self, name: str) -> 'LanceDbTable':
+    def table(self, name: str) -> "LanceDbTable":
         return LanceDbTable(table_name=name, config=self)
 
 
 @dataclass
-class LanceDbTable(VectorIndex, CodableBatchDataSource, WritableFeatureSource, Deletable):
-
+class LanceDbTable(
+    VectorIndex, CodableBatchDataSource, WritableFeatureSource, Deletable
+):
     table_name: str
     config: LanceDBConfig
 
     _vector_index_name: str | None = None
 
-    type_name = 'lancedb_table'
+    type_name = "lancedb_table"
 
     def job_group_key(self) -> str:
         return self.config.path + self.table_name
@@ -56,7 +56,7 @@ class LanceDbTable(VectorIndex, CodableBatchDataSource, WritableFeatureSource, D
     def vector_index_name(self) -> str | None:
         return self.table_name
 
-    def as_vector_index(self, name: str) -> 'LanceDbTable':
+    def as_vector_index(self, name: str) -> "LanceDbTable":
         self._vector_index_name = name
         return self
 
@@ -64,7 +64,9 @@ class LanceDbTable(VectorIndex, CodableBatchDataSource, WritableFeatureSource, D
         from lancedb import AsyncTable
 
         try:
-            lance_table: AsyncTable = await self.config.connect_to_table(self.table_name)
+            lance_table: AsyncTable = await self.config.connect_to_table(
+                self.table_name
+            )
             table = await lance_table.query().select([feature.name]).to_arrow()
             df = pl.from_arrow(table)
             if isinstance(df, pl.Series):
@@ -78,10 +80,12 @@ class LanceDbTable(VectorIndex, CodableBatchDataSource, WritableFeatureSource, D
 
             return max_value
         except ValueError:
-            logger.info(f"Unable to load freshness. Assumes that it do not exist for '{self.table_name}'")
+            logger.info(
+                f"Unable to load freshness. Assumes that it do not exist for '{self.table_name}'"
+            )
             return None
 
-    async def create(self, request: RetrivalRequest) -> None:
+    async def create(self, request: RetrievalRequest) -> None:
         from aligned.schemas.vector_storage import pyarrow_schema
 
         db = await self.config.connect()
@@ -89,7 +93,7 @@ class LanceDbTable(VectorIndex, CodableBatchDataSource, WritableFeatureSource, D
 
         await db.create_table(self.table_name, schema=schema)
 
-    async def upsert(self, job: 'RetrivalJob', request: RetrivalRequest) -> None:
+    async def upsert(self, job: "RetrievalJob", request: RetrievalRequest) -> None:
         import lancedb
 
         upsert_keys = list(request.entity_names)
@@ -104,7 +108,7 @@ class LanceDbTable(VectorIndex, CodableBatchDataSource, WritableFeatureSource, D
         arrow_table = df.to_arrow()
 
         # Is a bug when passing in an iterator
-        # As lancedb trys to access the .iter() which do not always exist I guess
+        # As lancedb tries to access the .iter() which do not always exist I guess
         (
             table.merge_insert(upsert_keys[0] if len(upsert_keys) == 1 else upsert_keys)
             .when_matched_update_all()
@@ -112,7 +116,7 @@ class LanceDbTable(VectorIndex, CodableBatchDataSource, WritableFeatureSource, D
             .execute(arrow_table)
         )
 
-    async def insert(self, job: 'RetrivalJob', request: RetrivalRequest) -> None:
+    async def insert(self, job: "RetrievalJob", request: RetrievalRequest) -> None:
         try:
             table = await self.config.connect_to_table(self.table_name)
         except ValueError:
@@ -126,7 +130,7 @@ class LanceDbTable(VectorIndex, CodableBatchDataSource, WritableFeatureSource, D
         arrow_table = df.to_arrow()
         await table.add(arrow_table)
 
-    async def overwrite(self, job: 'RetrivalJob', request: RetrivalRequest) -> None:
+    async def overwrite(self, job: "RetrievalJob", request: RetrievalRequest) -> None:
         await self.delete()
         await self.insert(job, request)
 
@@ -134,8 +138,8 @@ class LanceDbTable(VectorIndex, CodableBatchDataSource, WritableFeatureSource, D
         conn = await self.config.connect()
         await conn.drop_table(self.table_name)
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> 'RetrivalJob':
-        from aligned.retrival_job import RetrivalJob
+    def all_data(self, request: RetrievalRequest, limit: int | None) -> "RetrievalJob":
+        from aligned.retrieval_job import RetrievalJob
 
         async def load() -> pl.LazyFrame:
             table = await self.config.connect_to_table(self.table_name)
@@ -149,12 +153,12 @@ class LanceDbTable(VectorIndex, CodableBatchDataSource, WritableFeatureSource, D
             else:
                 return pl.DataFrame(df).lazy()
 
-        return RetrivalJob.from_lazy_function(load, request)
+        return RetrievalJob.from_lazy_function(load, request)
 
     def nearest_n_to(
-        self, data: 'RetrivalJob', number_of_records: int, request: RetrivalRequest
-    ) -> 'RetrivalJob':
-        from aligned.retrival_job import RetrivalJob
+        self, data: "RetrievalJob", number_of_records: int, request: RetrievalRequest
+    ) -> "RetrievalJob":
+        from aligned.retrieval_job import RetrievalJob
 
         async def load() -> pl.LazyFrame:
             def first_embedding(features: set[Feature]) -> Feature | None:
@@ -169,19 +173,24 @@ class LanceDbTable(VectorIndex, CodableBatchDataSource, WritableFeatureSource, D
             result: pl.DataFrame | None = None
 
             embedding = first_embedding(data.request_result.features)
-            assert embedding, 'Expected to a least find one embedding in the input data'
+            assert embedding, "Expected to a least find one embedding in the input data"
             org_columns = df.columns
             df_cols = len(df.columns)
 
             for item in df.iter_rows(named=True):
                 nearest = (
-                    await table.query().nearest_to(item[embedding.name]).limit(number_of_records).to_arrow()
+                    await table.query()
+                    .nearest_to(item[embedding.name])
+                    .limit(number_of_records)
+                    .to_arrow()
                 )
 
                 polars_df = pl.from_arrow(nearest)
-                assert isinstance(polars_df, pl.DataFrame), f"Expected a data frame, was {type(polars_df)}"
+                assert isinstance(
+                    polars_df, pl.DataFrame
+                ), f"Expected a data frame, was {type(polars_df)}"
 
-                polars_df = polars_df.select(pl.exclude('_distance'))
+                polars_df = polars_df.select(pl.exclude("_distance"))
                 if df_cols > 1:
                     logger.info(f"Stacking {polars_df.columns} and {item.keys()}")
                     polars_df = polars_df.select(pl.exclude(org_columns)).hstack(
@@ -200,13 +209,15 @@ class LanceDbTable(VectorIndex, CodableBatchDataSource, WritableFeatureSource, D
             else:
                 return result.lazy()
 
-        return RetrivalJob.from_lazy_function(load, request)
+        return RetrievalJob.from_lazy_function(load, request)
 
     @classmethod
     def multi_source_features_for(  # type: ignore
-        cls, facts: 'RetrivalJob', requests: list[tuple['LanceDbTable', RetrivalRequest]]
-    ) -> 'RetrivalJob':
-        from aligned.retrival_job import RetrivalJob
+        cls,
+        facts: "RetrievalJob",
+        requests: list[tuple["LanceDbTable", RetrievalRequest]],
+    ) -> "RetrievalJob":
+        from aligned.retrieval_job import RetrievalJob
 
         if len(requests) != 1:
             raise ValueError(f"Expected only one request. Got: {len(requests)}")
@@ -226,10 +237,12 @@ class LanceDbTable(VectorIndex, CodableBatchDataSource, WritableFeatureSource, D
             filter = f"{entity} IN ({joined_values})"
 
             conn = await source.config.connect_to_table(source.table_name)
-            arr = (conn.query().select(request.all_returned_columns).where(filter)).to_arrow()
+            arr = (
+                conn.query().select(request.all_returned_columns).where(filter)
+            ).to_arrow()
 
             df = pl.from_arrow(arr)
             assert isinstance(df, pl.DataFrame)
             return df.lazy()
 
-        return RetrivalJob.from_lazy_function(load, request)
+        return RetrievalJob.from_lazy_function(load, request)

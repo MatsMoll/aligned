@@ -1,6 +1,15 @@
 from contextlib import suppress
+from os import environ
 import pytest
-from aligned import ExposedModel, model_contract, String, Int32, EventTimestamp, feature_view, FileSource
+from aligned import (
+    ExposedModel,
+    model_contract,
+    String,
+    Int32,
+    EventTimestamp,
+    feature_view,
+    FileSource,
+)
 from aligned.feature_store import ContractStore
 from aligned.sources.in_mem_source import InMemorySource
 from aligned.sources.random_source import RandomDataSource
@@ -10,18 +19,22 @@ import pandas as pd
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    environ.get("MLFLOW_REGISTRY_URI") is None,
+    reason="Only runs if an MLFlow instance is up and running",
+)
 async def test_mlflow() -> None:
     from aligned.exposed_model.mlflow import MlflowConfig, signature_for_contract
     import mlflow
 
     config = MlflowConfig()
 
-    model_name = 'test_model'
-    model_alias = 'champion'
+    model_name = "test_model"
+    model_alias = "champion"
 
     @feature_view(
-        name='input',
-        source=FileSource.parquet_at('non-existing-data'),
+        name="input",
+        source=FileSource.parquet_at("non-existing-data"),
     )
     class InputFeatureView:
         entity_id = String().as_entity()
@@ -50,74 +63,38 @@ async def test_mlflow() -> None:
         def predict(data):
             return data.sum(axis=1) * 2
 
-        example = pd.DataFrame({'x': [1, 2, 3]})
-        example['x'] = example['x'].astype('int32')
+        example = pd.DataFrame({"x": [1, 2, 3]})
+        example["x"] = example["x"].astype("int32")
 
         mlflow.start_run()
         model_info = mlflow.pyfunc.log_model(
-            artifact_path='model',
+            artifact_path="model",
             python_model=predict,
             registered_model_name=model_name,
             input_example=example,
             signature=signature_for_contract(MyModelContract.query([InputFeatureView])),
         )
         mlflow_client.set_registered_model_alias(
-            name=model_name, alias=model_alias, version=str(model_info.registered_model_version)
+            name=model_name,
+            alias=model_alias,
+            version=str(model_info.registered_model_version),
         )  # type: ignore
         mlflow.end_run()
 
     preds = await MyModelContract.predict_over(
-        values={'entity_id': ['a', 'b'], 'x': [1, 2]}, needed_views=[InputFeatureView]
+        values={"entity_id": ["a", "b"], "x": [1, 2]}, needed_views=[InputFeatureView]
     ).to_polars()
 
-    assert preds['prediction'].to_list() == [2, 4]
-    assert 'model_version' in preds.columns
-    assert 'predicted_at' in preds.columns
+    assert preds["prediction"].to_list() == [2, 4]
+    assert "model_version" in preds.columns
+    assert "predicted_at" in preds.columns
 
 
 @pytest.mark.asyncio
 async def test_model() -> None:
     @feature_view(
-        name='input',
-        source=FileSource.parquet_at('non-existing-data'),
-    )
-    class InputFeatureView:
-        entity_id = String().as_entity()
-        x = Int32()
-        other = Int32()
-
-    input = InputFeatureView()
-
-    @model_contract(
-        input_features=[InputFeatureView().x], exposed_model=python_function(lambda df: df['x'] * 2)
-    )
-    class MyModelContract:
-        entity_id = String().as_entity()
-
-        prediction = input.x.as_regression_target()
-
-    @model_contract(
-        input_features=[InputFeatureView().x, MyModelContract().prediction],
-        exposed_model=python_function(lambda df: df['prediction'] * 3),
-    )
-    class MyModelContract2:
-        entity_id = String().as_entity()
-
-        other_pred = input.other.as_regression_target()
-
-    entities = {'entity_id': ['a', 'b'], 'x': [1, 2]}
-    pred_job = MyModelContract2.predict_over(entities, needed_views=[InputFeatureView, MyModelContract])
-    assert set(pred_job.request_result.all_returned_columns) == {'x', 'entity_id', 'prediction', 'other_pred'}
-
-    preds = await pred_job.to_polars()
-    assert preds['other_pred'].to_list() == [6, 12]
-
-
-@pytest.mark.asyncio
-async def test_pipeline_model_with_source() -> None:
-    @feature_view(
-        name='input',
-        source=FileSource.parquet_at('non-existing-data'),
+        name="input",
+        source=FileSource.parquet_at("non-existing-data"),
     )
     class InputFeatureView:
         entity_id = String().as_entity()
@@ -128,7 +105,53 @@ async def test_pipeline_model_with_source() -> None:
 
     @model_contract(
         input_features=[InputFeatureView().x],
-        exposed_model=python_function(lambda df: df['x'] * 2),
+        exposed_model=python_function(lambda df: df["x"] * 2),
+    )
+    class MyModelContract:
+        entity_id = String().as_entity()
+
+        prediction = input.x.as_regression_target()
+
+    @model_contract(
+        input_features=[InputFeatureView().x, MyModelContract().prediction],
+        exposed_model=python_function(lambda df: df["prediction"] * 3),
+    )
+    class MyModelContract2:
+        entity_id = String().as_entity()
+
+        other_pred = input.other.as_regression_target()
+
+    entities = {"entity_id": ["a", "b"], "x": [1, 2]}
+    pred_job = MyModelContract2.predict_over(
+        entities, needed_views=[InputFeatureView, MyModelContract]
+    )
+    assert set(pred_job.request_result.all_returned_columns) == {
+        "x",
+        "entity_id",
+        "prediction",
+        "other_pred",
+    }
+
+    preds = await pred_job.to_polars()
+    assert preds["other_pred"].to_list() == [6, 12]
+
+
+@pytest.mark.asyncio
+async def test_pipeline_model_with_source() -> None:
+    @feature_view(
+        name="input",
+        source=FileSource.parquet_at("non-existing-data"),
+    )
+    class InputFeatureView:
+        entity_id = String().as_entity()
+        x = Int32()
+        other = Int32()
+
+    input = InputFeatureView()
+
+    @model_contract(
+        input_features=[InputFeatureView().x],
+        exposed_model=python_function(lambda df: df["x"] * 2),
         output_source=RandomDataSource(),
     )
     class MyModelContract:
@@ -138,27 +161,27 @@ async def test_pipeline_model_with_source() -> None:
 
     @model_contract(
         input_features=[InputFeatureView().x, MyModelContract().prediction],
-        exposed_model=python_function(lambda df: df['prediction'] * 3),
+        exposed_model=python_function(lambda df: df["prediction"] * 3),
     )
     class MyModelContract2:
         entity_id = String().as_entity()
 
         other_pred = input.other.as_regression_target()
 
-    entities = {'entity_id': ['a', 'b'], 'x': [1, 2]}
+    entities = {"entity_id": ["a", "b"], "x": [1, 2]}
     preds = await MyModelContract2.predict_over(
         entities, needed_views=[InputFeatureView, MyModelContract]
     ).to_polars()
 
-    assert 'other_pred' in preds
+    assert "other_pred" in preds
 
 
 @pytest.mark.asyncio
 async def test_pipeline_model() -> None:
     @feature_view(
-        name='input',
+        name="input",
         source=InMemorySource.from_values(
-            {'entity_id': ['a', 'b', 'c'], 'x': [1, 2, 3], 'other': [9, 8, 7]}  # type: ignore
+            {"entity_id": ["a", "b", "c"], "x": [1, 2, 3], "other": [9, 8, 7]}  # type: ignore
         ),
     )
     class InputFeatureView:
@@ -170,9 +193,13 @@ async def test_pipeline_model() -> None:
 
     @model_contract(
         input_features=[InputFeatureView().x],
-        exposed_model=python_function(lambda df: df['x'] * 2),
+        exposed_model=python_function(lambda df: df["x"] * 2),
         output_source=InMemorySource.from_values(
-            {'entity_id': ['a', 'b'], 'prediction': [2, 4]}  # type: ignore
+            {
+                "entity_id": ["a", "b"],
+                "prediction": [2, 4],
+                "model_version": ["a", "b"],
+            }
         ),
     )
     class MyModelContract:
@@ -184,7 +211,7 @@ async def test_pipeline_model() -> None:
 
     @model_contract(
         input_features=[InputFeatureView().x, MyModelContract().prediction],
-        exposed_model=python_function(lambda df: df['prediction'] * 3 + df['x']),
+        exposed_model=python_function(lambda df: df["prediction"] * 3 + df["x"]),
     )
     class MyModelContract2:
         entity_id = String().as_entity()
@@ -200,45 +227,51 @@ async def test_pipeline_model() -> None:
 
     without_cache = store.without_model_cache()
 
-    first_preds = await store.model(MyModelContract).predict_over({'entity_id': ['a', 'c']}).to_polars()
-    assert first_preds['prediction'].null_count() == 0
+    first_preds = (
+        await store.model(MyModelContract)
+        .predict_over({"entity_id": ["a", "c"]})
+        .to_polars()
+    )
+    assert first_preds["prediction"].null_count() == 0
 
     preds = (
         await store.model(MyModelContract2)
         .predict_over(
             {
-                'entity_id': ['a', 'c'],
+                "entity_id": ["a", "c"],
             }
         )
         .to_polars()
     )
-    assert preds['other_pred'].null_count() == 1
-    assert not first_preds['model_version'].equals(preds['model_version'])
+    assert preds["other_pred"].null_count() == 1
+    assert not first_preds["model_version"].equals(preds["model_version"])
 
     preds = (
         await store.model(MyModelContract2)
         .predict_over(
             {
-                'entity_id': ['a', 'c'],
-                'prediction': [2, 6],
+                "entity_id": ["a", "c"],
+                "prediction": [2, 6],
             }
         )
         .to_polars()
     )
-    assert preds['other_pred'].null_count() == 0
-    assert not first_preds['model_version'].equals(preds['model_version'])
+    assert preds["other_pred"].null_count() == 0
+    # Should return the model version of the model 2 not first
+    assert not first_preds["model_version"].equals(preds["model_version"])
 
     preds = (
         await without_cache.model(MyModelContract2)
         .predict_over(
             {
-                'entity_id': ['a', 'c'],
+                "entity_id": ["a", "c"],
             }
         )
         .to_polars()
     )
-    assert preds['other_pred'].null_count() == 0
-    assert not first_preds['model_version'].equals(preds['model_version'])
+    assert preds["other_pred"].null_count() == 0
+    # Should return the model version of the model 2 not first
+    assert not first_preds["model_version"].equals(preds["model_version"])
 
     preds = (
         await without_cache.model(MyModelContract2)
@@ -246,17 +279,17 @@ async def test_pipeline_model() -> None:
         .to_polars()
     )
     input_features = InputFeatureView.query().request.all_returned_columns
-    assert set(input_features) - set(preds.columns) == set(), 'Missing some columns'
-    assert preds['other_pred'].null_count() == 0
-    assert not first_preds['model_version'].equals(preds['model_version'])
+    assert set(input_features) - set(preds.columns) == set(), "Missing some columns"
+    assert preds["other_pred"].null_count() == 0
+    assert not first_preds["model_version"].equals(preds["model_version"])
 
 
 @pytest.mark.asyncio
 async def test_if_is_missing() -> None:
     @feature_view(
-        name='input',
+        name="input",
         source=InMemorySource.from_values(
-            {'entity_id': ['a', 'b', 'c'], 'x': [1, 2, 3], 'other': [9, 8, 7]}  # type: ignore
+            {"entity_id": ["a", "b", "c"], "x": [1, 2, 3], "other": [9, 8, 7]}  # type: ignore
         ),
     )
     class InputFeatureView:
@@ -268,9 +301,9 @@ async def test_if_is_missing() -> None:
 
     @model_contract(
         input_features=[InputFeatureView().x],
-        exposed_model=python_function(lambda df: df['x'] * 2),
+        exposed_model=python_function(lambda df: df["x"] * 2),
         output_source=InMemorySource.from_values(
-            {'entity_id': ['a', 'b'], 'prediction': [4, 4]}  # type: ignore
+            {"entity_id": ["a", "b"], "prediction": [4, 4]}  # type: ignore
         ),
     )
     class MyModelContract:
@@ -282,7 +315,7 @@ async def test_if_is_missing() -> None:
 
     @model_contract(
         input_features=[InputFeatureView().x, MyModelContract().prediction],
-        exposed_model=python_function(lambda df: df['prediction'] * 3 + df['x']),
+        exposed_model=python_function(lambda df: df["prediction"] * 3 + df["x"]),
     )
     class MyModelContract2:
         entity_id = String().as_entity()
@@ -301,20 +334,20 @@ async def test_if_is_missing() -> None:
         await predict_when_missing.model(MyModelContract2)
         .predict_over(
             {
-                'entity_id': ['a', 'c'],
+                "entity_id": ["a", "c"],
             }
         )
         .to_polars()
     )
-    assert preds['other_pred'].null_count() == 0
-    assert preds['prediction'].null_count() == 0
+    assert preds["other_pred"].null_count() == 0
+    assert preds["prediction"].null_count() == 0
 
 
 @pytest.mark.asyncio
 async def test_partitioned_model() -> None:
     @feature_view(
-        name='input',
-        source=FileSource.parquet_at('non-existing-data'),
+        name="input",
+        source=FileSource.parquet_at("non-existing-data"),
     )
     class InputFeatureView:
         entity_id = String().as_entity()
@@ -324,7 +357,8 @@ async def test_partitioned_model() -> None:
     input = InputFeatureView()
 
     @model_contract(
-        input_features=[InputFeatureView().x], exposed_model=python_function(lambda df: df['x'] * 2)
+        input_features=[InputFeatureView().x],
+        exposed_model=python_function(lambda df: df["x"] * 2),
     )
     class MyModelContract:
         entity_id = String().as_entity()
@@ -334,12 +368,12 @@ async def test_partitioned_model() -> None:
     @model_contract(
         input_features=[InputFeatureView().x, MyModelContract().prediction],
         exposed_model=partitioned_on(
-            'key',
+            "key",
             partitions={
-                'a': python_function(lambda df: df['x'] * 2 + df['prediction']),
-                'b': python_function(lambda df: df['x'] + df['prediction'] * 2),
+                "a": python_function(lambda df: df["x"] * 2 + df["prediction"]),
+                "b": python_function(lambda df: df["x"] + df["prediction"] * 2),
             },
-            default_partition='a',
+            default_partition="a",
         ),
     )
     class MyModelContract2:
@@ -348,12 +382,18 @@ async def test_partitioned_model() -> None:
 
         other_pred = input.other.as_regression_target()
 
-    inputs = {'key': ['a', 'a', 'b', 'b', 'c'], 'x': [1, 2, 1, 2, 2], 'entity_id': ['a', 'b', 'c', 'd', 'e']}
+    inputs = {
+        "key": ["a", "a", "b", "b", "c"],
+        "x": [1, 2, 1, 2, 2],
+        "entity_id": ["a", "b", "c", "d", "e"],
+    }
     expected_output = [4, 8, 5, 10, 8]
 
     preds = await MyModelContract2.predict_over(
         inputs, needed_views=[InputFeatureView, MyModelContract]
     ).to_polars()
 
-    assert preds.sort('entity_id', descending=False)['other_pred'].equals(pl.Series(expected_output))
-    assert 'key' in preds
+    assert preds.sort("entity_id", descending=False)["other_pred"].equals(
+        pl.Series(expected_output)
+    )
+    assert "key" in preds

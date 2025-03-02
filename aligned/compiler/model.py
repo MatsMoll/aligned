@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Callable, Type, TypeVar, Generic, TYPE_CHECKING
+from typing import Any, Callable, Literal, Type, TypeVar, Generic, TYPE_CHECKING
 from datetime import timedelta
 
 from uuid import uuid4
@@ -27,9 +27,15 @@ from aligned.feature_view.feature_view import (
     FeatureViewWrapper,
 )
 from aligned.exposed_model.interface import ExposedModel
-from aligned.retrival_job import ConvertableToRetrivalJob, PredictionJob, RetrivalJob
+from aligned.retrieval_job import ConvertableToRetrievalJob, PredictionJob, RetrievalJob
 from aligned.schemas.derivied_feature import DerivedFeature
-from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference, FeatureType, StaticFeatureTags
+from aligned.schemas.feature import (
+    Feature,
+    FeatureLocation,
+    FeatureReference,
+    FeatureType,
+    StaticFeatureTags,
+)
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.model import Model as ModelSchema
@@ -45,7 +51,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 @dataclass
@@ -85,7 +91,6 @@ class ModelMetadata:
 
 @dataclass
 class ModelContractWrapper(Generic[T]):
-
     metadata: ModelMetadata
     contract: Type[T]
 
@@ -101,7 +106,7 @@ class ModelContractWrapper(Generic[T]):
         # As this can lead to incorrect features otherwise
         contract = copy.deepcopy(self.contract())
         for attribute in dir(contract):
-            if attribute.startswith('__'):
+            if attribute.startswith("__"):
                 continue
 
             value = getattr(contract, attribute)
@@ -109,14 +114,13 @@ class ModelContractWrapper(Generic[T]):
                 value._location = self.location
                 setattr(contract, attribute, copy.deepcopy(value))
 
-        setattr(contract, '__model_wrapper__', self)
+        setattr(contract, "__model_wrapper__", self)
         return contract
 
     def compile(self) -> ModelSchema:
         return compile_with_metadata(self.contract(), self.metadata)
 
     def as_view_wrapper(self) -> FeatureViewWrapper[T]:
-
         return FeatureViewWrapper(self.metadata.as_view_meatadata(), self.contract())
 
     def with_schema(
@@ -129,7 +133,6 @@ class ModelContractWrapper(Generic[T]):
         copy_default_values: bool = False,
         copy_transformations: bool = False,
     ) -> FeatureViewWrapper[T]:
-
         return self.as_view_wrapper().with_schema(
             name=name,
             source=source,
@@ -156,10 +159,13 @@ class ModelContractWrapper(Generic[T]):
 
         index_name = source.vector_index_name() or self.metadata.name
 
-        return AlignedRetriver(store=store.store, index_name=index_name, number_of_docs=number_of_docs)
+        return AlignedRetriver(
+            store=store.store, index_name=index_name, number_of_docs=number_of_docs
+        )
 
     def query(
-        self, needed_views: list[FeatureViewWrapper | ModelContractWrapper] | None = None
+        self,
+        needed_views: list[FeatureViewWrapper | ModelContractWrapper] | None = None,
     ) -> ModelFeatureStore:
         from aligned import ContractStore
 
@@ -176,25 +182,29 @@ class ModelContractWrapper(Generic[T]):
 
     def predict_over(
         self,
-        values: ConvertableToRetrivalJob | RetrivalJob,
+        values: ConvertableToRetrievalJob | RetrievalJob,
         needed_views: list[FeatureViewWrapper | ModelContractWrapper] | None = None,
     ) -> PredictionJob:
         model = self.compile()
 
         if not model.exposed_model:
-            raise ValueError(f"Model {model.name} does not have an `exposed_model` to use for predictions.")
+            raise ValueError(
+                f"Model {model.name} does not have an `exposed_model` to use for predictions."
+            )
 
         return self.query(needed_views).predict_over(values)
 
     def as_view(self) -> CompiledFeatureView | None:
-
         compiled = self.compile()
         view = compiled.predictions_view
 
         return view.as_view(self.metadata.name)
 
     def filter(
-        self, name: str, where: Callable[[T], Bool], application_source: CodableBatchDataSource | None = None
+        self,
+        name: str,
+        where: Callable[[T], Bool],
+        application_source: CodableBatchDataSource | None = None,
     ) -> ModelContractWrapper[T]:
         from aligned.data_source.batch_data_source import FilteredDataSource
 
@@ -206,7 +216,7 @@ class ModelContractWrapper(Generic[T]):
         main_source = meta.output_source
         if not main_source:
             raise ValueError(
-                f'Model: {self.metadata.name} needs a `prediction_source` to use `filter`, got None.'
+                f"Model: {self.metadata.name} needs a `prediction_source` to use `filter`, got None."
             )
 
         if not condition._name:
@@ -239,7 +249,7 @@ class ModelContractWrapper(Generic[T]):
         view: FeatureViewWrapper,
         on_left: str | FeatureFactory | list[str] | list[FeatureFactory],
         on_right: str | FeatureFactory | list[str] | list[FeatureFactory],
-        how: str = 'inner',
+        how: Literal["inner", "left", "outer"] = "inner",
     ) -> CodableBatchDataSource:
         from aligned.data_source.batch_data_source import join_source
         from aligned.schemas.model import ModelSource
@@ -284,7 +294,9 @@ class ModelContractWrapper(Generic[T]):
         )
 
 
-def resolve_dataset_store(dataset_store: DatasetStore | StorageFileReference) -> DatasetStore:
+def resolve_dataset_store(
+    dataset_store: DatasetStore | StorageFileReference,
+) -> DatasetStore:
     from aligned.schemas.folder import DatasetStore, JsonDatasetStore, StorageFileSource
 
     if isinstance(dataset_store, DatasetStore):
@@ -296,7 +308,6 @@ def resolve_dataset_store(dataset_store: DatasetStore | StorageFileReference) ->
 
 @dataclass
 class FeatureInputVersions:
-
     default_version: str
     versions: dict[str, list[FeatureReferencable]]
 
@@ -311,7 +322,9 @@ class FeatureInputVersions:
 
 
 def model_contract(
-    input_features: list[FeatureReferencable | FeatureViewWrapper | ModelContractWrapper]
+    input_features: list[
+        FeatureReferencable | FeatureViewWrapper | ModelContractWrapper
+    ]
     | FeatureInputVersions,
     name: str | None = None,
     contacts: list[str] | None = None,
@@ -327,6 +340,7 @@ def model_contract(
     unacceptable_freshness: timedelta | None = None,
 ) -> Callable[[Type[T]], ModelContractWrapper[T]]:
     def decorator(cls: Type[T]) -> ModelContractWrapper[T]:
+        from aligned.sources.renamer import camel_to_snake_case
 
         if isinstance(input_features, FeatureInputVersions):
             features_versions = input_features
@@ -338,13 +352,15 @@ def model_contract(
                     compiled_view = feature.compile()
                     request = compiled_view.request_all
                     features = [
-                        feat.as_reference(FeatureLocation.feature_view(compiled_view.name))
+                        feat.as_reference(
+                            FeatureLocation.feature_view(compiled_view.name)
+                        )
                         for feat in request.request_result.features
                     ]
                     unwrapped_input_features.extend(features)  # type: ignore
                 elif isinstance(feature, ModelContractWrapper):
                     compiled_model = feature.compile()
-                    request = compiled_model.predictions_view.request('')
+                    request = compiled_model.predictions_view.request("")
                     features = [
                         feat.as_reference(FeatureLocation.model(compiled_model.name))
                         for feat in request.request_result.features
@@ -354,10 +370,11 @@ def model_contract(
                     unwrapped_input_features.append(feature)
 
             features_versions = FeatureInputVersions(
-                default_version='default', versions={'default': unwrapped_input_features}
+                default_version="default",
+                versions={"default": unwrapped_input_features},
             )
 
-        used_name = name or str(cls.__name__).lower()
+        used_name = name or camel_to_snake_case(str(cls.__name__))
 
         used_description = None
         if description:
@@ -378,7 +395,9 @@ def model_contract(
             output_source=output_source,
             output_stream=output_stream,
             application_source=application_source,
-            dataset_store=resolve_dataset_store(dataset_store) if dataset_store else None,
+            dataset_store=resolve_dataset_store(dataset_store)
+            if dataset_store
+            else None,
             exposed_at_url=used_exposed_at_url,
             exposed_model=exposed_model,
             acceptable_freshness=acceptable_freshness,
@@ -405,7 +424,7 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
 
     Returns: The compiled Model schema
     """
-    var_names = [name for name in model.__dir__() if not name.startswith('_')]
+    var_names = [name for name in model.__dir__() if not name.startswith("_")]
 
     inference_view: PredictionsView = PredictionsView(
         entities=set(),
@@ -434,9 +453,7 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
     for var_name in var_names:
         feature = getattr(model, var_name)
         if isinstance(feature, FeatureFactory):
-            assert (
-                feature._name
-            ), f"Expected name but found none in model: {metadata.name} for feature {var_name}"
+            assert feature._name, f"Expected name but found none in model: {metadata.name} for feature {var_name}"
             feature._location = FeatureLocation.model(metadata.name)
 
         if isinstance(feature, FeatureView):
@@ -469,7 +486,9 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
             feature_name = feature.target._name
             assert feature_name
             assert feature._name
-            assert feature.target._name in classification_targets, 'Target must be a classification target.'
+            assert (
+                feature.target._name in classification_targets
+            ), "Target must be a classification target."
 
             target = classification_targets[feature.target._name]
             target.class_probabilities.add(feature.compile())
@@ -481,13 +500,12 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
                     f"The probability of target named {feature_name} being '{feature.of_value}'.",
                 )
             )
-            probability_features[feature_name] = probability_features.get(feature_name, set()).union(
-                {feature}
-            )
+            probability_features[feature_name] = probability_features.get(
+                feature_name, set()
+            ).union({feature})
         elif isinstance(feature, RecommendationTarget):
             inference_view.recommendation_targets.add(feature.compile())
         elif isinstance(feature, FeatureFactory):
-
             if feature.tags and StaticFeatureTags.is_entity in feature.tags:
                 inference_view.entities.add(feature.feature())
                 continue
@@ -501,23 +519,29 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
                 #     z = (x & y) | x
                 #
                 # Here will (x & y)'s result be a 'hidden' feature
-                feature_deps = [(feat.depth(), feat) for feat in feature.feature_dependencies()]
+                feature_deps = [
+                    (feat.depth(), feat) for feat in feature.feature_dependencies()
+                ]
 
-                # Sorting by key in order to instanciate the "core" features first
+                # Sorting by key so the "core" features are first
                 # And then making it possible for other features to reference them
                 def sort_key(x: tuple[int, FeatureFactory]) -> int:
                     return x[0]
 
                 for depth, feature_dep in sorted(feature_deps, key=sort_key):
-
                     if not feature_dep._location:
-                        feature_dep._location = FeatureLocation.feature_view(metadata.name)
+                        feature_dep._location = FeatureLocation.feature_view(
+                            metadata.name
+                        )
                     elif feature_dep._location.name != metadata.name:
                         continue
 
                     if feature_dep._name:
                         feat_dep = feature_dep.feature()
-                        if feat_dep in inference_view.features or feat_dep in inference_view.entities:
+                        if (
+                            feat_dep in inference_view.features
+                            or feat_dep in inference_view.entities
+                        ):
                             continue
 
                     if depth == 0:
@@ -532,7 +556,9 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
                         feature_dep._name = str(hidden_features)
                         hidden_features += 1
 
-                    feature_graph = feature_dep.compile()  # Should decide on which payload to send
+                    feature_graph = (
+                        feature_dep.compile()
+                    )  # Should decide on which payload to send
                     if feature_graph in inference_view.derived_features:
                         continue
 
@@ -569,7 +595,9 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
         inference_view.derived_features.add(arg_max_feature)
 
     if not probability_features and inference_view.classification_targets:
-        inference_view.features.update({target.feature for target in inference_view.classification_targets})
+        inference_view.features.update(
+            {target.feature for target in inference_view.classification_targets}
+        )
 
     view = inference_view.as_view(metadata.name)
     if inference_view.source:

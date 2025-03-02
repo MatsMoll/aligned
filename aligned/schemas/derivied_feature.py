@@ -4,15 +4,20 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 
 from aligned.schemas.codable import Codable
-from aligned.schemas.feature import Constraint, Feature, FeatureLocation, FeatureReference, FeatureType
+from aligned.schemas.feature import (
+    Constraint,
+    Feature,
+    FeatureLocation,
+    FeatureReference,
+    FeatureType,
+)
 from aligned.schemas.transformation import Transformation
 
 
 class DerivedFeature(Feature):
-
     depending_on: set[FeatureReference]
     transformation: Transformation
-    loads_feature: FeatureReference | None
+    loads_feature: FeatureReference | None = None
     depth: int = 1
 
     def __init__(
@@ -94,7 +99,7 @@ class AggregateOver(Codable):
         if self.window:
             return self.window.__hash__()
 
-        name = ''
+        name = ""
         for feature in self.group_by:
             name += feature.name
         return name.__hash__()
@@ -102,7 +107,6 @@ class AggregateOver(Codable):
 
 @dataclass
 class AggregatedFeature(Codable):
-
     derived_feature: DerivedFeature
     aggregate_over: AggregateOver
 

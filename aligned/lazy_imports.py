@@ -23,9 +23,9 @@ class _LazyModule(ModuleType):
     __lazy__ = True
 
     _mod_pfx: ClassVar[dict[str, str]] = {
-        'numpy': 'np.',
-        'pandas': 'pd.',
-        'pyarrow': 'pa.',
+        "numpy": "np.",
+        "pandas": "pd.",
+        "pyarrow": "pa.",
     }
 
     def __init__(
@@ -61,7 +61,7 @@ class _LazyModule(ModuleType):
     def __getattr__(self, name: str) -> Any:
         # have "hasattr('__wrapped__')" return False without triggering import
         # (it's for decorators, not modules, but keeps "make doctest" happy)
-        if name == '__wrapped__':
+        if name == "__wrapped__":
             msg = f"{self._module_name!r} object has no attribute {name!r}"
             raise AttributeError(msg)
 
@@ -72,15 +72,15 @@ class _LazyModule(ModuleType):
             return getattr(module, name)
 
         # user has not installed the proxied/lazy module
-        elif name == '__name__':
+        elif name == "__name__":
             return self._module_name
-        elif re.match(r'^__\w+__$', name) and name != '__version__':
+        elif re.match(r"^__\w+__$", name) and name != "__version__":
             # allow some minimal introspection on private module
             # attrs to avoid unnecessary error-handling elsewhere
             return None
         else:
             # all other attribute access raises a helpful exception
-            pfx = self._mod_pfx.get(self._module_name, '')
+            pfx = self._mod_pfx.get(self._module_name, "")
             msg = f"{pfx}{name} requires {self._module_name!r} module to be installed"
             raise ModuleNotFoundError(msg) from None
 
@@ -133,12 +133,23 @@ def _lazy_import(module_name: str) -> tuple[ModuleType, bool]:
 _PANDAS_AVAILABLE = True
 _SENTENCE_TRANSFORMERS = True
 _MLFLOW_AVAILABLE = True
+_REDIS_AVAILABLE = True
+_AWS_S3_AVAILABLE = True
+_LANGCHAIN_AVAILABLE = True
 
 if TYPE_CHECKING:
     import pandas
     import sentence_transformers
     import mlflow
+    import redis.asyncio as redis
+    import aioaws.s3 as s3
+    import langchain_core
 else:
-    pandas, _PANDAS_AVAILABLE = _lazy_import('pandas')
-    sentence_transformers, _SENTENCE_TRANSFORMERS = _lazy_import('sentence_transformers')
-    mlflow, _MLFLOW_AVAILABLE = _lazy_import('mlflow')
+    pandas, _PANDAS_AVAILABLE = _lazy_import("pandas")
+    sentence_transformers, _SENTENCE_TRANSFORMERS = _lazy_import(
+        "sentence_transformers"
+    )
+    mlflow, _MLFLOW_AVAILABLE = _lazy_import("mlflow")
+    redis, _REDIS_AVAILABLE = _lazy_import("redis.asyncio")
+    s3, _REDIS_AVAILABLE = _lazy_import("aioaws.s3")
+    langchain_core, _LANGCHAIN_AVAILABLE = _lazy_import("langchain_core")

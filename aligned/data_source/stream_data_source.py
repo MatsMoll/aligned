@@ -9,12 +9,11 @@ from mashumaro.types import SerializableType
 from aligned.schemas.codable import Codable
 
 if TYPE_CHECKING:
-    from aligned.retrival_job import RetrivalJob
+    from aligned.retrieval_job import RetrievalJob
     from aligned.streams.interface import ReadableStream
 
 
 class StreamDataSourceFactory:
-
     supported_data_sources: dict[str, type[StreamDataSource]]
 
     _shared: StreamDataSourceFactory | None = None
@@ -51,14 +50,14 @@ class StreamDataSource(ABC, Codable, SerializableType):
 
     @classmethod
     def _deserialize(cls, value: dict) -> StreamDataSource:
-        name = value['name']
+        name = value["name"]
         if name not in StreamDataSourceFactory.shared().supported_data_sources:
             raise ValueError(
                 f"Unknown stream data source id: '{name}'.\nRemember to add the"
-                ' data source to the StreamDataSourceFactory.supported_data_sources if'
-                ' it is a custom type.'
+                " data source to the StreamDataSourceFactory.supported_data_sources if"
+                " it is a custom type."
             )
-        del value['name']
+        del value["name"]
         data_class = StreamDataSourceFactory.shared().supported_data_sources[name]
         return data_class.from_dict(value)
 
@@ -80,16 +79,17 @@ class StreamDataSource(ABC, Codable, SerializableType):
 
 @dataclass
 class HttpStreamSource(StreamDataSource):
-
     topic_name: str
     mappings: dict[str, str] = field(default_factory=dict)
 
-    name: str = 'http'
+    name: str = "http"
 
     def map_values(self, mappings: dict[str, str]) -> HttpStreamSource:
-        return HttpStreamSource(topic_name=self.topic_name, mappings=self.mappings | mappings)
+        return HttpStreamSource(
+            topic_name=self.topic_name, mappings=self.mappings | mappings
+        )
 
 
 class SinkableDataSource:
-    async def write_to_stream(self, job: RetrivalJob) -> None:
+    async def write_to_stream(self, job: RetrievalJob) -> None:
         pass

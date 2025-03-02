@@ -17,7 +17,7 @@ from aligned.data_source.batch_data_source import CodableBatchDataSource
 from aligned.feature_store import ModelFeatureStore
 
 from aligned.exposed_model.interface import ExposedModel, PromptModel
-from aligned.retrival_job import RetrivalJob
+from aligned.retrieval_job import RetrievalJob
 from aligned.schemas.feature import Feature, FeatureReference
 
 
@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SentenceTransformerPredictor(ExposedModel, PromptModel):
-
     model_name: str
     embedding_name: str
 
@@ -35,7 +34,7 @@ class SentenceTransformerPredictor(ExposedModel, PromptModel):
 
     precomputed_prompt_key_overwrite: str
 
-    model_type: str = 'sent_tran'
+    model_type: str = "sent_tran"
 
     @property
     def precomputed_prompt_key(self) -> str | None:
@@ -60,14 +59,12 @@ class SentenceTransformerPredictor(ExposedModel, PromptModel):
         if not isinstance(old_model, SentenceTransformerPredictor):
             return None
 
-        changes = ''
+        changes = ""
         if old_model.model_name != self.model_name:
             changes += f"Model name changed from `{old_model.model_name}` to `{self.model_name}`.\n"
 
         if old_model.prompt_template != self.prompt_template:
-            changes += (
-                f"Prompt template changed from `{old_model.prompt_template}` to `{self.prompt_template}`.\n"
-            )
+            changes += f"Prompt template changed from `{old_model.prompt_template}` to `{self.prompt_template}`.\n"
 
         if changes:
             return changes
@@ -84,9 +81,13 @@ This will use the model: `{self.model_name}` to generate the embeddings."""
         return self.features_to_load
 
     async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
-        return store.store.requests_for_features(self.features_to_load).request_result.entities
+        return store.store.requests_for_features(
+            self.features_to_load
+        ).request_result.entities
 
-    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+    async def run_polars(
+        self, values: RetrievalJob, store: ModelFeatureStore
+    ) -> pl.DataFrame:
         import polars as pl
         from sentence_transformers import SentenceTransformer
 
@@ -98,9 +99,13 @@ This will use the model: `{self.model_name}` to generate the embeddings."""
         if self.precomputed_prompt_key_overwrite in entities.columns:
             prompts = entities[self.precomputed_prompt_key_overwrite].to_list()
         else:
-            missing_cols = {feat.name for feat in self.features_to_load} - set(entities.columns)
+            missing_cols = {feat.name for feat in self.features_to_load} - set(
+                entities.columns
+            )
             if missing_cols:
-                entities = await store.store.features_for(values, self.features_to_load).to_polars()
+                entities = await store.store.features_for(
+                    values, self.features_to_load
+                ).to_polars()
 
             for index, value in enumerate(entities.iter_rows(named=True)):
                 logger.info(f"Processing row {index + 1}/{len(prompts)}")
@@ -118,7 +123,9 @@ This will use the model: `{self.model_name}` to generate the embeddings."""
         if pred_view.model_version_column:
             model_version = f"{self.prompt_template_hash()} -> {self.model_name}"
             model_version_name = pred_view.model_version_column.name
-            entities = entities.with_columns(pl.lit(model_version).alias(model_version_name))
+            entities = entities.with_columns(
+                pl.lit(model_version).alias(model_version_name)
+            )
 
         if pred_view.event_timestamp:
             new_et = pred_view.event_timestamp.name
@@ -126,12 +133,16 @@ This will use the model: `{self.model_name}` to generate the embeddings."""
             need_to_add_et = new_et not in entities.columns
 
             if existing_et and need_to_add_et and existing_et in entities.columns:
-                logger.info(f"Using existing event timestamp `{existing_et}` as new timestamp.")
+                logger.info(
+                    f"Using existing event timestamp `{existing_et}` as new timestamp."
+                )
                 entities = entities.with_columns(pl.col(existing_et).alias(new_et))
             elif need_to_add_et:
-                logger.info('No event timestamp using now as the timestamp.')
+                logger.info("No event timestamp using now as the timestamp.")
                 entities = entities.with_columns(
-                    pl.lit(datetime.now(tz=timezone.utc)).alias(pred_view.event_timestamp.name)
+                    pl.lit(datetime.now(tz=timezone.utc)).alias(
+                        pred_view.event_timestamp.name
+                    )
                 )
 
         return entities.hstack([pl.Series(name=self.embedding_name, values=responses)])
@@ -141,9 +152,8 @@ def sentence_transform_feature(
     feature: FeatureReferencable,
     model: str,
     output_name: str,
-    precomputed_prompt_key: str = 'full_prompt',
-) -> 'SentenceTransformerPredictor':
-
+    precomputed_prompt_key: str = "full_prompt",
+) -> "SentenceTransformerPredictor":
     return SentenceTransformerPredictor(
         model_name=model,
         embedding_name=output_name,
@@ -158,9 +168,8 @@ def sentence_transform_prompt(
     features: list[FeatureReferencable],
     prompt_template: str,
     output_name: str,
-    precomputed_prompt_key: str = 'full_prompt',
-) -> 'SentenceTransformerPredictor':
-
+    precomputed_prompt_key: str = "full_prompt",
+) -> "SentenceTransformerPredictor":
     return SentenceTransformerPredictor(
         model_name=model,
         embedding_name=output_name,
@@ -180,7 +189,7 @@ def sentence_transformer_contract(
     output_source: CodableBatchDataSource | None = None,
     contacts: list[str] | None = None,
     tags: list[str] | None = None,
-    precomputed_prompt_key: str = 'full_prompt',
+    precomputed_prompt_key: str = "full_prompt",
     model_version_field: FeatureFactory | None = None,
     additional_metadata: list[FeatureFactory] | None = None,
     acceptable_freshness: timedelta | None = None,
@@ -193,22 +202,23 @@ def sentence_transformer_contract(
         prompt_template = f"{{{ref.name}}}"
 
     if prompt_template is None:
-        raise ValueError('prompt_template must be provided if input is a list')
+        raise ValueError("prompt_template must be provided if input is a list")
 
     if not isinstance(input, list):
         input = [input]
 
     @model_contract(
         name=contract_name,
-        description=f'Contract for generating embeddings using the {model} through Ollama',
+        description=f"Contract for generating embeddings using the {model} through Ollama",
         input_features=FeatureInputVersions(
-            default_version='default', versions={'default': input}  # type: ignore
+            default_version="default",
+            versions={"default": input},  # type: ignore
         ),
         exposed_model=sentence_transform_prompt(
             model=model,
             features=input,
             prompt_template=prompt_template,
-            output_name='embedding',
+            output_name="embedding",
             precomputed_prompt_key=precomputed_prompt_key,
         ),
         output_source=output_source,
@@ -236,10 +246,9 @@ def sentence_transformer_contract(
         setattr(ScentenceTransformerContract.contract, entity.name, new_entity)
 
     def add_feature(feature: FeatureFactory) -> None:
-
         assert feature._name, (
-            'Trying to add a feature without any name. '
-            'Consider using the `.with_name(...)` to manually set it.'
+            "Trying to add a feature without any name. "
+            "Consider using the `.with_name(...)` to manually set it."
         )
         if feature._location is None:
             setattr(ScentenceTransformerContract.contract, feature.name, feature)
@@ -247,18 +256,26 @@ def sentence_transformer_contract(
 
         feature_copy = feature.copy_type()
         feature_copy._name = feature._name
-        feature_copy.constraints = feature.constraints.copy() if feature.constraints else None
+        feature_copy.constraints = (
+            feature.constraints.copy() if feature.constraints else None
+        )
         setattr(ScentenceTransformerContract.contract, feature_copy.name, feature_copy)
 
     if model_version_field is not None:
         if isinstance(model_version_field, ModelVersion):
             add_feature(model_version_field)
         elif isinstance(model_version_field, CouldBeModelVersion):
-            add_feature(model_version_field.as_model_version().with_name(model_version_field.name))
+            add_feature(
+                model_version_field.as_model_version().with_name(
+                    model_version_field.name
+                )
+            )
         else:
-            raise ValueError(f"Feature {model_version_field} can not be a model version.")
+            raise ValueError(
+                f"Feature {model_version_field} can not be a model version."
+            )
     else:
-        add_feature(String().as_model_version().with_name('model_version'))
+        add_feature(String().as_model_version().with_name("model_version"))
 
     for feature in additional_metadata or []:
         add_feature(feature)

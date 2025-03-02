@@ -6,8 +6,8 @@ from logging import getLogger
 
 import polars as pl
 
-from aligned.request.retrival_request import RequestResult, RetrivalRequest
-from aligned.retrival_job import RetrivalJob
+from aligned.request.retrieval_request import RequestResult, RetrievalRequest
+from aligned.retrieval_job import RetrievalJob
 from aligned.sources.redshift import RedshiftSQLConfig
 
 if TYPE_CHECKING:
@@ -29,7 +29,7 @@ class SqlColumn:
     @property
     def sql_select(self) -> str:
         if self.selection == self.alias:
-            return f'{self.selection}'
+            return f"{self.selection}"
         return f'{self.selection} AS "{self.alias}"'
 
     def __hash__(self) -> int:
@@ -65,26 +65,26 @@ class TableFetch:
 
 def select_table(table: TableFetch) -> str:
     if isinstance(table.table, TableFetch):
-        raise ValueError('Do not support TableFetch in this select')
-    wheres = ''
-    order_by = ''
-    group_by = ''
-    from_table = 'FROM '
+        raise ValueError("Do not support TableFetch in this select")
+    wheres = ""
+    order_by = ""
+    group_by = ""
+    from_table = "FROM "
 
     columns = [col.sql_select for col in table.columns]
     select = f'SELECT {', '.join(columns)}'
 
     if table.conditions:
-        wheres = 'WHERE ' + ' AND '.join(table.conditions)
+        wheres = "WHERE " + " AND ".join(table.conditions)
 
     if table.order_by:
-        order_by = 'ORDER BY ' + table.order_by
+        order_by = "ORDER BY " + table.order_by
 
     if table.group_by:
-        group_by = 'GROUP BY ' + ', '.join(table.group_by)
+        group_by = "GROUP BY " + ", ".join(table.group_by)
 
     if table.schema:
-        from_table += f'{table.schema}.'
+        from_table += f"{table.schema}."
 
     from_table += f'"{table.table}"'
 
@@ -98,27 +98,27 @@ def select_table(table: TableFetch) -> str:
 
 
 def redshift_table_fetch(fetch: TableFetch, distinct: str | None = None) -> str:
-    wheres = ''
-    order_by = ''
-    group_by = ''
-    select = 'SELECT'
+    wheres = ""
+    order_by = ""
+    group_by = ""
+    select = "SELECT"
 
     if fetch.conditions:
-        wheres = 'WHERE ' + ' AND '.join(fetch.conditions)
+        wheres = "WHERE " + " AND ".join(fetch.conditions)
 
     if fetch.order_by:
-        order_by = 'ORDER BY ' + fetch.order_by
+        order_by = "ORDER BY " + fetch.order_by
 
     if fetch.group_by:
-        group_by = 'GROUP BY ' + ', '.join(fetch.group_by)
+        group_by = "GROUP BY " + ", ".join(fetch.group_by)
 
     table_columns = [col.sql_select for col in fetch.columns]
 
     if isinstance(fetch.table, TableFetch):
         sub_query = redshift_table_fetch(fetch.table)
-        from_sql = f'FROM ({sub_query}) as entities'
+        from_sql = f"FROM ({sub_query}) as entities"
     else:
-        schema = f'{fetch.schema}.' if fetch.schema else ''
+        schema = f"{fetch.schema}." if fetch.schema else ""
         from_sql = f"""FROM entities
     LEFT JOIN {schema}"{ fetch.table }" ta ON { ' AND '.join(fetch.joins) }"""
         if fetch.join_tables:
@@ -155,17 +155,17 @@ def redshift_table_fetch(fetch: TableFetch, distinct: str | None = None) -> str:
 
 
 @dataclass
-class RedshiftSqlJob(RetrivalJob):
-
+class RedshiftSqlJob(RetrievalJob):
     config: RedshiftSQLConfig
     query: str
-    requests: list[RetrivalRequest]
-
-    def request_result(self) -> RequestResult:
-        return RequestResult.from_request_list(self.retrival_requests)
+    requests: list[RetrievalRequest]
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
+    def request_result(self) -> RequestResult:
+        return RequestResult.from_request_list(self.retrieval_requests)
+
+    @property
+    def retrieval_requests(self) -> list[RetrievalRequest]:
         return self.requests
 
     async def to_pandas(self) -> pd.DataFrame:
@@ -176,9 +176,9 @@ class RedshiftSqlJob(RetrivalJob):
         try:
             return pl.read_sql(self.query, self.config.url).lazy()
         except Exception as e:
-            logger.error(f'Error running query: {self.query}')
-            logger.error(f'Error: {e}')
+            logger.error(f"Error running query: {self.query}")
+            logger.error(f"Error: {e}")
             raise e
 
     def describe(self) -> str:
-        return f'RedshiftSql Job: \n{self.query}\n'
+        return f"RedshiftSql Job: \n{self.query}\n"

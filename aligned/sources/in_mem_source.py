@@ -4,9 +4,12 @@ import uuid
 
 import polars as pl
 from aligned.data_file import DataFileReference, upsert_on_column
-from aligned.data_source.batch_data_source import BatchDataSource, CodableBatchDataSource
+from aligned.data_source.batch_data_source import (
+    BatchDataSource,
+    CodableBatchDataSource,
+)
 from aligned.feature_source import WritableFeatureSource
-from aligned.retrival_job import RetrivalJob, RetrivalRequest
+from aligned.retrieval_job import RetrievalJob, RetrievalRequest
 from aligned.schemas.feature import Feature
 from aligned.sources.vector_index import VectorIndex
 
@@ -14,9 +17,10 @@ if TYPE_CHECKING:
     from aligned.schemas.feature_view import CompiledFeatureView
 
 
-class InMemorySource(CodableBatchDataSource, DataFileReference, WritableFeatureSource, VectorIndex):
-
-    type_name = 'in_mem_source'
+class InMemorySource(
+    CodableBatchDataSource, DataFileReference, WritableFeatureSource, VectorIndex
+):
+    type_name = "in_mem_source"
 
     def __init__(self, data: pl.DataFrame) -> None:
         self.data = data
@@ -32,30 +36,32 @@ class InMemorySource(CodableBatchDataSource, DataFileReference, WritableFeatureS
     async def to_lazy_polars(self) -> pl.LazyFrame:
         return self.data.lazy()
 
-    async def insert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
+    async def insert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         values = await job.to_polars()
         if not self.data.is_empty():
             self.data = self.data.vstack(values.select(self.data.columns))
         else:
             self.data = values
 
-    async def upsert(self, job: RetrivalJob, request: RetrivalRequest) -> None:
+    async def upsert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         values = await job.to_lazy_polars()
 
         self.data = upsert_on_column(
-            sorted(request.entity_names), new_data=values, existing_data=self.data.lazy()
+            sorted(request.entity_names),
+            new_data=values,
+            existing_data=self.data.lazy(),
         ).collect()
 
-    async def overwrite(self, job: RetrivalJob, request: RetrivalRequest) -> None:
+    async def overwrite(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         self.data = await job.to_polars()
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
         self.data = df.collect()
 
     def nearest_n_to(
-        self, data: RetrivalJob, number_of_records: int, request: RetrivalRequest
-    ) -> RetrivalJob:
-        from aligned.retrival_job import RetrivalJob
+        self, data: RetrievalJob, number_of_records: int, request: RetrievalRequest
+    ) -> RetrievalJob:
+        from aligned.retrieval_job import RetrievalJob
 
         async def load() -> pl.LazyFrame:
             def first_embedding(features: set[Feature]) -> Feature | None:
@@ -65,7 +71,7 @@ class InMemorySource(CodableBatchDataSource, DataFileReference, WritableFeatureS
                 return None
 
             embedding = first_embedding(data.request_result.features)
-            assert embedding, 'Expected to a least find one embedding in the input data'
+            assert embedding, "Expected to a least find one embedding in the input data"
 
             df = await data.to_polars()
 
@@ -86,14 +92,16 @@ class InMemorySource(CodableBatchDataSource, DataFileReference, WritableFeatureS
             org_columns = df.columns
             df_cols = len(df.columns)
 
-            distance_key = 'distance'
+            distance_key = "distance"
 
             for item in df.iter_rows(named=True):
                 most_similar = (
                     self.data.with_columns(
                         pl.col(embedding.name)
                         .map_elements(
-                            lambda candidate: cosine_similarity(item[embedding.name], candidate),
+                            lambda candidate: cosine_similarity(
+                                item[embedding.name], candidate
+                            ),
                         )
                         .alias(distance_key)
                     )
@@ -119,29 +127,34 @@ class InMemorySource(CodableBatchDataSource, DataFileReference, WritableFeatureS
             else:
                 return result.lazy()
 
-        return RetrivalJob.from_lazy_function(load, request)
+        return RetrievalJob.from_lazy_function(load, request)
 
-    def with_view(self, view: 'CompiledFeatureView') -> 'InMemorySource':
-
+    def with_view(self, view: "CompiledFeatureView") -> "InMemorySource":
         if self._vector_index_name is None:
             self._vector_index_name = view.name
 
         if self.data.is_empty():
-            return InMemorySource.from_values({feat.name: [] for feat in view.entities.union(view.features)})
+            return InMemorySource.from_values(
+                {feat.name: [] for feat in view.entities.union(view.features)}
+            )
         return self
 
     @classmethod
     def multi_source_features_for(  # type: ignore
-        cls: type['InMemorySource'],
-        facts: RetrivalJob,
-        requests: list[tuple['InMemorySource', RetrivalRequest]],
-    ) -> RetrivalJob:
+        cls: type["InMemorySource"],
+        facts: RetrievalJob,
+        requests: list[tuple["InMemorySource", RetrievalRequest]],
+    ) -> RetrievalJob:
         from aligned.local.job import FileFactualJob
 
-        sources = {source.job_group_key() for source, _ in requests if isinstance(source, BatchDataSource)}
+        sources = {
+            source.job_group_key()
+            for source, _ in requests
+            if isinstance(source, BatchDataSource)
+        }
         if len(sources) != 1:
             raise NotImplementedError(
-                f'Type: {cls} have not implemented how to load fact data with multiple sources.'
+                f"Type: {cls} have not implemented how to load fact data with multiple sources."
             )
 
         source, _ = requests[0]
@@ -149,9 +162,9 @@ class InMemorySource(CodableBatchDataSource, DataFileReference, WritableFeatureS
         return FileFactualJob(source, [request for _, request in requests], facts)
 
     @staticmethod
-    def from_values(values: dict[str, object]) -> 'InMemorySource':
+    def from_values(values: dict[str, object]) -> "InMemorySource":
         return InMemorySource(pl.DataFrame(values))
 
     @staticmethod
-    def empty() -> 'InMemorySource':
+    def empty() -> "InMemorySource":
         return InMemorySource.from_values({})
