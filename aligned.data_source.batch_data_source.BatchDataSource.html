@@ -261,6 +261,16 @@
         
 
         
+            <div class="itemName"><code><a href="#needed_configs" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource.needed_configs">needed<wbr></wbr>_configs</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
             <div class="itemName"><code><a href="#schema" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource.schema">schema</a></code>
             </div>
         
@@ -575,7 +585,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">BatchDataSource</span>: <a href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L105" class="sourceLink">(source)</a></code></p><p>Known subclasses: <code><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link">aligned.data_source.batch_data_source.CodableBatchDataSource</a></code>, <code><a href="aligned.data_source.model_predictor.PredictModelSource.html" class="internal-link">aligned.data_source.model_predictor.PredictModelSource</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">BatchDataSource</span>: <a href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L119" class="sourceLink">(source)</a></code></p><p>Known subclasses: <code><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link">aligned.data_source.batch_data_source.CodableBatchDataSource</a></code>, <code><a href="aligned.data_source.model_predictor.PredictModelSource.html" class="internal-link">aligned.data_source.model_predictor.PredictModelSource</a></code></p>
           <p><a href="classIndex.html#aligned.data_source.batch_data_source.BatchDataSource">View In Hierarchy</a></p>
         </div>
 
@@ -584,7 +594,7 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id16">
+          <table class="children sortable" id="id30">
   
   
   <tr class="classmethod">
@@ -654,6 +664,11 @@
     <td><span class="undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
+    <td>Method</td>
+    <td><code><a href="#needed_configs" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource.needed_configs">needed<wbr></wbr>_configs</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
     <td>Async Method</td>
     <td><code><a href="#schema" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource.schema">schema</a></code></td>
     <td>Returns the schema for the data source</td>
@@ -702,8 +717,8 @@
   <div class="functionHeader">
     
     @<a href="https://docs.python.org/3/library/functions.html#classmethod" class="intersphinx-link">classmethod</a><br />
-    <span class="py-keyword">def</span> <span class="py-defname">multi_source_features_for</span><span class="function-signature">(cls: <code><a href="https://docs.python.org/3/library/functions.html#type" class="intersphinx-link">type</a>[<wbr></wbr><a href="aligned.data_source.batch_data_source.html#T" class="internal-link" title="aligned.data_source.batch_data_source.T">T</a>]</code>, facts: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, requests: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr><a href="aligned.data_source.batch_data_source.html#T" class="internal-link" title="aligned.data_source.batch_data_source.T">T</a>, <wbr></wbr>RetrivalRequest]]</code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L152">
+    <span class="py-keyword">def</span> <span class="py-defname">multi_source_features_for</span><span class="function-signature">(cls: <code><a href="https://docs.python.org/3/library/functions.html#type" class="intersphinx-link">type</a>[<wbr></wbr><a href="aligned.data_source.batch_data_source.html#T" class="internal-link" title="aligned.data_source.batch_data_source.T">T</a>]</code>, facts: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, requests: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr><a href="aligned.data_source.batch_data_source.html#T" class="internal-link" title="aligned.data_source.batch_data_source.T">T</a>, <wbr></wbr>RetrievalRequest]]</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L172">
       
       (source)
     </a>
@@ -714,7 +729,7 @@
     </a>
   </div>
   <div class="docstring functionBody">
-    <div class="interfaceinfo">overridden in <code><a href="aligned.CustomMethodDataSource.html" class="internal-link">aligned.CustomMethodDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.FilteredDataSource.html" class="internal-link">aligned.data_source.batch_data_source.FilteredDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.LoadedAtSource.html" class="internal-link">aligned.data_source.batch_data_source.LoadedAtSource</a></code>, <code><a href="aligned.data_source.batch_data_source.StackSource.html" class="internal-link">aligned.data_source.batch_data_source.StackSource</a></code>, <code><a href="aligned.data_source.model_predictor.PredictModelSource.html" class="internal-link">aligned.data_source.model_predictor.PredictModelSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobCsvDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobCsvDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobParquetDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.in_mem_source.InMemorySource.html" class="internal-link">aligned.sources.in_mem_source.InMemorySource</a></code>, <code><a href="aligned.sources.lancedb.LanceDbTable.html" class="internal-link">aligned.sources.lancedb.LanceDbTable</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.ParquetFileSource.html" class="internal-link">aligned.sources.local.ParquetFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code>, <code><a href="aligned.sources.redshift.RedshiftSQLDataSource.html" class="internal-link">aligned.sources.redshift.RedshiftSQLDataSource</a></code></div>
+    <div class="interfaceinfo">overridden in <code><a href="aligned.CustomMethodDataSource.html" class="internal-link">aligned.CustomMethodDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.FilteredDataSource.html" class="internal-link">aligned.data_source.batch_data_source.FilteredDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.LoadedAtSource.html" class="internal-link">aligned.data_source.batch_data_source.LoadedAtSource</a></code>, <code><a href="aligned.data_source.batch_data_source.StackSource.html" class="internal-link">aligned.data_source.batch_data_source.StackSource</a></code>, <code><a href="aligned.data_source.model_predictor.PredictModelSource.html" class="internal-link">aligned.data_source.model_predictor.PredictModelSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobCsvDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobCsvDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobParquetDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.databricks.UCFeatureTableSource.html" class="internal-link">aligned.sources.databricks.UCFeatureTableSource</a></code>, <code><a href="aligned.sources.databricks.UCSqlSource.html" class="internal-link">aligned.sources.databricks.UCSqlSource</a></code>, <code><a href="aligned.sources.databricks.UCTableSource.html" class="internal-link">aligned.sources.databricks.UCTableSource</a></code>, <code><a href="aligned.sources.in_mem_source.InMemorySource.html" class="internal-link">aligned.sources.in_mem_source.InMemorySource</a></code>, <code><a href="aligned.sources.lancedb.LanceDbTable.html" class="internal-link">aligned.sources.lancedb.LanceDbTable</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.ParquetFileSource.html" class="internal-link">aligned.sources.local.ParquetFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code>, <code><a href="aligned.sources.redshift.RedshiftSQLDataSource.html" class="internal-link">aligned.sources.redshift.RedshiftSQLDataSource</a></code></div>
     <div><p class="undocumented">Undocumented</p></div>
   </div>
 </div><div class="basemethod">
@@ -730,7 +745,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">__hash__</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L121">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L138">
       
       (source)
     </a>
@@ -756,8 +771,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">all</span><span class="function-signature">(self, result: <code>RequestResult</code>, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L200">
+    <span class="py-keyword">def</span> <span class="py-defname">all</span><span class="function-signature">(self, result: <code>RequestResult</code>, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L225">
       
       (source)
     </a>
@@ -783,8 +798,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">all_between_dates</span><span class="function-signature">(self, request: <code>RetrivalRequest</code>, start_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>, end_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L135">
+    <span class="py-keyword">def</span> <span class="py-defname">all_between_dates</span><span class="function-signature">(self, request: <code>RetrievalRequest</code>, start_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>, end_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L152">
       
       (source)
     </a>
@@ -795,7 +810,7 @@
     </a>
   </div>
   <div class="docstring functionBody">
-    <div class="interfaceinfo">overridden in <code><a href="aligned.CustomMethodDataSource.html" class="internal-link">aligned.CustomMethodDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.FilteredDataSource.html" class="internal-link">aligned.data_source.batch_data_source.FilteredDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinAsofDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinAsofDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.LoadedAtSource.html" class="internal-link">aligned.data_source.batch_data_source.LoadedAtSource</a></code>, <code><a href="aligned.data_source.batch_data_source.StackSource.html" class="internal-link">aligned.data_source.batch_data_source.StackSource</a></code>, <code><a href="aligned.data_source.model_predictor.PredictModelSource.html" class="internal-link">aligned.data_source.model_predictor.PredictModelSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobCsvDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobCsvDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobParquetDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.ParquetFileSource.html" class="internal-link">aligned.sources.local.ParquetFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code>, <code><a href="aligned.sources.redshift.RedshiftSQLDataSource.html" class="internal-link">aligned.sources.redshift.RedshiftSQLDataSource</a></code>, <code><a href="aligned.sources.s3.AwsS3CsvDataSource.html" class="internal-link">aligned.sources.s3.AwsS3CsvDataSource</a></code></div>
+    <div class="interfaceinfo">overridden in <code><a href="aligned.CustomMethodDataSource.html" class="internal-link">aligned.CustomMethodDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.FilteredDataSource.html" class="internal-link">aligned.data_source.batch_data_source.FilteredDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinAsofDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinAsofDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.LoadedAtSource.html" class="internal-link">aligned.data_source.batch_data_source.LoadedAtSource</a></code>, <code><a href="aligned.data_source.batch_data_source.StackSource.html" class="internal-link">aligned.data_source.batch_data_source.StackSource</a></code>, <code><a href="aligned.data_source.model_predictor.PredictModelSource.html" class="internal-link">aligned.data_source.model_predictor.PredictModelSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobCsvDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobCsvDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobParquetDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.databricks.UCFeatureTableSource.html" class="internal-link">aligned.sources.databricks.UCFeatureTableSource</a></code>, <code><a href="aligned.sources.databricks.UCSqlSource.html" class="internal-link">aligned.sources.databricks.UCSqlSource</a></code>, <code><a href="aligned.sources.databricks.UCTableSource.html" class="internal-link">aligned.sources.databricks.UCTableSource</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.ParquetFileSource.html" class="internal-link">aligned.sources.local.ParquetFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code>, <code><a href="aligned.sources.redshift.RedshiftSQLDataSource.html" class="internal-link">aligned.sources.redshift.RedshiftSQLDataSource</a></code>, <code><a href="aligned.sources.s3.AwsS3CsvDataSource.html" class="internal-link">aligned.sources.s3.AwsS3CsvDataSource</a></code></div>
     <div><p class="undocumented">Undocumented</p></div>
   </div>
 </div><div class="basemethod">
@@ -810,8 +825,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">all_columns</span><span class="function-signature">(self, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L197">
+    <span class="py-keyword">def</span> <span class="py-defname">all_columns</span><span class="function-signature">(self, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L222">
       
       (source)
     </a>
@@ -837,8 +852,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">all_data</span><span class="function-signature">(self, request: <code>RetrivalRequest</code>, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L124">
+    <span class="py-keyword">def</span> <span class="py-defname">all_data</span><span class="function-signature">(self, request: <code>RetrievalRequest</code>, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L141">
       
       (source)
     </a>
@@ -849,7 +864,7 @@
     </a>
   </div>
   <div class="docstring functionBody">
-    <div class="interfaceinfo">overridden in <code><a href="aligned.CustomMethodDataSource.html" class="internal-link">aligned.CustomMethodDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.FilteredDataSource.html" class="internal-link">aligned.data_source.batch_data_source.FilteredDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinAsofDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinAsofDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.LoadedAtSource.html" class="internal-link">aligned.data_source.batch_data_source.LoadedAtSource</a></code>, <code><a href="aligned.data_source.batch_data_source.StackSource.html" class="internal-link">aligned.data_source.batch_data_source.StackSource</a></code>, <code><a href="aligned.data_source.model_predictor.PredictModelSource.html" class="internal-link">aligned.data_source.model_predictor.PredictModelSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobCsvDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobCsvDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobParquetDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.lancedb.LanceDbTable.html" class="internal-link">aligned.sources.lancedb.LanceDbTable</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.ParquetFileSource.html" class="internal-link">aligned.sources.local.ParquetFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code>, <code><a href="aligned.sources.redshift.RedshiftSQLDataSource.html" class="internal-link">aligned.sources.redshift.RedshiftSQLDataSource</a></code>, <code><a href="aligned.sources.s3.AwsS3CsvDataSource.html" class="internal-link">aligned.sources.s3.AwsS3CsvDataSource</a></code></div>
+    <div class="interfaceinfo">overridden in <code><a href="aligned.CustomMethodDataSource.html" class="internal-link">aligned.CustomMethodDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.FilteredDataSource.html" class="internal-link">aligned.data_source.batch_data_source.FilteredDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinAsofDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinAsofDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.LoadedAtSource.html" class="internal-link">aligned.data_source.batch_data_source.LoadedAtSource</a></code>, <code><a href="aligned.data_source.batch_data_source.StackSource.html" class="internal-link">aligned.data_source.batch_data_source.StackSource</a></code>, <code><a href="aligned.data_source.model_predictor.PredictModelSource.html" class="internal-link">aligned.data_source.model_predictor.PredictModelSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobCsvDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobCsvDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobParquetDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.databricks.UCFeatureTableSource.html" class="internal-link">aligned.sources.databricks.UCFeatureTableSource</a></code>, <code><a href="aligned.sources.databricks.UCSqlSource.html" class="internal-link">aligned.sources.databricks.UCSqlSource</a></code>, <code><a href="aligned.sources.databricks.UCTableSource.html" class="internal-link">aligned.sources.databricks.UCTableSource</a></code>, <code><a href="aligned.sources.lancedb.LanceDbTable.html" class="internal-link">aligned.sources.lancedb.LanceDbTable</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.ParquetFileSource.html" class="internal-link">aligned.sources.local.ParquetFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code>, <code><a href="aligned.sources.redshift.RedshiftSQLDataSource.html" class="internal-link">aligned.sources.redshift.RedshiftSQLDataSource</a></code>, <code><a href="aligned.sources.s3.AwsS3CsvDataSource.html" class="internal-link">aligned.sources.s3.AwsS3CsvDataSource</a></code></div>
     <div><p class="undocumented">Undocumented</p></div>
   </div>
 </div><div class="basemethod">
@@ -865,7 +880,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">depends_on</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>FeatureLocation]</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L268">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L299">
       
       (source)
     </a>
@@ -892,7 +907,7 @@
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">feature_view_code</span><span class="function-signature">(self, view_name: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L206">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L233">
       
       (source)
     </a>
@@ -903,7 +918,7 @@
     </a>
   </div>
   <div class="docstring functionBody">
-    <div class="interfaceinfo">overridden in <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.ParquetFileSource.html" class="internal-link">aligned.sources.local.ParquetFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code></div>
+    <div class="interfaceinfo">overridden in <code><a href="aligned.sources.databricks.UCTableSource.html" class="internal-link">aligned.sources.databricks.UCTableSource</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.ParquetFileSource.html" class="internal-link">aligned.sources.local.ParquetFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code></div>
     <div><p>Setup the code needed to represent the data source as a feature view</p>
 <p>```python
 FileSource.parquet("my_path.parquet").feature_view_code(view_name="my_view")</p>
@@ -950,8 +965,8 @@ Embarked = String()"""</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">features_for</span><span class="function-signature">(self, facts: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, request: <code>RetrivalRequest</code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L177">
+    <span class="py-keyword">def</span> <span class="py-defname">features_for</span><span class="function-signature">(self, facts: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, request: <code>RetrievalRequest</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L200">
       
       (source)
     </a>
@@ -962,7 +977,7 @@ Embarked = String()"""</p>
     </a>
   </div>
   <div class="docstring functionBody">
-    <div class="interfaceinfo">overridden in <code><a href="aligned.CustomMethodDataSource.html" class="internal-link">aligned.CustomMethodDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.StackSource.html" class="internal-link">aligned.data_source.batch_data_source.StackSource</a></code>, <code><a href="aligned.data_source.model_predictor.PredictModelSource.html" class="internal-link">aligned.data_source.model_predictor.PredictModelSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobCsvDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobCsvDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobParquetDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code></div>
+    <div class="interfaceinfo">overridden in <code><a href="aligned.CustomMethodDataSource.html" class="internal-link">aligned.CustomMethodDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.StackSource.html" class="internal-link">aligned.data_source.batch_data_source.StackSource</a></code>, <code><a href="aligned.data_source.model_predictor.PredictModelSource.html" class="internal-link">aligned.data_source.model_predictor.PredictModelSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobCsvDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobCsvDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobParquetDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.databricks.UCFeatureTableSource.html" class="internal-link">aligned.sources.databricks.UCFeatureTableSource</a></code>, <code><a href="aligned.sources.databricks.UCSqlSource.html" class="internal-link">aligned.sources.databricks.UCSqlSource</a></code>, <code><a href="aligned.sources.databricks.UCTableSource.html" class="internal-link">aligned.sources.databricks.UCTableSource</a></code></div>
     <div><p class="undocumented">Undocumented</p></div>
   </div>
 </div><div class="basemethod">
@@ -978,7 +993,7 @@ Embarked = String()"""</p>
     
     
     <span class="py-keyword">def</span> <span class="py-defname">filter</span><span class="function-signature">(self, condition: <code>DerivedFeature | Feature</code>) -&gt; <code><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L261">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L292">
       
       (source)
     </a>
@@ -1005,7 +1020,7 @@ Embarked = String()"""</p>
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">freshness</span><span class="function-signature">(self, feature: <code>Feature</code>) -&gt; <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L246">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L277">
       
       (source)
     </a>
@@ -1016,7 +1031,7 @@ Embarked = String()"""</p>
     </a>
   </div>
   <div class="docstring functionBody">
-    <div class="interfaceinfo">overridden in <code><a href="aligned.data_source.batch_data_source.FilteredDataSource.html" class="internal-link">aligned.data_source.batch_data_source.FilteredDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinAsofDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinAsofDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.LoadedAtSource.html" class="internal-link">aligned.data_source.batch_data_source.LoadedAtSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.lancedb.LanceDbTable.html" class="internal-link">aligned.sources.lancedb.LanceDbTable</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.redshift.RedshiftSQLDataSource.html" class="internal-link">aligned.sources.redshift.RedshiftSQLDataSource</a></code></div>
+    <div class="interfaceinfo">overridden in <code><a href="aligned.data_source.batch_data_source.FilteredDataSource.html" class="internal-link">aligned.data_source.batch_data_source.FilteredDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinAsofDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinAsofDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.LoadedAtSource.html" class="internal-link">aligned.data_source.batch_data_source.LoadedAtSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.databricks.UCFeatureTableSource.html" class="internal-link">aligned.sources.databricks.UCFeatureTableSource</a></code>, <code><a href="aligned.sources.databricks.UCSqlSource.html" class="internal-link">aligned.sources.databricks.UCSqlSource</a></code>, <code><a href="aligned.sources.databricks.UCTableSource.html" class="internal-link">aligned.sources.databricks.UCTableSource</a></code>, <code><a href="aligned.sources.lancedb.LanceDbTable.html" class="internal-link">aligned.sources.lancedb.LanceDbTable</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.redshift.RedshiftSQLDataSource.html" class="internal-link">aligned.sources.redshift.RedshiftSQLDataSource</a></code></div>
     <div><p><dl class="rst-docutils">
 <dt>my_table_freshenss = await (PostgreSQLConfig("DB_URL")</dt>
 <dd>.table("my_table")
@@ -1038,7 +1053,7 @@ Embarked = String()"""</p>
     
     
     <span class="py-keyword">def</span> <span class="py-defname">job_group_key</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L106">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L120">
       
       (source)
     </a>
@@ -1049,7 +1064,7 @@ Embarked = String()"""</p>
     </a>
   </div>
   <div class="docstring functionBody">
-    <div class="interfaceinfo">overridden in <code><a href="aligned.CustomMethodDataSource.html" class="internal-link">aligned.CustomMethodDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.FilteredDataSource.html" class="internal-link">aligned.data_source.batch_data_source.FilteredDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinAsofDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinAsofDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.LoadedAtSource.html" class="internal-link">aligned.data_source.batch_data_source.LoadedAtSource</a></code>, <code><a href="aligned.data_source.batch_data_source.StackSource.html" class="internal-link">aligned.data_source.batch_data_source.StackSource</a></code>, <code><a href="aligned.data_source.model_predictor.PredictModelSource.html" class="internal-link">aligned.data_source.model_predictor.PredictModelSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobCsvDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobCsvDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobParquetDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.in_mem_source.InMemorySource.html" class="internal-link">aligned.sources.in_mem_source.InMemorySource</a></code>, <code><a href="aligned.sources.lancedb.LanceDbTable.html" class="internal-link">aligned.sources.lancedb.LanceDbTable</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.ParquetFileSource.html" class="internal-link">aligned.sources.local.ParquetFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code>, <code><a href="aligned.sources.redshift.RedshiftSQLDataSource.html" class="internal-link">aligned.sources.redshift.RedshiftSQLDataSource</a></code>, <code><a href="aligned.sources.s3.AwsS3CsvDataSource.html" class="internal-link">aligned.sources.s3.AwsS3CsvDataSource</a></code>, <code><a href="aligned.sources.s3.AwsS3ParquetDataSource.html" class="internal-link">aligned.sources.s3.AwsS3ParquetDataSource</a></code></div>
+    <div class="interfaceinfo">overridden in <code><a href="aligned.CustomMethodDataSource.html" class="internal-link">aligned.CustomMethodDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.FilteredDataSource.html" class="internal-link">aligned.data_source.batch_data_source.FilteredDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinAsofDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinAsofDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.LoadedAtSource.html" class="internal-link">aligned.data_source.batch_data_source.LoadedAtSource</a></code>, <code><a href="aligned.data_source.batch_data_source.StackSource.html" class="internal-link">aligned.data_source.batch_data_source.StackSource</a></code>, <code><a href="aligned.data_source.model_predictor.PredictModelSource.html" class="internal-link">aligned.data_source.model_predictor.PredictModelSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobCsvDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobCsvDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobParquetDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.databricks.UCFeatureTableSource.html" class="internal-link">aligned.sources.databricks.UCFeatureTableSource</a></code>, <code><a href="aligned.sources.databricks.UCTableSource.html" class="internal-link">aligned.sources.databricks.UCTableSource</a></code>, <code><a href="aligned.sources.in_mem_source.InMemorySource.html" class="internal-link">aligned.sources.in_mem_source.InMemorySource</a></code>, <code><a href="aligned.sources.lancedb.LanceDbTable.html" class="internal-link">aligned.sources.lancedb.LanceDbTable</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.ParquetFileSource.html" class="internal-link">aligned.sources.local.ParquetFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code>, <code><a href="aligned.sources.redshift.RedshiftSQLDataSource.html" class="internal-link">aligned.sources.redshift.RedshiftSQLDataSource</a></code>, <code><a href="aligned.sources.s3.AwsS3CsvDataSource.html" class="internal-link">aligned.sources.s3.AwsS3CsvDataSource</a></code>, <code><a href="aligned.sources.s3.AwsS3ParquetDataSource.html" class="internal-link">aligned.sources.s3.AwsS3ParquetDataSource</a></code></div>
     <div><p>A key defining which sources can be grouped together in one request.</p></div>
   </div>
 </div><div class="basemethod">
@@ -1065,7 +1080,7 @@ Embarked = String()"""</p>
     
     
     <span class="py-keyword">def</span> <span class="py-defname">location_id</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>FeatureLocation]</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L265">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L296">
       
       (source)
     </a>
@@ -1082,6 +1097,33 @@ Embarked = String()"""</p>
 </div><div class="basemethod">
   
   
+  <a name="aligned.data_source.batch_data_source.BatchDataSource.needed_configs">
+    
+  </a>
+  <a name="needed_configs">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">needed_configs</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a>]</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L132">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#needed_configs" title="aligned.data_source.batch_data_source.BatchDataSource.needed_configs">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overridden in <code><a href="aligned.sources.azure_blob_storage.AzureBlobCsvDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobCsvDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobParquetDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
   <a name="aligned.data_source.batch_data_source.BatchDataSource.schema">
     
   </a>
@@ -1092,7 +1134,7 @@ Embarked = String()"""</p>
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">schema</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr>FeatureType]</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L180">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L205">
       
       (source)
     </a>
@@ -1103,7 +1145,7 @@ Embarked = String()"""</p>
     </a>
   </div>
   <div class="docstring functionBody">
-    <div class="interfaceinfo">overridden in <code><a href="aligned.data_source.batch_data_source.FilteredDataSource.html" class="internal-link">aligned.data_source.batch_data_source.FilteredDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinAsofDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinAsofDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.LoadedAtSource.html" class="internal-link">aligned.data_source.batch_data_source.LoadedAtSource</a></code>, <code><a href="aligned.data_source.batch_data_source.StackSource.html" class="internal-link">aligned.data_source.batch_data_source.StackSource</a></code>, <code><a href="aligned.data_source.model_predictor.PredictModelSource.html" class="internal-link">aligned.data_source.model_predictor.PredictModelSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobCsvDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobCsvDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobParquetDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.ParquetFileSource.html" class="internal-link">aligned.sources.local.ParquetFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code></div>
+    <div class="interfaceinfo">overridden in <code><a href="aligned.data_source.batch_data_source.FilteredDataSource.html" class="internal-link">aligned.data_source.batch_data_source.FilteredDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinAsofDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinAsofDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.JoinDataSource.html" class="internal-link">aligned.data_source.batch_data_source.JoinDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.LoadedAtSource.html" class="internal-link">aligned.data_source.batch_data_source.LoadedAtSource</a></code>, <code><a href="aligned.data_source.batch_data_source.StackSource.html" class="internal-link">aligned.data_source.batch_data_source.StackSource</a></code>, <code><a href="aligned.data_source.model_predictor.PredictModelSource.html" class="internal-link">aligned.data_source.model_predictor.PredictModelSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobCsvDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobCsvDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobParquetDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.databricks.UCFeatureTableSource.html" class="internal-link">aligned.sources.databricks.UCFeatureTableSource</a></code>, <code><a href="aligned.sources.databricks.UCSqlSource.html" class="internal-link">aligned.sources.databricks.UCSqlSource</a></code>, <code><a href="aligned.sources.databricks.UCTableSource.html" class="internal-link">aligned.sources.databricks.UCTableSource</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.ParquetFileSource.html" class="internal-link">aligned.sources.local.ParquetFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code></div>
     <div><p>Returns the schema for the data source</p>
 <p><tt class="rst-docutils rst-literal">`python
 source = <span class="pre">FileSource.parquet_at('test_data/titanic.parquet')</span>
@@ -1129,7 +1171,7 @@ schema = await source.schema()
     
     
     <span class="py-keyword">def</span> <span class="py-defname">source_id</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L112">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L126">
       
       (source)
     </a>
@@ -1156,7 +1198,7 @@ schema = await source.schema()
     
     
     <span class="py-keyword">def</span> <span class="py-defname">tags</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L271">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L302">
       
       (source)
     </a>
@@ -1182,8 +1224,8 @@ schema = await source.schema()
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">transform_with_polars</span><span class="function-signature">(self, method: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr>pl.LazyFrame], <wbr></wbr><a href="https://docs.python.org/3/library/typing.html#typing.Awaitable" class="intersphinx-link">Awaitable</a>[<wbr></wbr>pl.LazyFrame]] | <a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr>pl.LazyFrame], <wbr></wbr>pl.LazyFrame]</code>) -&gt; <code><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L281">
+    <span class="py-keyword">def</span> <span class="py-defname">transform_with_polars</span><span class="function-signature">(self, method: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr>pl.LazyFrame], <wbr></wbr><a href="https://docs.python.org/3/library/typing.html#typing.Awaitable" class="intersphinx-link">Awaitable</a>[<wbr></wbr>pl.LazyFrame]] | <a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr>pl.LazyFrame], <wbr></wbr>pl.LazyFrame]</code>, docker_config: <code><a href="aligned.DockerConfig.html" class="internal-link" title="aligned.DockerConfig">DockerConfig</a> | <a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L312">
       
       (source)
     </a>
@@ -1210,7 +1252,7 @@ schema = await source.schema()
     
     
     <span class="py-keyword">def</span> <span class="py-defname">with_loaded_at</span><span class="function-signature">(self) -&gt; <code><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L276">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L307">
       
       (source)
     </a>
@@ -1237,7 +1279,7 @@ schema = await source.schema()
     
     
     <span class="py-keyword">def</span> <span class="py-defname">with_view</span><span class="function-signature">(self: <code><a href="aligned.data_source.batch_data_source.html#T" class="internal-link" title="aligned.data_source.batch_data_source.T">T</a></code>, view: <code>CompiledFeatureView</code>) -&gt; <code><a href="aligned.data_source.batch_data_source.html#T" class="internal-link" title="aligned.data_source.batch_data_source.T">T</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/batch_data_source.py#L118">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/batch_data_source.py#L135">
       
       (source)
     </a>
@@ -1263,7 +1305,7 @@ schema = await source.schema()
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    24.11.2 at 2025-02-18 12:41:13.
+    24.11.2 at 2025-03-05 23:11:44.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

@@ -233,16 +233,6 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.feature_store.ModelFeatureStore.html" class="internal-link" title="aligned.feature_store.ModelFeatureStore"><wbr></wbr>Model<wbr></wbr>Feature<wbr></wbr>Store</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
             <div class="itemName"><code><a href="aligned.feature_store.RawStringFeatureRequest.html" class="internal-link" title="aligned.feature_store.RawStringFeatureRequest"><wbr></wbr>Raw<wbr></wbr>String<wbr></wbr>Feature<wbr></wbr>Request</a></code>
             </div>
         
@@ -254,16 +244,6 @@
 
         
             <div class="itemName"><code><a href="aligned.feature_store.SourceRequest.html" class="internal-link" title="aligned.feature_store.SourceRequest"><wbr></wbr>Source<wbr></wbr>Request</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.feature_store.SupervisedModelFeatureStore.html" class="internal-link" title="aligned.feature_store.SupervisedModelFeatureStore"><wbr></wbr>Supervised<wbr></wbr>Model<wbr></wbr>Feature<wbr></wbr>Store</a></code>
             </div>
         
 
@@ -315,16 +295,6 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.feature_store.html#feature_view_write_time" class="internal-link" title="aligned.feature_store.feature_view_write_time">feature<wbr></wbr>_view<wbr></wbr>_write<wbr></wbr>_time</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
             <div class="itemName"><code><a href="aligned.feature_store.html#logger" class="internal-link" title="aligned.feature_store.logger">logger</a></code>
             </div>
         
@@ -365,7 +335,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">VectorIndexStore</span>: <a href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1937" class="sourceLink">(source)</a></code></p><p>Constructor: <code><a href="#__init__" class="internal-link" title="aligned.feature_store.VectorIndexStore.__init__">VectorIndexStore(store, model, index_name)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">VectorIndexStore</span>: <a href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/feature_store.py#L1402" class="sourceLink">(source)</a></code></p><p>Constructor: <code><a href="#__init__" class="internal-link" title="aligned.feature_store.VectorIndexStore.__init__">VectorIndexStore(store, model, index_name)</a></code></p>
           <p><a href="classIndex.html#aligned.feature_store.VectorIndexStore">View In Hierarchy</a></p>
         </div>
 
@@ -374,7 +344,7 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id57">
+          <table class="children sortable" id="id69">
   
   
   <tr class="method">
@@ -428,7 +398,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">__init__</span><span class="function-signature">(self, store: <code><a href="aligned.ContractStore.html" class="internal-link" title="aligned.ContractStore">ContractStore</a></code>, model: <code>ModelSchema</code>, index_name: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1943">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/feature_store.py#L1407">
       
       (source)
     </a>
@@ -455,7 +425,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">as_langchain_retriver</span><span class="function-signature">(self, number_of_docs: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code> = 5)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1996">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/feature_store.py#L1468">
       
       (source)
     </a>
@@ -481,8 +451,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">nearest_n_to</span><span class="function-signature">(self, entities: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a> | <a href="aligned.retrival_job.html#ConvertableToRetrivalJob" class="internal-link" title="aligned.retrival_job.ConvertableToRetrivalJob">ConvertableToRetrivalJob</a></code>, number_of_records: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1958">
+    <span class="py-keyword">def</span> <span class="py-defname">nearest_n_to</span><span class="function-signature">(self, entities: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a> | <a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a></code>, number_of_records: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/feature_store.py#L1422">
       
       (source)
     </a>
@@ -508,7 +478,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">index_name</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1941">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/feature_store.py#L1405">
       
       (source)
     </a>
@@ -535,7 +505,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">model</span>: <code>ModelSchema</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1940">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/feature_store.py#L1404">
       
       (source)
     </a>
@@ -562,7 +532,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">store</span>: <code><a href="aligned.ContractStore.html" class="internal-link" title="aligned.ContractStore">ContractStore</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_store.py#L1939">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/feature_store.py#L1403">
       
       (source)
     </a>
@@ -589,7 +559,7 @@
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    24.11.2 at 2025-02-18 12:41:13.
+    24.11.2 at 2025-03-05 23:11:44.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

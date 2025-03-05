@@ -201,16 +201,6 @@
         
 
         
-            <div class="itemName"><code><a href="#path_string" class="internal-link" title="aligned.sources.local.FileDirectory.path_string">path<wbr></wbr>_string</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
             <div class="itemName"><code><a href="#repo_from_dir" class="internal-link" title="aligned.sources.local.FileDirectory.repo_from_dir">repo<wbr></wbr>_from<wbr></wbr>_dir</a></code>
             </div>
         
@@ -250,7 +240,7 @@
         
 
         
-            <div class="itemName"><code><a href="#dir_path" class="internal-link" title="aligned.sources.local.FileDirectory.dir_path">dir<wbr></wbr>_path</a></code>
+            <div class="itemName"><code><a href="#path" class="internal-link" title="aligned.sources.local.FileDirectory.path">path</a></code>
             </div>
         
 
@@ -278,6 +268,16 @@
         <ul>
     
     <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.local.AlignedCloudSource.html" class="internal-link" title="aligned.sources.local.AlignedCloudSource"><wbr></wbr>Aligned<wbr></wbr>Cloud<wbr></wbr>Source</a></code>
+            </div>
+        
+
+    </li><li class="">
         
         
         
@@ -518,7 +518,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">FileDirectory</span>(Codable, <a href="aligned.Directory.html" class="internal-link" title="aligned.Directory">Directory</a>): <a href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/local.py#L872" class="sourceLink">(source)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">FileDirectory</span>(Codable, <a href="aligned.Directory.html" class="internal-link" title="aligned.Directory">Directory</a>): <a href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/local.py#L1002" class="sourceLink">(source)</a></code></p>
           <p><a href="classIndex.html#aligned.sources.local.FileDirectory">View In Hierarchy</a></p>
         </div>
 
@@ -527,7 +527,7 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id287">
+          <table class="children sortable" id="id325">
   
   
   <tr class="classmethod">
@@ -568,11 +568,6 @@
   </tr><tr class="method">
     
     <td>Method</td>
-    <td><code><a href="#path_string" class="internal-link" title="aligned.sources.local.FileDirectory.path_string">path<wbr></wbr>_string</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
-  </tr><tr class="method">
-    
-    <td>Method</td>
     <td><code><a href="#repo_from_dir" class="internal-link" title="aligned.sources.local.FileDirectory.repo_from_dir">repo<wbr></wbr>_from<wbr></wbr>_dir</a></code></td>
     <td><span class="undocumented">Undocumented</span></td>
   </tr><tr class="method">
@@ -588,7 +583,7 @@
   </tr><tr class="classvariable">
     
     <td>Class Variable</td>
-    <td><code><a href="#dir_path" class="internal-link" title="aligned.sources.local.FileDirectory.dir_path">dir<wbr></wbr>_path</a></code></td>
+    <td><code><a href="#path" class="internal-link" title="aligned.sources.local.FileDirectory.path">path</a></code></td>
     <td><span class="undocumented">Undocumented</span></td>
   </tr>
 </table>
@@ -610,8 +605,8 @@
   <div class="functionHeader">
     
     @<a href="https://docs.python.org/3/library/functions.html#classmethod" class="intersphinx-link">classmethod</a><br />
-    <span class="py-keyword">def</span> <span class="py-defname">schema_placeholder</span><span class="function-signature">(cls) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/local.py#L877">
+    <span class="py-keyword">def</span> <span class="py-defname">schema_placeholder</span><span class="function-signature">(cls) -&gt; <code><a href="aligned.config_value.PlaceholderValue.html" class="internal-link" title="aligned.config_value.PlaceholderValue">PlaceholderValue</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/local.py#L1006">
       
       (source)
     </a>
@@ -638,7 +633,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">csv_at</span><span class="function-signature">(self, path: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, mapping_keys: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, csv_config: <code><a href="aligned.CsvConfig.html" class="internal-link" title="aligned.CsvConfig">CsvConfig</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link" title="aligned.sources.local.CsvFileSource">CsvFileSource</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/local.py#L894">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/local.py#L1013">
       
       (source)
     </a>
@@ -665,7 +660,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">delta_at</span><span class="function-signature">(self, path: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, mapping_keys: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, config: <code><a href="aligned.sources.local.DeltaFileConfig.html" class="internal-link" title="aligned.sources.local.DeltaFileConfig">DeltaFileConfig</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link" title="aligned.sources.local.DeltaFileSource">DeltaFileSource</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/local.py#L932">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/local.py#L1055">
       
       (source)
     </a>
@@ -691,8 +686,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">directory</span><span class="function-signature">(self, path: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code><a href="aligned.sources.local.FileDirectory.html" class="internal-link" title="aligned.sources.local.FileDirectory">FileDirectory</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/local.py#L946">
+    <span class="py-keyword">def</span> <span class="py-defname">directory</span><span class="function-signature">(self, path: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code>) -&gt; <code><a href="aligned.sources.local.FileDirectory.html" class="internal-link" title="aligned.sources.local.FileDirectory">FileDirectory</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/local.py#L1080">
       
       (source)
     </a>
@@ -719,7 +714,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">json_at</span><span class="function-signature">(self, path: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code><a href="aligned.sources.local.StorageFileSource.html" class="internal-link" title="aligned.sources.local.StorageFileSource">StorageFileSource</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/local.py#L891">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/local.py#L1010">
       
       (source)
     </a>
@@ -746,7 +741,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">parquet_at</span><span class="function-signature">(self, path: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, mapping_keys: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, config: <code><a href="aligned.ParquetConfig.html" class="internal-link" title="aligned.ParquetConfig">ParquetConfig</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, date_formatter: <code>DateFormatter | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.sources.local.ParquetFileSource.html" class="internal-link" title="aligned.sources.local.ParquetFileSource">ParquetFileSource</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/local.py#L901">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/local.py#L1025">
       
       (source)
     </a>
@@ -773,7 +768,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">partitioned_parquet_at</span><span class="function-signature">(self, directory: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, partition_keys: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>, mapping_keys: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, config: <code><a href="aligned.ParquetConfig.html" class="internal-link" title="aligned.ParquetConfig">ParquetConfig</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, date_formatter: <code>DateFormatter | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link" title="aligned.sources.local.PartitionedParquetFileSource">PartitionedParquetFileSource</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/local.py#L915">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/local.py#L1039">
       
       (source)
     </a>
@@ -790,33 +785,6 @@
 </div><div class="basemethod">
   
   
-  <a name="aligned.sources.local.FileDirectory.path_string">
-    
-  </a>
-  <a name="path_string">
-    
-  </a>
-  <div class="functionHeader">
-    
-    
-    <span class="py-keyword">def</span> <span class="py-defname">path_string</span><span class="function-signature">(self, path: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/local.py#L881">
-      
-      (source)
-    </a>
-    <a class="headerLink" href="#path_string" title="aligned.sources.local.FileDirectory.path_string">
-      
-      
-      ¶
-    </a>
-  </div>
-  <div class="docstring functionBody">
-    
-    <div><p class="undocumented">Undocumented</p></div>
-  </div>
-</div><div class="basemethod">
-  
-  
   <a name="aligned.sources.local.FileDirectory.repo_from_dir">
     
   </a>
@@ -827,7 +795,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">repo_from_dir</span><span class="function-signature">(self, dir: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, exclude: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.sources.local.AsRepoDefinition.html" class="internal-link" title="aligned.sources.local.AsRepoDefinition">AsRepoDefinition</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/local.py#L949">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/local.py#L1083">
       
       (source)
     </a>
@@ -853,8 +821,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">sub_directory</span><span class="function-signature">(self, path: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code><a href="aligned.sources.local.FileDirectory.html" class="internal-link" title="aligned.sources.local.FileDirectory">FileDirectory</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/local.py#L937">
+    <span class="py-keyword">def</span> <span class="py-defname">sub_directory</span><span class="function-signature">(self, path: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code>) -&gt; <code><a href="aligned.sources.local.FileDirectory.html" class="internal-link" title="aligned.sources.local.FileDirectory">FileDirectory</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/local.py#L1065">
       
       (source)
     </a>
@@ -880,8 +848,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">with_schema_version</span><span class="function-signature">(self, sub_directory: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.Directory.html" class="internal-link" title="aligned.Directory">Directory</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/local.py#L940">
+    <span class="py-keyword">def</span> <span class="py-defname">with_schema_version</span><span class="function-signature">(self, sub_directory: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.Directory.html" class="internal-link" title="aligned.Directory">Directory</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/local.py#L1068">
       
       (source)
     </a>
@@ -898,20 +866,20 @@
 </div><div class="baseclassvariable">
   
   
-  <a name="aligned.sources.local.FileDirectory.dir_path">
+  <a name="aligned.sources.local.FileDirectory.path">
     
   </a>
-  <a name="dir_path">
+  <a name="path">
     
   </a>
   <div class="functionHeader">
     
-    <span class="py-defname">dir_path</span>: <code><a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" class="intersphinx-link">Path</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/local.py#L875">
+    <span class="py-defname">path</span>: <code><a href="aligned.config_value.PathResolver.html" class="internal-link" title="aligned.config_value.PathResolver">PathResolver</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/local.py#L1004">
       
       (source)
     </a>
-    <a class="headerLink" href="#dir_path" title="aligned.sources.local.FileDirectory.dir_path">
+    <a class="headerLink" href="#path" title="aligned.sources.local.FileDirectory.path">
       
       
       ¶
@@ -934,7 +902,7 @@
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    24.11.2 at 2025-02-18 12:41:13.
+    24.11.2 at 2025-03-05 23:11:44.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

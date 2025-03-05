@@ -1,0 +1,1543 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+          "DTD/xhtml1-strict.dtd">
+<html>
+  
+
+  <head>
+    
+    <title>aligned.sources.databricks.UnityCatalogTableAllJob</title>
+    <meta name="generator" content="pydoctor 24.11.2"> 
+        
+    </meta>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1 maximum-scale=1" />
+    <link rel="stylesheet" type="text/css" href="bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="apidocs.css" />
+    <link rel="stylesheet" type="text/css" href="extra.css" />
+    
+</head>
+
+  <body>
+
+    
+
+    <nav class="navbar navbar-default mainnavbar">
+      
+  
+  <div class="container-fluid">
+
+
+    <div class="navbar-header">
+      
+      <div class="navlinks">
+        <span class="navbar-brand">
+          <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a> <a href="index.html">API Documentation</a>
+        </span>
+
+        <a href="moduleIndex.html">
+          Modules
+        </a>
+
+        <a href="classIndex.html">
+          Classes
+        </a>
+
+        <a href="nameIndex.html">
+          Names
+        </a>
+
+        <div id="search-box-container">
+          <div class="input-group">
+            <input id="search-box" type="search" name="search-query" placeholder="Search..." aria-label="Search" minlength="2" class="form-control" autocomplete="off" />
+            
+            <span class="input-group-btn">
+              <a style="display: none;" class="btn btn-default" id="search-clear-button" title="Clear" onclick="clearSearch()"><img src="fonts/x-circle.svg" alt="Clear" /></a>
+              <a class="btn btn-default" id="apidocs-help-button" title="Help" href="apidocs-help.html"><img src="fonts/info.svg" alt="Help" /></a>
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="search-results-container" style="display: none;">
+        
+        <div id="search-buttons">
+          <span class="label label-default" id="search-docstrings-button">
+          <label class="checkbox-inline">
+            <input type="checkbox" id="toggle-search-in-docstrings-checkbox" value="false" onclick="toggleSearchInDocstrings()">
+              search in docstrings
+            </input>
+          </label>
+          </span>
+          
+        </div>
+        
+        <noscript>
+            <h1>Cannot search: JavaScript is not supported/enabled in your browser.</h1>
+        </noscript>
+
+        <div id="search-status"> </div>
+
+        <div class="warning" id="search-warn-box" style="display: none;">
+          <p class="rst-last"><span id="search-warn"></span></p>
+        </div>
+
+        <table id="search-results">
+          <!-- Filled dynamically by JS -->
+        </table>
+        
+        <div style="margin-top: 10px;">
+          <p>For more information on the search, visit the <a href="apidocs-help.html#rst-search">help page</a>.</p>
+        </div>
+      </div>
+
+    </div>
+
+
+  </div>
+</nav>
+    
+    <div class="container-fluid">
+
+      <!-- Side navigation -->
+      <div class="sidebarcontainer" style="display: none;">
+        
+        <div class="sidebar"><nav class="sidebar">
+  
+
+  <div>
+
+      <div class="thingTitle">
+        <span>Class</span>
+        <code class="thisobject"><a href="aligned.sources.databricks.UnityCatalogTableAllJob.html" class="internal-link" title="This class"><wbr></wbr>Unity<wbr></wbr>Catalog<wbr></wbr>Table<wbr></wbr>All<wbr></wbr>Job</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        
+        
+
+        <div class="childrenKindTitle">Methods</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#filter" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.filter">filter</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#to_lazy_polars" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.to_lazy_polars">to<wbr></wbr>_lazy<wbr></wbr>_polars</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#to_pandas" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.to_pandas">to<wbr></wbr>_pandas</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        <div class="childrenKindTitle">Inherited Methods</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#from_convertable" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_convertable">from<wbr></wbr>_convertable</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#from_dict" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_dict">from<wbr></wbr>_dict</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#from_lazy_function" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_lazy_function">from<wbr></wbr>_lazy<wbr></wbr>_function</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#from_polars_df" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_polars_df">from<wbr></wbr>_polars<wbr></wbr>_df</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#aggregate" class="internal-link" title="aligned.retrieval_job.RetrievalJob.aggregate">aggregate</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#cache_raw_data" class="internal-link" title="aligned.retrieval_job.RetrievalJob.cache_raw_data">cache<wbr></wbr>_raw<wbr></wbr>_data</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#cached_at" class="internal-link" title="aligned.retrieval_job.RetrievalJob.cached_at">cached<wbr></wbr>_at</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#chunked" class="internal-link" title="aligned.retrieval_job.RetrievalJob.chunked">chunked</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#combined_features" class="internal-link" title="aligned.retrieval_job.RetrievalJob.combined_features">combined<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#derive_features" class="internal-link" title="aligned.retrieval_job.RetrievalJob.derive_features">derive<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#describe" class="internal-link" title="aligned.retrieval_job.RetrievalJob.describe">describe</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#drop_duplicate_entities" class="internal-link" title="aligned.retrieval_job.RetrievalJob.drop_duplicate_entities">drop<wbr></wbr>_duplicate<wbr></wbr>_entities</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#drop_invalid" class="internal-link" title="aligned.retrieval_job.RetrievalJob.drop_invalid">drop<wbr></wbr>_invalid</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#ensure_types" class="internal-link" title="aligned.retrieval_job.RetrievalJob.ensure_types">ensure<wbr></wbr>_types</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#fill_missing_columns" class="internal-link" title="aligned.retrieval_job.RetrievalJob.fill_missing_columns">fill<wbr></wbr>_missing<wbr></wbr>_columns</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#ignore_event_timestamp" class="internal-link" title="aligned.retrieval_job.RetrievalJob.ignore_event_timestamp">ignore<wbr></wbr>_event<wbr></wbr>_timestamp</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#inject_store" class="internal-link" title="aligned.retrieval_job.RetrievalJob.inject_store">inject<wbr></wbr>_store</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#join" class="internal-link" title="aligned.retrieval_job.RetrievalJob.join">join</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#join_asof" class="internal-link" title="aligned.retrieval_job.RetrievalJob.join_asof">join<wbr></wbr>_asof</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#listen_to_events" class="internal-link" title="aligned.retrieval_job.RetrievalJob.listen_to_events">listen<wbr></wbr>_to<wbr></wbr>_events</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#log_each_job" class="internal-link" title="aligned.retrieval_job.RetrievalJob.log_each_job">log<wbr></wbr>_each<wbr></wbr>_job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#monitor_time_used" class="internal-link" title="aligned.retrieval_job.RetrievalJob.monitor_time_used">monitor<wbr></wbr>_time<wbr></wbr>_used</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#on_load" class="internal-link" title="aligned.retrieval_job.RetrievalJob.on_load">on<wbr></wbr>_load</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#polars_method" class="internal-link" title="aligned.retrieval_job.RetrievalJob.polars_method">polars<wbr></wbr>_method</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#remove_derived_features" class="internal-link" title="aligned.retrieval_job.RetrievalJob.remove_derived_features">remove<wbr></wbr>_derived<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#rename" class="internal-link" title="aligned.retrieval_job.RetrievalJob.rename">rename</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#return_invalid" class="internal-link" title="aligned.retrieval_job.RetrievalJob.return_invalid">return<wbr></wbr>_invalid</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#select" class="internal-link" title="aligned.retrieval_job.RetrievalJob.select">select</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#select_columns" class="internal-link" title="aligned.retrieval_job.RetrievalJob.select_columns">select<wbr></wbr>_columns</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#split" class="internal-link" title="aligned.retrieval_job.RetrievalJob.split">split</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#to_polars" class="internal-link" title="aligned.retrieval_job.RetrievalJob.to_polars">to<wbr></wbr>_polars</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#train_test" class="internal-link" title="aligned.retrieval_job.RetrievalJob.train_test">train<wbr></wbr>_test</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#train_test_validate" class="internal-link" title="aligned.retrieval_job.RetrievalJob.train_test_validate">train<wbr></wbr>_test<wbr></wbr>_validate</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#transform_polars" class="internal-link" title="aligned.retrieval_job.RetrievalJob.transform_polars">transform<wbr></wbr>_polars</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#unique_entities" class="internal-link" title="aligned.retrieval_job.RetrievalJob.unique_entities">unique<wbr></wbr>_entities</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#unique_on" class="internal-link" title="aligned.retrieval_job.RetrievalJob.unique_on">unique<wbr></wbr>_on</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#unpack_embeddings" class="internal-link" title="aligned.retrieval_job.RetrievalJob.unpack_embeddings">unpack<wbr></wbr>_embeddings</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#update_vector_index" class="internal-link" title="aligned.retrieval_job.RetrievalJob.update_vector_index">update<wbr></wbr>_vector<wbr></wbr>_index</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#validate_entites" class="internal-link" title="aligned.retrieval_job.RetrievalJob.validate_entites">validate<wbr></wbr>_entites</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#with_request" class="internal-link" title="aligned.retrieval_job.RetrievalJob.with_request">with<wbr></wbr>_request</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#with_subfeatures" class="internal-link" title="aligned.retrieval_job.RetrievalJob.with_subfeatures">with<wbr></wbr>_subfeatures</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#without_derived_features" class="internal-link" title="aligned.retrieval_job.RetrievalJob.without_derived_features">without<wbr></wbr>_derived<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#write_to_source" class="internal-link" title="aligned.retrieval_job.RetrievalJob.write_to_source">write<wbr></wbr>_to<wbr></wbr>_source</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        <div class="childrenKindTitle">Attributes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#config" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.config">config</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#limit" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.limit">limit</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#request" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.request">request</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#table" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.table">table</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#where" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.where">where</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#request_result" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.request_result">request<wbr></wbr>_result</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#retrieval_requests" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.retrieval_requests">retrieval<wbr></wbr>_requests</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        <div class="childrenKindTitle">Inherited Attributes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#loaded_columns" class="internal-link" title="aligned.retrieval_job.RetrievalJob.loaded_columns">loaded<wbr></wbr>_columns</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+        
+      </div>
+  </div><div>
+
+      <div class="thingTitle">
+        <span>Module</span>
+        <code><a href="aligned.sources.databricks.html" class="internal-link" title="The parent of this class">databricks</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        <div class="childrenKindTitle">Classes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.DatabricksAuthConfig.html" class="internal-link" title="aligned.sources.databricks.DatabricksAuthConfig"><wbr></wbr>Databricks<wbr></wbr>Auth<wbr></wbr>Config</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.DatabricksConnectionConfig.html" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig"><wbr></wbr>Databricks<wbr></wbr>Connection<wbr></wbr>Config</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.DatabricksSource.html" class="internal-link" title="aligned.sources.databricks.DatabricksSource"><wbr></wbr>Databricks<wbr></wbr>Source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.SparkDataType.html" class="internal-link" title="aligned.sources.databricks.SparkDataType"><wbr></wbr>Spark<wbr></wbr>Data<wbr></wbr>Type</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.UCFeatureTableSource.html" class="internal-link" title="aligned.sources.databricks.UCFeatureTableSource"><wbr></wbr>UCFeature<wbr></wbr>Table<wbr></wbr>Source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.UCSqlSource.html" class="internal-link" title="aligned.sources.databricks.UCSqlSource"><wbr></wbr>UCSql<wbr></wbr>Source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.UCTableSource.html" class="internal-link" title="aligned.sources.databricks.UCTableSource"><wbr></wbr>UCTable<wbr></wbr>Source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.UnityCatalog.html" class="internal-link" title="aligned.sources.databricks.UnityCatalog"><wbr></wbr>Unity<wbr></wbr>Catalog</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.UnityCatalogSchema.html" class="internal-link" title="aligned.sources.databricks.UnityCatalogSchema"><wbr></wbr>Unity<wbr></wbr>Catalog<wbr></wbr>Schema</a></code>
+            </div>
+        
+
+    </li><li class=" thisobject">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.UnityCatalogTableAllJob.html" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob"><wbr></wbr>Unity<wbr></wbr>Catalog<wbr></wbr>Table<wbr></wbr>All<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.UnityCatalogTableConfig.html" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableConfig"><wbr></wbr>Unity<wbr></wbr>Catalog<wbr></wbr>Table<wbr></wbr>Config</a></code>
+            </div>
+        
+
+    </li>
+</ul>
+
+        <div class="childrenKindTitle">Functions</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.html#convert_pyspark_type" class="internal-link" title="aligned.sources.databricks.convert_pyspark_type">convert<wbr></wbr>_pyspark<wbr></wbr>_type</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.html#features_to_read" class="internal-link" title="aligned.sources.databricks.features_to_read">features<wbr></wbr>_to<wbr></wbr>_read</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.html#is_running_on_databricks" class="internal-link" title="aligned.sources.databricks.is_running_on_databricks">is<wbr></wbr>_running<wbr></wbr>_on<wbr></wbr>_databricks</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.html#polars_dtype_to_spark" class="internal-link" title="aligned.sources.databricks.polars_dtype_to_spark">polars<wbr></wbr>_dtype<wbr></wbr>_to<wbr></wbr>_spark</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.html#polars_schema_to_spark" class="internal-link" title="aligned.sources.databricks.polars_schema_to_spark">polars<wbr></wbr>_schema<wbr></wbr>_to<wbr></wbr>_spark</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.html#raise_on_invalid_pyspark_schema" class="internal-link" title="aligned.sources.databricks.raise_on_invalid_pyspark_schema">raise<wbr></wbr>_on<wbr></wbr>_invalid<wbr></wbr>_pyspark<wbr></wbr>_schema</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.html#validate_pyspark_schema" class="internal-link" title="aligned.sources.databricks.validate_pyspark_schema">validate<wbr></wbr>_pyspark<wbr></wbr>_schema</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+
+        <div class="childrenKindTitle">Variables</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.html#logger" class="internal-link" title="aligned.sources.databricks.logger">logger</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div>
+
+</nav>
+        </div>
+        <div id="collapseSideBar">
+          <a class="btn btn-link" onclick="toggleSideBarCollapse()" title="Toggle Sidebar Collapse">
+          </a>
+        </div> 
+        <script src="sidebartoggle.js" type="text/javascript"></script>
+       
+      </div>
+
+      <div id="main" class="">
+        
+
+        
+
+        <div class="page-header">
+          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.sources.html" class="internal-link" title="aligned.sources">sources</a></code><wbr></wbr>.<code><a href="aligned.sources.databricks.html" class="internal-link" title="aligned.sources.databricks">databricks</a></code><wbr></wbr>.<code><a href="aligned.sources.databricks.UnityCatalogTableAllJob.html" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob">UnityCatalogTableAllJob</a></code></code></h1>
+          <div id="showPrivate">
+            <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
+          </div>
+        </div>
+
+        <div class="categoryHeader">
+          class documentation
+        </div>
+
+        <div class="extrasDocstring">
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">UnityCatalogTableAllJob</span>(<a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a>): <a href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L651" class="sourceLink">(source)</a></code></p>
+          <p><a href="classIndex.html#aligned.sources.databricks.UnityCatalogTableAllJob">View In Hierarchy</a></p>
+        </div>
+
+        <div class="moduleDocstring">
+          <div><p class="undocumented">Undocumented</p></div>
+        </div>
+
+        <div id="splitTables">
+          <table class="children sortable" id="id273">
+  
+  
+  <tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#filter" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.filter">filter</a></code></td>
+    <td>Filters based on a condition referencing either a feature, a feature name, or an polars expression to filter on.</td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#to_lazy_polars" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.to_lazy_polars">to<wbr></wbr>_lazy<wbr></wbr>_polars</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#to_pandas" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.to_pandas">to<wbr></wbr>_pandas</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#config" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.config">config</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#limit" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.limit">limit</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#request" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.request">request</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#table" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.table">table</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="instancevariable">
+    
+    <td>Instance Variable</td>
+    <td><code><a href="#where" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.where">where</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="property">
+    
+    <td>Property</td>
+    <td><code><a href="#request_result" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.request_result">request<wbr></wbr>_result</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="property">
+    
+    <td>Property</td>
+    <td><code><a href="#retrieval_requests" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob.retrieval_requests">retrieval<wbr></wbr>_requests</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr>
+</table>
+          
+            <p class="inheritedFrom">
+              Inherited from <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:
+            </p>
+            <table class="children sortable" id="id274">
+  
+  
+  <tr class="basestaticmethod">
+    
+    <td>Static Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#from_convertable" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_convertable">from<wbr></wbr>_convertable</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basestaticmethod">
+    
+    <td>Static Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#from_dict" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_dict">from<wbr></wbr>_dict</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basestaticmethod">
+    
+    <td>Static Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#from_lazy_function" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_lazy_function">from<wbr></wbr>_lazy<wbr></wbr>_function</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basestaticmethod">
+    
+    <td>Static Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#from_polars_df" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_polars_df">from<wbr></wbr>_polars<wbr></wbr>_df</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#aggregate" class="internal-link" title="aligned.retrieval_job.RetrievalJob.aggregate">aggregate</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#cache_raw_data" class="internal-link" title="aligned.retrieval_job.RetrievalJob.cache_raw_data">cache<wbr></wbr>_raw<wbr></wbr>_data</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#cached_at" class="internal-link" title="aligned.retrieval_job.RetrievalJob.cached_at">cached<wbr></wbr>_at</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#chunked" class="internal-link" title="aligned.retrieval_job.RetrievalJob.chunked">chunked</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#combined_features" class="internal-link" title="aligned.retrieval_job.RetrievalJob.combined_features">combined<wbr></wbr>_features</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#derive_features" class="internal-link" title="aligned.retrieval_job.RetrievalJob.derive_features">derive<wbr></wbr>_features</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#describe" class="internal-link" title="aligned.retrieval_job.RetrievalJob.describe">describe</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#drop_duplicate_entities" class="internal-link" title="aligned.retrieval_job.RetrievalJob.drop_duplicate_entities">drop<wbr></wbr>_duplicate<wbr></wbr>_entities</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#drop_invalid" class="internal-link" title="aligned.retrieval_job.RetrievalJob.drop_invalid">drop<wbr></wbr>_invalid</a></code></td>
+    <td>Drops invalid row based on the defined features.</td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#ensure_types" class="internal-link" title="aligned.retrieval_job.RetrievalJob.ensure_types">ensure<wbr></wbr>_types</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#fill_missing_columns" class="internal-link" title="aligned.retrieval_job.RetrievalJob.fill_missing_columns">fill<wbr></wbr>_missing<wbr></wbr>_columns</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#ignore_event_timestamp" class="internal-link" title="aligned.retrieval_job.RetrievalJob.ignore_event_timestamp">ignore<wbr></wbr>_event<wbr></wbr>_timestamp</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#inject_store" class="internal-link" title="aligned.retrieval_job.RetrievalJob.inject_store">inject<wbr></wbr>_store</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#join" class="internal-link" title="aligned.retrieval_job.RetrievalJob.join">join</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#join_asof" class="internal-link" title="aligned.retrieval_job.RetrievalJob.join_asof">join<wbr></wbr>_asof</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#listen_to_events" class="internal-link" title="aligned.retrieval_job.RetrievalJob.listen_to_events">listen<wbr></wbr>_to<wbr></wbr>_events</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#log_each_job" class="internal-link" title="aligned.retrieval_job.RetrievalJob.log_each_job">log<wbr></wbr>_each<wbr></wbr>_job</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#monitor_time_used" class="internal-link" title="aligned.retrieval_job.RetrievalJob.monitor_time_used">monitor<wbr></wbr>_time<wbr></wbr>_used</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#on_load" class="internal-link" title="aligned.retrieval_job.RetrievalJob.on_load">on<wbr></wbr>_load</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#polars_method" class="internal-link" title="aligned.retrieval_job.RetrievalJob.polars_method">polars<wbr></wbr>_method</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#remove_derived_features" class="internal-link" title="aligned.retrieval_job.RetrievalJob.remove_derived_features">remove<wbr></wbr>_derived<wbr></wbr>_features</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#rename" class="internal-link" title="aligned.retrieval_job.RetrievalJob.rename">rename</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#return_invalid" class="internal-link" title="aligned.retrieval_job.RetrievalJob.return_invalid">return<wbr></wbr>_invalid</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#select" class="internal-link" title="aligned.retrieval_job.RetrievalJob.select">select</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#select_columns" class="internal-link" title="aligned.retrieval_job.RetrievalJob.select_columns">select<wbr></wbr>_columns</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#split" class="internal-link" title="aligned.retrieval_job.RetrievalJob.split">split</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Async Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#to_polars" class="internal-link" title="aligned.retrieval_job.RetrievalJob.to_polars">to<wbr></wbr>_polars</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#train_test" class="internal-link" title="aligned.retrieval_job.RetrievalJob.train_test">train<wbr></wbr>_test</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#train_test_validate" class="internal-link" title="aligned.retrieval_job.RetrievalJob.train_test_validate">train<wbr></wbr>_test<wbr></wbr>_validate</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#transform_polars" class="internal-link" title="aligned.retrieval_job.RetrievalJob.transform_polars">transform<wbr></wbr>_polars</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#unique_entities" class="internal-link" title="aligned.retrieval_job.RetrievalJob.unique_entities">unique<wbr></wbr>_entities</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#unique_on" class="internal-link" title="aligned.retrieval_job.RetrievalJob.unique_on">unique<wbr></wbr>_on</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#unpack_embeddings" class="internal-link" title="aligned.retrieval_job.RetrievalJob.unpack_embeddings">unpack<wbr></wbr>_embeddings</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#update_vector_index" class="internal-link" title="aligned.retrieval_job.RetrievalJob.update_vector_index">update<wbr></wbr>_vector<wbr></wbr>_index</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#validate_entites" class="internal-link" title="aligned.retrieval_job.RetrievalJob.validate_entites">validate<wbr></wbr>_entites</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#with_request" class="internal-link" title="aligned.retrieval_job.RetrievalJob.with_request">with<wbr></wbr>_request</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#with_subfeatures" class="internal-link" title="aligned.retrieval_job.RetrievalJob.with_subfeatures">with<wbr></wbr>_subfeatures</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#without_derived_features" class="internal-link" title="aligned.retrieval_job.RetrievalJob.without_derived_features">without<wbr></wbr>_derived<wbr></wbr>_features</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Async Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#write_to_source" class="internal-link" title="aligned.retrieval_job.RetrievalJob.write_to_source">write<wbr></wbr>_to<wbr></wbr>_source</a></code></td>
+    <td>Writes the output of the retrieval job to the passed source.</td>
+  </tr><tr class="baseproperty">
+    
+    <td>Property</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#loaded_columns" class="internal-link" title="aligned.retrieval_job.RetrievalJob.loaded_columns">loaded<wbr></wbr>_columns</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr>
+</table>
+            
+
+            
+        </div>
+
+        <div id="childList">
+          <div class="basemethod">
+  
+  
+  <a name="aligned.sources.databricks.UnityCatalogTableAllJob.filter">
+    
+  </a>
+  <a name="filter">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">filter</span><span class="function-signature">(self, condition: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | Feature | pl.Expr</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L667">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#filter" title="aligned.sources.databricks.UnityCatalogTableAllJob.filter">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.retrieval_job.RetrievalJob.html#filter" class="internal-link">aligned.retrieval_job.RetrievalJob.filter</a></code></div>
+    <div><p>Filters based on a condition referencing either a feature,
+a feature name, or an polars expression to filter on.</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.sources.databricks.UnityCatalogTableAllJob.to_lazy_polars">
+    
+  </a>
+  <a name="to_lazy_polars">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">to_lazy_polars</span><span class="function-signature">(self) -&gt; <code>pl.LazyFrame</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L691">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#to_lazy_polars" title="aligned.sources.databricks.UnityCatalogTableAllJob.to_lazy_polars">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.retrieval_job.RetrievalJob.html#to_lazy_polars" class="internal-link">aligned.retrieval_job.RetrievalJob.to_lazy_polars</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.sources.databricks.UnityCatalogTableAllJob.to_pandas">
+    
+  </a>
+  <a name="to_pandas">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">to_pandas</span><span class="function-signature">(self) -&gt; <code>pd.DataFrame</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L676">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#to_pandas" title="aligned.sources.databricks.UnityCatalogTableAllJob.to_pandas">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.retrieval_job.RetrievalJob.html#to_pandas" class="internal-link">aligned.retrieval_job.RetrievalJob.to_pandas</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.sources.databricks.UnityCatalogTableAllJob.config">
+    
+  </a>
+  <a name="config">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">config</span>: <code><a href="aligned.sources.databricks.DatabricksConnectionConfig.html" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig">DatabricksConnectionConfig</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L653">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#config" title="aligned.sources.databricks.UnityCatalogTableAllJob.config">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.sources.databricks.UnityCatalogTableAllJob.limit">
+    
+  </a>
+  <a name="limit">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">limit</span>: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L656">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#limit" title="aligned.sources.databricks.UnityCatalogTableAllJob.limit">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.sources.databricks.UnityCatalogTableAllJob.request">
+    
+  </a>
+  <a name="request">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">request</span>: <code>RetrievalRequest</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L655">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#request" title="aligned.sources.databricks.UnityCatalogTableAllJob.request">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.sources.databricks.UnityCatalogTableAllJob.table">
+    
+  </a>
+  <a name="table">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">table</span>: <code><a href="aligned.sources.databricks.UnityCatalogTableConfig.html" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableConfig">UnityCatalogTableConfig</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L654">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#table" title="aligned.sources.databricks.UnityCatalogTableAllJob.table">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseinstancevariable">
+  
+  
+  <a name="aligned.sources.databricks.UnityCatalogTableAllJob.where">
+    
+  </a>
+  <a name="where">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">where</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L657">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#where" title="aligned.sources.databricks.UnityCatalogTableAllJob.where">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseproperty">
+  
+  
+  <a name="aligned.sources.databricks.UnityCatalogTableAllJob.request_result">
+    
+  </a>
+  <a name="request_result">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">request_result</span>: <code>RequestResult</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L659">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#request_result" title="aligned.sources.databricks.UnityCatalogTableAllJob.request_result">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.retrieval_job.RetrievalJob.html#request_result" class="internal-link">aligned.retrieval_job.RetrievalJob.request_result</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseproperty">
+  
+  
+  <a name="aligned.sources.databricks.UnityCatalogTableAllJob.retrieval_requests">
+    
+  </a>
+  <a name="retrieval_requests">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">retrieval_requests</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest]</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L663">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#retrieval_requests" title="aligned.sources.databricks.UnityCatalogTableAllJob.retrieval_requests">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.retrieval_job.RetrievalJob.html#retrieval_requests" class="internal-link">aligned.retrieval_job.RetrievalJob.retrieval_requests</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div>
+        </div>
+      
+      </div>
+    </div>
+
+    <footer class="navbar navbar-default">
+
+  
+  <div class="container-fluid">
+    <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
+  generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
+    24.11.2 at 2025-03-05 23:11:44.
+  </div>
+
+  <!-- Search related scripts needs to be loaded at the end of HTML 
+    parsing not to introduce overhead and display HTML data asap -->
+  <script src="ajax.js" type="text/javascript"></script>
+  <script src="searchlib.js" type="text/javascript"></script>
+  <script src="search.js" type="text/javascript"></script>
+
+</footer>
+  
+    <script src="pydoctor.js" type="text/javascript"></script>
+
+  </body>
+</html>

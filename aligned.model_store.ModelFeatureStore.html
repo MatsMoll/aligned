@@ -1,0 +1,1838 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+          "DTD/xhtml1-strict.dtd">
+<html>
+  
+
+  <head>
+    
+    <title>aligned.model_store.ModelFeatureStore</title>
+    <meta name="generator" content="pydoctor 24.11.2"> 
+        
+    </meta>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1 maximum-scale=1" />
+    <link rel="stylesheet" type="text/css" href="bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="apidocs.css" />
+    <link rel="stylesheet" type="text/css" href="extra.css" />
+    
+</head>
+
+  <body>
+
+    
+
+    <nav class="navbar navbar-default mainnavbar">
+      
+  
+  <div class="container-fluid">
+
+
+    <div class="navbar-header">
+      
+      <div class="navlinks">
+        <span class="navbar-brand">
+          <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a> <a href="index.html">API Documentation</a>
+        </span>
+
+        <a href="moduleIndex.html">
+          Modules
+        </a>
+
+        <a href="classIndex.html">
+          Classes
+        </a>
+
+        <a href="nameIndex.html">
+          Names
+        </a>
+
+        <div id="search-box-container">
+          <div class="input-group">
+            <input id="search-box" type="search" name="search-query" placeholder="Search..." aria-label="Search" minlength="2" class="form-control" autocomplete="off" />
+            
+            <span class="input-group-btn">
+              <a style="display: none;" class="btn btn-default" id="search-clear-button" title="Clear" onclick="clearSearch()"><img src="fonts/x-circle.svg" alt="Clear" /></a>
+              <a class="btn btn-default" id="apidocs-help-button" title="Help" href="apidocs-help.html"><img src="fonts/info.svg" alt="Help" /></a>
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="search-results-container" style="display: none;">
+        
+        <div id="search-buttons">
+          <span class="label label-default" id="search-docstrings-button">
+          <label class="checkbox-inline">
+            <input type="checkbox" id="toggle-search-in-docstrings-checkbox" value="false" onclick="toggleSearchInDocstrings()">
+              search in docstrings
+            </input>
+          </label>
+          </span>
+          
+        </div>
+        
+        <noscript>
+            <h1>Cannot search: JavaScript is not supported/enabled in your browser.</h1>
+        </noscript>
+
+        <div id="search-status"> </div>
+
+        <div class="warning" id="search-warn-box" style="display: none;">
+          <p class="rst-last"><span id="search-warn"></span></p>
+        </div>
+
+        <table id="search-results">
+          <!-- Filled dynamically by JS -->
+        </table>
+        
+        <div style="margin-top: 10px;">
+          <p>For more information on the search, visit the <a href="apidocs-help.html#rst-search">help page</a>.</p>
+        </div>
+      </div>
+
+    </div>
+
+
+  </div>
+</nav>
+    
+    <div class="container-fluid">
+
+      <!-- Side navigation -->
+      <div class="sidebarcontainer" style="display: none;">
+        
+        <div class="sidebar"><nav class="sidebar">
+  
+
+  <div>
+
+      <div class="thingTitle">
+        <span>Class</span>
+        <code class="thisobject"><a href="aligned.model_store.ModelFeatureStore.html" class="internal-link" title="This class"><wbr></wbr>Model<wbr></wbr>Feature<wbr></wbr>Store</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        
+        
+
+        <div class="childrenKindTitle">Methods</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#all_predictions" class="internal-link" title="aligned.model_store.ModelFeatureStore.all_predictions">all<wbr></wbr>_predictions</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#cached_at" class="internal-link" title="aligned.model_store.ModelFeatureStore.cached_at">cached<wbr></wbr>_at</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#depends_on" class="internal-link" title="aligned.model_store.ModelFeatureStore.depends_on">depends<wbr></wbr>_on</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#feature_references_for" class="internal-link" title="aligned.model_store.ModelFeatureStore.feature_references_for">feature<wbr></wbr>_references<wbr></wbr>_for</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#features_for" class="internal-link" title="aligned.model_store.ModelFeatureStore.features_for">features<wbr></wbr>_for</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#freshness" class="internal-link" title="aligned.model_store.ModelFeatureStore.freshness">freshness</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#has_exposed_model" class="internal-link" title="aligned.model_store.ModelFeatureStore.has_exposed_model">has<wbr></wbr>_exposed<wbr></wbr>_model</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#has_one_source_for_input_features" class="internal-link" title="aligned.model_store.ModelFeatureStore.has_one_source_for_input_features">has<wbr></wbr>_one<wbr></wbr>_source<wbr></wbr>_for<wbr></wbr>_input<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#input_features" class="internal-link" title="aligned.model_store.ModelFeatureStore.input_features">input<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#input_freshness" class="internal-link" title="aligned.model_store.ModelFeatureStore.input_freshness">input<wbr></wbr>_freshness</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#input_request" class="internal-link" title="aligned.model_store.ModelFeatureStore.input_request">input<wbr></wbr>_request</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#insert_predictions" class="internal-link" title="aligned.model_store.ModelFeatureStore.insert_predictions">insert<wbr></wbr>_predictions</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#needed_entities" class="internal-link" title="aligned.model_store.ModelFeatureStore.needed_entities">needed<wbr></wbr>_entities</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#predict_over" class="internal-link" title="aligned.model_store.ModelFeatureStore.predict_over">predict<wbr></wbr>_over</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#prediction_freshness" class="internal-link" title="aligned.model_store.ModelFeatureStore.prediction_freshness">prediction<wbr></wbr>_freshness</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#prediction_request" class="internal-link" title="aligned.model_store.ModelFeatureStore.prediction_request">prediction<wbr></wbr>_request</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#predictions_between" class="internal-link" title="aligned.model_store.ModelFeatureStore.predictions_between">predictions<wbr></wbr>_between</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#predictions_for" class="internal-link" title="aligned.model_store.ModelFeatureStore.predictions_for">predictions<wbr></wbr>_for</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#process_features" class="internal-link" title="aligned.model_store.ModelFeatureStore.process_features">process<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#raw_string_features" class="internal-link" title="aligned.model_store.ModelFeatureStore.raw_string_features">raw<wbr></wbr>_string<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#request" class="internal-link" title="aligned.model_store.ModelFeatureStore.request">request</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#upsert_predictions" class="internal-link" title="aligned.model_store.ModelFeatureStore.upsert_predictions">upsert<wbr></wbr>_predictions</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#using_model" class="internal-link" title="aligned.model_store.ModelFeatureStore.using_model">using<wbr></wbr>_model</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#using_source" class="internal-link" title="aligned.model_store.ModelFeatureStore.using_source">using<wbr></wbr>_source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#using_version" class="internal-link" title="aligned.model_store.ModelFeatureStore.using_version">using<wbr></wbr>_version</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#with_labels" class="internal-link" title="aligned.model_store.ModelFeatureStore.with_labels">with<wbr></wbr>_labels</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+
+        <div class="childrenKindTitle">Attributes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#model" class="internal-link" title="aligned.model_store.ModelFeatureStore.model">model</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#model_to_use" class="internal-link" title="aligned.model_store.ModelFeatureStore.model_to_use">model<wbr></wbr>_to<wbr></wbr>_use</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#selected_version" class="internal-link" title="aligned.model_store.ModelFeatureStore.selected_version">selected<wbr></wbr>_version</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#store" class="internal-link" title="aligned.model_store.ModelFeatureStore.store">store</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#dataset_store" class="internal-link" title="aligned.model_store.ModelFeatureStore.dataset_store">dataset<wbr></wbr>_store</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#location" class="internal-link" title="aligned.model_store.ModelFeatureStore.location">location</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#source" class="internal-link" title="aligned.model_store.ModelFeatureStore.source">source</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div><div>
+
+      <div class="thingTitle">
+        <span>Module</span>
+        <code><a href="aligned.model_store.html" class="internal-link" title="The parent of this class">model<wbr></wbr>_store</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        <div class="childrenKindTitle">Classes</div>
+        <ul>
+    
+    <li class=" thisobject">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.model_store.ModelFeatureStore.html" class="internal-link" title="aligned.model_store.ModelFeatureStore"><wbr></wbr>Model<wbr></wbr>Feature<wbr></wbr>Store</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.model_store.SupervisedModelFeatureStore.html" class="internal-link" title="aligned.model_store.SupervisedModelFeatureStore"><wbr></wbr>Supervised<wbr></wbr>Model<wbr></wbr>Feature<wbr></wbr>Store</a></code>
+            </div>
+        
+
+    </li>
+</ul>
+
+        
+         
+
+        
+         
+
+        <div class="childrenKindTitle">Variables</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.model_store.html#logger" class="internal-link" title="aligned.model_store.logger">logger</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div>
+
+</nav>
+        </div>
+        <div id="collapseSideBar">
+          <a class="btn btn-link" onclick="toggleSideBarCollapse()" title="Toggle Sidebar Collapse">
+          </a>
+        </div> 
+        <script src="sidebartoggle.js" type="text/javascript"></script>
+       
+      </div>
+
+      <div id="main" class="">
+        
+
+        
+
+        <div class="page-header">
+          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.model_store.html" class="internal-link" title="aligned.model_store">model_store</a></code><wbr></wbr>.<code><a href="aligned.model_store.ModelFeatureStore.html" class="internal-link" title="aligned.model_store.ModelFeatureStore">ModelFeatureStore</a></code></code></h1>
+          <div id="showPrivate">
+            <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
+          </div>
+        </div>
+
+        <div class="categoryHeader">
+          class documentation
+        </div>
+
+        <div class="extrasDocstring">
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">ModelFeatureStore</span>: <a href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L34" class="sourceLink">(source)</a></code></p>
+          <p><a href="classIndex.html#aligned.model_store.ModelFeatureStore">View In Hierarchy</a></p>
+        </div>
+
+        <div class="moduleDocstring">
+          <div><p class="undocumented">Undocumented</p></div>
+        </div>
+
+        <div id="splitTables">
+          <table class="children sortable" id="id84">
+  
+  
+  <tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#all_predictions" class="internal-link" title="aligned.model_store.ModelFeatureStore.all_predictions">all<wbr></wbr>_predictions</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#cached_at" class="internal-link" title="aligned.model_store.ModelFeatureStore.cached_at">cached<wbr></wbr>_at</a></code></td>
+    <td>Loads the model features from a pre computed location</td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#depends_on" class="internal-link" title="aligned.model_store.ModelFeatureStore.depends_on">depends<wbr></wbr>_on</a></code></td>
+    <td>Returns the views and models that the model depend on to compute it's output.</td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#feature_references_for" class="internal-link" title="aligned.model_store.ModelFeatureStore.feature_references_for">feature<wbr></wbr>_references<wbr></wbr>_for</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#features_for" class="internal-link" title="aligned.model_store.ModelFeatureStore.features_for">features<wbr></wbr>_for</a></code></td>
+    <td>Returns the features for the given entities</td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#freshness" class="internal-link" title="aligned.model_store.ModelFeatureStore.freshness">freshness</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#has_exposed_model" class="internal-link" title="aligned.model_store.ModelFeatureStore.has_exposed_model">has<wbr></wbr>_exposed<wbr></wbr>_model</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#has_one_source_for_input_features" class="internal-link" title="aligned.model_store.ModelFeatureStore.has_one_source_for_input_features">has<wbr></wbr>_one<wbr></wbr>_source<wbr></wbr>_for<wbr></wbr>_input<wbr></wbr>_features</a></code></td>
+    <td>If the input features are from the same source.</td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#input_features" class="internal-link" title="aligned.model_store.ModelFeatureStore.input_features">input<wbr></wbr>_features</a></code></td>
+    <td>The input features to load, based on the input features in a model.</td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#input_freshness" class="internal-link" title="aligned.model_store.ModelFeatureStore.input_freshness">input<wbr></wbr>_freshness</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#input_request" class="internal-link" title="aligned.model_store.ModelFeatureStore.input_request">input<wbr></wbr>_request</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#insert_predictions" class="internal-link" title="aligned.model_store.ModelFeatureStore.insert_predictions">insert<wbr></wbr>_predictions</a></code></td>
+    <td>Writes data to a source defined as a prediction source</td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#needed_entities" class="internal-link" title="aligned.model_store.ModelFeatureStore.needed_entities">needed<wbr></wbr>_entities</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#predict_over" class="internal-link" title="aligned.model_store.ModelFeatureStore.predict_over">predict<wbr></wbr>_over</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#prediction_freshness" class="internal-link" title="aligned.model_store.ModelFeatureStore.prediction_freshness">prediction<wbr></wbr>_freshness</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#prediction_request" class="internal-link" title="aligned.model_store.ModelFeatureStore.prediction_request">prediction<wbr></wbr>_request</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#predictions_between" class="internal-link" title="aligned.model_store.ModelFeatureStore.predictions_between">predictions<wbr></wbr>_between</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#predictions_for" class="internal-link" title="aligned.model_store.ModelFeatureStore.predictions_for">predictions<wbr></wbr>_for</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#process_features" class="internal-link" title="aligned.model_store.ModelFeatureStore.process_features">process<wbr></wbr>_features</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#raw_string_features" class="internal-link" title="aligned.model_store.ModelFeatureStore.raw_string_features">raw<wbr></wbr>_string<wbr></wbr>_features</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#request" class="internal-link" title="aligned.model_store.ModelFeatureStore.request">request</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#upsert_predictions" class="internal-link" title="aligned.model_store.ModelFeatureStore.upsert_predictions">upsert<wbr></wbr>_predictions</a></code></td>
+    <td>Upserts data to a source defined as a prediction source</td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#using_model" class="internal-link" title="aligned.model_store.ModelFeatureStore.using_model">using<wbr></wbr>_model</a></code></td>
+    <td>Makes it possible to define which model to use for predictions.</td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#using_source" class="internal-link" title="aligned.model_store.ModelFeatureStore.using_source">using<wbr></wbr>_source</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#using_version" class="internal-link" title="aligned.model_store.ModelFeatureStore.using_version">using<wbr></wbr>_version</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#with_labels" class="internal-link" title="aligned.model_store.ModelFeatureStore.with_labels">with<wbr></wbr>_labels</a></code></td>
+    <td>Will also load the labels for the model</td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#model" class="internal-link" title="aligned.model_store.ModelFeatureStore.model">model</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#model_to_use" class="internal-link" title="aligned.model_store.ModelFeatureStore.model_to_use">model<wbr></wbr>_to<wbr></wbr>_use</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#selected_version" class="internal-link" title="aligned.model_store.ModelFeatureStore.selected_version">selected<wbr></wbr>_version</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#store" class="internal-link" title="aligned.model_store.ModelFeatureStore.store">store</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="property">
+    
+    <td>Property</td>
+    <td><code><a href="#dataset_store" class="internal-link" title="aligned.model_store.ModelFeatureStore.dataset_store">dataset<wbr></wbr>_store</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="property">
+    
+    <td>Property</td>
+    <td><code><a href="#location" class="internal-link" title="aligned.model_store.ModelFeatureStore.location">location</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="property">
+    
+    <td>Property</td>
+    <td><code><a href="#source" class="internal-link" title="aligned.model_store.ModelFeatureStore.source">source</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr>
+</table>
+          
+
+            
+        </div>
+
+        <div id="childList">
+          <div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.all_predictions">
+    
+  </a>
+  <a name="all_predictions">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">all_predictions</span><span class="function-signature">(self, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L403">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#all_predictions" title="aligned.model_store.ModelFeatureStore.all_predictions">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.cached_at">
+    
+  </a>
+  <a name="cached_at">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">cached_at</span><span class="function-signature">(self, location: <code>DataFileReference</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L319">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#cached_at" title="aligned.model_store.ModelFeatureStore.cached_at">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p>Loads the model features from a pre computed location</p>
+<p>```python
+from aligned import FileSource</p>
+<p>store = await FileSource.json_at("features-latest.json").feature_store()</p>
+<p>cached_features = FileSource.parquet_at("titanic_features.parquet")</p>
+<dl class="rst-docutils">
+<dt>df = store.model("titanic")</dt>
+<dd>.cached_at(cached_features).to_polars()</dd>
+</dl>
+<p>print(df.collect())
+&gt;&gt;&gt; ┌──────────────┬───────┬─────────┬─────────────────────┬──────────────┐
+&gt;&gt;&gt; │ passenger_id ┆ is_mr ┆ is_male ┆ constant_filled_age ┆ has_siblings │
+&gt;&gt;&gt; │ ---          ┆ ---   ┆ ---     ┆ ---                 ┆ ---          │
+&gt;&gt;&gt; │ i32          ┆ bool  ┆ bool    ┆ f64                 ┆ bool         │
+&gt;&gt;&gt; ╞══════════════╪═══════╪═════════╪═════════════════════╪══════════════╡
+&gt;&gt;&gt; │ 1            ┆ true  ┆ true    ┆ 22.0                ┆ true         │
+&gt;&gt;&gt; │ 2            ┆ false ┆ false   ┆ 38.0                ┆ true         │
+&gt;&gt;&gt; │ 3            ┆ false ┆ false   ┆ 26.0                ┆ false        │
+&gt;&gt;&gt; └──────────────┴───────┴─────────┴─────────────────────┴──────────────┘
+```</p>
+<dl class="rst-docutils">
+<dt>Args:</dt>
+<dd>location (DataFileReference): _description_</dd>
+<dt>Returns:</dt>
+<dd>RetrievalJob: _description_</dd>
+</dl>
+</div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.depends_on">
+    
+  </a>
+  <a name="depends_on">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">depends_on</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>FeatureLocation]</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L418">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#depends_on" title="aligned.model_store.ModelFeatureStore.depends_on">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p>Returns the views and models that the model depend on to compute it's output.</p>
+<dl class="rst-docutils">
+<dt>Examples:</dt>
+<dd><p class="rst-first">```python
+@feature_view(name="passenger", ...)
+class Passenger:</p>
+<blockquote>
+<p>passenger_id = Int32().as_entity()</p>
+<p>age = Float()</p>
+</blockquote>
+<p>@feature_view(name="location", ...)
+class Location:</p>
+<blockquote>
+<p>location_id = String().as_entity()</p>
+<p>location_area = Float()</p>
+</blockquote>
+<p>@model_contract(name="some_model", ...)
+class SomeModel:</p>
+<blockquote>
+<p>some_id = String().as_entity()</p>
+<p>some_computed_metric = Int32()</p>
+</blockquote>
+<dl class="rst-docutils">
+<dt>@model_contract(</dt>
+<dd><p class="rst-first">name="new_model",
+features=[</p>
+<blockquote>
+Passenger().age,
+Location().location_area,
+SomeModel().some_computed_metric</blockquote>
+<p class="rst-last">]</p>
+</dd>
+</dl>
+<p>)
+class NewModel:</p>
+<blockquote>
+...</blockquote>
+<p class="rst-last">print(store.model("new_model").depends_on())
+&gt;&gt;&gt; {
+&gt;&gt;&gt;     FeatureLocation(location="feature_view", name="passenger"),
+&gt;&gt;&gt;     FeatureLocation(location="feature_view", name="location"),
+&gt;&gt;&gt;     FeatureLocation(location="model", name="some_model")
+&gt;&gt;&gt; }
+```</p>
+</dd>
+</dl>
+</div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.feature_references_for">
+    
+  </a>
+  <a name="feature_references_for">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">feature_references_for</span><span class="function-signature">(self, version: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>FeatureReference]</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L129">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#feature_references_for" title="aligned.model_store.ModelFeatureStore.feature_references_for">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.features_for">
+    
+  </a>
+  <a name="features_for">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">features_for</span><span class="function-signature">(self, entities: <code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a> | <a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, event_timestamp_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L167">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#features_for" title="aligned.model_store.ModelFeatureStore.features_for">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p>Returns the features for the given entities</p>
+<p>```python
+store = await FileSource.json_at("features-latest.json").feature_store()</p>
+<dl class="rst-docutils">
+<dt>df = store.model("titanic")</dt>
+<dd>.features_for({"passenger_id": [1, 2, 3]}).to_polars()</dd>
+</dl>
+<p>print(df.collect())
+&gt;&gt;&gt; ┌──────────────┬───────┬─────────┬─────────────────────┬──────────────┐
+&gt;&gt;&gt; │ passenger_id ┆ is_mr ┆ is_male ┆ constant_filled_age ┆ has_siblings │
+&gt;&gt;&gt; │ ---          ┆ ---   ┆ ---     ┆ ---                 ┆ ---          │
+&gt;&gt;&gt; │ i32          ┆ bool  ┆ bool    ┆ f64                 ┆ bool         │
+&gt;&gt;&gt; ╞══════════════╪═══════╪═════════╪═════════════════════╪══════════════╡
+&gt;&gt;&gt; │ 1            ┆ true  ┆ true    ┆ 22.0                ┆ true         │
+&gt;&gt;&gt; │ 2            ┆ false ┆ false   ┆ 38.0                ┆ true         │
+&gt;&gt;&gt; │ 3            ┆ false ┆ false   ┆ 26.0                ┆ false        │
+&gt;&gt;&gt; └──────────────┴───────┴─────────┴─────────────────────┴──────────────┘
+```</p>
+<dl class="rst-docutils">
+<dt>Args:</dt>
+<dd>entities (dict[str, list] | RetrievalJob): The entities to fetch features for</dd>
+<dt>Returns:</dt>
+<dd>RetrievalJob: A retrieval job that can be used to fetch the features</dd>
+</dl>
+</div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.freshness">
+    
+  </a>
+  <a name="freshness">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">freshness</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr>FeatureLocation, <wbr></wbr><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>]</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L238">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#freshness" title="aligned.model_store.ModelFeatureStore.freshness">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.has_exposed_model">
+    
+  </a>
+  <a name="has_exposed_model">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">has_exposed_model</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L132">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#has_exposed_model" title="aligned.model_store.ModelFeatureStore.has_exposed_model">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.has_one_source_for_input_features">
+    
+  </a>
+  <a name="has_one_source_for_input_features">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">has_one_source_for_input_features</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L53">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#has_one_source_for_input_features" title="aligned.model_store.ModelFeatureStore.has_one_source_for_input_features">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p>If the input features are from the same source.</p>
+<p>This can be interesting to know in order to automatically predict over
+the input.
+E.g. predict over all data in the source.</p>
+</div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.input_features">
+    
+  </a>
+  <a name="input_features">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">input_features</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>FeatureReference]</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L66">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#input_features" title="aligned.model_store.ModelFeatureStore.input_features">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p>The input features to load, based on the input features in a model.</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.input_freshness">
+    
+  </a>
+  <a name="input_freshness">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">input_freshness</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr>FeatureLocation, <wbr></wbr><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>]</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L241">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#input_freshness" title="aligned.model_store.ModelFeatureStore.input_freshness">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.input_request">
+    
+  </a>
+  <a name="input_request">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">input_request</span><span class="function-signature">(self, except_features: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, event_timestamp_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code>FeatureRequest</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L91">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#input_request" title="aligned.model_store.ModelFeatureStore.input_request">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.insert_predictions">
+    
+  </a>
+  <a name="insert_predictions">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">insert_predictions</span><span class="function-signature">(self, predictions: <code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a> | <a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>)</span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L500">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#insert_predictions" title="aligned.model_store.ModelFeatureStore.insert_predictions">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p>Writes data to a source defined as a prediction source</p>
+<p>```python
+@model_contract(</p>
+<blockquote>
+name="taxi_eta",
+features=[...]
+predictions_source=FileSource.parquet_at("predictions.parquet")</blockquote>
+<p>)
+class TaxiEta:</p>
+<blockquote>
+<p>trip_id = Int32().as_entity()</p>
+<p>duration = Int32()</p>
+</blockquote>
+<p>...</p>
+<p>store = FeatureStore.from_dir(".")</p>
+<dl class="rst-docutils">
+<dt>await store.model("taxi_eta").insert_predictions({</dt>
+<dd>"trip_id": [1, 2, 3, ...],
+"duration": [20, 33, 42, ...]</dd>
+</dl>
+<div class="rst-section" id="rst-section-1">
+<h2 class="heading">})</h2>
+</div>
+</div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.needed_entities">
+    
+  </a>
+  <a name="needed_entities">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">needed_entities</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>Feature]</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L126">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#needed_entities" title="aligned.model_store.ModelFeatureStore.needed_entities">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.predict_over">
+    
+  </a>
+  <a name="predict_over">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">predict_over</span><span class="function-signature">(self, entities: <code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a> | <a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>) -&gt; <code><a href="aligned.retrieval_job.PredictionJob.html" class="internal-link" title="aligned.retrieval_job.PredictionJob">PredictionJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L143">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#predict_over" title="aligned.model_store.ModelFeatureStore.predict_over">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.prediction_freshness">
+    
+  </a>
+  <a name="prediction_freshness">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">prediction_freshness</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L281">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#prediction_freshness" title="aligned.model_store.ModelFeatureStore.prediction_freshness">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.prediction_request">
+    
+  </a>
+  <a name="prediction_request">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">prediction_request</span><span class="function-signature">(self, exclude_features: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, model_version_as_entity: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code> = <a href="https://docs.python.org/3/library/constants.html#False" class="intersphinx-link">False</a>) -&gt; <code>RetrievalRequest</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L105">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#prediction_request" title="aligned.model_store.ModelFeatureStore.prediction_request">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.predictions_between">
+    
+  </a>
+  <a name="predictions_between">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">predictions_between</span><span class="function-signature">(self, start_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>, end_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L393">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#predictions_between" title="aligned.model_store.ModelFeatureStore.predictions_between">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.predictions_for">
+    
+  </a>
+  <a name="predictions_for">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">predictions_for</span><span class="function-signature">(self, entities: <code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a> | <a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, event_timestamp_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, model_version_as_entity: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L379">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#predictions_for" title="aligned.model_store.ModelFeatureStore.predictions_for">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.process_features">
+    
+  </a>
+  <a name="process_features">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">process_features</span><span class="function-signature">(self, input: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a> | <a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a></code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L363">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#process_features" title="aligned.model_store.ModelFeatureStore.process_features">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.raw_string_features">
+    
+  </a>
+  <a name="raw_string_features">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">raw_string_features</span><span class="function-signature">(self, except_features: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L73">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#raw_string_features" title="aligned.model_store.ModelFeatureStore.raw_string_features">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.request">
+    
+  </a>
+  <a name="request">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">request</span><span class="function-signature">(self, except_features: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, event_timestamp_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code>FeatureRequest</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L84">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#request" title="aligned.model_store.ModelFeatureStore.request">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.upsert_predictions">
+    
+  </a>
+  <a name="upsert_predictions">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">upsert_predictions</span><span class="function-signature">(self, predictions: <code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a> | <a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>)</span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L469">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#upsert_predictions" title="aligned.model_store.ModelFeatureStore.upsert_predictions">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p>Upserts data to a source defined as a prediction source</p>
+<p>```python
+@model_contract(</p>
+<blockquote>
+name="taxi_eta",
+features=[...]
+predictions_source=FileSource.parquet_at("predictions.parquet")</blockquote>
+<p>)
+class TaxiEta:</p>
+<blockquote>
+<p>trip_id = Int32().as_entity()</p>
+<p>duration = Int32()</p>
+</blockquote>
+<p>...</p>
+<p>store = FeatureStore.from_dir(".")</p>
+<dl class="rst-docutils">
+<dt>await store.model("taxi_eta").upsert_predictions({</dt>
+<dd>"trip_id": [1, 2, 3, ...],
+"duration": [20, 33, 42, ...]</dd>
+</dl>
+<div class="rst-section" id="rst-section-1">
+<h2 class="heading">})</h2>
+</div>
+</div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.using_model">
+    
+  </a>
+  <a name="using_model">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">using_model</span><span class="function-signature">(self, model_to_use: <code>ExposedModel</code>) -&gt; <code><a href="aligned.model_store.ModelFeatureStore.html" class="internal-link" title="aligned.model_store.ModelFeatureStore">ModelFeatureStore</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L135">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#using_model" title="aligned.model_store.ModelFeatureStore.using_model">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p>Makes it possible to define which model to use for predictions.</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.using_source">
+    
+  </a>
+  <a name="using_source">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">using_source</span><span class="function-signature">(self, source: <code><a href="aligned.data_source.batch_data_source.BatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource">BatchDataSource</a></code>) -&gt; <code><a href="aligned.model_store.ModelFeatureStore.html" class="internal-link" title="aligned.model_store.ModelFeatureStore">ModelFeatureStore</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L413">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#using_source" title="aligned.model_store.ModelFeatureStore.using_source">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.using_version">
+    
+  </a>
+  <a name="using_version">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">using_version</span><span class="function-signature">(self, version: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code><a href="aligned.model_store.ModelFeatureStore.html" class="internal-link" title="aligned.model_store.ModelFeatureStore">ModelFeatureStore</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L81">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#using_version" title="aligned.model_store.ModelFeatureStore.using_version">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.with_labels">
+    
+  </a>
+  <a name="with_labels">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">with_labels</span><span class="function-signature">(self, label_refs: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>FeatureReference] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.model_store.SupervisedModelFeatureStore.html" class="internal-link" title="aligned.model_store.SupervisedModelFeatureStore">SupervisedModelFeatureStore</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L284">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#with_labels" title="aligned.model_store.ModelFeatureStore.with_labels">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p>Will also load the labels for the model</p>
+<p>```python
+store = await FileSource.json_at("features-latest.json").feature_store()</p>
+<dl class="rst-docutils">
+<dt>data = store.model("titanic")</dt>
+<dd>.with_labels().features_for({"passenger_id": [1, 2, 3]}).to_polars()</dd>
+</dl>
+<p>print(data.labels.collect(), data.input.collect())
+&gt;&gt;&gt; ┌──────────┐ ┌───────┬─────────┬─────────────────────┬──────────────┐
+&gt;&gt;&gt; │ survived │ │ is_mr ┆ is_male ┆ constant_filled_age ┆ has_siblings │
+&gt;&gt;&gt; │ ---      │ │ ---   ┆ ---     ┆ ---                 ┆ ---          │
+&gt;&gt;&gt; │ bool     │ │ bool  ┆ bool    ┆ f64                 ┆ bool         │
+&gt;&gt;&gt; ╞══════════╡ ╞═══════╪═════════╪═════════════════════╪══════════════╡
+&gt;&gt;&gt; │ false    │ │ true  ┆ true    ┆ 22.0                ┆ true         │
+&gt;&gt;&gt; │ true     │ │ false ┆ false   ┆ 38.0                ┆ true         │
+&gt;&gt;&gt; │ true     │ │ false ┆ false   ┆ 26.0                ┆ false        │
+&gt;&gt;&gt; └──────────┘ └───────┴─────────┴─────────────────────┴──────────────┘
+```</p>
+<dl class="rst-docutils">
+<dt>Returns:</dt>
+<dd>SupervisedModelFeatureStore: A new queryable feature store</dd>
+</dl>
+</div>
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.model">
+    
+  </a>
+  <a name="model">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">model</span>: <code>ModelSchema</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L36">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#model" title="aligned.model_store.ModelFeatureStore.model">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.model_to_use">
+    
+  </a>
+  <a name="model_to_use">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">model_to_use</span>: <code>ExposedModel | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L39">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#model_to_use" title="aligned.model_store.ModelFeatureStore.model_to_use">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.selected_version">
+    
+  </a>
+  <a name="selected_version">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">selected_version</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L38">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#selected_version" title="aligned.model_store.ModelFeatureStore.selected_version">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.store">
+    
+  </a>
+  <a name="store">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">store</span>: <code>ContractStore</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L37">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#store" title="aligned.model_store.ModelFeatureStore.store">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseproperty">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.dataset_store">
+    
+  </a>
+  <a name="dataset_store">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">dataset_store</span>: <code>DatasetStore | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L45">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#dataset_store" title="aligned.model_store.ModelFeatureStore.dataset_store">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseproperty">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.location">
+    
+  </a>
+  <a name="location">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">location</span>: <code>FeatureLocation</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L41">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#location" title="aligned.model_store.ModelFeatureStore.location">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseproperty">
+  
+  
+  <a name="aligned.model_store.ModelFeatureStore.source">
+    
+  </a>
+  <a name="source">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">source</span>: <code><a href="aligned.data_source.batch_data_source.BatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource">BatchDataSource</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/model_store.py#L49">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#source" title="aligned.model_store.ModelFeatureStore.source">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div>
+        </div>
+      
+      </div>
+    </div>
+
+    <footer class="navbar navbar-default">
+
+  
+  <div class="container-fluid">
+    <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
+  generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
+    24.11.2 at 2025-03-05 23:11:44.
+  </div>
+
+  <!-- Search related scripts needs to be loaded at the end of HTML 
+    parsing not to introduce overhead and display HTML data asap -->
+  <script src="ajax.js" type="text/javascript"></script>
+  <script src="searchlib.js" type="text/javascript"></script>
+  <script src="search.js" type="text/javascript"></script>
+
+</footer>
+  
+    <script src="pydoctor.js" type="text/javascript"></script>
+
+  </body>
+</html>

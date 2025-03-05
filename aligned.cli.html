@@ -201,6 +201,16 @@
         
 
         
+            <div class="itemName"><code><a href="#materialize" class="internal-link" title="aligned.cli.materialize">materialize</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
             <div class="itemName"><code><a href="#serve_command" class="internal-link" title="aligned.cli.serve_command">serve<wbr></wbr>_command</a></code>
             </div>
         
@@ -278,6 +288,16 @@
 
         
             <div class="itemName"><code><a href="aligned.cli.html" class="internal-link" title="aligned.cli">cli</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.config_value.html" class="internal-link" title="aligned.config_value">config<wbr></wbr>_value</a></code>
             </div>
         
 
@@ -367,6 +387,16 @@
         
 
         
+            <div class="itemName"><code><a href="aligned.model_store.html" class="internal-link" title="aligned.model_store">model<wbr></wbr>_store</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
             <div class="itemName"><code><a href="aligned.psql.html" class="internal-link" title="aligned.psql">psql</a></code>
             </div>
         
@@ -397,7 +427,7 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.retrival_job.html" class="internal-link" title="aligned.retrival_job">retrival<wbr></wbr>_job</a></code>
+            <div class="itemName"><code><a href="aligned.retrieval_job.html" class="internal-link" title="aligned.retrieval_job">retrieval<wbr></wbr>_job</a></code>
             </div>
         
 
@@ -448,6 +478,16 @@
 
         
             <div class="itemName"><code><a href="aligned.split_strategy.html" class="internal-link" title="aligned.split_strategy">split<wbr></wbr>_strategy</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sql.html" class="internal-link" title="aligned.sql">sql</a></code>
             </div>
         
 
@@ -544,6 +584,16 @@
 
         
             <div class="itemName"><code><a href="aligned.Directory.html" class="internal-link" title="aligned.Directory"><wbr></wbr>Directory</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.DockerConfig.html" class="internal-link" title="aligned.DockerConfig"><wbr></wbr>Docker<wbr></wbr>Config</a></code>
             </div>
         
 
@@ -662,7 +712,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <a href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/cli.py" class="sourceLink">(source)</a>
+          <a href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/cli.py" class="sourceLink">(source)</a>
           <p></p>
         </div>
 
@@ -711,6 +761,11 @@
     <td>We assume tz-naive datetimes are UTC</td>
   </tr><tr class="function">
     
+    <td>Async Function</td>
+    <td><code><a href="#materialize" class="internal-link" title="aligned.cli.materialize">materialize</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="function">
+    
     <td>Function</td>
     <td><code><a href="#serve_command" class="internal-link" title="aligned.cli.serve_command">serve<wbr></wbr>_command</a></code></td>
     <td>Starts an API serving data based on a contract store.</td>
@@ -750,7 +805,7 @@
     
     @cli.command(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">check-updates</span><span class="rst-variable-quote">'</span>)<br />@<a href="#coro" class="internal-link" title="aligned.cli.coro">coro</a><br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--updated-contract</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--reference-contract</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--output-format</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<span class="rst-variable-quote">'</span><span class="rst-variable-string">markdown</span><span class="rst-variable-quote">'</span>, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The output format</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--output-file</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The output format</span><span class="rst-variable-quote">'</span>)<br />
     <span class="py-keyword">async def</span> <span class="py-defname">check_updates</span><span class="function-signature">(updated_contract: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, reference_contract: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, output_format: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, output_file: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/cli.py#L165">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/cli.py#L204">
       
       (source)
     </a>
@@ -783,7 +838,7 @@
     
     @click.group()<br />
     <span class="py-keyword">def</span> <span class="py-defname">cli</span><span class="function-signature">()</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/cli.py#L101">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/cli.py#L108">
       
       (source)
     </a>
@@ -810,7 +865,7 @@
     
     @cli.command(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">compile</span><span class="rst-variable-quote">'</span>)<br />@<a href="#coro" class="internal-link" title="aligned.cli.coro">coro</a><br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--repo-path</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<span class="rst-variable-quote">'</span><span class="rst-variable-string">.</span><span class="rst-variable-quote">'</span>, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The path to the repo</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--reference-file</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<span class="rst-variable-quote">'</span><span class="rst-variable-string">contract_store.json</span><span class="rst-variable-quote">'</span>, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The path to a contract store reference file. Defining where to read and write the feature store</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--env-file</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<span class="rst-variable-quote">'</span><span class="rst-variable-string">.env</span><span class="rst-variable-quote">'</span>, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The path to env variables</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--ignore-file</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<span class="rst-variable-quote">'</span><span class="rst-variable-string">.alignedignore</span><span class="rst-variable-quote">'</span>, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The files Aligned should ignore</span><span class="rst-variable-quote">'</span>)<br />
     <span class="py-keyword">async def</span> <span class="py-defname">compile</span><span class="function-signature">(repo_path: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, reference_file: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, env_file: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, ignore_file: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/cli.py#L106">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/cli.py#L113">
       
       (source)
     </a>
@@ -837,7 +892,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">coro</span><span class="function-signature">(func: <code><a href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" class="intersphinx-link">Callable</a></code>) -&gt; <code><a href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" class="intersphinx-link">Callable</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/cli.py#L21">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/cli.py#L22">
       
       (source)
     </a>
@@ -864,7 +919,7 @@
     
     @cli.command(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">create-indexes</span><span class="rst-variable-quote">'</span>)<br />@<a href="#coro" class="internal-link" title="aligned.cli.coro">coro</a><br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--repo-path</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<span class="rst-variable-quote">'</span><span class="rst-variable-string">.</span><span class="rst-variable-quote">'</span>, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The path to the repo</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--reference-file</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<span class="rst-variable-quote">'</span><span class="rst-variable-string">feature_store_location.py:source</span><span class="rst-variable-quote">'</span>, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The path to a feature store reference file. Defining where to read and write the feature store</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--env-file</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<span class="rst-variable-quote">'</span><span class="rst-variable-string">.env</span><span class="rst-variable-quote">'</span>, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The path to env variables</span><span class="rst-variable-quote">'</span>)<br />
     <span class="py-keyword">async def</span> <span class="py-defname">create_indexes</span><span class="function-signature">(repo_path: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, reference_file: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, env_file: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/cli.py#L327">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/cli.py#L372">
       
       (source)
     </a>
@@ -891,7 +946,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">load_envs</span><span class="function-signature">(path: <code><a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" class="intersphinx-link">Path</a></code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/cli.py#L37">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/cli.py#L38">
       
       (source)
     </a>
@@ -918,7 +973,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">make_tzaware</span><span class="function-signature">(t: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>) -&gt; <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/cli.py#L29">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/cli.py#L30">
       
       (source)
     </a>
@@ -935,6 +990,33 @@
 </div><div class="basefunction">
   
   
+  <a name="aligned.cli.materialize">
+    
+  </a>
+  <a name="materialize">
+    
+  </a>
+  <div class="functionHeader">
+    
+    @cli.command(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">materialize</span><span class="rst-variable-quote">'</span>)<br />@<a href="#coro" class="internal-link" title="aligned.cli.coro">coro</a><br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--view</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--contract</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<span class="rst-variable-quote">'</span><span class="rst-variable-string">contract_store.json</span><span class="rst-variable-quote">'</span>)<br />
+    <span class="py-keyword">async def</span> <span class="py-defname">materialize</span><span class="function-signature">(contract: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, view: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>)</span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/cli.py#L176">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#materialize" title="aligned.cli.materialize">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basefunction">
+  
+  
   <a name="aligned.cli.serve_command">
     
   </a>
@@ -945,7 +1027,7 @@
     
     @cli.command(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">serve</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--repo-path</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<span class="rst-variable-quote">'</span><span class="rst-variable-string">.</span><span class="rst-variable-quote">'</span>, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The path to the repo</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--host</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The host to serve on</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--port</span><span class="rst-variable-quote">'</span>, <wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">-p</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=8000, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The port to serve on</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--workers</span><span class="rst-variable-quote">'</span>, <wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">-w</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=1, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The number of workers</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--env-file</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<span class="rst-variable-quote">'</span><span class="rst-variable-string">.env</span><span class="rst-variable-quote">'</span>, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The path to env variables</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--reload</span><span class="rst-variable-quote">'</span>, <wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">-r</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<a href="https://docs.python.org/3/library/constants.html#False" class="intersphinx-link">False</a>, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">If the server should reload on dir changes</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--server-path</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<span class="rst-variable-quote">'</span><span class="rst-variable-string">server:server</span><span class="rst-variable-quote">'</span>, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The path to the feature store server</span><span class="rst-variable-quote">'</span>)<br />
     <span class="py-keyword">def</span> <span class="py-defname">serve_command</span><span class="function-signature">(repo_path: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, port: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code>, workers: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code>, env_file: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, reload: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code>, server_path: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, host: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/cli.py#L224">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/cli.py#L263">
       
       (source)
     </a>
@@ -972,7 +1054,7 @@
     
     @cli.command(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">serve-worker</span><span class="rst-variable-quote">'</span>)<br />@<a href="#coro" class="internal-link" title="aligned.cli.coro">coro</a><br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--repo-path</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<span class="rst-variable-quote">'</span><span class="rst-variable-string">.</span><span class="rst-variable-quote">'</span>, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The path to the repo</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--worker-path</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<span class="rst-variable-quote">'</span><span class="rst-variable-string">worker.py:worker</span><span class="rst-variable-quote">'</span>, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The path to the `StreamWorker`</span><span class="rst-variable-quote">'</span>)<br />@click.option(<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">--env-file</span><span class="rst-variable-quote">'</span>, <wbr></wbr>default=<span class="rst-variable-quote">'</span><span class="rst-variable-string">.env</span><span class="rst-variable-quote">'</span>, <wbr></wbr>help=<span class="rst-variable-quote">'</span><span class="rst-variable-string">The path to env variables</span><span class="rst-variable-quote">'</span>)<br />
     <span class="py-keyword">async def</span> <span class="py-defname">serve_worker_command</span><span class="function-signature">(repo_path: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, worker_path: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, env_file: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/cli.py#L291">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/cli.py#L336">
       
       (source)
     </a>
@@ -999,7 +1081,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">setup_logger</span><span class="function-signature">()</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/cli.py#L44">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/cli.py#L45">
       
       (source)
     </a>
@@ -1026,7 +1108,7 @@
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">store_from_reference</span><span class="function-signature">(reference_file: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, dir: <code><a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" class="intersphinx-link">Path</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code>ContractStore</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/cli.py#L82">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/cli.py#L87">
       
       (source)
     </a>
@@ -1052,7 +1134,7 @@
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    24.11.2 at 2025-02-18 12:41:13.
+    24.11.2 at 2025-03-05 23:11:44.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

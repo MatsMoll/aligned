@@ -338,7 +338,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">RedisSource</span>(<a href="aligned.feature_source.FeatureSource.html" class="internal-link" title="aligned.feature_source.FeatureSource">FeatureSource</a>, <a href="aligned.feature_source.WritableFeatureSource.html" class="internal-link" title="aligned.feature_source.WritableFeatureSource">WritableFeatureSource</a>): <a href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/redis.py#L157" class="sourceLink">(source)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">RedisSource</span>(<a href="aligned.feature_source.FeatureSource.html" class="internal-link" title="aligned.feature_source.FeatureSource">FeatureSource</a>, <a href="aligned.feature_source.WritableFeatureSource.html" class="internal-link" title="aligned.feature_source.WritableFeatureSource">WritableFeatureSource</a>): <a href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/redis.py#L173" class="sourceLink">(source)</a></code></p>
           <p><a href="classIndex.html#aligned.sources.redis.RedisSource">View In Hierarchy</a></p>
         </div>
 
@@ -347,7 +347,7 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id303">
+          <table class="children sortable" id="id341">
   
   
   <tr class="method">
@@ -386,7 +386,7 @@
             <p class="inheritedFrom">
               Inherited from <code><a href="aligned.feature_source.FeatureSource.html" class="internal-link" title="aligned.feature_source.FeatureSource">FeatureSource</a></code>:
             </p>
-            <table class="children sortable" id="id304">
+            <table class="children sortable" id="id342">
   
   
   <tr class="basemethod">
@@ -400,7 +400,7 @@
             <p class="inheritedFrom">
               Inherited from <code><a href="aligned.feature_source.WritableFeatureSource.html" class="internal-link" title="aligned.feature_source.WritableFeatureSource">WritableFeatureSource</a></code> (via <code><a href="aligned.feature_source.FeatureSource.html" class="internal-link" title="aligned.feature_source.FeatureSource">FeatureSource</a></code>):
             </p>
-            <table class="children sortable" id="id305">
+            <table class="children sortable" id="id343">
   
   
   <tr class="basemethod">
@@ -428,8 +428,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">all_for</span><span class="function-signature">(self, request: <code>FeatureRequest</code>, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/redis.py#L163">
+    <span class="py-keyword">def</span> <span class="py-defname">all_for</span><span class="function-signature">(self, request: <code>FeatureRequest</code>, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/redis.py#L178">
       
       (source)
     </a>
@@ -455,8 +455,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">features_for</span><span class="function-signature">(self, facts: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, request: <code>FeatureRequest</code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/redis.py#L166">
+    <span class="py-keyword">def</span> <span class="py-defname">features_for</span><span class="function-signature">(self, facts: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, request: <code>FeatureRequest</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/redis.py#L183">
       
       (source)
     </a>
@@ -482,8 +482,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">async def</span> <span class="py-defname">insert</span><span class="function-signature">(self, job: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, request: <code>RetrivalRequest</code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/redis.py#L175">
+    <span class="py-keyword">async def</span> <span class="py-defname">insert</span><span class="function-signature">(self, job: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, request: <code>RetrievalRequest</code>)</span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/redis.py#L202">
       
       (source)
     </a>
@@ -509,8 +509,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">async def</span> <span class="py-defname">upsert</span><span class="function-signature">(self, job: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, request: <code>RetrivalRequest</code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/redis.py#L221">
+    <span class="py-keyword">async def</span> <span class="py-defname">upsert</span><span class="function-signature">(self, job: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, request: <code>RetrievalRequest</code>)</span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/redis.py#L263">
       
       (source)
     </a>
@@ -536,7 +536,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">batch_size</span>: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/redis.py#L161">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/redis.py#L176">
       
       (source)
     </a>
@@ -563,7 +563,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">config</span>: <code><a href="aligned.RedisConfig.html" class="internal-link" title="aligned.RedisConfig">RedisConfig</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/redis.py#L160">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/redis.py#L175">
       
       (source)
     </a>
@@ -590,7 +590,7 @@
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    24.11.2 at 2025-02-18 12:41:13.
+    24.11.2 at 2025-03-05 23:11:44.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

@@ -190,16 +190,6 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.feature_source.BatchFeatureSource.html" class="internal-link" title="aligned.feature_source.BatchFeatureSource"><wbr></wbr>Batch<wbr></wbr>Feature<wbr></wbr>Source</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
             <div class="itemName"><code><a href="aligned.feature_source.FeatureSource.html" class="internal-link" title="aligned.feature_source.FeatureSource"><wbr></wbr>Feature<wbr></wbr>Source</a></code>
             </div>
         
@@ -279,7 +269,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">WritableFeatureSource</span>: <a href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_source.py#L32" class="sourceLink">(source)</a></code></p><p>Known subclasses: <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.in_mem_source.InMemorySource.html" class="internal-link">aligned.sources.in_mem_source.InMemorySource</a></code>, <code><a href="aligned.sources.lancedb.LanceDbTable.html" class="internal-link">aligned.sources.lancedb.LanceDbTable</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code>, <code><a href="aligned.sources.redis.RedisSource.html" class="internal-link">aligned.sources.redis.RedisSource</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">WritableFeatureSource</span>: <a href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/feature_source.py#L30" class="sourceLink">(source)</a></code></p><p>Known subclasses: <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.databricks.UCFeatureTableSource.html" class="internal-link">aligned.sources.databricks.UCFeatureTableSource</a></code>, <code><a href="aligned.sources.databricks.UCTableSource.html" class="internal-link">aligned.sources.databricks.UCTableSource</a></code>, <code><a href="aligned.sources.in_mem_source.InMemorySource.html" class="internal-link">aligned.sources.in_mem_source.InMemorySource</a></code>, <code><a href="aligned.sources.lancedb.LanceDbTable.html" class="internal-link">aligned.sources.lancedb.LanceDbTable</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code>, <code><a href="aligned.sources.redis.RedisSource.html" class="internal-link">aligned.sources.redis.RedisSource</a></code></p>
           <p><a href="classIndex.html#aligned.feature_source.WritableFeatureSource">View In Hierarchy</a></p>
         </div>
 
@@ -288,7 +278,7 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id48">
+          <table class="children sortable" id="id63">
   
   
   <tr class="method">
@@ -326,8 +316,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">async def</span> <span class="py-defname">insert</span><span class="function-signature">(self, job: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, request: <code>RetrivalRequest</code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_source.py#L33">
+    <span class="py-keyword">async def</span> <span class="py-defname">insert</span><span class="function-signature">(self, job: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, request: <code>RetrievalRequest</code>)</span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/feature_source.py#L31">
       
       (source)
     </a>
@@ -338,7 +328,7 @@
     </a>
   </div>
   <div class="docstring functionBody">
-    <div class="interfaceinfo">overridden in <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.in_mem_source.InMemorySource.html" class="internal-link">aligned.sources.in_mem_source.InMemorySource</a></code>, <code><a href="aligned.sources.lancedb.LanceDbTable.html" class="internal-link">aligned.sources.lancedb.LanceDbTable</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code>, <code><a href="aligned.sources.redis.RedisSource.html" class="internal-link">aligned.sources.redis.RedisSource</a></code></div>
+    <div class="interfaceinfo">overridden in <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.databricks.UCFeatureTableSource.html" class="internal-link">aligned.sources.databricks.UCFeatureTableSource</a></code>, <code><a href="aligned.sources.databricks.UCTableSource.html" class="internal-link">aligned.sources.databricks.UCTableSource</a></code>, <code><a href="aligned.sources.in_mem_source.InMemorySource.html" class="internal-link">aligned.sources.in_mem_source.InMemorySource</a></code>, <code><a href="aligned.sources.lancedb.LanceDbTable.html" class="internal-link">aligned.sources.lancedb.LanceDbTable</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code>, <code><a href="aligned.sources.redis.RedisSource.html" class="internal-link">aligned.sources.redis.RedisSource</a></code></div>
     <div><p class="undocumented">Undocumented</p></div>
   </div>
 </div><div class="basemethod">
@@ -353,8 +343,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">async def</span> <span class="py-defname">overwrite</span><span class="function-signature">(self, job: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, request: <code>RetrivalRequest</code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_source.py#L39">
+    <span class="py-keyword">async def</span> <span class="py-defname">overwrite</span><span class="function-signature">(self, job: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, request: <code>RetrievalRequest</code>)</span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/feature_source.py#L37">
       
       (source)
     </a>
@@ -365,7 +355,7 @@
     </a>
   </div>
   <div class="docstring functionBody">
-    <div class="interfaceinfo">overridden in <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.in_mem_source.InMemorySource.html" class="internal-link">aligned.sources.in_mem_source.InMemorySource</a></code>, <code><a href="aligned.sources.lancedb.LanceDbTable.html" class="internal-link">aligned.sources.lancedb.LanceDbTable</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code></div>
+    <div class="interfaceinfo">overridden in <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.databricks.UCFeatureTableSource.html" class="internal-link">aligned.sources.databricks.UCFeatureTableSource</a></code>, <code><a href="aligned.sources.databricks.UCTableSource.html" class="internal-link">aligned.sources.databricks.UCTableSource</a></code>, <code><a href="aligned.sources.in_mem_source.InMemorySource.html" class="internal-link">aligned.sources.in_mem_source.InMemorySource</a></code>, <code><a href="aligned.sources.lancedb.LanceDbTable.html" class="internal-link">aligned.sources.lancedb.LanceDbTable</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code></div>
     <div><p class="undocumented">Undocumented</p></div>
   </div>
 </div><div class="basemethod">
@@ -380,8 +370,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">async def</span> <span class="py-defname">upsert</span><span class="function-signature">(self, job: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, request: <code>RetrivalRequest</code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/feature_source.py#L36">
+    <span class="py-keyword">async def</span> <span class="py-defname">upsert</span><span class="function-signature">(self, job: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, request: <code>RetrievalRequest</code>)</span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/feature_source.py#L34">
       
       (source)
     </a>
@@ -392,7 +382,7 @@
     </a>
   </div>
   <div class="docstring functionBody">
-    <div class="interfaceinfo">overridden in <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.in_mem_source.InMemorySource.html" class="internal-link">aligned.sources.in_mem_source.InMemorySource</a></code>, <code><a href="aligned.sources.lancedb.LanceDbTable.html" class="internal-link">aligned.sources.lancedb.LanceDbTable</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code>, <code><a href="aligned.sources.redis.RedisSource.html" class="internal-link">aligned.sources.redis.RedisSource</a></code></div>
+    <div class="interfaceinfo">overridden in <code><a href="aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobDeltaDataSource</a></code>, <code><a href="aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource.html" class="internal-link">aligned.sources.azure_blob_storage.AzureBlobPartitionedParquetDataSource</a></code>, <code><a href="aligned.sources.databricks.UCFeatureTableSource.html" class="internal-link">aligned.sources.databricks.UCFeatureTableSource</a></code>, <code><a href="aligned.sources.databricks.UCTableSource.html" class="internal-link">aligned.sources.databricks.UCTableSource</a></code>, <code><a href="aligned.sources.in_mem_source.InMemorySource.html" class="internal-link">aligned.sources.in_mem_source.InMemorySource</a></code>, <code><a href="aligned.sources.lancedb.LanceDbTable.html" class="internal-link">aligned.sources.lancedb.LanceDbTable</a></code>, <code><a href="aligned.sources.local.CsvFileSource.html" class="internal-link">aligned.sources.local.CsvFileSource</a></code>, <code><a href="aligned.sources.local.DeltaFileSource.html" class="internal-link">aligned.sources.local.DeltaFileSource</a></code>, <code><a href="aligned.sources.local.PartitionedParquetFileSource.html" class="internal-link">aligned.sources.local.PartitionedParquetFileSource</a></code>, <code><a href="aligned.sources.psql.PostgreSQLDataSource.html" class="internal-link">aligned.sources.psql.PostgreSQLDataSource</a></code>, <code><a href="aligned.sources.random_source.RandomDataSource.html" class="internal-link">aligned.sources.random_source.RandomDataSource</a></code>, <code><a href="aligned.sources.redis.RedisSource.html" class="internal-link">aligned.sources.redis.RedisSource</a></code></div>
     <div><p class="undocumented">Undocumented</p></div>
   </div>
 </div>
@@ -407,7 +397,7 @@
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    24.11.2 at 2025-02-18 12:41:13.
+    24.11.2 at 2025-03-05 23:11:44.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

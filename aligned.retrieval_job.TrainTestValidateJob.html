@@ -1,0 +1,1249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+          "DTD/xhtml1-strict.dtd">
+<html>
+  
+
+  <head>
+    
+    <title>aligned.retrieval_job.TrainTestValidateJob</title>
+    <meta name="generator" content="pydoctor 24.11.2"> 
+        
+    </meta>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1 maximum-scale=1" />
+    <link rel="stylesheet" type="text/css" href="bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="apidocs.css" />
+    <link rel="stylesheet" type="text/css" href="extra.css" />
+    
+</head>
+
+  <body>
+
+    
+
+    <nav class="navbar navbar-default mainnavbar">
+      
+  
+  <div class="container-fluid">
+
+
+    <div class="navbar-header">
+      
+      <div class="navlinks">
+        <span class="navbar-brand">
+          <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a> <a href="index.html">API Documentation</a>
+        </span>
+
+        <a href="moduleIndex.html">
+          Modules
+        </a>
+
+        <a href="classIndex.html">
+          Classes
+        </a>
+
+        <a href="nameIndex.html">
+          Names
+        </a>
+
+        <div id="search-box-container">
+          <div class="input-group">
+            <input id="search-box" type="search" name="search-query" placeholder="Search..." aria-label="Search" minlength="2" class="form-control" autocomplete="off" />
+            
+            <span class="input-group-btn">
+              <a style="display: none;" class="btn btn-default" id="search-clear-button" title="Clear" onclick="clearSearch()"><img src="fonts/x-circle.svg" alt="Clear" /></a>
+              <a class="btn btn-default" id="apidocs-help-button" title="Help" href="apidocs-help.html"><img src="fonts/info.svg" alt="Help" /></a>
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="search-results-container" style="display: none;">
+        
+        <div id="search-buttons">
+          <span class="label label-default" id="search-docstrings-button">
+          <label class="checkbox-inline">
+            <input type="checkbox" id="toggle-search-in-docstrings-checkbox" value="false" onclick="toggleSearchInDocstrings()">
+              search in docstrings
+            </input>
+          </label>
+          </span>
+          
+        </div>
+        
+        <noscript>
+            <h1>Cannot search: JavaScript is not supported/enabled in your browser.</h1>
+        </noscript>
+
+        <div id="search-status"> </div>
+
+        <div class="warning" id="search-warn-box" style="display: none;">
+          <p class="rst-last"><span id="search-warn"></span></p>
+        </div>
+
+        <table id="search-results">
+          <!-- Filled dynamically by JS -->
+        </table>
+        
+        <div style="margin-top: 10px;">
+          <p>For more information on the search, visit the <a href="apidocs-help.html#rst-search">help page</a>.</p>
+        </div>
+      </div>
+
+    </div>
+
+
+  </div>
+</nav>
+    
+    <div class="container-fluid">
+
+      <!-- Side navigation -->
+      <div class="sidebarcontainer" style="display: none;">
+        
+        <div class="sidebar"><nav class="sidebar">
+  
+
+  <div>
+
+      <div class="thingTitle">
+        <span>Class</span>
+        <code class="thisobject"><a href="aligned.retrieval_job.TrainTestValidateJob.html" class="internal-link" title="This class"><wbr></wbr>Train<wbr></wbr>Test<wbr></wbr>Validate<wbr></wbr>Job</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        
+        
+
+        <div class="childrenKindTitle">Methods</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#input_features" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.input_features">input<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#store_dataset" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.store_dataset">store<wbr></wbr>_dataset</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#store_dataset_at_directory" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.store_dataset_at_directory">store<wbr></wbr>_dataset<wbr></wbr>_at<wbr></wbr>_directory</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+
+        <div class="childrenKindTitle">Attributes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#should_filter_out_null_targets" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.should_filter_out_null_targets">should<wbr></wbr>_filter<wbr></wbr>_out<wbr></wbr>_null<wbr></wbr>_targets</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#target_columns" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.target_columns">target<wbr></wbr>_columns</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#test_job" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.test_job">test<wbr></wbr>_job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#train_job" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.train_job">train<wbr></wbr>_job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#validate_job" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.validate_job">validate<wbr></wbr>_job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#test" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.test">test</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#train" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.train">train</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#validate" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.validate">validate</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div><div>
+
+      <div class="thingTitle">
+        <span>Module</span>
+        <code><a href="aligned.retrieval_job.html" class="internal-link" title="The parent of this class">retrieval<wbr></wbr>_job</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        <div class="childrenKindTitle">Classes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.AggregateJob.html" class="internal-link" title="aligned.retrieval_job.AggregateJob"><wbr></wbr>Aggregate<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.CombineFactualJob.html" class="internal-link" title="aligned.retrieval_job.CombineFactualJob"><wbr></wbr>Combine<wbr></wbr>Factual<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.CustomLazyPolarsJob.html" class="internal-link" title="aligned.retrieval_job.CustomLazyPolarsJob"><wbr></wbr>Custom<wbr></wbr>Lazy<wbr></wbr>Polars<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.CustomPolarsJob.html" class="internal-link" title="aligned.retrieval_job.CustomPolarsJob"><wbr></wbr>Custom<wbr></wbr>Polars<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.DataLoaderJob.html" class="internal-link" title="aligned.retrieval_job.DataLoaderJob"><wbr></wbr>Data<wbr></wbr>Loader<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.DerivedFeatureJob.html" class="internal-link" title="aligned.retrieval_job.DerivedFeatureJob"><wbr></wbr>Derived<wbr></wbr>Feature<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.DropDuplicateEntities.html" class="internal-link" title="aligned.retrieval_job.DropDuplicateEntities"><wbr></wbr>Drop<wbr></wbr>Duplicate<wbr></wbr>Entities</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.DropInvalidJob.html" class="internal-link" title="aligned.retrieval_job.DropInvalidJob"><wbr></wbr>Drop<wbr></wbr>Invalid<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.EncodeDatesJob.html" class="internal-link" title="aligned.retrieval_job.EncodeDatesJob"><wbr></wbr>Encode<wbr></wbr>Dates<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.EnsureTypesJob.html" class="internal-link" title="aligned.retrieval_job.EnsureTypesJob"><wbr></wbr>Ensure<wbr></wbr>Types<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.FileCachedJob.html" class="internal-link" title="aligned.retrieval_job.FileCachedJob"><wbr></wbr>File<wbr></wbr>Cached<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.FillMissingColumnsJob.html" class="internal-link" title="aligned.retrieval_job.FillMissingColumnsJob"><wbr></wbr>Fill<wbr></wbr>Missing<wbr></wbr>Columns<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.FilteredJob.html" class="internal-link" title="aligned.retrieval_job.FilteredJob"><wbr></wbr>Filtered<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.InMemoryCacheJob.html" class="internal-link" title="aligned.retrieval_job.InMemoryCacheJob"><wbr></wbr>In<wbr></wbr>Memory<wbr></wbr>Cache<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.InMemorySplitCacheJob.html" class="internal-link" title="aligned.retrieval_job.InMemorySplitCacheJob"><wbr></wbr>In<wbr></wbr>Memory<wbr></wbr>Split<wbr></wbr>Cache<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.JoinAsofJob.html" class="internal-link" title="aligned.retrieval_job.JoinAsofJob"><wbr></wbr>Join<wbr></wbr>Asof<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.JoinJobs.html" class="internal-link" title="aligned.retrieval_job.JoinJobs"><wbr></wbr>Join<wbr></wbr>Jobs</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.ListenForTriggers.html" class="internal-link" title="aligned.retrieval_job.ListenForTriggers"><wbr></wbr>Listen<wbr></wbr>For<wbr></wbr>Triggers</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.LiteralDictJob.html" class="internal-link" title="aligned.retrieval_job.LiteralDictJob"><wbr></wbr>Literal<wbr></wbr>Dict<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.LoadedAtJob.html" class="internal-link" title="aligned.retrieval_job.LoadedAtJob"><wbr></wbr>Loaded<wbr></wbr>At<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.LogJob.html" class="internal-link" title="aligned.retrieval_job.LogJob"><wbr></wbr>Log<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.ModificationJob.html" class="internal-link" title="aligned.retrieval_job.ModificationJob"><wbr></wbr>Modification<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.OnLoadJob.html" class="internal-link" title="aligned.retrieval_job.OnLoadJob"><wbr></wbr>On<wbr></wbr>Load<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.PredictionJob.html" class="internal-link" title="aligned.retrieval_job.PredictionJob"><wbr></wbr>Prediction<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RawFileCachedJob.html" class="internal-link" title="aligned.retrieval_job.RawFileCachedJob"><wbr></wbr>Raw<wbr></wbr>File<wbr></wbr>Cached<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RenameJob.html" class="internal-link" title="aligned.retrieval_job.RenameJob"><wbr></wbr>Rename<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob"><wbr></wbr>Retrieval<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.ReturnInvalidJob.html" class="internal-link" title="aligned.retrieval_job.ReturnInvalidJob"><wbr></wbr>Return<wbr></wbr>Invalid<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.SelectColumnsJob.html" class="internal-link" title="aligned.retrieval_job.SelectColumnsJob"><wbr></wbr>Select<wbr></wbr>Columns<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.SplitConfig.html" class="internal-link" title="aligned.retrieval_job.SplitConfig"><wbr></wbr>Split<wbr></wbr>Config</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.SqlJob.html" class="internal-link" title="aligned.retrieval_job.SqlJob"><wbr></wbr>Sql<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.StackJob.html" class="internal-link" title="aligned.retrieval_job.StackJob"><wbr></wbr>Stack<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.StackSourceColumn.html" class="internal-link" title="aligned.retrieval_job.StackSourceColumn"><wbr></wbr>Stack<wbr></wbr>Source<wbr></wbr>Column</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.StreamAggregationJob.html" class="internal-link" title="aligned.retrieval_job.StreamAggregationJob"><wbr></wbr>Stream<wbr></wbr>Aggregation<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.SubsetJob.html" class="internal-link" title="aligned.retrieval_job.SubsetJob"><wbr></wbr>Subset<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.SupervisedJob.html" class="internal-link" title="aligned.retrieval_job.SupervisedJob"><wbr></wbr>Supervised<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.TimeMetricLoggerJob.html" class="internal-link" title="aligned.retrieval_job.TimeMetricLoggerJob"><wbr></wbr>Time<wbr></wbr>Metric<wbr></wbr>Logger<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.TrainTestJob.html" class="internal-link" title="aligned.retrieval_job.TrainTestJob"><wbr></wbr>Train<wbr></wbr>Test<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class=" thisobject">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.TrainTestValidateJob.html" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob"><wbr></wbr>Train<wbr></wbr>Test<wbr></wbr>Validate<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.UniqueRowsJob.html" class="internal-link" title="aligned.retrieval_job.UniqueRowsJob"><wbr></wbr>Unique<wbr></wbr>Rows<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.UnpackEmbedding.html" class="internal-link" title="aligned.retrieval_job.UnpackEmbedding"><wbr></wbr>Unpack<wbr></wbr>Embedding</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.UpdateVectorIndexJob.html" class="internal-link" title="aligned.retrieval_job.UpdateVectorIndexJob"><wbr></wbr>Update<wbr></wbr>Vector<wbr></wbr>Index<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.ValidateEntitiesJob.html" class="internal-link" title="aligned.retrieval_job.ValidateEntitiesJob"><wbr></wbr>Validate<wbr></wbr>Entities<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.WithRequests.html" class="internal-link" title="aligned.retrieval_job.WithRequests"><wbr></wbr>With<wbr></wbr>Requests</a></code>
+            </div>
+        
+
+    </li>
+</ul>
+
+        <div class="childrenKindTitle">Functions</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#fraction_from_job" class="internal-link" title="aligned.retrieval_job.fraction_from_job">fraction<wbr></wbr>_from<wbr></wbr>_job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#polars_filter_expressions_from" class="internal-link" title="aligned.retrieval_job.polars_filter_expressions_from">polars<wbr></wbr>_filter<wbr></wbr>_expressions<wbr></wbr>_from</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#split" class="internal-link" title="aligned.retrieval_job.split">split</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#subset_polars" class="internal-link" title="aligned.retrieval_job.subset_polars">subset<wbr></wbr>_polars</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+
+        <div class="childrenKindTitle">Variables</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#JobType" class="internal-link" title="aligned.retrieval_job.JobType"><wbr></wbr>Job<wbr></wbr>Type</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob"><wbr></wbr>Convertable<wbr></wbr>To<wbr></wbr>Retrieval<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#SplitterCallable" class="internal-link" title="aligned.retrieval_job.SplitterCallable"><wbr></wbr>Splitter<wbr></wbr>Callable</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#CustomPolarsTransform" class="internal-link" title="aligned.retrieval_job.CustomPolarsTransform"><wbr></wbr>Custom<wbr></wbr>Polars<wbr></wbr>Transform</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#logger" class="internal-link" title="aligned.retrieval_job.logger">logger</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div>
+
+</nav>
+        </div>
+        <div id="collapseSideBar">
+          <a class="btn btn-link" onclick="toggleSideBarCollapse()" title="Toggle Sidebar Collapse">
+          </a>
+        </div> 
+        <script src="sidebartoggle.js" type="text/javascript"></script>
+       
+      </div>
+
+      <div id="main" class="">
+        
+
+        
+
+        <div class="page-header">
+          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.retrieval_job.html" class="internal-link" title="aligned.retrieval_job">retrieval_job</a></code><wbr></wbr>.<code><a href="aligned.retrieval_job.TrainTestValidateJob.html" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob">TrainTestValidateJob</a></code></code></h1>
+          <div id="showPrivate">
+            <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
+          </div>
+        </div>
+
+        <div class="categoryHeader">
+          class documentation
+        </div>
+
+        <div class="extrasDocstring">
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">TrainTestValidateJob</span>: <a href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L256" class="sourceLink">(source)</a></code></p>
+          <p><a href="classIndex.html#aligned.retrieval_job.TrainTestValidateJob">View In Hierarchy</a></p>
+        </div>
+
+        <div class="moduleDocstring">
+          <div><p class="undocumented">Undocumented</p></div>
+        </div>
+
+        <div id="splitTables">
+          <table class="children sortable" id="id115">
+  
+  
+  <tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#input_features" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.input_features">input<wbr></wbr>_features</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#store_dataset" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.store_dataset">store<wbr></wbr>_dataset</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#store_dataset_at_directory" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.store_dataset_at_directory">store<wbr></wbr>_dataset<wbr></wbr>_at<wbr></wbr>_directory</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#should_filter_out_null_targets" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.should_filter_out_null_targets">should<wbr></wbr>_filter<wbr></wbr>_out<wbr></wbr>_null<wbr></wbr>_targets</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#target_columns" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.target_columns">target<wbr></wbr>_columns</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#test_job" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.test_job">test<wbr></wbr>_job</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#train_job" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.train_job">train<wbr></wbr>_job</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#validate_job" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.validate_job">validate<wbr></wbr>_job</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="property">
+    
+    <td>Property</td>
+    <td><code><a href="#test" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.test">test</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="property">
+    
+    <td>Property</td>
+    <td><code><a href="#train" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.train">train</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="property">
+    
+    <td>Property</td>
+    <td><code><a href="#validate" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob.validate">validate</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr>
+</table>
+          
+
+            
+        </div>
+
+        <div id="childList">
+          <div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.TrainTestValidateJob.input_features">
+    
+  </a>
+  <a name="input_features">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">input_features</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>Feature]</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L284">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#input_features" title="aligned.retrieval_job.TrainTestValidateJob.input_features">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.TrainTestValidateJob.store_dataset">
+    
+  </a>
+  <a name="store_dataset">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">store_dataset</span><span class="function-signature">(self, dataset_store: <code>DatasetStore | <a href="aligned.sources.local.StorageFileReference.html" class="internal-link" title="aligned.sources.local.StorageFileReference">StorageFileReference</a></code>, train_source: <code>DataFileReference</code>, test_source: <code>DataFileReference</code>, validate_source: <code>DataFileReference</code>, metadata: <code>DatasetMetadata | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, train_size: <code><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, test_size: <code><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, validation_size: <code><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.TrainTestValidateJob.html" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob">TrainTestValidateJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L320">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#store_dataset" title="aligned.retrieval_job.TrainTestValidateJob.store_dataset">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.TrainTestValidateJob.store_dataset_at_directory">
+    
+  </a>
+  <a name="store_dataset_at_directory">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">store_dataset_at_directory</span><span class="function-signature">(self, directory: <code>Directory</code>, dataset_store: <code>DatasetStore | <a href="aligned.sources.local.StorageFileReference.html" class="internal-link" title="aligned.sources.local.StorageFileReference">StorageFileReference</a></code>, metadata: <code>DatasetMetadata | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, id: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, tags: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.TrainTestValidateJob.html" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob">TrainTestValidateJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L291">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#store_dataset_at_directory" title="aligned.retrieval_job.TrainTestValidateJob.store_dataset_at_directory">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.retrieval_job.TrainTestValidateJob.should_filter_out_null_targets">
+    
+  </a>
+  <a name="should_filter_out_null_targets">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">should_filter_out_null_targets</span>: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L264">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#should_filter_out_null_targets" title="aligned.retrieval_job.TrainTestValidateJob.should_filter_out_null_targets">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.retrieval_job.TrainTestValidateJob.target_columns">
+    
+  </a>
+  <a name="target_columns">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">target_columns</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L262">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#target_columns" title="aligned.retrieval_job.TrainTestValidateJob.target_columns">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.retrieval_job.TrainTestValidateJob.test_job">
+    
+  </a>
+  <a name="test_job">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">test_job</span>: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L259">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#test_job" title="aligned.retrieval_job.TrainTestValidateJob.test_job">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.retrieval_job.TrainTestValidateJob.train_job">
+    
+  </a>
+  <a name="train_job">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">train_job</span>: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L258">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#train_job" title="aligned.retrieval_job.TrainTestValidateJob.train_job">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.retrieval_job.TrainTestValidateJob.validate_job">
+    
+  </a>
+  <a name="validate_job">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">validate_job</span>: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L260">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#validate_job" title="aligned.retrieval_job.TrainTestValidateJob.validate_job">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseproperty">
+  
+  
+  <a name="aligned.retrieval_job.TrainTestValidateJob.test">
+    
+  </a>
+  <a name="test">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">test</span>: <code><a href="aligned.retrieval_job.SupervisedJob.html" class="internal-link" title="aligned.retrieval_job.SupervisedJob">SupervisedJob</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L272">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#test" title="aligned.retrieval_job.TrainTestValidateJob.test">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseproperty">
+  
+  
+  <a name="aligned.retrieval_job.TrainTestValidateJob.train">
+    
+  </a>
+  <a name="train">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">train</span>: <code><a href="aligned.retrieval_job.SupervisedJob.html" class="internal-link" title="aligned.retrieval_job.SupervisedJob">SupervisedJob</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L266">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#train" title="aligned.retrieval_job.TrainTestValidateJob.train">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseproperty">
+  
+  
+  <a name="aligned.retrieval_job.TrainTestValidateJob.validate">
+    
+  </a>
+  <a name="validate">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">validate</span>: <code><a href="aligned.retrieval_job.SupervisedJob.html" class="internal-link" title="aligned.retrieval_job.SupervisedJob">SupervisedJob</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L278">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#validate" title="aligned.retrieval_job.TrainTestValidateJob.validate">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div>
+        </div>
+      
+      </div>
+    </div>
+
+    <footer class="navbar navbar-default">
+
+  
+  <div class="container-fluid">
+    <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
+  generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
+    24.11.2 at 2025-03-05 23:11:44.
+  </div>
+
+  <!-- Search related scripts needs to be loaded at the end of HTML 
+    parsing not to introduce overhead and display HTML data asap -->
+  <script src="ajax.js" type="text/javascript"></script>
+  <script src="searchlib.js" type="text/javascript"></script>
+  <script src="search.js" type="text/javascript"></script>
+
+</footer>
+  
+    <script src="pydoctor.js" type="text/javascript"></script>
+
+  </body>
+</html>

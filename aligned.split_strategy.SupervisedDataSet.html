@@ -135,6 +135,26 @@
             </div>
         
 
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#label" class="internal-link" title="aligned.split_strategy.SupervisedDataSet.label">label</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#target" class="internal-link" title="aligned.split_strategy.SupervisedDataSet.target">target</a></code>
+            </div>
+        
+
     </li>
 </ul> 
 
@@ -257,17 +277,7 @@
         <div class="childrenKindTitle">Classes</div>
         <ul>
     
-    <li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.split_strategy.SplitDataSet.html" class="internal-link" title="aligned.split_strategy.SplitDataSet"><wbr></wbr>Split<wbr></wbr>Data<wbr></wbr>Set</a></code>
-            </div>
-        
-
-    </li><li class=" thisobject">
+    <li class=" thisobject">
         
         
         
@@ -277,21 +287,24 @@
             </div>
         
 
-    </li><li class="">
+    </li>
+</ul>
+
+        <div class="childrenKindTitle">Functions</div>
+        <ul>
+    
+    <li class="">
         
         
         
 
         
-            <div class="itemName"><code><a href="aligned.split_strategy.TrainTestValidateSet.html" class="internal-link" title="aligned.split_strategy.TrainTestValidateSet"><wbr></wbr>Train<wbr></wbr>Test<wbr></wbr>Validate<wbr></wbr>Set</a></code>
+            <div class="itemName"><code><a href="aligned.split_strategy.html#column_for" class="internal-link" title="aligned.split_strategy.column_for">column<wbr></wbr>_for</a></code>
             </div>
         
 
     </li>
-</ul>
-
-        
-         
+</ul> 
 
         
          
@@ -345,7 +358,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">SupervisedDataSet</span>(<a href="https://docs.python.org/3/library/typing.html#typing.Generic" class="intersphinx-link">Generic</a>[<wbr></wbr><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a>]): <a href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/split_strategy.py#L10" class="sourceLink">(source)</a></code></p><p>Constructor: <code><a href="#__init__" class="internal-link" title="aligned.split_strategy.SupervisedDataSet.__init__">SupervisedDataSet(data, entity_columns, features, target, event_timestamp_column)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">SupervisedDataSet</span>(<a href="https://docs.python.org/3/library/typing.html#typing.Generic" class="intersphinx-link">Generic</a>[<wbr></wbr><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a>]): <a href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/split_strategy.py#L22" class="sourceLink">(source)</a></code></p><p>Constructor: <code><a href="#__init__" class="internal-link" title="aligned.split_strategy.SupervisedDataSet.__init__">SupervisedDataSet(data, entity_columns, features, target, event_timestamp_column)</a></code></p>
           <p><a href="classIndex.html#aligned.split_strategy.SupervisedDataSet">View In Hierarchy</a></p>
         </div>
 
@@ -354,13 +367,23 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id336">
+          <table class="children sortable" id="id377">
   
   
   <tr class="method">
     
     <td>Method</td>
     <td><code><a href="#__init__" class="internal-link" title="aligned.split_strategy.SupervisedDataSet.__init__">__init__</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#label" class="internal-link" title="aligned.split_strategy.SupervisedDataSet.label">label</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#target" class="internal-link" title="aligned.split_strategy.SupervisedDataSet.target">target</a></code></td>
     <td><span class="undocumented">Undocumented</span></td>
   </tr><tr class="instancevariable">
     
@@ -428,11 +451,65 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">__init__</span><span class="function-signature">(self, data: <code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a></code>, entity_columns: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>, features: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>, target: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>, event_timestamp_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/split_strategy.py#L22">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/split_strategy.py#L34">
       
       (source)
     </a>
     <a class="headerLink" href="#__init__" title="aligned.split_strategy.SupervisedDataSet.__init__">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.split_strategy.SupervisedDataSet.label">
+    
+  </a>
+  <a name="label">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/typing.html#typing.overload" class="intersphinx-link">overload</a><br /><div><span class="py-keyword">def</span> <span class="py-defname">label</span><span class="function-signature">(self: <code><a href="aligned.split_strategy.SupervisedDataSet.html" class="internal-link" title="aligned.split_strategy.SupervisedDataSet">SupervisedDataSet</a>[<wbr></wbr>pl.DataFrame]</code>) -&gt; <code>pl.Series</code></span>:</div>@<a href="https://docs.python.org/3/library/typing.html#typing.overload" class="intersphinx-link">overload</a><br /><div><span class="py-keyword">def</span> <span class="py-defname">label</span><span class="function-signature">(self: <code><a href="aligned.split_strategy.SupervisedDataSet.html" class="internal-link" title="aligned.split_strategy.SupervisedDataSet">SupervisedDataSet</a>[<wbr></wbr>pl.LazyFrame]</code>) -&gt; <code>pl.Series</code></span>:</div>@<a href="https://docs.python.org/3/library/typing.html#typing.overload" class="intersphinx-link">overload</a><br /><div><span class="py-keyword">def</span> <span class="py-defname">label</span><span class="function-signature">(self: <code><a href="aligned.split_strategy.SupervisedDataSet.html" class="internal-link" title="aligned.split_strategy.SupervisedDataSet">SupervisedDataSet</a>[<wbr></wbr>pd.DataFrame]</code>) -&gt; <code>pd.Series</code></span>:</div>
+    
+    
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/split_strategy.py#L60">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#label" title="aligned.split_strategy.SupervisedDataSet.label">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.split_strategy.SupervisedDataSet.target">
+    
+  </a>
+  <a name="target">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/typing.html#typing.overload" class="intersphinx-link">overload</a><br /><div><span class="py-keyword">def</span> <span class="py-defname">target</span><span class="function-signature">(self: <code><a href="aligned.split_strategy.SupervisedDataSet.html" class="internal-link" title="aligned.split_strategy.SupervisedDataSet">SupervisedDataSet</a>[<wbr></wbr>pl.DataFrame]</code>) -&gt; <code>pl.Series</code></span>:</div>@<a href="https://docs.python.org/3/library/typing.html#typing.overload" class="intersphinx-link">overload</a><br /><div><span class="py-keyword">def</span> <span class="py-defname">target</span><span class="function-signature">(self: <code><a href="aligned.split_strategy.SupervisedDataSet.html" class="internal-link" title="aligned.split_strategy.SupervisedDataSet">SupervisedDataSet</a>[<wbr></wbr>pl.LazyFrame]</code>) -&gt; <code>pl.Series</code></span>:</div>@<a href="https://docs.python.org/3/library/typing.html#typing.overload" class="intersphinx-link">overload</a><br /><div><span class="py-keyword">def</span> <span class="py-defname">target</span><span class="function-signature">(self: <code><a href="aligned.split_strategy.SupervisedDataSet.html" class="internal-link" title="aligned.split_strategy.SupervisedDataSet">SupervisedDataSet</a>[<wbr></wbr>pd.DataFrame]</code>) -&gt; <code>pd.Series</code></span>:</div>
+    
+    
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/split_strategy.py#L82">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#target" title="aligned.split_strategy.SupervisedDataSet.target">
       
       
       ¶
@@ -454,7 +531,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">data</span>: <code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/split_strategy.py#L11">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/split_strategy.py#L23">
       
       (source)
     </a>
@@ -481,7 +558,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">entity_columns</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/split_strategy.py#L13">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/split_strategy.py#L25">
       
       (source)
     </a>
@@ -508,7 +585,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">event_timestamp_column</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/split_strategy.py#L16">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/split_strategy.py#L28">
       
       (source)
     </a>
@@ -535,7 +612,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">feature_columns</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/split_strategy.py#L14">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/split_strategy.py#L26">
       
       (source)
     </a>
@@ -562,7 +639,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">target_columns</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/split_strategy.py#L15">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/split_strategy.py#L27">
       
       (source)
     </a>
@@ -589,7 +666,7 @@
   <div class="functionHeader">
     @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
     <span class="py-defname">entities</span>: <code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/split_strategy.py#L36">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/split_strategy.py#L48">
       
       (source)
     </a>
@@ -616,7 +693,7 @@
   <div class="functionHeader">
     @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
     <span class="py-defname">input</span>: <code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/split_strategy.py#L42">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/split_strategy.py#L54">
       
       (source)
     </a>
@@ -643,7 +720,7 @@
   <div class="functionHeader">
     @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
     <span class="py-defname">labels</span>: <code><a href="aligned.split_strategy.html#DatasetType" class="internal-link" title="aligned.split_strategy.DatasetType">DatasetType</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/split_strategy.py#L48">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/split_strategy.py#L76">
       
       (source)
     </a>
@@ -670,7 +747,7 @@
   <div class="functionHeader">
     @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
     <span class="py-defname">sorted_features</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/split_strategy.py#L18">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/split_strategy.py#L30">
       
       (source)
     </a>
@@ -697,7 +774,7 @@
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    24.11.2 at 2025-02-18 12:41:13.
+    24.11.2 at 2025-03-05 23:11:44.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

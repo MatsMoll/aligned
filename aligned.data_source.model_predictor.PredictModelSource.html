@@ -277,6 +277,16 @@
         
 
         
+            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.BatchDataSource.html#needed_configs" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource.needed_configs">needed<wbr></wbr>_configs</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
             <div class="itemName"><code><a href="aligned.data_source.batch_data_source.BatchDataSource.html#source_id" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource.source_id">source<wbr></wbr>_id</a></code>
             </div>
         
@@ -445,7 +455,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">PredictModelSource</span>(<a href="aligned.data_source.batch_data_source.BatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource">BatchDataSource</a>): <a href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/model_predictor.py#L13" class="sourceLink">(source)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">PredictModelSource</span>(<a href="aligned.data_source.batch_data_source.BatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource">BatchDataSource</a>): <a href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/model_predictor.py#L13" class="sourceLink">(source)</a></code></p>
           <p><a href="classIndex.html#aligned.data_source.model_predictor.PredictModelSource">View In Hierarchy</a></p>
         </div>
 
@@ -454,7 +464,7 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id36">
+          <table class="children sortable" id="id50">
   
   
   <tr class="classmethod">
@@ -523,7 +533,7 @@
             <p class="inheritedFrom">
               Inherited from <code><a href="aligned.data_source.batch_data_source.BatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource">BatchDataSource</a></code>:
             </p>
-            <table class="children sortable" id="id37">
+            <table class="children sortable" id="id51">
   
   
   <tr class="basemethod">
@@ -556,6 +566,11 @@
     <td>Async Method</td>
     <td><code><a href="aligned.data_source.batch_data_source.BatchDataSource.html#freshness" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource.freshness">freshness</a></code></td>
     <td>.table("my_table") .freshness()</td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.data_source.batch_data_source.BatchDataSource.html#needed_configs" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource.needed_configs">needed<wbr></wbr>_configs</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
   </tr><tr class="basemethod">
     
     <td>Method</td>
@@ -601,8 +616,8 @@
   <div class="functionHeader">
     
     @<a href="https://docs.python.org/3/library/functions.html#classmethod" class="intersphinx-link">classmethod</a><br />
-    <span class="py-keyword">def</span> <span class="py-defname">multi_source_features_for</span><span class="function-signature">(cls, facts: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, requests: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr><a href="aligned.data_source.model_predictor.PredictModelSource.html" class="internal-link" title="aligned.data_source.model_predictor.PredictModelSource">PredictModelSource</a>, <wbr></wbr>RetrivalRequest]]</code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/model_predictor.py#L108">
+    <span class="py-keyword">def</span> <span class="py-defname">multi_source_features_for</span><span class="function-signature">(cls, facts: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, requests: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr><a href="aligned.data_source.model_predictor.PredictModelSource.html" class="internal-link" title="aligned.data_source.model_predictor.PredictModelSource">PredictModelSource</a>, <wbr></wbr>RetrievalRequest]]</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/model_predictor.py#L116">
       
       (source)
     </a>
@@ -628,8 +643,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">all_between_dates</span><span class="function-signature">(self, request: <code>RetrivalRequest</code>, start_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>, end_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/model_predictor.py#L57">
+    <span class="py-keyword">def</span> <span class="py-defname">all_between_dates</span><span class="function-signature">(self, request: <code>RetrievalRequest</code>, start_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>, end_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/model_predictor.py#L58">
       
       (source)
     </a>
@@ -655,8 +670,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">all_data</span><span class="function-signature">(self, request: <code>RetrivalRequest</code>, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/model_predictor.py#L36">
+    <span class="py-keyword">def</span> <span class="py-defname">all_data</span><span class="function-signature">(self, request: <code>RetrievalRequest</code>, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/model_predictor.py#L35">
       
       (source)
     </a>
@@ -683,7 +698,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">depends_on</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>FeatureLocation]</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/model_predictor.py#L121">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/model_predictor.py#L130">
       
       (source)
     </a>
@@ -709,8 +724,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">features_for</span><span class="function-signature">(self, facts: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, request: <code>RetrivalRequest</code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/model_predictor.py#L80">
+    <span class="py-keyword">def</span> <span class="py-defname">features_for</span><span class="function-signature">(self, facts: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, request: <code>RetrievalRequest</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/model_predictor.py#L81">
       
       (source)
     </a>
@@ -737,7 +752,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">job_group_key</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/model_predictor.py#L24">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/model_predictor.py#L23">
       
       (source)
     </a>
@@ -764,7 +779,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">location_id</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>FeatureLocation]</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/model_predictor.py#L28">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/model_predictor.py#L27">
       
       (source)
     </a>
@@ -791,7 +806,7 @@
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">schema</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr>FeatureType]</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/model_predictor.py#L31">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/model_predictor.py#L30">
       
       (source)
     </a>
@@ -827,7 +842,7 @@ schema = await source.schema()
   <div class="functionHeader">
     
     <span class="py-defname">cache_source</span>: <code><a href="aligned.data_source.batch_data_source.BatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource">BatchDataSource</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/model_predictor.py#L17">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/model_predictor.py#L16">
       
       (source)
     </a>
@@ -853,8 +868,8 @@ schema = await source.schema()
   </a>
   <div class="functionHeader">
     
-    <span class="py-defname">store</span>: <code><a href="aligned.feature_store.ModelFeatureStore.html" class="internal-link" title="aligned.feature_store.ModelFeatureStore">ModelFeatureStore</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/model_predictor.py#L16">
+    <span class="py-defname">store</span>: <code>ModelFeatureStore</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/model_predictor.py#L15">
       
       (source)
     </a>
@@ -881,7 +896,7 @@ schema = await source.schema()
   <div class="functionHeader">
     
     <span class="py-defname">type_name</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/model_predictor.py#L18">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/model_predictor.py#L17">
       
       (source)
     </a>
@@ -908,7 +923,7 @@ schema = await source.schema()
   <div class="functionHeader">
     @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
     <span class="py-defname">model</span>: <code>Model</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/data_source/model_predictor.py#L20">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/data_source/model_predictor.py#L19">
       
       (source)
     </a>
@@ -935,7 +950,7 @@ schema = await source.schema()
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    24.11.2 at 2025-02-18 12:41:13.
+    24.11.2 at 2025-03-05 23:11:44.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

@@ -1,0 +1,909 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+          "DTD/xhtml1-strict.dtd">
+<html>
+  
+
+  <head>
+    
+    <title>aligned.sources.databricks.DatabricksConnectionConfig</title>
+    <meta name="generator" content="pydoctor 24.11.2"> 
+        
+    </meta>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1 maximum-scale=1" />
+    <link rel="stylesheet" type="text/css" href="bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="apidocs.css" />
+    <link rel="stylesheet" type="text/css" href="extra.css" />
+    
+</head>
+
+  <body>
+
+    
+
+    <nav class="navbar navbar-default mainnavbar">
+      
+  
+  <div class="container-fluid">
+
+
+    <div class="navbar-header">
+      
+      <div class="navlinks">
+        <span class="navbar-brand">
+          <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a> <a href="index.html">API Documentation</a>
+        </span>
+
+        <a href="moduleIndex.html">
+          Modules
+        </a>
+
+        <a href="classIndex.html">
+          Classes
+        </a>
+
+        <a href="nameIndex.html">
+          Names
+        </a>
+
+        <div id="search-box-container">
+          <div class="input-group">
+            <input id="search-box" type="search" name="search-query" placeholder="Search..." aria-label="Search" minlength="2" class="form-control" autocomplete="off" />
+            
+            <span class="input-group-btn">
+              <a style="display: none;" class="btn btn-default" id="search-clear-button" title="Clear" onclick="clearSearch()"><img src="fonts/x-circle.svg" alt="Clear" /></a>
+              <a class="btn btn-default" id="apidocs-help-button" title="Help" href="apidocs-help.html"><img src="fonts/info.svg" alt="Help" /></a>
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="search-results-container" style="display: none;">
+        
+        <div id="search-buttons">
+          <span class="label label-default" id="search-docstrings-button">
+          <label class="checkbox-inline">
+            <input type="checkbox" id="toggle-search-in-docstrings-checkbox" value="false" onclick="toggleSearchInDocstrings()">
+              search in docstrings
+            </input>
+          </label>
+          </span>
+          
+        </div>
+        
+        <noscript>
+            <h1>Cannot search: JavaScript is not supported/enabled in your browser.</h1>
+        </noscript>
+
+        <div id="search-status"> </div>
+
+        <div class="warning" id="search-warn-box" style="display: none;">
+          <p class="rst-last"><span id="search-warn"></span></p>
+        </div>
+
+        <table id="search-results">
+          <!-- Filled dynamically by JS -->
+        </table>
+        
+        <div style="margin-top: 10px;">
+          <p>For more information on the search, visit the <a href="apidocs-help.html#rst-search">help page</a>.</p>
+        </div>
+      </div>
+
+    </div>
+
+
+  </div>
+</nav>
+    
+    <div class="container-fluid">
+
+      <!-- Side navigation -->
+      <div class="sidebarcontainer" style="display: none;">
+        
+        <div class="sidebar"><nav class="sidebar">
+  
+
+  <div>
+
+      <div class="thingTitle">
+        <span>Class</span>
+        <code class="thisobject"><a href="aligned.sources.databricks.DatabricksConnectionConfig.html" class="internal-link" title="This class"><wbr></wbr>Databricks<wbr></wbr>Connection<wbr></wbr>Config</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        
+        
+
+        <div class="childrenKindTitle">Methods</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#databricks_or_serverless" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.databricks_or_serverless">databricks<wbr></wbr>_or<wbr></wbr>_serverless</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#serverless" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.serverless">serverless</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#with_cluster_id" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.with_cluster_id">with<wbr></wbr>_cluster<wbr></wbr>_id</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#__init__" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.__init__">__init__</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#catalog" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.catalog">catalog</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#connection" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.connection">connection</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#sql" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.sql">sql</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#with_auth" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.with_auth">with<wbr></wbr>_auth</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+
+        <div class="childrenKindTitle">Attributes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#cluster_id" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.cluster_id">cluster<wbr></wbr>_id</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#host" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.host">host</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#token" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.token">token</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div><div>
+
+      <div class="thingTitle">
+        <span>Module</span>
+        <code><a href="aligned.sources.databricks.html" class="internal-link" title="The parent of this class">databricks</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        <div class="childrenKindTitle">Classes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.DatabricksAuthConfig.html" class="internal-link" title="aligned.sources.databricks.DatabricksAuthConfig"><wbr></wbr>Databricks<wbr></wbr>Auth<wbr></wbr>Config</a></code>
+            </div>
+        
+
+    </li><li class=" thisobject">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.DatabricksConnectionConfig.html" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig"><wbr></wbr>Databricks<wbr></wbr>Connection<wbr></wbr>Config</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.DatabricksSource.html" class="internal-link" title="aligned.sources.databricks.DatabricksSource"><wbr></wbr>Databricks<wbr></wbr>Source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.SparkDataType.html" class="internal-link" title="aligned.sources.databricks.SparkDataType"><wbr></wbr>Spark<wbr></wbr>Data<wbr></wbr>Type</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.UCFeatureTableSource.html" class="internal-link" title="aligned.sources.databricks.UCFeatureTableSource"><wbr></wbr>UCFeature<wbr></wbr>Table<wbr></wbr>Source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.UCSqlSource.html" class="internal-link" title="aligned.sources.databricks.UCSqlSource"><wbr></wbr>UCSql<wbr></wbr>Source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.UCTableSource.html" class="internal-link" title="aligned.sources.databricks.UCTableSource"><wbr></wbr>UCTable<wbr></wbr>Source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.UnityCatalog.html" class="internal-link" title="aligned.sources.databricks.UnityCatalog"><wbr></wbr>Unity<wbr></wbr>Catalog</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.UnityCatalogSchema.html" class="internal-link" title="aligned.sources.databricks.UnityCatalogSchema"><wbr></wbr>Unity<wbr></wbr>Catalog<wbr></wbr>Schema</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.UnityCatalogTableAllJob.html" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableAllJob"><wbr></wbr>Unity<wbr></wbr>Catalog<wbr></wbr>Table<wbr></wbr>All<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.UnityCatalogTableConfig.html" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableConfig"><wbr></wbr>Unity<wbr></wbr>Catalog<wbr></wbr>Table<wbr></wbr>Config</a></code>
+            </div>
+        
+
+    </li>
+</ul>
+
+        <div class="childrenKindTitle">Functions</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.html#convert_pyspark_type" class="internal-link" title="aligned.sources.databricks.convert_pyspark_type">convert<wbr></wbr>_pyspark<wbr></wbr>_type</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.html#features_to_read" class="internal-link" title="aligned.sources.databricks.features_to_read">features<wbr></wbr>_to<wbr></wbr>_read</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.html#is_running_on_databricks" class="internal-link" title="aligned.sources.databricks.is_running_on_databricks">is<wbr></wbr>_running<wbr></wbr>_on<wbr></wbr>_databricks</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.html#polars_dtype_to_spark" class="internal-link" title="aligned.sources.databricks.polars_dtype_to_spark">polars<wbr></wbr>_dtype<wbr></wbr>_to<wbr></wbr>_spark</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.html#polars_schema_to_spark" class="internal-link" title="aligned.sources.databricks.polars_schema_to_spark">polars<wbr></wbr>_schema<wbr></wbr>_to<wbr></wbr>_spark</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.html#raise_on_invalid_pyspark_schema" class="internal-link" title="aligned.sources.databricks.raise_on_invalid_pyspark_schema">raise<wbr></wbr>_on<wbr></wbr>_invalid<wbr></wbr>_pyspark<wbr></wbr>_schema</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.html#validate_pyspark_schema" class="internal-link" title="aligned.sources.databricks.validate_pyspark_schema">validate<wbr></wbr>_pyspark<wbr></wbr>_schema</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+
+        <div class="childrenKindTitle">Variables</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.html#logger" class="internal-link" title="aligned.sources.databricks.logger">logger</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div>
+
+</nav>
+        </div>
+        <div id="collapseSideBar">
+          <a class="btn btn-link" onclick="toggleSideBarCollapse()" title="Toggle Sidebar Collapse">
+          </a>
+        </div> 
+        <script src="sidebartoggle.js" type="text/javascript"></script>
+       
+      </div>
+
+      <div id="main" class="">
+        
+
+        
+
+        <div class="page-header">
+          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.sources.html" class="internal-link" title="aligned.sources">sources</a></code><wbr></wbr>.<code><a href="aligned.sources.databricks.html" class="internal-link" title="aligned.sources.databricks">databricks</a></code><wbr></wbr>.<code><a href="aligned.sources.databricks.DatabricksConnectionConfig.html" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig">DatabricksConnectionConfig</a></code></code></h1>
+          <div id="showPrivate">
+            <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
+          </div>
+        </div>
+
+        <div class="categoryHeader">
+          class documentation
+        </div>
+
+        <div class="extrasDocstring">
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">DatabricksConnectionConfig</span>: <a href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L195" class="sourceLink">(source)</a></code></p><p>Constructors: <code><a href="#databricks_or_serverless" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.databricks_or_serverless">DatabricksConnectionConfig.databricks_or_serverless(host, token)</a></code>, <code><a href="#serverless" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.serverless">DatabricksConnectionConfig.serverless(host, token)</a></code>, <code><a href="#with_cluster_id" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.with_cluster_id">DatabricksConnectionConfig.with_cluster_id(cluster_id, host)</a></code>, <code><a href="#__init__" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.__init__">DatabricksConnectionConfig(host, cluster_id, token)</a></code></p>
+          <p><a href="classIndex.html#aligned.sources.databricks.DatabricksConnectionConfig">View In Hierarchy</a></p>
+        </div>
+
+        <div class="moduleDocstring">
+          <div><p class="undocumented">Undocumented</p></div>
+        </div>
+
+        <div id="splitTables">
+          <table class="children sortable" id="id262">
+  
+  
+  <tr class="staticmethod">
+    
+    <td>Static Method</td>
+    <td><code><a href="#databricks_or_serverless" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.databricks_or_serverless">databricks<wbr></wbr>_or<wbr></wbr>_serverless</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="staticmethod">
+    
+    <td>Static Method</td>
+    <td><code><a href="#serverless" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.serverless">serverless</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="staticmethod">
+    
+    <td>Static Method</td>
+    <td><code><a href="#with_cluster_id" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.with_cluster_id">with<wbr></wbr>_cluster<wbr></wbr>_id</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#__init__" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.__init__">__init__</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#catalog" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.catalog">catalog</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#connection" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.connection">connection</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#sql" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.sql">sql</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#with_auth" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.with_auth">with<wbr></wbr>_auth</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="instancevariable">
+    
+    <td>Instance Variable</td>
+    <td><code><a href="#cluster_id" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.cluster_id">cluster<wbr></wbr>_id</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="instancevariable">
+    
+    <td>Instance Variable</td>
+    <td><code><a href="#host" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.host">host</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="instancevariable">
+    
+    <td>Instance Variable</td>
+    <td><code><a href="#token" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.token">token</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr>
+</table>
+          
+
+            
+        </div>
+
+        <div id="childList">
+          <div class="basestaticmethod">
+  
+  
+  <a name="aligned.sources.databricks.DatabricksConnectionConfig.databricks_or_serverless">
+    
+  </a>
+  <a name="databricks_or_serverless">
+    
+  </a>
+  <div class="functionHeader">
+    
+    @<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br />
+    <span class="py-keyword">def</span> <span class="py-defname">databricks_or_serverless</span><span class="function-signature">(host: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, token: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.sources.databricks.DatabricksConnectionConfig.html" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig">DatabricksConnectionConfig</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L222">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#databricks_or_serverless" title="aligned.sources.databricks.DatabricksConnectionConfig.databricks_or_serverless">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basestaticmethod">
+  
+  
+  <a name="aligned.sources.databricks.DatabricksConnectionConfig.serverless">
+    
+  </a>
+  <a name="serverless">
+    
+  </a>
+  <div class="functionHeader">
+    
+    @<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br />
+    <span class="py-keyword">def</span> <span class="py-defname">serverless</span><span class="function-signature">(host: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, token: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.sources.databricks.DatabricksConnectionConfig.html" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig">DatabricksConnectionConfig</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L232">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#serverless" title="aligned.sources.databricks.DatabricksConnectionConfig.serverless">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basestaticmethod">
+  
+  
+  <a name="aligned.sources.databricks.DatabricksConnectionConfig.with_cluster_id">
+    
+  </a>
+  <a name="with_cluster_id">
+    
+  </a>
+  <div class="functionHeader">
+    
+    @<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br />
+    <span class="py-keyword">def</span> <span class="py-defname">with_cluster_id</span><span class="function-signature">(cluster_id: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code>, host: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code>) -&gt; <code><a href="aligned.sources.databricks.DatabricksConnectionConfig.html" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig">DatabricksConnectionConfig</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L242">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#with_cluster_id" title="aligned.sources.databricks.DatabricksConnectionConfig.with_cluster_id">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.sources.databricks.DatabricksConnectionConfig.__init__">
+    
+  </a>
+  <a name="__init__">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">__init__</span><span class="function-signature">(self, host: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code>, cluster_id: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code>, token: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code>)</span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L201">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#__init__" title="aligned.sources.databricks.DatabricksConnectionConfig.__init__">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.sources.databricks.DatabricksConnectionConfig.catalog">
+    
+  </a>
+  <a name="catalog">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">catalog</span><span class="function-signature">(self, catalog: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code>) -&gt; <code><a href="aligned.sources.databricks.UnityCatalog.html" class="internal-link" title="aligned.sources.databricks.UnityCatalog">UnityCatalog</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L248">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#catalog" title="aligned.sources.databricks.DatabricksConnectionConfig.catalog">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.sources.databricks.DatabricksConnectionConfig.connection">
+    
+  </a>
+  <a name="connection">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">connection</span><span class="function-signature">(self) -&gt; <code>SparkSession</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L251">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#connection" title="aligned.sources.databricks.DatabricksConnectionConfig.connection">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.sources.databricks.DatabricksConnectionConfig.sql">
+    
+  </a>
+  <a name="sql">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">sql</span><span class="function-signature">(self, query: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code><a href="aligned.sources.databricks.UCSqlSource.html" class="internal-link" title="aligned.sources.databricks.UCSqlSource">UCSqlSource</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L289">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#sql" title="aligned.sources.databricks.DatabricksConnectionConfig.sql">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.sources.databricks.DatabricksConnectionConfig.with_auth">
+    
+  </a>
+  <a name="with_auth">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">with_auth</span><span class="function-signature">(self, token: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code>, host: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code>) -&gt; <code><a href="aligned.sources.databricks.DatabricksConnectionConfig.html" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig">DatabricksConnectionConfig</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L215">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#with_auth" title="aligned.sources.databricks.DatabricksConnectionConfig.with_auth">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="baseinstancevariable">
+  
+  
+  <a name="aligned.sources.databricks.DatabricksConnectionConfig.cluster_id">
+    
+  </a>
+  <a name="cluster_id">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">cluster_id</span>: <code><a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L198">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#cluster_id" title="aligned.sources.databricks.DatabricksConnectionConfig.cluster_id">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseinstancevariable">
+  
+  
+  <a name="aligned.sources.databricks.DatabricksConnectionConfig.host">
+    
+  </a>
+  <a name="host">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">host</span>: <code><a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L197">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#host" title="aligned.sources.databricks.DatabricksConnectionConfig.host">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseinstancevariable">
+  
+  
+  <a name="aligned.sources.databricks.DatabricksConnectionConfig.token">
+    
+  </a>
+  <a name="token">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">token</span>: <code><a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/databricks.py#L199">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#token" title="aligned.sources.databricks.DatabricksConnectionConfig.token">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div>
+        </div>
+      
+      </div>
+    </div>
+
+    <footer class="navbar navbar-default">
+
+  
+  <div class="container-fluid">
+    <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
+  generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
+    24.11.2 at 2025-03-05 23:11:44.
+  </div>
+
+  <!-- Search related scripts needs to be loaded at the end of HTML 
+    parsing not to introduce overhead and display HTML data asap -->
+  <script src="ajax.js" type="text/javascript"></script>
+  <script src="searchlib.js" type="text/javascript"></script>
+  <script src="search.js" type="text/javascript"></script>
+
+</footer>
+  
+    <script src="pydoctor.js" type="text/javascript"></script>
+
+  </body>
+</html>

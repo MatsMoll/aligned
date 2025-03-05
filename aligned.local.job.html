@@ -158,7 +158,7 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.local.job.LiteralRetrivalJob.html" class="internal-link" title="aligned.local.job.LiteralRetrivalJob"><wbr></wbr>Literal<wbr></wbr>Retrival<wbr></wbr>Job</a></code>
+            <div class="itemName"><code><a href="aligned.local.job.LiteralRetrievalJob.html" class="internal-link" title="aligned.local.job.LiteralRetrievalJob"><wbr></wbr>Literal<wbr></wbr>Retrieval<wbr></wbr>Job</a></code>
             </div>
         
 
@@ -295,7 +295,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <a href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/local/job.py" class="sourceLink">(source)</a>
+          <a href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/local/job.py" class="sourceLink">(source)</a>
           <p></p>
         </div>
 
@@ -304,7 +304,7 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id62">
+          <table class="children sortable" id="id74">
   
   
   <tr class="class">
@@ -325,7 +325,7 @@
   </tr><tr class="class">
     
     <td>Class</td>
-    <td><code><a href="aligned.local.job.LiteralRetrivalJob.html" class="internal-link" title="aligned.local.job.LiteralRetrivalJob"><wbr></wbr>Literal<wbr></wbr>Retrival<wbr></wbr>Job</a></code></td>
+    <td><code><a href="aligned.local.job.LiteralRetrievalJob.html" class="internal-link" title="aligned.local.job.LiteralRetrievalJob"><wbr></wbr>Literal<wbr></wbr>Retrieval<wbr></wbr>Job</a></code></td>
     <td><span class="undocumented">Undocumented</span></td>
   </tr><tr class="function">
     
@@ -367,8 +367,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">async def</span> <span class="py-defname">aggregate</span><span class="function-signature">(request: <code>RetrivalRequest</code>, core_data: <code>pl.LazyFrame</code>) -&gt; <code>pl.LazyFrame</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/local/job.py#L60">
+    <span class="py-keyword">async def</span> <span class="py-defname">aggregate</span><span class="function-signature">(request: <code>RetrievalRequest</code>, core_data: <code>pl.LazyFrame</code>) -&gt; <code>pl.LazyFrame</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/local/job.py#L69">
       
       (source)
     </a>
@@ -395,7 +395,7 @@
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">aggregate_over</span><span class="function-signature">(group: <code>AggregateOver</code>, features: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>AggregatedFeature]</code>, df: <code>pl.LazyFrame</code>, event_timestamp_col: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, group_by: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code>pl.LazyFrame</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/local/job.py#L323">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/local/job.py#L353">
       
       (source)
     </a>
@@ -421,8 +421,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">decode_timestamps</span><span class="function-signature">(df: <code>pl.LazyFrame</code>, request: <code>RetrivalRequest</code>, formatter: <code>DateFormatter</code>) -&gt; <code>pl.LazyFrame</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/local/job.py#L147">
+    <span class="py-keyword">def</span> <span class="py-defname">decode_timestamps</span><span class="function-signature">(df: <code>pl.LazyFrame</code>, request: <code>RetrievalRequest</code>, formatter: <code>DateFormatter</code>) -&gt; <code>pl.LazyFrame</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/local/job.py#L160">
       
       (source)
     </a>
@@ -448,7 +448,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">logger</span> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/local/job.py#L18">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/local/job.py#L22">
       
       (source)
     </a>
@@ -475,7 +475,7 @@
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    24.11.2 at 2025-02-18 12:41:13.
+    24.11.2 at 2025-03-05 23:11:44.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

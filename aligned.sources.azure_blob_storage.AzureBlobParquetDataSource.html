@@ -191,6 +191,16 @@
         
 
         
+            <div class="itemName"><code><a href="#needed_configs" class="internal-link" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.needed_configs">needed<wbr></wbr>_configs</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
             <div class="itemName"><code><a href="#read_pandas" class="internal-link" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.read_pandas">read<wbr></wbr>_pandas</a></code>
             </div>
         
@@ -483,7 +493,7 @@
         
 
         
-            <div class="itemName"><code><a href="#storage" class="internal-link" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.storage">storage</a></code>
+            <div class="itemName"><code><a href="#as_markdown" class="internal-link" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.as_markdown">as<wbr></wbr>_markdown</a></code>
             </div>
         
 
@@ -493,7 +503,7 @@
         
 
         
-            <div class="itemName"><code><a href="#to_markdown" class="internal-link" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.to_markdown">to<wbr></wbr>_markdown</a></code>
+            <div class="itemName"><code><a href="#storage" class="internal-link" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.storage">storage</a></code>
             </div>
         
 
@@ -681,7 +691,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">AzureBlobParquetDataSource</span>(<a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a>, DataFileReference, <a href="aligned.data_source.batch_data_source.ColumnFeatureMappable.html" class="internal-link" title="aligned.data_source.batch_data_source.ColumnFeatureMappable">ColumnFeatureMappable</a>, <a href="aligned.sources.azure_blob_storage.AzureConfigurable.html" class="internal-link" title="aligned.sources.azure_blob_storage.AzureConfigurable">AzureConfigurable</a>): <a href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L668" class="sourceLink">(source)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">AzureBlobParquetDataSource</span>(<a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a>, DataFileReference, <a href="aligned.data_source.batch_data_source.ColumnFeatureMappable.html" class="internal-link" title="aligned.data_source.batch_data_source.ColumnFeatureMappable">ColumnFeatureMappable</a>, <a href="aligned.sources.azure_blob_storage.AzureConfigurable.html" class="internal-link" title="aligned.sources.azure_blob_storage.AzureConfigurable">AzureConfigurable</a>): <a href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L754" class="sourceLink">(source)</a></code></p>
           <p><a href="classIndex.html#aligned.sources.azure_blob_storage.AzureBlobParquetDataSource">View In Hierarchy</a></p>
         </div>
 
@@ -690,7 +700,7 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id234">
+          <table class="children sortable" id="id251">
   
   
   <tr class="classmethod">
@@ -723,6 +733,11 @@
     <td>Method</td>
     <td><code><a href="#job_group_key" class="internal-link" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.job_group_key">job<wbr></wbr>_group<wbr></wbr>_key</a></code></td>
     <td>A key defining which sources can be grouped together in one request.</td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#needed_configs" class="internal-link" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.needed_configs">needed<wbr></wbr>_configs</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Async Method</td>
@@ -786,12 +801,12 @@
   </tr><tr class="property">
     
     <td>Property</td>
-    <td><code><a href="#storage" class="internal-link" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.storage">storage</a></code></td>
+    <td><code><a href="#as_markdown" class="internal-link" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.as_markdown">as<wbr></wbr>_markdown</a></code></td>
     <td><span class="undocumented">Undocumented</span></td>
   </tr><tr class="property">
     
     <td>Property</td>
-    <td><code><a href="#to_markdown" class="internal-link" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.to_markdown">to<wbr></wbr>_markdown</a></code></td>
+    <td><code><a href="#storage" class="internal-link" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.storage">storage</a></code></td>
     <td><span class="undocumented">Undocumented</span></td>
   </tr>
 </table>
@@ -799,7 +814,7 @@
             <p class="inheritedFrom">
               Inherited from <code><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a></code>:
             </p>
-            <table class="children sortable" id="id235">
+            <table class="children sortable" id="id252">
   
   
   <tr class="baseclassmethod private">
@@ -818,7 +833,7 @@
             <p class="inheritedFrom">
               Inherited from <code><a href="aligned.data_source.batch_data_source.BatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource">BatchDataSource</a></code> (via <code><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a></code>):
             </p>
-            <table class="children sortable" id="id236">
+            <table class="children sortable" id="id253">
   
   
   <tr class="basemethod">
@@ -882,7 +897,7 @@
             <p class="inheritedFrom">
               Inherited from <code><a href="aligned.data_source.batch_data_source.ColumnFeatureMappable.html" class="internal-link" title="aligned.data_source.batch_data_source.ColumnFeatureMappable">ColumnFeatureMappable</a></code> (via <code><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.BatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource">BatchDataSource</a></code>):
             </p>
-            <table class="children sortable" id="id237">
+            <table class="children sortable" id="id254">
   
   
   <tr class="basemethod">
@@ -920,8 +935,8 @@
   <div class="functionHeader">
     
     @<a href="https://docs.python.org/3/library/functions.html#classmethod" class="intersphinx-link">classmethod</a><br />
-    <span class="py-keyword">def</span> <span class="py-defname">multi_source_features_for</span><span class="function-signature">(cls, facts: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, requests: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr><a href="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.html" class="internal-link" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource">AzureBlobParquetDataSource</a>, <wbr></wbr>RetrivalRequest]]</code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L753">
+    <span class="py-keyword">def</span> <span class="py-defname">multi_source_features_for</span><span class="function-signature">(cls, facts: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, requests: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr><a href="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.html" class="internal-link" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource">AzureBlobParquetDataSource</a>, <wbr></wbr>RetrievalRequest]]</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L848">
       
       (source)
     </a>
@@ -948,7 +963,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">__hash__</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L690">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L779">
       
       (source)
     </a>
@@ -974,8 +989,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">all_between_dates</span><span class="function-signature">(self, request: <code>RetrivalRequest</code>, start_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>, end_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L776">
+    <span class="py-keyword">def</span> <span class="py-defname">all_between_dates</span><span class="function-signature">(self, request: <code>RetrievalRequest</code>, start_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>, end_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L876">
       
       (source)
     </a>
@@ -1001,8 +1016,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">all_data</span><span class="function-signature">(self, request: <code>RetrivalRequest</code>, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L773">
+    <span class="py-keyword">def</span> <span class="py-defname">all_data</span><span class="function-signature">(self, request: <code>RetrievalRequest</code>, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L873">
       
       (source)
     </a>
@@ -1028,8 +1043,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">features_for</span><span class="function-signature">(self, facts: <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code>, request: <code>RetrivalRequest</code>) -&gt; <code><a href="aligned.retrival_job.RetrivalJob.html" class="internal-link" title="aligned.retrival_job.RetrivalJob">RetrivalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L770">
+    <span class="py-keyword">def</span> <span class="py-defname">features_for</span><span class="function-signature">(self, facts: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, request: <code>RetrievalRequest</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L866">
       
       (source)
     </a>
@@ -1056,7 +1071,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">job_group_key</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L687">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L776">
       
       (source)
     </a>
@@ -1073,6 +1088,33 @@
 </div><div class="basemethod">
   
   
+  <a name="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.needed_configs">
+    
+  </a>
+  <a name="needed_configs">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">needed_configs</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a>]</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L773">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#needed_configs" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.needed_configs">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.data_source.batch_data_source.BatchDataSource.html#needed_configs" class="internal-link">aligned.data_source.batch_data_source.BatchDataSource.needed_configs</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
   <a name="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.read_pandas">
     
   </a>
@@ -1083,7 +1125,7 @@
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">read_pandas</span><span class="function-signature">(self) -&gt; <code>pd.DataFrame</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L716">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L810">
       
       (source)
     </a>
@@ -1110,7 +1152,7 @@
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">schema</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr>FeatureType]</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L706">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L797">
       
       (source)
     </a>
@@ -1147,7 +1189,7 @@ schema = await source.schema()
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">to_lazy_polars</span><span class="function-signature">(self) -&gt; <code>pl.LazyFrame</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L726">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L821">
       
       (source)
     </a>
@@ -1174,7 +1216,7 @@ schema = await source.schema()
     
     
     <span class="py-keyword">def</span> <span class="py-defname">with_view</span><span class="function-signature">(self, view: <code>CompiledFeatureView</code>) -&gt; <code><a href="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.html" class="internal-link" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource">AzureBlobParquetDataSource</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L693">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L782">
       
       (source)
     </a>
@@ -1201,7 +1243,7 @@ schema = await source.schema()
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">write_pandas</span><span class="function-signature">(self, df: <code>pd.DataFrame</code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L738">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L833">
       
       (source)
     </a>
@@ -1228,7 +1270,7 @@ schema = await source.schema()
     
     
     <span class="py-keyword">async def</span> <span class="py-defname">write_polars</span><span class="function-signature">(self, df: <code>pl.LazyFrame</code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L748">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L843">
       
       (source)
     </a>
@@ -1254,7 +1296,7 @@ schema = await source.schema()
   <div class="functionHeader">
     
     <span class="py-defname">config</span>: <code><a href="aligned.AzureBlobConfig.html" class="internal-link" title="aligned.AzureBlobConfig">AzureBlobConfig</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L672">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L758">
       
       (source)
     </a>
@@ -1281,7 +1323,7 @@ schema = await source.schema()
   <div class="functionHeader">
     
     <span class="py-defname">date_formatter</span>: <code>DateFormatter</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L676">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L762">
       
       (source)
     </a>
@@ -1308,7 +1350,7 @@ schema = await source.schema()
   <div class="functionHeader">
     
     <span class="py-defname">mapping_keys</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L674">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L760">
       
       (source)
     </a>
@@ -1335,7 +1377,7 @@ schema = await source.schema()
   <div class="functionHeader">
     
     <span class="py-defname">parquet_config</span>: <code>ParquetConfig</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L675">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L761">
       
       (source)
     </a>
@@ -1361,8 +1403,8 @@ schema = await source.schema()
   </a>
   <div class="functionHeader">
     
-    <span class="py-defname">path</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L673">
+    <span class="py-defname">path</span>: <code><a href="aligned.config_value.PathResolver.html" class="internal-link" title="aligned.config_value.PathResolver">PathResolver</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L759">
       
       (source)
     </a>
@@ -1389,7 +1431,7 @@ schema = await source.schema()
   <div class="functionHeader">
     
     <span class="py-defname">type_name</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L677">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L763">
       
       (source)
     </a>
@@ -1407,6 +1449,33 @@ schema = await source.schema()
 </div><div class="baseproperty">
   
   
+  <a name="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.as_markdown">
+    
+  </a>
+  <a name="as_markdown">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">as_markdown</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L765">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#as_markdown" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.as_markdown">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html#as_markdown" class="internal-link">aligned.data_source.batch_data_source.CodableBatchDataSource.as_markdown</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseproperty">
+  
+  
   <a name="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.storage">
     
   </a>
@@ -1416,38 +1485,11 @@ schema = await source.schema()
   <div class="functionHeader">
     @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
     <span class="py-defname">storage</span>: <code><a href="aligned.storage.Storage.html" class="internal-link" title="aligned.storage.Storage">Storage</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L702">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/sources/azure_blob_storage.py#L793">
       
       (source)
     </a>
     <a class="headerLink" href="#storage" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.storage">
-      
-      
-      ¶
-    </a>
-  </div>
-  <div class="functionBody">
-    
-    <div><p class="undocumented">Undocumented</p></div>
-    
-  </div>
-</div><div class="baseproperty">
-  
-  
-  <a name="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.to_markdown">
-    
-  </a>
-  <a name="to_markdown">
-    
-  </a>
-  <div class="functionHeader">
-    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
-    <span class="py-defname">to_markdown</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/baf10f7216e0df0c1cc71a3a76664719c8cc8bc0/aligned/sources/azure_blob_storage.py#L679">
-      
-      (source)
-    </a>
-    <a class="headerLink" href="#to_markdown" title="aligned.sources.azure_blob_storage.AzureBlobParquetDataSource.to_markdown">
       
       
       ¶
@@ -1470,7 +1512,7 @@ schema = await source.schema()
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    24.11.2 at 2025-02-18 12:41:13.
+    24.11.2 at 2025-03-05 23:11:44.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

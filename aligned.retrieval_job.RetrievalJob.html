@@ -1,0 +1,2893 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+          "DTD/xhtml1-strict.dtd">
+<html>
+  
+
+  <head>
+    
+    <title>aligned.retrieval_job.RetrievalJob</title>
+    <meta name="generator" content="pydoctor 24.11.2"> 
+        
+    </meta>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1 maximum-scale=1" />
+    <link rel="stylesheet" type="text/css" href="bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="apidocs.css" />
+    <link rel="stylesheet" type="text/css" href="extra.css" />
+    
+</head>
+
+  <body>
+
+    
+
+    <nav class="navbar navbar-default mainnavbar">
+      
+  
+  <div class="container-fluid">
+
+
+    <div class="navbar-header">
+      
+      <div class="navlinks">
+        <span class="navbar-brand">
+          <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a> <a href="index.html">API Documentation</a>
+        </span>
+
+        <a href="moduleIndex.html">
+          Modules
+        </a>
+
+        <a href="classIndex.html">
+          Classes
+        </a>
+
+        <a href="nameIndex.html">
+          Names
+        </a>
+
+        <div id="search-box-container">
+          <div class="input-group">
+            <input id="search-box" type="search" name="search-query" placeholder="Search..." aria-label="Search" minlength="2" class="form-control" autocomplete="off" />
+            
+            <span class="input-group-btn">
+              <a style="display: none;" class="btn btn-default" id="search-clear-button" title="Clear" onclick="clearSearch()"><img src="fonts/x-circle.svg" alt="Clear" /></a>
+              <a class="btn btn-default" id="apidocs-help-button" title="Help" href="apidocs-help.html"><img src="fonts/info.svg" alt="Help" /></a>
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="search-results-container" style="display: none;">
+        
+        <div id="search-buttons">
+          <span class="label label-default" id="search-docstrings-button">
+          <label class="checkbox-inline">
+            <input type="checkbox" id="toggle-search-in-docstrings-checkbox" value="false" onclick="toggleSearchInDocstrings()">
+              search in docstrings
+            </input>
+          </label>
+          </span>
+          
+        </div>
+        
+        <noscript>
+            <h1>Cannot search: JavaScript is not supported/enabled in your browser.</h1>
+        </noscript>
+
+        <div id="search-status"> </div>
+
+        <div class="warning" id="search-warn-box" style="display: none;">
+          <p class="rst-last"><span id="search-warn"></span></p>
+        </div>
+
+        <table id="search-results">
+          <!-- Filled dynamically by JS -->
+        </table>
+        
+        <div style="margin-top: 10px;">
+          <p>For more information on the search, visit the <a href="apidocs-help.html#rst-search">help page</a>.</p>
+        </div>
+      </div>
+
+    </div>
+
+
+  </div>
+</nav>
+    
+    <div class="container-fluid">
+
+      <!-- Side navigation -->
+      <div class="sidebarcontainer" style="display: none;">
+        
+        <div class="sidebar"><nav class="sidebar">
+  
+
+  <div>
+
+      <div class="thingTitle">
+        <span>Class</span>
+        <code class="thisobject"><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="This class"><wbr></wbr>Retrieval<wbr></wbr>Job</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        
+        
+
+        <div class="childrenKindTitle">Methods</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#from_convertable" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_convertable">from<wbr></wbr>_convertable</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#from_dict" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_dict">from<wbr></wbr>_dict</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#from_lazy_function" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_lazy_function">from<wbr></wbr>_lazy<wbr></wbr>_function</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#from_polars_df" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_polars_df">from<wbr></wbr>_polars<wbr></wbr>_df</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#aggregate" class="internal-link" title="aligned.retrieval_job.RetrievalJob.aggregate">aggregate</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#cache_raw_data" class="internal-link" title="aligned.retrieval_job.RetrievalJob.cache_raw_data">cache<wbr></wbr>_raw<wbr></wbr>_data</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#cached_at" class="internal-link" title="aligned.retrieval_job.RetrievalJob.cached_at">cached<wbr></wbr>_at</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#chunked" class="internal-link" title="aligned.retrieval_job.RetrievalJob.chunked">chunked</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#combined_features" class="internal-link" title="aligned.retrieval_job.RetrievalJob.combined_features">combined<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#derive_features" class="internal-link" title="aligned.retrieval_job.RetrievalJob.derive_features">derive<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#describe" class="internal-link" title="aligned.retrieval_job.RetrievalJob.describe">describe</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#drop_duplicate_entities" class="internal-link" title="aligned.retrieval_job.RetrievalJob.drop_duplicate_entities">drop<wbr></wbr>_duplicate<wbr></wbr>_entities</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#drop_invalid" class="internal-link" title="aligned.retrieval_job.RetrievalJob.drop_invalid">drop<wbr></wbr>_invalid</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#ensure_types" class="internal-link" title="aligned.retrieval_job.RetrievalJob.ensure_types">ensure<wbr></wbr>_types</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#fill_missing_columns" class="internal-link" title="aligned.retrieval_job.RetrievalJob.fill_missing_columns">fill<wbr></wbr>_missing<wbr></wbr>_columns</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#filter" class="internal-link" title="aligned.retrieval_job.RetrievalJob.filter">filter</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#ignore_event_timestamp" class="internal-link" title="aligned.retrieval_job.RetrievalJob.ignore_event_timestamp">ignore<wbr></wbr>_event<wbr></wbr>_timestamp</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#inject_store" class="internal-link" title="aligned.retrieval_job.RetrievalJob.inject_store">inject<wbr></wbr>_store</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#join" class="internal-link" title="aligned.retrieval_job.RetrievalJob.join">join</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#join_asof" class="internal-link" title="aligned.retrieval_job.RetrievalJob.join_asof">join<wbr></wbr>_asof</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#listen_to_events" class="internal-link" title="aligned.retrieval_job.RetrievalJob.listen_to_events">listen<wbr></wbr>_to<wbr></wbr>_events</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#log_each_job" class="internal-link" title="aligned.retrieval_job.RetrievalJob.log_each_job">log<wbr></wbr>_each<wbr></wbr>_job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#monitor_time_used" class="internal-link" title="aligned.retrieval_job.RetrievalJob.monitor_time_used">monitor<wbr></wbr>_time<wbr></wbr>_used</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#on_load" class="internal-link" title="aligned.retrieval_job.RetrievalJob.on_load">on<wbr></wbr>_load</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#polars_method" class="internal-link" title="aligned.retrieval_job.RetrievalJob.polars_method">polars<wbr></wbr>_method</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#remove_derived_features" class="internal-link" title="aligned.retrieval_job.RetrievalJob.remove_derived_features">remove<wbr></wbr>_derived<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#rename" class="internal-link" title="aligned.retrieval_job.RetrievalJob.rename">rename</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#return_invalid" class="internal-link" title="aligned.retrieval_job.RetrievalJob.return_invalid">return<wbr></wbr>_invalid</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#select" class="internal-link" title="aligned.retrieval_job.RetrievalJob.select">select</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#select_columns" class="internal-link" title="aligned.retrieval_job.RetrievalJob.select_columns">select<wbr></wbr>_columns</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#split" class="internal-link" title="aligned.retrieval_job.RetrievalJob.split">split</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#to_lazy_polars" class="internal-link" title="aligned.retrieval_job.RetrievalJob.to_lazy_polars">to<wbr></wbr>_lazy<wbr></wbr>_polars</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#to_pandas" class="internal-link" title="aligned.retrieval_job.RetrievalJob.to_pandas">to<wbr></wbr>_pandas</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#to_polars" class="internal-link" title="aligned.retrieval_job.RetrievalJob.to_polars">to<wbr></wbr>_polars</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#train_test" class="internal-link" title="aligned.retrieval_job.RetrievalJob.train_test">train<wbr></wbr>_test</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#train_test_validate" class="internal-link" title="aligned.retrieval_job.RetrievalJob.train_test_validate">train<wbr></wbr>_test<wbr></wbr>_validate</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#transform_polars" class="internal-link" title="aligned.retrieval_job.RetrievalJob.transform_polars">transform<wbr></wbr>_polars</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#unique_entities" class="internal-link" title="aligned.retrieval_job.RetrievalJob.unique_entities">unique<wbr></wbr>_entities</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#unique_on" class="internal-link" title="aligned.retrieval_job.RetrievalJob.unique_on">unique<wbr></wbr>_on</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#unpack_embeddings" class="internal-link" title="aligned.retrieval_job.RetrievalJob.unpack_embeddings">unpack<wbr></wbr>_embeddings</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#update_vector_index" class="internal-link" title="aligned.retrieval_job.RetrievalJob.update_vector_index">update<wbr></wbr>_vector<wbr></wbr>_index</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#validate_entites" class="internal-link" title="aligned.retrieval_job.RetrievalJob.validate_entites">validate<wbr></wbr>_entites</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#with_request" class="internal-link" title="aligned.retrieval_job.RetrievalJob.with_request">with<wbr></wbr>_request</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#with_subfeatures" class="internal-link" title="aligned.retrieval_job.RetrievalJob.with_subfeatures">with<wbr></wbr>_subfeatures</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#without_derived_features" class="internal-link" title="aligned.retrieval_job.RetrievalJob.without_derived_features">without<wbr></wbr>_derived<wbr></wbr>_features</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#write_to_source" class="internal-link" title="aligned.retrieval_job.RetrievalJob.write_to_source">write<wbr></wbr>_to<wbr></wbr>_source</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+
+        <div class="childrenKindTitle">Attributes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#loaded_columns" class="internal-link" title="aligned.retrieval_job.RetrievalJob.loaded_columns">loaded<wbr></wbr>_columns</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#request_result" class="internal-link" title="aligned.retrieval_job.RetrievalJob.request_result">request<wbr></wbr>_result</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#retrieval_requests" class="internal-link" title="aligned.retrieval_job.RetrievalJob.retrieval_requests">retrieval<wbr></wbr>_requests</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div><div>
+
+      <div class="thingTitle">
+        <span>Module</span>
+        <code><a href="aligned.retrieval_job.html" class="internal-link" title="The parent of this class">retrieval<wbr></wbr>_job</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        <div class="childrenKindTitle">Classes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.AggregateJob.html" class="internal-link" title="aligned.retrieval_job.AggregateJob"><wbr></wbr>Aggregate<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.CombineFactualJob.html" class="internal-link" title="aligned.retrieval_job.CombineFactualJob"><wbr></wbr>Combine<wbr></wbr>Factual<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.CustomLazyPolarsJob.html" class="internal-link" title="aligned.retrieval_job.CustomLazyPolarsJob"><wbr></wbr>Custom<wbr></wbr>Lazy<wbr></wbr>Polars<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.CustomPolarsJob.html" class="internal-link" title="aligned.retrieval_job.CustomPolarsJob"><wbr></wbr>Custom<wbr></wbr>Polars<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.DataLoaderJob.html" class="internal-link" title="aligned.retrieval_job.DataLoaderJob"><wbr></wbr>Data<wbr></wbr>Loader<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.DerivedFeatureJob.html" class="internal-link" title="aligned.retrieval_job.DerivedFeatureJob"><wbr></wbr>Derived<wbr></wbr>Feature<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.DropDuplicateEntities.html" class="internal-link" title="aligned.retrieval_job.DropDuplicateEntities"><wbr></wbr>Drop<wbr></wbr>Duplicate<wbr></wbr>Entities</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.DropInvalidJob.html" class="internal-link" title="aligned.retrieval_job.DropInvalidJob"><wbr></wbr>Drop<wbr></wbr>Invalid<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.EncodeDatesJob.html" class="internal-link" title="aligned.retrieval_job.EncodeDatesJob"><wbr></wbr>Encode<wbr></wbr>Dates<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.EnsureTypesJob.html" class="internal-link" title="aligned.retrieval_job.EnsureTypesJob"><wbr></wbr>Ensure<wbr></wbr>Types<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.FileCachedJob.html" class="internal-link" title="aligned.retrieval_job.FileCachedJob"><wbr></wbr>File<wbr></wbr>Cached<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.FillMissingColumnsJob.html" class="internal-link" title="aligned.retrieval_job.FillMissingColumnsJob"><wbr></wbr>Fill<wbr></wbr>Missing<wbr></wbr>Columns<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.FilteredJob.html" class="internal-link" title="aligned.retrieval_job.FilteredJob"><wbr></wbr>Filtered<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.InMemoryCacheJob.html" class="internal-link" title="aligned.retrieval_job.InMemoryCacheJob"><wbr></wbr>In<wbr></wbr>Memory<wbr></wbr>Cache<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.InMemorySplitCacheJob.html" class="internal-link" title="aligned.retrieval_job.InMemorySplitCacheJob"><wbr></wbr>In<wbr></wbr>Memory<wbr></wbr>Split<wbr></wbr>Cache<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.JoinAsofJob.html" class="internal-link" title="aligned.retrieval_job.JoinAsofJob"><wbr></wbr>Join<wbr></wbr>Asof<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.JoinJobs.html" class="internal-link" title="aligned.retrieval_job.JoinJobs"><wbr></wbr>Join<wbr></wbr>Jobs</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.ListenForTriggers.html" class="internal-link" title="aligned.retrieval_job.ListenForTriggers"><wbr></wbr>Listen<wbr></wbr>For<wbr></wbr>Triggers</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.LiteralDictJob.html" class="internal-link" title="aligned.retrieval_job.LiteralDictJob"><wbr></wbr>Literal<wbr></wbr>Dict<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.LoadedAtJob.html" class="internal-link" title="aligned.retrieval_job.LoadedAtJob"><wbr></wbr>Loaded<wbr></wbr>At<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.LogJob.html" class="internal-link" title="aligned.retrieval_job.LogJob"><wbr></wbr>Log<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.ModificationJob.html" class="internal-link" title="aligned.retrieval_job.ModificationJob"><wbr></wbr>Modification<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.OnLoadJob.html" class="internal-link" title="aligned.retrieval_job.OnLoadJob"><wbr></wbr>On<wbr></wbr>Load<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.PredictionJob.html" class="internal-link" title="aligned.retrieval_job.PredictionJob"><wbr></wbr>Prediction<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RawFileCachedJob.html" class="internal-link" title="aligned.retrieval_job.RawFileCachedJob"><wbr></wbr>Raw<wbr></wbr>File<wbr></wbr>Cached<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RenameJob.html" class="internal-link" title="aligned.retrieval_job.RenameJob"><wbr></wbr>Rename<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class=" thisobject">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob"><wbr></wbr>Retrieval<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.ReturnInvalidJob.html" class="internal-link" title="aligned.retrieval_job.ReturnInvalidJob"><wbr></wbr>Return<wbr></wbr>Invalid<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.SelectColumnsJob.html" class="internal-link" title="aligned.retrieval_job.SelectColumnsJob"><wbr></wbr>Select<wbr></wbr>Columns<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.SplitConfig.html" class="internal-link" title="aligned.retrieval_job.SplitConfig"><wbr></wbr>Split<wbr></wbr>Config</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.SqlJob.html" class="internal-link" title="aligned.retrieval_job.SqlJob"><wbr></wbr>Sql<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.StackJob.html" class="internal-link" title="aligned.retrieval_job.StackJob"><wbr></wbr>Stack<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.StackSourceColumn.html" class="internal-link" title="aligned.retrieval_job.StackSourceColumn"><wbr></wbr>Stack<wbr></wbr>Source<wbr></wbr>Column</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.StreamAggregationJob.html" class="internal-link" title="aligned.retrieval_job.StreamAggregationJob"><wbr></wbr>Stream<wbr></wbr>Aggregation<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.SubsetJob.html" class="internal-link" title="aligned.retrieval_job.SubsetJob"><wbr></wbr>Subset<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.SupervisedJob.html" class="internal-link" title="aligned.retrieval_job.SupervisedJob"><wbr></wbr>Supervised<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.TimeMetricLoggerJob.html" class="internal-link" title="aligned.retrieval_job.TimeMetricLoggerJob"><wbr></wbr>Time<wbr></wbr>Metric<wbr></wbr>Logger<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.TrainTestJob.html" class="internal-link" title="aligned.retrieval_job.TrainTestJob"><wbr></wbr>Train<wbr></wbr>Test<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.TrainTestValidateJob.html" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob"><wbr></wbr>Train<wbr></wbr>Test<wbr></wbr>Validate<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.UniqueRowsJob.html" class="internal-link" title="aligned.retrieval_job.UniqueRowsJob"><wbr></wbr>Unique<wbr></wbr>Rows<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.UnpackEmbedding.html" class="internal-link" title="aligned.retrieval_job.UnpackEmbedding"><wbr></wbr>Unpack<wbr></wbr>Embedding</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.UpdateVectorIndexJob.html" class="internal-link" title="aligned.retrieval_job.UpdateVectorIndexJob"><wbr></wbr>Update<wbr></wbr>Vector<wbr></wbr>Index<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.ValidateEntitiesJob.html" class="internal-link" title="aligned.retrieval_job.ValidateEntitiesJob"><wbr></wbr>Validate<wbr></wbr>Entities<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.WithRequests.html" class="internal-link" title="aligned.retrieval_job.WithRequests"><wbr></wbr>With<wbr></wbr>Requests</a></code>
+            </div>
+        
+
+    </li>
+</ul>
+
+        <div class="childrenKindTitle">Functions</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#fraction_from_job" class="internal-link" title="aligned.retrieval_job.fraction_from_job">fraction<wbr></wbr>_from<wbr></wbr>_job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#polars_filter_expressions_from" class="internal-link" title="aligned.retrieval_job.polars_filter_expressions_from">polars<wbr></wbr>_filter<wbr></wbr>_expressions<wbr></wbr>_from</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#split" class="internal-link" title="aligned.retrieval_job.split">split</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#subset_polars" class="internal-link" title="aligned.retrieval_job.subset_polars">subset<wbr></wbr>_polars</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+
+        <div class="childrenKindTitle">Variables</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#JobType" class="internal-link" title="aligned.retrieval_job.JobType"><wbr></wbr>Job<wbr></wbr>Type</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob"><wbr></wbr>Convertable<wbr></wbr>To<wbr></wbr>Retrieval<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#SplitterCallable" class="internal-link" title="aligned.retrieval_job.SplitterCallable"><wbr></wbr>Splitter<wbr></wbr>Callable</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#CustomPolarsTransform" class="internal-link" title="aligned.retrieval_job.CustomPolarsTransform"><wbr></wbr>Custom<wbr></wbr>Polars<wbr></wbr>Transform</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#logger" class="internal-link" title="aligned.retrieval_job.logger">logger</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div>
+
+</nav>
+        </div>
+        <div id="collapseSideBar">
+          <a class="btn btn-link" onclick="toggleSideBarCollapse()" title="Toggle Sidebar Collapse">
+          </a>
+        </div> 
+        <script src="sidebartoggle.js" type="text/javascript"></script>
+       
+      </div>
+
+      <div id="main" class="">
+        
+
+        
+
+        <div class="page-header">
+          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.retrieval_job.html" class="internal-link" title="aligned.retrieval_job">retrieval_job</a></code><wbr></wbr>.<code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></code></h1>
+          <div id="showPrivate">
+            <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
+          </div>
+        </div>
+
+        <div class="categoryHeader">
+          class documentation
+        </div>
+
+        <div class="extrasDocstring">
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">RetrievalJob</span>(<a href="https://docs.python.org/3/library/abc.html#abc.ABC" class="intersphinx-link">ABC</a>): <a href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L678" class="sourceLink">(source)</a></code></p><p>Known subclasses: <code><a href="aligned.local.job.FileDateJob.html" class="internal-link">aligned.local.job.FileDateJob</a></code>, <code><a href="aligned.local.job.FileFactualJob.html" class="internal-link">aligned.local.job.FileFactualJob</a></code>, <code><a href="aligned.local.job.FileFullJob.html" class="internal-link">aligned.local.job.FileFullJob</a></code>, <code><a href="aligned.local.job.LiteralRetrievalJob.html" class="internal-link">aligned.local.job.LiteralRetrievalJob</a></code>, <code><a href="aligned.psql.jobs.FactPsqlJob.html" class="internal-link">aligned.psql.jobs.FactPsqlJob</a></code>, <code><a href="aligned.psql.jobs.PostgreSqlJob.html" class="internal-link">aligned.psql.jobs.PostgreSqlJob</a></code>, <code><a href="aligned.redis.job.FactualRedisJob.html" class="internal-link">aligned.redis.job.FactualRedisJob</a></code>, <code><a href="aligned.redshift.jobs.FactRedshiftJob.html" class="internal-link">aligned.redshift.jobs.FactRedshiftJob</a></code>, <code><a href="aligned.redshift.sql_job.RedshiftSqlJob.html" class="internal-link">aligned.redshift.sql_job.RedshiftSqlJob</a></code>, <code><a href="aligned.retrieval_job.AggregateJob.html" class="internal-link">aligned.retrieval_job.AggregateJob</a></code>, <code><a href="aligned.retrieval_job.CombineFactualJob.html" class="internal-link">aligned.retrieval_job.CombineFactualJob</a></code>, <code><a href="aligned.retrieval_job.CustomLazyPolarsJob.html" class="internal-link">aligned.retrieval_job.CustomLazyPolarsJob</a></code>, <code><a href="aligned.retrieval_job.CustomPolarsJob.html" class="internal-link">aligned.retrieval_job.CustomPolarsJob</a></code>, <code><a href="aligned.retrieval_job.DerivedFeatureJob.html" class="internal-link">aligned.retrieval_job.DerivedFeatureJob</a></code>, <code><a href="aligned.retrieval_job.DropDuplicateEntities.html" class="internal-link">aligned.retrieval_job.DropDuplicateEntities</a></code>, <code><a href="aligned.retrieval_job.DropInvalidJob.html" class="internal-link">aligned.retrieval_job.DropInvalidJob</a></code>, <code><a href="aligned.retrieval_job.EncodeDatesJob.html" class="internal-link">aligned.retrieval_job.EncodeDatesJob</a></code>, <code><a href="aligned.retrieval_job.EnsureTypesJob.html" class="internal-link">aligned.retrieval_job.EnsureTypesJob</a></code>, <code><a href="aligned.retrieval_job.FileCachedJob.html" class="internal-link">aligned.retrieval_job.FileCachedJob</a></code>, <code><a href="aligned.retrieval_job.FillMissingColumnsJob.html" class="internal-link">aligned.retrieval_job.FillMissingColumnsJob</a></code>, <code><a href="aligned.retrieval_job.FilteredJob.html" class="internal-link">aligned.retrieval_job.FilteredJob</a></code>, <code><a href="aligned.retrieval_job.InMemoryCacheJob.html" class="internal-link">aligned.retrieval_job.InMemoryCacheJob</a></code>, <code><a href="aligned.retrieval_job.InMemorySplitCacheJob.html" class="internal-link">aligned.retrieval_job.InMemorySplitCacheJob</a></code>, <code><a href="aligned.retrieval_job.JoinAsofJob.html" class="internal-link">aligned.retrieval_job.JoinAsofJob</a></code>, <code><a href="aligned.retrieval_job.JoinJobs.html" class="internal-link">aligned.retrieval_job.JoinJobs</a></code>, <code><a href="aligned.retrieval_job.ListenForTriggers.html" class="internal-link">aligned.retrieval_job.ListenForTriggers</a></code>, <code><a href="aligned.retrieval_job.LiteralDictJob.html" class="internal-link">aligned.retrieval_job.LiteralDictJob</a></code>, <code><a href="aligned.retrieval_job.LoadedAtJob.html" class="internal-link">aligned.retrieval_job.LoadedAtJob</a></code>, <code><a href="aligned.retrieval_job.LogJob.html" class="internal-link">aligned.retrieval_job.LogJob</a></code>, <code><a href="aligned.retrieval_job.OnLoadJob.html" class="internal-link">aligned.retrieval_job.OnLoadJob</a></code>, <code><a href="aligned.retrieval_job.PredictionJob.html" class="internal-link">aligned.retrieval_job.PredictionJob</a></code>, <code><a href="aligned.retrieval_job.RawFileCachedJob.html" class="internal-link">aligned.retrieval_job.RawFileCachedJob</a></code>, <code><a href="aligned.retrieval_job.RenameJob.html" class="internal-link">aligned.retrieval_job.RenameJob</a></code>, <code><a href="aligned.retrieval_job.ReturnInvalidJob.html" class="internal-link">aligned.retrieval_job.ReturnInvalidJob</a></code>, <code><a href="aligned.retrieval_job.SelectColumnsJob.html" class="internal-link">aligned.retrieval_job.SelectColumnsJob</a></code>, <code><a href="aligned.retrieval_job.SqlJob.html" class="internal-link">aligned.retrieval_job.SqlJob</a></code>, <code><a href="aligned.retrieval_job.StackJob.html" class="internal-link">aligned.retrieval_job.StackJob</a></code>, <code><a href="aligned.retrieval_job.StreamAggregationJob.html" class="internal-link">aligned.retrieval_job.StreamAggregationJob</a></code>, <code><a href="aligned.retrieval_job.SubsetJob.html" class="internal-link">aligned.retrieval_job.SubsetJob</a></code>, <code><a href="aligned.retrieval_job.TimeMetricLoggerJob.html" class="internal-link">aligned.retrieval_job.TimeMetricLoggerJob</a></code>, <code><a href="aligned.retrieval_job.UniqueRowsJob.html" class="internal-link">aligned.retrieval_job.UniqueRowsJob</a></code>, <code><a href="aligned.retrieval_job.UnpackEmbedding.html" class="internal-link">aligned.retrieval_job.UnpackEmbedding</a></code>, <code><a href="aligned.retrieval_job.UpdateVectorIndexJob.html" class="internal-link">aligned.retrieval_job.UpdateVectorIndexJob</a></code>, <code><a href="aligned.retrieval_job.ValidateEntitiesJob.html" class="internal-link">aligned.retrieval_job.ValidateEntitiesJob</a></code>, <code><a href="aligned.retrieval_job.WithRequests.html" class="internal-link">aligned.retrieval_job.WithRequests</a></code>, <code><a href="aligned.sources.databricks.UnityCatalogTableAllJob.html" class="internal-link">aligned.sources.databricks.UnityCatalogTableAllJob</a></code></p><p>Constructors: <code><a href="#from_convertable" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_convertable">RetrievalJob.from_convertable(data, request)</a></code>, <code><a href="#from_dict" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_dict">RetrievalJob.from_dict(data, request)</a></code>, <code><a href="#from_lazy_function" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_lazy_function">RetrievalJob.from_lazy_function(callable, request)</a></code>, <code><a href="#from_polars_df" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_polars_df">RetrievalJob.from_polars_df(df, request)</a></code></p>
+          <p><a href="classIndex.html#aligned.retrieval_job.RetrievalJob">View In Hierarchy</a></p>
+        </div>
+
+        <div class="moduleDocstring">
+          <div><p class="undocumented">Undocumented</p></div>
+        </div>
+
+        <div id="splitTables">
+          <table class="children sortable" id="id117">
+  
+  
+  <tr class="staticmethod">
+    
+    <td>Static Method</td>
+    <td><code><a href="#from_convertable" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_convertable">from<wbr></wbr>_convertable</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="staticmethod">
+    
+    <td>Static Method</td>
+    <td><code><a href="#from_dict" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_dict">from<wbr></wbr>_dict</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="staticmethod">
+    
+    <td>Static Method</td>
+    <td><code><a href="#from_lazy_function" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_lazy_function">from<wbr></wbr>_lazy<wbr></wbr>_function</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="staticmethod">
+    
+    <td>Static Method</td>
+    <td><code><a href="#from_polars_df" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_polars_df">from<wbr></wbr>_polars<wbr></wbr>_df</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#aggregate" class="internal-link" title="aligned.retrieval_job.RetrievalJob.aggregate">aggregate</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#cache_raw_data" class="internal-link" title="aligned.retrieval_job.RetrievalJob.cache_raw_data">cache<wbr></wbr>_raw<wbr></wbr>_data</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#cached_at" class="internal-link" title="aligned.retrieval_job.RetrievalJob.cached_at">cached<wbr></wbr>_at</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#chunked" class="internal-link" title="aligned.retrieval_job.RetrievalJob.chunked">chunked</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#combined_features" class="internal-link" title="aligned.retrieval_job.RetrievalJob.combined_features">combined<wbr></wbr>_features</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#derive_features" class="internal-link" title="aligned.retrieval_job.RetrievalJob.derive_features">derive<wbr></wbr>_features</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#describe" class="internal-link" title="aligned.retrieval_job.RetrievalJob.describe">describe</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#drop_duplicate_entities" class="internal-link" title="aligned.retrieval_job.RetrievalJob.drop_duplicate_entities">drop<wbr></wbr>_duplicate<wbr></wbr>_entities</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#drop_invalid" class="internal-link" title="aligned.retrieval_job.RetrievalJob.drop_invalid">drop<wbr></wbr>_invalid</a></code></td>
+    <td>Drops invalid row based on the defined features.</td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#ensure_types" class="internal-link" title="aligned.retrieval_job.RetrievalJob.ensure_types">ensure<wbr></wbr>_types</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#fill_missing_columns" class="internal-link" title="aligned.retrieval_job.RetrievalJob.fill_missing_columns">fill<wbr></wbr>_missing<wbr></wbr>_columns</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#filter" class="internal-link" title="aligned.retrieval_job.RetrievalJob.filter">filter</a></code></td>
+    <td>Filters based on a condition referencing either a feature, a feature name, or an polars expression to filter on.</td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#ignore_event_timestamp" class="internal-link" title="aligned.retrieval_job.RetrievalJob.ignore_event_timestamp">ignore<wbr></wbr>_event<wbr></wbr>_timestamp</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#inject_store" class="internal-link" title="aligned.retrieval_job.RetrievalJob.inject_store">inject<wbr></wbr>_store</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#join" class="internal-link" title="aligned.retrieval_job.RetrievalJob.join">join</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#join_asof" class="internal-link" title="aligned.retrieval_job.RetrievalJob.join_asof">join<wbr></wbr>_asof</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#listen_to_events" class="internal-link" title="aligned.retrieval_job.RetrievalJob.listen_to_events">listen<wbr></wbr>_to<wbr></wbr>_events</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#log_each_job" class="internal-link" title="aligned.retrieval_job.RetrievalJob.log_each_job">log<wbr></wbr>_each<wbr></wbr>_job</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#monitor_time_used" class="internal-link" title="aligned.retrieval_job.RetrievalJob.monitor_time_used">monitor<wbr></wbr>_time<wbr></wbr>_used</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#on_load" class="internal-link" title="aligned.retrieval_job.RetrievalJob.on_load">on<wbr></wbr>_load</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#polars_method" class="internal-link" title="aligned.retrieval_job.RetrievalJob.polars_method">polars<wbr></wbr>_method</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#remove_derived_features" class="internal-link" title="aligned.retrieval_job.RetrievalJob.remove_derived_features">remove<wbr></wbr>_derived<wbr></wbr>_features</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#rename" class="internal-link" title="aligned.retrieval_job.RetrievalJob.rename">rename</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#return_invalid" class="internal-link" title="aligned.retrieval_job.RetrievalJob.return_invalid">return<wbr></wbr>_invalid</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#select" class="internal-link" title="aligned.retrieval_job.RetrievalJob.select">select</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#select_columns" class="internal-link" title="aligned.retrieval_job.RetrievalJob.select_columns">select<wbr></wbr>_columns</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#split" class="internal-link" title="aligned.retrieval_job.RetrievalJob.split">split</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#to_lazy_polars" class="internal-link" title="aligned.retrieval_job.RetrievalJob.to_lazy_polars">to<wbr></wbr>_lazy<wbr></wbr>_polars</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#to_pandas" class="internal-link" title="aligned.retrieval_job.RetrievalJob.to_pandas">to<wbr></wbr>_pandas</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#to_polars" class="internal-link" title="aligned.retrieval_job.RetrievalJob.to_polars">to<wbr></wbr>_polars</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#train_test" class="internal-link" title="aligned.retrieval_job.RetrievalJob.train_test">train<wbr></wbr>_test</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#train_test_validate" class="internal-link" title="aligned.retrieval_job.RetrievalJob.train_test_validate">train<wbr></wbr>_test<wbr></wbr>_validate</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#transform_polars" class="internal-link" title="aligned.retrieval_job.RetrievalJob.transform_polars">transform<wbr></wbr>_polars</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#unique_entities" class="internal-link" title="aligned.retrieval_job.RetrievalJob.unique_entities">unique<wbr></wbr>_entities</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#unique_on" class="internal-link" title="aligned.retrieval_job.RetrievalJob.unique_on">unique<wbr></wbr>_on</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#unpack_embeddings" class="internal-link" title="aligned.retrieval_job.RetrievalJob.unpack_embeddings">unpack<wbr></wbr>_embeddings</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#update_vector_index" class="internal-link" title="aligned.retrieval_job.RetrievalJob.update_vector_index">update<wbr></wbr>_vector<wbr></wbr>_index</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#validate_entites" class="internal-link" title="aligned.retrieval_job.RetrievalJob.validate_entites">validate<wbr></wbr>_entites</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#with_request" class="internal-link" title="aligned.retrieval_job.RetrievalJob.with_request">with<wbr></wbr>_request</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#with_subfeatures" class="internal-link" title="aligned.retrieval_job.RetrievalJob.with_subfeatures">with<wbr></wbr>_subfeatures</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#without_derived_features" class="internal-link" title="aligned.retrieval_job.RetrievalJob.without_derived_features">without<wbr></wbr>_derived<wbr></wbr>_features</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#write_to_source" class="internal-link" title="aligned.retrieval_job.RetrievalJob.write_to_source">write<wbr></wbr>_to<wbr></wbr>_source</a></code></td>
+    <td>Writes the output of the retrieval job to the passed source.</td>
+  </tr><tr class="property">
+    
+    <td>Property</td>
+    <td><code><a href="#loaded_columns" class="internal-link" title="aligned.retrieval_job.RetrievalJob.loaded_columns">loaded<wbr></wbr>_columns</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="property">
+    
+    <td>Property</td>
+    <td><code><a href="#request_result" class="internal-link" title="aligned.retrieval_job.RetrievalJob.request_result">request<wbr></wbr>_result</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="property">
+    
+    <td>Property</td>
+    <td><code><a href="#retrieval_requests" class="internal-link" title="aligned.retrieval_job.RetrievalJob.retrieval_requests">retrieval<wbr></wbr>_requests</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr>
+</table>
+          
+
+            
+        </div>
+
+        <div id="childList">
+          <div class="basestaticmethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.from_convertable">
+    
+  </a>
+  <a name="from_convertable">
+    
+  </a>
+  <div class="functionHeader">
+    
+    @<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br />
+    <span class="py-keyword">def</span> <span class="py-defname">from_convertable</span><span class="function-signature">(data: <code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a></code>, request: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest] | RetrievalRequest | FeatureRequest</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1139">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#from_convertable" title="aligned.retrieval_job.RetrievalJob.from_convertable">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basestaticmethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.from_dict">
+    
+  </a>
+  <a name="from_dict">
+    
+  </a>
+  <div class="functionHeader">
+    
+    @<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br />
+    <span class="py-keyword">def</span> <span class="py-defname">from_dict</span><span class="function-signature">(data: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>]</code>, request: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest] | RetrievalRequest</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1116">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#from_dict" title="aligned.retrieval_job.RetrievalJob.from_dict">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basestaticmethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.from_lazy_function">
+    
+  </a>
+  <a name="from_lazy_function">
+    
+  </a>
+  <div class="functionHeader">
+    
+    @<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br />
+    <span class="py-keyword">def</span> <span class="py-defname">from_lazy_function</span><span class="function-signature">(callable: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[], <wbr></wbr><a href="https://docs.python.org/3/library/typing.html#typing.Coroutine" class="intersphinx-link">Coroutine</a>[<wbr></wbr><a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, <wbr></wbr><a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, <wbr></wbr>pl.LazyFrame]]</code>, request: <code>RetrievalRequest</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1132">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#from_lazy_function" title="aligned.retrieval_job.RetrievalJob.from_lazy_function">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basestaticmethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.from_polars_df">
+    
+  </a>
+  <a name="from_polars_df">
+    
+  </a>
+  <div class="functionHeader">
+    
+    @<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br />
+    <span class="py-keyword">def</span> <span class="py-defname">from_polars_df</span><span class="function-signature">(df: <code>pl.DataFrame | pl.LazyFrame</code>, request: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest]</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1124">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#from_polars_df" title="aligned.retrieval_job.RetrievalJob.from_polars_df">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.aggregate">
+    
+  </a>
+  <a name="aggregate">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">aggregate</span><span class="function-signature">(self, request: <code>RetrievalRequest</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1055">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#aggregate" title="aligned.retrieval_job.RetrievalJob.aggregate">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.cache_raw_data">
+    
+  </a>
+  <a name="cache_raw_data">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">cache_raw_data</span><span class="function-signature">(self, location: <code>DataFileReference | <a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L833">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#cache_raw_data" title="aligned.retrieval_job.RetrievalJob.cache_raw_data">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overridden in <code><a href="aligned.retrieval_job.CombineFactualJob.html" class="internal-link">aligned.retrieval_job.CombineFactualJob</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.cached_at">
+    
+  </a>
+  <a name="cached_at">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">cached_at</span><span class="function-signature">(self, location: <code>DataFileReference | <a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L838">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#cached_at" title="aligned.retrieval_job.RetrievalJob.cached_at">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overridden in <code><a href="aligned.retrieval_job.CombineFactualJob.html" class="internal-link">aligned.retrieval_job.CombineFactualJob</a></code>, <code><a href="aligned.retrieval_job.DropInvalidJob.html" class="internal-link">aligned.retrieval_job.DropInvalidJob</a></code>, <code><a href="aligned.retrieval_job.FileCachedJob.html" class="internal-link">aligned.retrieval_job.FileCachedJob</a></code>, <code><a href="aligned.retrieval_job.RawFileCachedJob.html" class="internal-link">aligned.retrieval_job.RawFileCachedJob</a></code>, <code><a href="aligned.retrieval_job.SelectColumnsJob.html" class="internal-link">aligned.retrieval_job.SelectColumnsJob</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.chunked">
+    
+  </a>
+  <a name="chunked">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">chunked</span><span class="function-signature">(self, size: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code>) -&gt; <code><a href="aligned.retrieval_job.DataLoaderJob.html" class="internal-link" title="aligned.retrieval_job.DataLoaderJob">DataLoaderJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L825">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#chunked" title="aligned.retrieval_job.RetrievalJob.chunked">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.combined_features">
+    
+  </a>
+  <a name="combined_features">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">combined_features</span><span class="function-signature">(self, requests: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1030">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#combined_features" title="aligned.retrieval_job.RetrievalJob.combined_features">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.derive_features">
+    
+  </a>
+  <a name="derive_features">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">derive_features</span><span class="function-signature">(self, requests: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1020">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#derive_features" title="aligned.retrieval_job.RetrievalJob.derive_features">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.describe">
+    
+  </a>
+  <a name="describe">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">describe</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L713">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#describe" title="aligned.retrieval_job.RetrievalJob.describe">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overridden in <code><a href="aligned.local.job.FileFactualJob.html" class="internal-link">aligned.local.job.FileFactualJob</a></code>, <code><a href="aligned.local.job.FileFullJob.html" class="internal-link">aligned.local.job.FileFullJob</a></code>, <code><a href="aligned.local.job.LiteralRetrievalJob.html" class="internal-link">aligned.local.job.LiteralRetrievalJob</a></code>, <code><a href="aligned.psql.jobs.FactPsqlJob.html" class="internal-link">aligned.psql.jobs.FactPsqlJob</a></code>, <code><a href="aligned.psql.jobs.PostgreSqlJob.html" class="internal-link">aligned.psql.jobs.PostgreSqlJob</a></code>, <code><a href="aligned.redis.job.FactualRedisJob.html" class="internal-link">aligned.redis.job.FactualRedisJob</a></code>, <code><a href="aligned.redshift.jobs.FactRedshiftJob.html" class="internal-link">aligned.redshift.jobs.FactRedshiftJob</a></code>, <code><a href="aligned.redshift.sql_job.RedshiftSqlJob.html" class="internal-link">aligned.redshift.sql_job.RedshiftSqlJob</a></code>, <code><a href="aligned.retrieval_job.AggregateJob.html" class="internal-link">aligned.retrieval_job.AggregateJob</a></code>, <code><a href="aligned.retrieval_job.CombineFactualJob.html" class="internal-link">aligned.retrieval_job.CombineFactualJob</a></code>, <code><a href="aligned.retrieval_job.CustomLazyPolarsJob.html" class="internal-link">aligned.retrieval_job.CustomLazyPolarsJob</a></code>, <code><a href="aligned.retrieval_job.FilteredJob.html" class="internal-link">aligned.retrieval_job.FilteredJob</a></code>, <code><a href="aligned.retrieval_job.JoinAsofJob.html" class="internal-link">aligned.retrieval_job.JoinAsofJob</a></code>, <code><a href="aligned.retrieval_job.JoinJobs.html" class="internal-link">aligned.retrieval_job.JoinJobs</a></code>, <code><a href="aligned.retrieval_job.LiteralDictJob.html" class="internal-link">aligned.retrieval_job.LiteralDictJob</a></code>, <code><a href="aligned.retrieval_job.OnLoadJob.html" class="internal-link">aligned.retrieval_job.OnLoadJob</a></code>, <code><a href="aligned.retrieval_job.PredictionJob.html" class="internal-link">aligned.retrieval_job.PredictionJob</a></code>, <code><a href="aligned.retrieval_job.ReturnInvalidJob.html" class="internal-link">aligned.retrieval_job.ReturnInvalidJob</a></code>, <code><a href="aligned.retrieval_job.StackJob.html" class="internal-link">aligned.retrieval_job.StackJob</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.drop_duplicate_entities">
+    
+  </a>
+  <a name="drop_duplicate_entities">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">drop_duplicate_entities</span><span class="function-signature">(self) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1100">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#drop_duplicate_entities" title="aligned.retrieval_job.RetrievalJob.drop_duplicate_entities">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.drop_invalid">
+    
+  </a>
+  <a name="drop_invalid">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">drop_invalid</span><span class="function-signature">(self, validator: <code>Validator | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L983">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#drop_invalid" title="aligned.retrieval_job.RetrievalJob.drop_invalid">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overridden in <code><a href="aligned.retrieval_job.DerivedFeatureJob.html" class="internal-link">aligned.retrieval_job.DerivedFeatureJob</a></code></div>
+    <div><p>Drops invalid row based on the defined features.</p>
+<p>```python
+@feature_view(...)
+class WhiteWine:</p>
+<blockquote>
+<p>wine_id = UInt64().as_entity()</p>
+<p>quality = Int32().lower_bound(1).upper_bound(10)</p>
+</blockquote>
+<dl class="rst-docutils">
+<dt>valid_wines = WhiteWine.drop_invalid({</dt>
+<dd>"wine_id": [0, 1, 2, 3, 4],
+"quality": [None, 4, 8, 20, -10]</dd>
+</dl>
+<p>})</p>
+<p>print(valid_wines)
+&gt;&gt;&gt; {</p>
+<blockquote>
+"wine_id": [1, 2],
+"quality": [4, 8]</blockquote>
+<div class="rst-section" id="rst-section-1">
+<h2 class="heading">}</h2>
+<dl class="rst-docutils">
+<dt>Args:</dt>
+<dd><dl class="rst-docutils rst-first rst-last">
+<dt>validator (Validator): A validator that can validate the data.</dt>
+<dd>The default uses the <code>PolarsValidator</code></dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd>RetrievalJob: A new retrieval job with only valid rows.</dd>
+</dl>
+</div>
+</div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.ensure_types">
+    
+  </a>
+  <a name="ensure_types">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">ensure_types</span><span class="function-signature">(self, requests: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, date_formatter: <code>DateFormatter | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1035">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#ensure_types" title="aligned.retrieval_job.RetrievalJob.ensure_types">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.fill_missing_columns">
+    
+  </a>
+  <a name="fill_missing_columns">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">fill_missing_columns</span><span class="function-signature">(self) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1092">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#fill_missing_columns" title="aligned.retrieval_job.RetrievalJob.fill_missing_columns">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.filter">
+    
+  </a>
+  <a name="filter">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">filter</span><span class="function-signature">(self, condition: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | Feature | DerivedFeature | pl.Expr</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L814">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#filter" title="aligned.retrieval_job.RetrievalJob.filter">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overridden in <code><a href="aligned.psql.jobs.PostgreSqlJob.html" class="internal-link">aligned.psql.jobs.PostgreSqlJob</a></code>, <code><a href="aligned.retrieval_job.DerivedFeatureJob.html" class="internal-link">aligned.retrieval_job.DerivedFeatureJob</a></code>, <code><a href="aligned.retrieval_job.PredictionJob.html" class="internal-link">aligned.retrieval_job.PredictionJob</a></code>, <code><a href="aligned.sources.databricks.UnityCatalogTableAllJob.html" class="internal-link">aligned.sources.databricks.UnityCatalogTableAllJob</a></code></div>
+    <div><p>Filters based on a condition referencing either a feature,
+a feature name, or an polars expression to filter on.</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.ignore_event_timestamp">
+    
+  </a>
+  <a name="ignore_event_timestamp">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">ignore_event_timestamp</span><span class="function-signature">(self) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1103">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#ignore_event_timestamp" title="aligned.retrieval_job.RetrievalJob.ignore_event_timestamp">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overridden in <code><a href="aligned.psql.jobs.FactPsqlJob.html" class="internal-link">aligned.psql.jobs.FactPsqlJob</a></code>, <code><a href="aligned.retrieval_job.CombineFactualJob.html" class="internal-link">aligned.retrieval_job.CombineFactualJob</a></code>, <code><a href="aligned.retrieval_job.SelectColumnsJob.html" class="internal-link">aligned.retrieval_job.SelectColumnsJob</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.inject_store">
+    
+  </a>
+  <a name="inject_store">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">inject_store</span><span class="function-signature">(self, store: <code>ContractStore</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L708">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#inject_store" title="aligned.retrieval_job.RetrievalJob.inject_store">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overridden in <code><a href="aligned.retrieval_job.CombineFactualJob.html" class="internal-link">aligned.retrieval_job.CombineFactualJob</a></code>, <code><a href="aligned.retrieval_job.DerivedFeatureJob.html" class="internal-link">aligned.retrieval_job.DerivedFeatureJob</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.join">
+    
+  </a>
+  <a name="join">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">join</span><span class="function-signature">(self, job: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, method: <code><a href="https://docs.python.org/3/library/typing.html#typing.Literal" class="intersphinx-link">Literal</a>[<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">inner</span><span class="rst-variable-quote">'</span>, <wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">left</span><span class="rst-variable-quote">'</span>, <wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">outer</span><span class="rst-variable-quote">'</span>]</code>, left_on: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>, right_on: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L790">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#join" title="aligned.retrieval_job.RetrievalJob.join">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.join_asof">
+    
+  </a>
+  <a name="join_asof">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">join_asof</span><span class="function-signature">(self, job: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, left_event_timestamp: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, right_event_timestamp: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, left_on: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, right_on: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, timestamp_unit: <code>TimeUnit</code> = <span class="rst-variable-quote">'</span><span class="rst-variable-string">us</span><span class="rst-variable-quote">'</span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L740">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#join_asof" title="aligned.retrieval_job.RetrievalJob.join_asof">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.listen_to_events">
+    
+  </a>
+  <a name="listen_to_events">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">listen_to_events</span><span class="function-signature">(self, events: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>EventTrigger]</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1063">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#listen_to_events" title="aligned.retrieval_job.RetrievalJob.listen_to_events">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.log_each_job">
+    
+  </a>
+  <a name="log_each_job">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">log_each_job</span><span class="function-signature">(self, logger_func: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr><a href="https://docs.python.org/3/library/functions.html#object" class="intersphinx-link">object</a>], <wbr></wbr><a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L728">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#log_each_job" title="aligned.retrieval_job.RetrievalJob.log_each_job">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overridden in <code><a href="aligned.local.job.FileFactualJob.html" class="internal-link">aligned.local.job.FileFactualJob</a></code>, <code><a href="aligned.retrieval_job.CombineFactualJob.html" class="internal-link">aligned.retrieval_job.CombineFactualJob</a></code>, <code><a href="aligned.retrieval_job.JoinAsofJob.html" class="internal-link">aligned.retrieval_job.JoinAsofJob</a></code>, <code><a href="aligned.retrieval_job.JoinJobs.html" class="internal-link">aligned.retrieval_job.JoinJobs</a></code>, <code><a href="aligned.retrieval_job.LogJob.html" class="internal-link">aligned.retrieval_job.LogJob</a></code>, <code><a href="aligned.retrieval_job.PredictionJob.html" class="internal-link">aligned.retrieval_job.PredictionJob</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.monitor_time_used">
+    
+  </a>
+  <a name="monitor_time_used">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">monitor_time_used</span><span class="function-signature">(self, callback: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a>], <wbr></wbr><a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>]</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1017">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#monitor_time_used" title="aligned.retrieval_job.RetrievalJob.monitor_time_used">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.on_load">
+    
+  </a>
+  <a name="on_load">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">on_load</span><span class="function-signature">(self, on_load: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[], <wbr></wbr><a href="https://docs.python.org/3/library/typing.html#typing.Coroutine" class="intersphinx-link">Coroutine</a>[<wbr></wbr><a href="https://docs.python.org/3/library/typing.html#typing.Any" class="intersphinx-link">Any</a>, <wbr></wbr><a href="https://docs.python.org/3/library/typing.html#typing.Any" class="intersphinx-link">Any</a>, <wbr></wbr><a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>]]</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L811">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#on_load" title="aligned.retrieval_job.RetrievalJob.on_load">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.polars_method">
+    
+  </a>
+  <a name="polars_method">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">polars_method</span><span class="function-signature">(self, polars_method: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr>pl.LazyFrame], <wbr></wbr>pl.LazyFrame]</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1111">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#polars_method" title="aligned.retrieval_job.RetrievalJob.polars_method">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.remove_derived_features">
+    
+  </a>
+  <a name="remove_derived_features">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">remove_derived_features</span><span class="function-signature">(self) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L720">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#remove_derived_features" title="aligned.retrieval_job.RetrievalJob.remove_derived_features">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overridden in <code><a href="aligned.retrieval_job.CombineFactualJob.html" class="internal-link">aligned.retrieval_job.CombineFactualJob</a></code>, <code><a href="aligned.retrieval_job.DerivedFeatureJob.html" class="internal-link">aligned.retrieval_job.DerivedFeatureJob</a></code>, <code><a href="aligned.retrieval_job.DropInvalidJob.html" class="internal-link">aligned.retrieval_job.DropInvalidJob</a></code>, <code><a href="aligned.retrieval_job.EnsureTypesJob.html" class="internal-link">aligned.retrieval_job.EnsureTypesJob</a></code>, <code><a href="aligned.retrieval_job.FileCachedJob.html" class="internal-link">aligned.retrieval_job.FileCachedJob</a></code>, <code><a href="aligned.retrieval_job.ListenForTriggers.html" class="internal-link">aligned.retrieval_job.ListenForTriggers</a></code>, <code><a href="aligned.retrieval_job.LogJob.html" class="internal-link">aligned.retrieval_job.LogJob</a></code>, <code><a href="aligned.retrieval_job.PredictionJob.html" class="internal-link">aligned.retrieval_job.PredictionJob</a></code>, <code><a href="aligned.retrieval_job.RawFileCachedJob.html" class="internal-link">aligned.retrieval_job.RawFileCachedJob</a></code>, <code><a href="aligned.retrieval_job.SelectColumnsJob.html" class="internal-link">aligned.retrieval_job.SelectColumnsJob</a></code>, <code><a href="aligned.retrieval_job.StreamAggregationJob.html" class="internal-link">aligned.retrieval_job.StreamAggregationJob</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.rename">
+    
+  </a>
+  <a name="rename">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">rename</span><span class="function-signature">(self, mappings: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1095">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#rename" title="aligned.retrieval_job.RetrievalJob.rename">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.return_invalid">
+    
+  </a>
+  <a name="return_invalid">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">return_invalid</span><span class="function-signature">(self, should_return_validation: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L775">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#return_invalid" title="aligned.retrieval_job.RetrievalJob.return_invalid">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.select">
+    
+  </a>
+  <a name="select">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">select</span><span class="function-signature">(self, include_features: <code><a href="https://docs.python.org/3/library/typing.html#typing.Collection" class="intersphinx-link">Collection</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1049">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#select" title="aligned.retrieval_job.RetrievalJob.select">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.select_columns">
+    
+  </a>
+  <a name="select_columns">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">select_columns</span><span class="function-signature">(self, include_features: <code><a href="https://docs.python.org/3/library/typing.html#typing.Collection" class="intersphinx-link">Collection</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1052">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#select_columns" title="aligned.retrieval_job.RetrievalJob.select_columns">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.split">
+    
+  </a>
+  <a name="split">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">split</span><span class="function-signature">(self, splitter: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr>pl.DataFrame], <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr>pl.DataFrame, <wbr></wbr>pl.DataFrame]]</code>, dataset_sizes: <code><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a>, <wbr></wbr><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a>]</code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a>, <wbr></wbr><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a>]</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L782">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#split" title="aligned.retrieval_job.RetrievalJob.split">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.to_lazy_polars">
+    
+  </a>
+  <a name="to_lazy_polars">
+    
+  </a>
+  <div class="functionHeader">
+    
+    @<a href="https://docs.python.org/3/library/abc.html#abc.abstractmethod" class="intersphinx-link">abstractmethod</a><br />
+    <span class="py-keyword">async def</span> <span class="py-defname">to_lazy_polars</span><span class="function-signature">(self) -&gt; <code>pl.LazyFrame</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L701">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#to_lazy_polars" title="aligned.retrieval_job.RetrievalJob.to_lazy_polars">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overridden in <code><a href="aligned.local.job.FileDateJob.html" class="internal-link">aligned.local.job.FileDateJob</a></code>, <code><a href="aligned.local.job.FileFactualJob.html" class="internal-link">aligned.local.job.FileFactualJob</a></code>, <code><a href="aligned.local.job.FileFullJob.html" class="internal-link">aligned.local.job.FileFullJob</a></code>, <code><a href="aligned.local.job.LiteralRetrievalJob.html" class="internal-link">aligned.local.job.LiteralRetrievalJob</a></code>, <code><a href="aligned.psql.jobs.FactPsqlJob.html" class="internal-link">aligned.psql.jobs.FactPsqlJob</a></code>, <code><a href="aligned.psql.jobs.PostgreSqlJob.html" class="internal-link">aligned.psql.jobs.PostgreSqlJob</a></code>, <code><a href="aligned.redis.job.FactualRedisJob.html" class="internal-link">aligned.redis.job.FactualRedisJob</a></code>, <code><a href="aligned.redshift.jobs.FactRedshiftJob.html" class="internal-link">aligned.redshift.jobs.FactRedshiftJob</a></code>, <code><a href="aligned.redshift.sql_job.RedshiftSqlJob.html" class="internal-link">aligned.redshift.sql_job.RedshiftSqlJob</a></code>, <code><a href="aligned.retrieval_job.AggregateJob.html" class="internal-link">aligned.retrieval_job.AggregateJob</a></code>, <code><a href="aligned.retrieval_job.CombineFactualJob.html" class="internal-link">aligned.retrieval_job.CombineFactualJob</a></code>, <code><a href="aligned.retrieval_job.CustomLazyPolarsJob.html" class="internal-link">aligned.retrieval_job.CustomLazyPolarsJob</a></code>, <code><a href="aligned.retrieval_job.CustomPolarsJob.html" class="internal-link">aligned.retrieval_job.CustomPolarsJob</a></code>, <code><a href="aligned.retrieval_job.DerivedFeatureJob.html" class="internal-link">aligned.retrieval_job.DerivedFeatureJob</a></code>, <code><a href="aligned.retrieval_job.DropDuplicateEntities.html" class="internal-link">aligned.retrieval_job.DropDuplicateEntities</a></code>, <code><a href="aligned.retrieval_job.DropInvalidJob.html" class="internal-link">aligned.retrieval_job.DropInvalidJob</a></code>, <code><a href="aligned.retrieval_job.EncodeDatesJob.html" class="internal-link">aligned.retrieval_job.EncodeDatesJob</a></code>, <code><a href="aligned.retrieval_job.EnsureTypesJob.html" class="internal-link">aligned.retrieval_job.EnsureTypesJob</a></code>, <code><a href="aligned.retrieval_job.FileCachedJob.html" class="internal-link">aligned.retrieval_job.FileCachedJob</a></code>, <code><a href="aligned.retrieval_job.FillMissingColumnsJob.html" class="internal-link">aligned.retrieval_job.FillMissingColumnsJob</a></code>, <code><a href="aligned.retrieval_job.FilteredJob.html" class="internal-link">aligned.retrieval_job.FilteredJob</a></code>, <code><a href="aligned.retrieval_job.InMemoryCacheJob.html" class="internal-link">aligned.retrieval_job.InMemoryCacheJob</a></code>, <code><a href="aligned.retrieval_job.InMemorySplitCacheJob.html" class="internal-link">aligned.retrieval_job.InMemorySplitCacheJob</a></code>, <code><a href="aligned.retrieval_job.JoinAsofJob.html" class="internal-link">aligned.retrieval_job.JoinAsofJob</a></code>, <code><a href="aligned.retrieval_job.JoinJobs.html" class="internal-link">aligned.retrieval_job.JoinJobs</a></code>, <code><a href="aligned.retrieval_job.ListenForTriggers.html" class="internal-link">aligned.retrieval_job.ListenForTriggers</a></code>, <code><a href="aligned.retrieval_job.LiteralDictJob.html" class="internal-link">aligned.retrieval_job.LiteralDictJob</a></code>, <code><a href="aligned.retrieval_job.LoadedAtJob.html" class="internal-link">aligned.retrieval_job.LoadedAtJob</a></code>, <code><a href="aligned.retrieval_job.LogJob.html" class="internal-link">aligned.retrieval_job.LogJob</a></code>, <code><a href="aligned.retrieval_job.OnLoadJob.html" class="internal-link">aligned.retrieval_job.OnLoadJob</a></code>, <code><a href="aligned.retrieval_job.PredictionJob.html" class="internal-link">aligned.retrieval_job.PredictionJob</a></code>, <code><a href="aligned.retrieval_job.RawFileCachedJob.html" class="internal-link">aligned.retrieval_job.RawFileCachedJob</a></code>, <code><a href="aligned.retrieval_job.RenameJob.html" class="internal-link">aligned.retrieval_job.RenameJob</a></code>, <code><a href="aligned.retrieval_job.ReturnInvalidJob.html" class="internal-link">aligned.retrieval_job.ReturnInvalidJob</a></code>, <code><a href="aligned.retrieval_job.SelectColumnsJob.html" class="internal-link">aligned.retrieval_job.SelectColumnsJob</a></code>, <code><a href="aligned.retrieval_job.StackJob.html" class="internal-link">aligned.retrieval_job.StackJob</a></code>, <code><a href="aligned.retrieval_job.StreamAggregationJob.html" class="internal-link">aligned.retrieval_job.StreamAggregationJob</a></code>, <code><a href="aligned.retrieval_job.SubsetJob.html" class="internal-link">aligned.retrieval_job.SubsetJob</a></code>, <code><a href="aligned.retrieval_job.TimeMetricLoggerJob.html" class="internal-link">aligned.retrieval_job.TimeMetricLoggerJob</a></code>, <code><a href="aligned.retrieval_job.UniqueRowsJob.html" class="internal-link">aligned.retrieval_job.UniqueRowsJob</a></code>, <code><a href="aligned.retrieval_job.UnpackEmbedding.html" class="internal-link">aligned.retrieval_job.UnpackEmbedding</a></code>, <code><a href="aligned.retrieval_job.UpdateVectorIndexJob.html" class="internal-link">aligned.retrieval_job.UpdateVectorIndexJob</a></code>, <code><a href="aligned.retrieval_job.ValidateEntitiesJob.html" class="internal-link">aligned.retrieval_job.ValidateEntitiesJob</a></code>, <code><a href="aligned.retrieval_job.WithRequests.html" class="internal-link">aligned.retrieval_job.WithRequests</a></code>, <code><a href="aligned.sources.databricks.UnityCatalogTableAllJob.html" class="internal-link">aligned.sources.databricks.UnityCatalogTableAllJob</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.to_pandas">
+    
+  </a>
+  <a name="to_pandas">
+    
+  </a>
+  <div class="functionHeader">
+    
+    @<a href="https://docs.python.org/3/library/abc.html#abc.abstractmethod" class="intersphinx-link">abstractmethod</a><br />
+    <span class="py-keyword">async def</span> <span class="py-defname">to_pandas</span><span class="function-signature">(self) -&gt; <code>pd.DataFrame</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L697">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#to_pandas" title="aligned.retrieval_job.RetrievalJob.to_pandas">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overridden in <code><a href="aligned.local.job.FileDateJob.html" class="internal-link">aligned.local.job.FileDateJob</a></code>, <code><a href="aligned.local.job.FileFactualJob.html" class="internal-link">aligned.local.job.FileFactualJob</a></code>, <code><a href="aligned.local.job.FileFullJob.html" class="internal-link">aligned.local.job.FileFullJob</a></code>, <code><a href="aligned.local.job.LiteralRetrievalJob.html" class="internal-link">aligned.local.job.LiteralRetrievalJob</a></code>, <code><a href="aligned.psql.jobs.FactPsqlJob.html" class="internal-link">aligned.psql.jobs.FactPsqlJob</a></code>, <code><a href="aligned.psql.jobs.PostgreSqlJob.html" class="internal-link">aligned.psql.jobs.PostgreSqlJob</a></code>, <code><a href="aligned.redis.job.FactualRedisJob.html" class="internal-link">aligned.redis.job.FactualRedisJob</a></code>, <code><a href="aligned.redshift.jobs.FactRedshiftJob.html" class="internal-link">aligned.redshift.jobs.FactRedshiftJob</a></code>, <code><a href="aligned.redshift.sql_job.RedshiftSqlJob.html" class="internal-link">aligned.redshift.sql_job.RedshiftSqlJob</a></code>, <code><a href="aligned.retrieval_job.AggregateJob.html" class="internal-link">aligned.retrieval_job.AggregateJob</a></code>, <code><a href="aligned.retrieval_job.CombineFactualJob.html" class="internal-link">aligned.retrieval_job.CombineFactualJob</a></code>, <code><a href="aligned.retrieval_job.CustomLazyPolarsJob.html" class="internal-link">aligned.retrieval_job.CustomLazyPolarsJob</a></code>, <code><a href="aligned.retrieval_job.CustomPolarsJob.html" class="internal-link">aligned.retrieval_job.CustomPolarsJob</a></code>, <code><a href="aligned.retrieval_job.DerivedFeatureJob.html" class="internal-link">aligned.retrieval_job.DerivedFeatureJob</a></code>, <code><a href="aligned.retrieval_job.DropDuplicateEntities.html" class="internal-link">aligned.retrieval_job.DropDuplicateEntities</a></code>, <code><a href="aligned.retrieval_job.DropInvalidJob.html" class="internal-link">aligned.retrieval_job.DropInvalidJob</a></code>, <code><a href="aligned.retrieval_job.EncodeDatesJob.html" class="internal-link">aligned.retrieval_job.EncodeDatesJob</a></code>, <code><a href="aligned.retrieval_job.EnsureTypesJob.html" class="internal-link">aligned.retrieval_job.EnsureTypesJob</a></code>, <code><a href="aligned.retrieval_job.FileCachedJob.html" class="internal-link">aligned.retrieval_job.FileCachedJob</a></code>, <code><a href="aligned.retrieval_job.FillMissingColumnsJob.html" class="internal-link">aligned.retrieval_job.FillMissingColumnsJob</a></code>, <code><a href="aligned.retrieval_job.FilteredJob.html" class="internal-link">aligned.retrieval_job.FilteredJob</a></code>, <code><a href="aligned.retrieval_job.InMemoryCacheJob.html" class="internal-link">aligned.retrieval_job.InMemoryCacheJob</a></code>, <code><a href="aligned.retrieval_job.InMemorySplitCacheJob.html" class="internal-link">aligned.retrieval_job.InMemorySplitCacheJob</a></code>, <code><a href="aligned.retrieval_job.JoinAsofJob.html" class="internal-link">aligned.retrieval_job.JoinAsofJob</a></code>, <code><a href="aligned.retrieval_job.JoinJobs.html" class="internal-link">aligned.retrieval_job.JoinJobs</a></code>, <code><a href="aligned.retrieval_job.ListenForTriggers.html" class="internal-link">aligned.retrieval_job.ListenForTriggers</a></code>, <code><a href="aligned.retrieval_job.LiteralDictJob.html" class="internal-link">aligned.retrieval_job.LiteralDictJob</a></code>, <code><a href="aligned.retrieval_job.LoadedAtJob.html" class="internal-link">aligned.retrieval_job.LoadedAtJob</a></code>, <code><a href="aligned.retrieval_job.LogJob.html" class="internal-link">aligned.retrieval_job.LogJob</a></code>, <code><a href="aligned.retrieval_job.OnLoadJob.html" class="internal-link">aligned.retrieval_job.OnLoadJob</a></code>, <code><a href="aligned.retrieval_job.PredictionJob.html" class="internal-link">aligned.retrieval_job.PredictionJob</a></code>, <code><a href="aligned.retrieval_job.RawFileCachedJob.html" class="internal-link">aligned.retrieval_job.RawFileCachedJob</a></code>, <code><a href="aligned.retrieval_job.RenameJob.html" class="internal-link">aligned.retrieval_job.RenameJob</a></code>, <code><a href="aligned.retrieval_job.ReturnInvalidJob.html" class="internal-link">aligned.retrieval_job.ReturnInvalidJob</a></code>, <code><a href="aligned.retrieval_job.SelectColumnsJob.html" class="internal-link">aligned.retrieval_job.SelectColumnsJob</a></code>, <code><a href="aligned.retrieval_job.StackJob.html" class="internal-link">aligned.retrieval_job.StackJob</a></code>, <code><a href="aligned.retrieval_job.StreamAggregationJob.html" class="internal-link">aligned.retrieval_job.StreamAggregationJob</a></code>, <code><a href="aligned.retrieval_job.SubsetJob.html" class="internal-link">aligned.retrieval_job.SubsetJob</a></code>, <code><a href="aligned.retrieval_job.TimeMetricLoggerJob.html" class="internal-link">aligned.retrieval_job.TimeMetricLoggerJob</a></code>, <code><a href="aligned.retrieval_job.UniqueRowsJob.html" class="internal-link">aligned.retrieval_job.UniqueRowsJob</a></code>, <code><a href="aligned.retrieval_job.UnpackEmbedding.html" class="internal-link">aligned.retrieval_job.UnpackEmbedding</a></code>, <code><a href="aligned.retrieval_job.UpdateVectorIndexJob.html" class="internal-link">aligned.retrieval_job.UpdateVectorIndexJob</a></code>, <code><a href="aligned.retrieval_job.ValidateEntitiesJob.html" class="internal-link">aligned.retrieval_job.ValidateEntitiesJob</a></code>, <code><a href="aligned.retrieval_job.WithRequests.html" class="internal-link">aligned.retrieval_job.WithRequests</a></code>, <code><a href="aligned.sources.databricks.UnityCatalogTableAllJob.html" class="internal-link">aligned.sources.databricks.UnityCatalogTableAllJob</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.to_polars">
+    
+  </a>
+  <a name="to_polars">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">to_polars</span><span class="function-signature">(self) -&gt; <code>pl.DataFrame</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L705">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#to_polars" title="aligned.retrieval_job.RetrievalJob.to_polars">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.train_test">
+    
+  </a>
+  <a name="train_test">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">train_test</span><span class="function-signature">(self, train_size: <code><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a></code>, target_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, splitter_factory: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr><a href="aligned.retrieval_job.SplitConfig.html" class="internal-link" title="aligned.retrieval_job.SplitConfig">SplitConfig</a>], <wbr></wbr><a href="aligned.retrieval_job.html#SplitterCallable" class="internal-link" title="aligned.retrieval_job.SplitterCallable">SplitterCallable</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.TrainTestJob.html" class="internal-link" title="aligned.retrieval_job.TrainTestJob">TrainTestJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L848">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#train_test" title="aligned.retrieval_job.RetrievalJob.train_test">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.train_test_validate">
+    
+  </a>
+  <a name="train_test_validate">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">train_test_validate</span><span class="function-signature">(self, train_size: <code><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a></code>, validate_size: <code><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a></code>, target_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, splitter_factory: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr><a href="aligned.retrieval_job.SplitConfig.html" class="internal-link" title="aligned.retrieval_job.SplitConfig">SplitConfig</a>], <wbr></wbr><a href="aligned.retrieval_job.html#SplitterCallable" class="internal-link" title="aligned.retrieval_job.SplitterCallable">SplitterCallable</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, should_filter_out_null_targets: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code> = <a href="https://docs.python.org/3/library/constants.html#True" class="intersphinx-link">True</a>) -&gt; <code><a href="aligned.retrieval_job.TrainTestValidateJob.html" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob">TrainTestValidateJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L899">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#train_test_validate" title="aligned.retrieval_job.RetrievalJob.train_test_validate">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.transform_polars">
+    
+  </a>
+  <a name="transform_polars">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">transform_polars</span><span class="function-signature">(self, polars_method: <code><a href="aligned.retrieval_job.html#CustomPolarsTransform" class="internal-link" title="aligned.retrieval_job.CustomPolarsTransform">CustomPolarsTransform</a></code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1108">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#transform_polars" title="aligned.retrieval_job.RetrievalJob.transform_polars">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.unique_entities">
+    
+  </a>
+  <a name="unique_entities">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">unique_entities</span><span class="function-signature">(self) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1079">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#unique_entities" title="aligned.retrieval_job.RetrievalJob.unique_entities">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.unique_on">
+    
+  </a>
+  <a name="unique_on">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">unique_on</span><span class="function-signature">(self, unique_on: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>, sort_key: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, descending: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code> = <a href="https://docs.python.org/3/library/constants.html#True" class="intersphinx-link">True</a>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1072">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#unique_on" title="aligned.retrieval_job.RetrievalJob.unique_on">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.unpack_embeddings">
+    
+  </a>
+  <a name="unpack_embeddings">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">unpack_embeddings</span><span class="function-signature">(self) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L735">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#unpack_embeddings" title="aligned.retrieval_job.RetrievalJob.unpack_embeddings">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.update_vector_index">
+    
+  </a>
+  <a name="update_vector_index">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">update_vector_index</span><span class="function-signature">(self, indexes: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>VectorIndex]</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1066">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#update_vector_index" title="aligned.retrieval_job.RetrievalJob.update_vector_index">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.validate_entites">
+    
+  </a>
+  <a name="validate_entites">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">validate_entites</span><span class="function-signature">(self) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1069">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#validate_entites" title="aligned.retrieval_job.RetrievalJob.validate_entites">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.with_request">
+    
+  </a>
+  <a name="with_request">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">with_request</span><span class="function-signature">(self, requests: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest]</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1060">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#with_request" title="aligned.retrieval_job.RetrievalJob.with_request">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.with_subfeatures">
+    
+  </a>
+  <a name="with_subfeatures">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">with_subfeatures</span><span class="function-signature">(self) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L828">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#with_subfeatures" title="aligned.retrieval_job.RetrievalJob.with_subfeatures">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overridden in <code><a href="aligned.retrieval_job.DropInvalidJob.html" class="internal-link">aligned.retrieval_job.DropInvalidJob</a></code>, <code><a href="aligned.retrieval_job.SelectColumnsJob.html" class="internal-link">aligned.retrieval_job.SelectColumnsJob</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.without_derived_features">
+    
+  </a>
+  <a name="without_derived_features">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">without_derived_features</span><span class="function-signature">(self) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L723">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#without_derived_features" title="aligned.retrieval_job.RetrievalJob.without_derived_features">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.write_to_source">
+    
+  </a>
+  <a name="write_to_source">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">write_to_source</span><span class="function-signature">(self, source: <code><a href="aligned.feature_source.WritableFeatureSource.html" class="internal-link" title="aligned.feature_source.WritableFeatureSource">WritableFeatureSource</a> | DataFileReference</code>)</span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L1236">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#write_to_source" title="aligned.retrieval_job.RetrievalJob.write_to_source">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p>Writes the output of the retrieval job to the passed source.</p>
+<p>```python
+redis_cluster = RedisConfig.localhost()</p>
+<p>store = FeatureStore.from_dir(".")</p>
+<dl class="rst-docutils">
+<dt>await (store.model("taxi")</dt>
+<dd>.all_predictions() # Reads predictions from a <code>prediction_source</code>
+.write_to_source(redis_cluster)</dd>
+</dl>
+<p>)</p>
+<p>```</p>
+<dl class="rst-docutils">
+<dt>Args:</dt>
+<dd>source (WritableFeatureSource): A source that we can write to.</dd>
+</dl>
+</div>
+  </div>
+</div><div class="baseproperty">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.loaded_columns">
+    
+  </a>
+  <a name="loaded_columns">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">loaded_columns</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L679">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#loaded_columns" title="aligned.retrieval_job.RetrievalJob.loaded_columns">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    <div class="interfaceinfo">overridden in <code><a href="aligned.local.job.FileFullJob.html" class="internal-link">aligned.local.job.FileFullJob</a></code>, <code><a href="aligned.local.job.LiteralRetrievalJob.html" class="internal-link">aligned.local.job.LiteralRetrievalJob</a></code>, <code><a href="aligned.retrieval_job.LiteralDictJob.html" class="internal-link">aligned.retrieval_job.LiteralDictJob</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseproperty">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.request_result">
+    
+  </a>
+  <a name="request_result">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">request_result</span>: <code>RequestResult</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L685">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#request_result" title="aligned.retrieval_job.RetrievalJob.request_result">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    <div class="interfaceinfo">overridden in <code><a href="aligned.local.job.FileDateJob.html" class="internal-link">aligned.local.job.FileDateJob</a></code>, <code><a href="aligned.local.job.FileFactualJob.html" class="internal-link">aligned.local.job.FileFactualJob</a></code>, <code><a href="aligned.local.job.FileFullJob.html" class="internal-link">aligned.local.job.FileFullJob</a></code>, <code><a href="aligned.local.job.LiteralRetrievalJob.html" class="internal-link">aligned.local.job.LiteralRetrievalJob</a></code>, <code><a href="aligned.psql.jobs.FactPsqlJob.html" class="internal-link">aligned.psql.jobs.FactPsqlJob</a></code>, <code><a href="aligned.psql.jobs.PostgreSqlJob.html" class="internal-link">aligned.psql.jobs.PostgreSqlJob</a></code>, <code><a href="aligned.redis.job.FactualRedisJob.html" class="internal-link">aligned.redis.job.FactualRedisJob</a></code>, <code><a href="aligned.redshift.jobs.FactRedshiftJob.html" class="internal-link">aligned.redshift.jobs.FactRedshiftJob</a></code>, <code><a href="aligned.redshift.sql_job.RedshiftSqlJob.html" class="internal-link">aligned.redshift.sql_job.RedshiftSqlJob</a></code>, <code><a href="aligned.retrieval_job.AggregateJob.html" class="internal-link">aligned.retrieval_job.AggregateJob</a></code>, <code><a href="aligned.retrieval_job.CombineFactualJob.html" class="internal-link">aligned.retrieval_job.CombineFactualJob</a></code>, <code><a href="aligned.retrieval_job.CustomLazyPolarsJob.html" class="internal-link">aligned.retrieval_job.CustomLazyPolarsJob</a></code>, <code><a href="aligned.retrieval_job.DerivedFeatureJob.html" class="internal-link">aligned.retrieval_job.DerivedFeatureJob</a></code>, <code><a href="aligned.retrieval_job.DropInvalidJob.html" class="internal-link">aligned.retrieval_job.DropInvalidJob</a></code>, <code><a href="aligned.retrieval_job.EnsureTypesJob.html" class="internal-link">aligned.retrieval_job.EnsureTypesJob</a></code>, <code><a href="aligned.retrieval_job.FileCachedJob.html" class="internal-link">aligned.retrieval_job.FileCachedJob</a></code>, <code><a href="aligned.retrieval_job.JoinAsofJob.html" class="internal-link">aligned.retrieval_job.JoinAsofJob</a></code>, <code><a href="aligned.retrieval_job.JoinJobs.html" class="internal-link">aligned.retrieval_job.JoinJobs</a></code>, <code><a href="aligned.retrieval_job.ListenForTriggers.html" class="internal-link">aligned.retrieval_job.ListenForTriggers</a></code>, <code><a href="aligned.retrieval_job.LiteralDictJob.html" class="internal-link">aligned.retrieval_job.LiteralDictJob</a></code>, <code><a href="aligned.retrieval_job.LoadedAtJob.html" class="internal-link">aligned.retrieval_job.LoadedAtJob</a></code>, <code><a href="aligned.retrieval_job.LogJob.html" class="internal-link">aligned.retrieval_job.LogJob</a></code>, <code><a href="aligned.retrieval_job.PredictionJob.html" class="internal-link">aligned.retrieval_job.PredictionJob</a></code>, <code><a href="aligned.retrieval_job.RawFileCachedJob.html" class="internal-link">aligned.retrieval_job.RawFileCachedJob</a></code>, <code><a href="aligned.retrieval_job.SelectColumnsJob.html" class="internal-link">aligned.retrieval_job.SelectColumnsJob</a></code>, <code><a href="aligned.retrieval_job.StackJob.html" class="internal-link">aligned.retrieval_job.StackJob</a></code>, <code><a href="aligned.retrieval_job.UpdateVectorIndexJob.html" class="internal-link">aligned.retrieval_job.UpdateVectorIndexJob</a></code>, <code><a href="aligned.retrieval_job.WithRequests.html" class="internal-link">aligned.retrieval_job.WithRequests</a></code>, <code><a href="aligned.sources.databricks.UnityCatalogTableAllJob.html" class="internal-link">aligned.sources.databricks.UnityCatalogTableAllJob</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseproperty">
+  
+  
+  <a name="aligned.retrieval_job.RetrievalJob.retrieval_requests">
+    
+  </a>
+  <a name="retrieval_requests">
+    
+  </a>
+  <div class="functionHeader">
+    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <span class="py-defname">retrieval_requests</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest]</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/8e9e3e6e5c4e7ae2c1672d2d72108a67d9208b2c/aligned/retrieval_job.py#L691">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#retrieval_requests" title="aligned.retrieval_job.RetrievalJob.retrieval_requests">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    <div class="interfaceinfo">overridden in <code><a href="aligned.local.job.FileDateJob.html" class="internal-link">aligned.local.job.FileDateJob</a></code>, <code><a href="aligned.local.job.FileFactualJob.html" class="internal-link">aligned.local.job.FileFactualJob</a></code>, <code><a href="aligned.local.job.FileFullJob.html" class="internal-link">aligned.local.job.FileFullJob</a></code>, <code><a href="aligned.local.job.LiteralRetrievalJob.html" class="internal-link">aligned.local.job.LiteralRetrievalJob</a></code>, <code><a href="aligned.psql.jobs.FactPsqlJob.html" class="internal-link">aligned.psql.jobs.FactPsqlJob</a></code>, <code><a href="aligned.psql.jobs.PostgreSqlJob.html" class="internal-link">aligned.psql.jobs.PostgreSqlJob</a></code>, <code><a href="aligned.redis.job.FactualRedisJob.html" class="internal-link">aligned.redis.job.FactualRedisJob</a></code>, <code><a href="aligned.redshift.jobs.FactRedshiftJob.html" class="internal-link">aligned.redshift.jobs.FactRedshiftJob</a></code>, <code><a href="aligned.redshift.sql_job.RedshiftSqlJob.html" class="internal-link">aligned.redshift.sql_job.RedshiftSqlJob</a></code>, <code><a href="aligned.retrieval_job.AggregateJob.html" class="internal-link">aligned.retrieval_job.AggregateJob</a></code>, <code><a href="aligned.retrieval_job.CombineFactualJob.html" class="internal-link">aligned.retrieval_job.CombineFactualJob</a></code>, <code><a href="aligned.retrieval_job.CustomLazyPolarsJob.html" class="internal-link">aligned.retrieval_job.CustomLazyPolarsJob</a></code>, <code><a href="aligned.retrieval_job.DerivedFeatureJob.html" class="internal-link">aligned.retrieval_job.DerivedFeatureJob</a></code>, <code><a href="aligned.retrieval_job.DropInvalidJob.html" class="internal-link">aligned.retrieval_job.DropInvalidJob</a></code>, <code><a href="aligned.retrieval_job.EnsureTypesJob.html" class="internal-link">aligned.retrieval_job.EnsureTypesJob</a></code>, <code><a href="aligned.retrieval_job.FileCachedJob.html" class="internal-link">aligned.retrieval_job.FileCachedJob</a></code>, <code><a href="aligned.retrieval_job.JoinAsofJob.html" class="internal-link">aligned.retrieval_job.JoinAsofJob</a></code>, <code><a href="aligned.retrieval_job.JoinJobs.html" class="internal-link">aligned.retrieval_job.JoinJobs</a></code>, <code><a href="aligned.retrieval_job.ListenForTriggers.html" class="internal-link">aligned.retrieval_job.ListenForTriggers</a></code>, <code><a href="aligned.retrieval_job.LiteralDictJob.html" class="internal-link">aligned.retrieval_job.LiteralDictJob</a></code>, <code><a href="aligned.retrieval_job.LoadedAtJob.html" class="internal-link">aligned.retrieval_job.LoadedAtJob</a></code>, <code><a href="aligned.retrieval_job.LogJob.html" class="internal-link">aligned.retrieval_job.LogJob</a></code>, <code><a href="aligned.retrieval_job.PredictionJob.html" class="internal-link">aligned.retrieval_job.PredictionJob</a></code>, <code><a href="aligned.retrieval_job.RawFileCachedJob.html" class="internal-link">aligned.retrieval_job.RawFileCachedJob</a></code>, <code><a href="aligned.retrieval_job.SelectColumnsJob.html" class="internal-link">aligned.retrieval_job.SelectColumnsJob</a></code>, <code><a href="aligned.retrieval_job.StackJob.html" class="internal-link">aligned.retrieval_job.StackJob</a></code>, <code><a href="aligned.retrieval_job.UpdateVectorIndexJob.html" class="internal-link">aligned.retrieval_job.UpdateVectorIndexJob</a></code>, <code><a href="aligned.retrieval_job.WithRequests.html" class="internal-link">aligned.retrieval_job.WithRequests</a></code>, <code><a href="aligned.sources.databricks.UnityCatalogTableAllJob.html" class="internal-link">aligned.sources.databricks.UnityCatalogTableAllJob</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div>
+        </div>
+      
+      </div>
+    </div>
+
+    <footer class="navbar navbar-default">
+
+  
+  <div class="container-fluid">
+    <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
+  generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
+    24.11.2 at 2025-03-05 23:11:44.
+  </div>
+
+  <!-- Search related scripts needs to be loaded at the end of HTML 
+    parsing not to introduce overhead and display HTML data asap -->
+  <script src="ajax.js" type="text/javascript"></script>
+  <script src="searchlib.js" type="text/javascript"></script>
+  <script src="search.js" type="text/javascript"></script>
+
+</footer>
+  
+    <script src="pydoctor.js" type="text/javascript"></script>
+
+  </body>
+</html>
