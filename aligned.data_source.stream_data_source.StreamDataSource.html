@@ -282,7 +282,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">StreamDataSource</span>(<a href="https://docs.python.org/3/library/abc.html#abc.ABC" class="intersphinx-link">ABC</a>, Codable, SerializableType): <a href="https://github.com/MatsMoll/aligned/tree/10c77b91ff960e8b6d51429cfaeb8519814bd254/aligned/data_source/stream_data_source.py#L39" class="sourceLink">(source)</a></code></p><p>Known subclasses: <code><a href="aligned.HttpStreamSource.html" class="internal-link">aligned.HttpStreamSource</a></code>, <code><a href="aligned.sources.kafka.KafkaTopicConfig.html" class="internal-link">aligned.sources.kafka.KafkaTopicConfig</a></code>, <code><a href="aligned.sources.redis.RedisStreamSource.html" class="internal-link">aligned.sources.redis.RedisStreamSource</a></code></p><p>Constructor: <code><a href="#_deserialize" class="internal-link" title="aligned.data_source.stream_data_source.StreamDataSource._deserialize">StreamDataSource._deserialize(value)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">StreamDataSource</span>(<a href="https://docs.python.org/3/library/abc.html#abc.ABC" class="intersphinx-link">ABC</a>, Codable, SerializableType): <a href="https://github.com/MatsMoll/aligned/tree/c2a3052a2eb843307548371c21211518e5ce85d8/aligned/data_source/stream_data_source.py#L39" class="sourceLink">(source)</a></code></p><p>Known subclasses: <code><a href="aligned.HttpStreamSource.html" class="internal-link">aligned.HttpStreamSource</a></code>, <code><a href="aligned.sources.kafka.KafkaTopicConfig.html" class="internal-link">aligned.sources.kafka.KafkaTopicConfig</a></code>, <code><a href="aligned.sources.redis.RedisStreamSource.html" class="internal-link">aligned.sources.redis.RedisStreamSource</a></code></p><p>Constructor: <code><a href="#_deserialize" class="internal-link" title="aligned.data_source.stream_data_source.StreamDataSource._deserialize">StreamDataSource._deserialize(value)</a></code></p>
           <p><a href="classIndex.html#aligned.data_source.stream_data_source.StreamDataSource">View In Hierarchy</a></p>
         </div>
 
@@ -340,7 +340,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">consumer</span><span class="function-signature">(self, from_timestamp: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.streams.interface.ReadableStream.html" class="internal-link" title="aligned.streams.interface.ReadableStream">ReadableStream</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/10c77b91ff960e8b6d51429cfaeb8519814bd254/aligned/data_source/stream_data_source.py#L64">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/c2a3052a2eb843307548371c21211518e5ce85d8/aligned/data_source/stream_data_source.py#L64">
       
       (source)
     </a>
@@ -376,7 +376,7 @@ redis_config = RedisConfig(env_var="REDIS_URL")</p>
   <div class="functionHeader">
     
     <span class="py-defname">name</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/10c77b91ff960e8b6d51429cfaeb8519814bd254/aligned/data_source/stream_data_source.py#L44">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/c2a3052a2eb843307548371c21211518e5ce85d8/aligned/data_source/stream_data_source.py#L44">
       
       (source)
     </a>
@@ -403,7 +403,7 @@ redis_config = RedisConfig(env_var="REDIS_URL")</p>
   <div class="functionHeader">
     
     <span class="py-defname">topic_name</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/10c77b91ff960e8b6d51429cfaeb8519814bd254/aligned/data_source/stream_data_source.py#L45">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/c2a3052a2eb843307548371c21211518e5ce85d8/aligned/data_source/stream_data_source.py#L45">
       
       (source)
     </a>
@@ -431,7 +431,7 @@ redis_config = RedisConfig(env_var="REDIS_URL")</p>
     
     @<a href="https://docs.python.org/3/library/functions.html#classmethod" class="intersphinx-link">classmethod</a><br />
     <span class="py-keyword">def</span> <span class="py-defname">_deserialize</span><span class="function-signature">(cls, value: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a></code>) -&gt; <code><a href="aligned.data_source.stream_data_source.StreamDataSource.html" class="internal-link" title="aligned.data_source.stream_data_source.StreamDataSource">StreamDataSource</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/10c77b91ff960e8b6d51429cfaeb8519814bd254/aligned/data_source/stream_data_source.py#L51">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/c2a3052a2eb843307548371c21211518e5ce85d8/aligned/data_source/stream_data_source.py#L51">
       
       (source)
     </a>
@@ -458,7 +458,7 @@ redis_config = RedisConfig(env_var="REDIS_URL")</p>
     
     
     <span class="py-keyword">def</span> <span class="py-defname">_serialize</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/10c77b91ff960e8b6d51429cfaeb8519814bd254/aligned/data_source/stream_data_source.py#L47">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/c2a3052a2eb843307548371c21211518e5ce85d8/aligned/data_source/stream_data_source.py#L47">
       
       (source)
     </a>
@@ -484,7 +484,7 @@ redis_config = RedisConfig(env_var="REDIS_URL")</p>
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    24.11.2 at 2025-03-05 23:16:26.
+    24.11.2 at 2025-03-05 23:22:19.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 
