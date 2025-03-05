@@ -6,6 +6,33 @@ from aligned.sources.local import FileSource
 
 
 @pytest.mark.asyncio
+async def test_train_test_set(titanic_feature_store: ContractStore) -> None:
+
+    dataset_size = 100
+    train_fraction = 0.7
+
+    train_size = int(round(dataset_size * train_fraction))
+    test_size = int(round(dataset_size * (1 - train_fraction)))
+
+    datasets = (
+        titanic_feature_store.feature_view('titanic')
+        .all(limit=dataset_size)
+        .train_test(train_fraction, target_column='survived')
+    )
+    train = await datasets.train.to_pandas()
+    test = await datasets.test.to_pandas()
+
+    assert train.data.shape[0] == train_size
+    assert test.data.shape[0] == test_size
+
+    assert 'passenger_id' in train.data.columns
+    assert 'survived' in train.data.columns
+
+    assert 'passenger_id' not in train.input.columns
+    assert 'survived' not in train.input.columns
+
+
+@pytest.mark.asyncio
 async def test_train_test_validate_set(titanic_feature_store: ContractStore) -> None:
 
     dataset_size = 100
@@ -54,7 +81,12 @@ async def test_train_test_validate_set_new(titanic_feature_store: ContractStore)
     test_source = FileSource.csv_at('test_data/temp/titanic-test.csv')
     validate_source = FileSource.csv_at('test_data/temp/titanic-validate.csv')
 
-    delete_files = [dataset_store.path, train_source.path, test_source.path, validate_source.path]
+    delete_files = [
+        dataset_store.path,
+        train_source.path.as_posix(),
+        test_source.path.as_posix(),
+        validate_source.path.as_posix(),
+    ]
 
     for file in delete_files:
         path = Path(file)

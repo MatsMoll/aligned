@@ -1,6 +1,7 @@
-name: Test PR
+name: Pull Request
 
 on:
+  workflow_dispatch:
   pull_request:
     branches:
       - main
@@ -18,6 +19,7 @@ jobs:
           POSTGRES_PASSWORD: postgres
         ports:
           - '127.0.0.1:5432:5432'
+
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -43,9 +45,30 @@ jobs:
           poetry install --no-interaction --all-extras
         if: steps.cache-venv.outputs.cache-hit != 'true'
 
+      - name: Start MLflow service
+        run: |
+          docker network create mlflow || true
+          docker run -d --rm \
+            --name mlflow \
+            --network mlflow \
+            -p 8000:8000 \
+            ghcr.io/mlflow/mlflow:v2.15.0 \
+            /bin/sh -c "mlflow server --backend-store-uri file:///app/mlflow-server/experiments --artifacts-destination file:///app/mlflow-server/artifacts --host 0.0.0.0 --port 8000"
+
+      - name: Verify MLflow server is running
+        run: |
+          for i in {1..10}; do
+            curl -s http://localhost:8000 && break
+            echo "Waiting for MLflow server..."
+            sleep 5
+          done
+          curl http://localhost:8000
+
       - name: Run tests
         env:
           PSQL_DATABASE_TEST: postgresql://postgres:postgres@localhost:5432/postgres
+          MLFLOW_TRACKING_URI: http://localhost:8000
+          MLFLOW_REGISTRY_URI: http://localhost:8000
         run: |
           source .venv/bin/activate
           pytest

@@ -10,8 +10,8 @@ COPY ./pyproject.toml /opt/app/pyproject.toml
 COPY ./poetry.lock /opt/app/poetry.lock
 
 RUN mkdir /opt/app/aligned
-RUN poetry install --no-root --extras "redis pandera kafka ollama mlflow lancedb"
+RUN poetry install --no-root --extras "redis kafka ollama mlflow lancedb"
 
-COPY ./aligned /opt/app/aligned
-COPY ./conftest.py /opt/app/conftest.py
-COPY ./test_data /opt/app/test_data
+COPY aligned /opt/app/aligned
+COPY conftest.py /opt/app/conftest.py
+COPY test_data /opt/app/test_data

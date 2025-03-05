@@ -4,14 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-try:
-    from aioaws.s3 import S3Client
-except ModuleNotFoundError:
-
-    class S3Client:  # type: ignore[no-redef]
-        pass
-
-
+from aligned.lazy_imports import s3
 from aligned.storage import Storage
 
 if TYPE_CHECKING:
@@ -20,7 +13,6 @@ if TYPE_CHECKING:
 
 @dataclass
 class AwsS3Storage(Storage):
-
     config: AwsS3Config
     timeout: int = field(default=60)
 
@@ -28,18 +20,18 @@ class AwsS3Storage(Storage):
         from httpx import AsyncClient
 
         async with AsyncClient(timeout=self.timeout) as client:
-            s3_client = S3Client(client, self.config.s3_config)
+            s3_client = s3.S3Client(client, self.config.s3_config)
             url = s3_client.signed_download_url(path)
             response = await client.get(url)
             response.raise_for_status()
             return response.content
 
-    async def write(self, path: str, content: bytes) -> None:
+    async def write(self, path: str, content: bytes | bytearray) -> None:
         from httpx import AsyncClient
 
         async with AsyncClient(timeout=self.timeout) as client:
-            s3_client = S3Client(client, self.config.s3_config)
-            await s3_client.upload(path, content)
+            s3_client = s3.S3Client(client, self.config.s3_config)
+            await s3_client.upload(path, bytes(content))
 
 
 @dataclass
@@ -47,7 +39,7 @@ class FileStorage(Storage):
     async def read(self, path: str) -> bytes:
         return Path(path).read_bytes()
 
-    async def write(self, path: str, content: bytes) -> None:
+    async def write(self, path: str, content: bytes | bytearray) -> None:
         lib_path = Path(path)
         lib_path.parent.mkdir(parents=True, exist_ok=True)
         lib_path.write_bytes(content)
@@ -56,16 +48,16 @@ class FileStorage(Storage):
 @dataclass
 class HttpStorage(Storage):
     async def read(self, path: str) -> bytes:
-        if not (path.startswith('http://') or path.startswith('https://')):
-            raise ValueError('Invalid url')
+        if not (path.startswith("http://") or path.startswith("https://")):
+            raise ValueError("Invalid url")
 
         from httpx import AsyncClient
 
-        async with AsyncClient() as client:
+        async with AsyncClient(timeout=120) as client:
             response = await client.get(path)
             response.raise_for_status()
             return response.content
 
-    async def write(self, path: str, content: bytes) -> None:
+    async def write(self, path: str, content: bytes | bytearray) -> None:
         raise NotImplementedError()
         # return Path(path).write_bytes(content)

@@ -7,16 +7,15 @@ from datetime import datetime, timezone
 
 from mashumaro.types import SerializableType
 from aligned.data_source.batch_data_source import CodableBatchDataSource
-from aligned.request.retrival_request import RequestResult
+from aligned.request.retrieval_request import RequestResult
 
 from aligned.sources.local import Deletable, StorageFileSource
 from aligned.schemas.codable import Codable
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class DatasetStorageFactory:
-
     supported_stores: dict[str, type[DatasetStore]] = {}
 
     _shared: DatasetStorageFactory | None = None
@@ -65,9 +64,9 @@ class SingleDatasetMetadata(Codable):
     tags: list[str] | None = field(default=None)
 
     def format_as_job(self, job: T) -> T:
-        from aligned.retrival_job import RetrivalJob, SupervisedJob
+        from aligned.retrieval_job import RetrievalJob, SupervisedJob
 
-        if isinstance(job, RetrivalJob):
+        if isinstance(job, RetrievalJob):
             return self.source.all(job.request_result)
         elif isinstance(job, SupervisedJob):
             return SupervisedJob(  # type: ignore
@@ -76,12 +75,13 @@ class SingleDatasetMetadata(Codable):
                 should_filter_out_null_targets=job.should_filter_out_null_targets,
             )
         else:
-            raise NotImplementedError(f"Can't convert {type(self)} to type {type(job)} job.")
+            raise NotImplementedError(
+                f"Can't convert {type(self)} to type {type(job)} job."
+            )
 
 
 @dataclass
 class TrainDatasetMetadata(Codable, DatasetMetadataInterface):
-
     name: str | None
 
     content: RequestResult
@@ -106,11 +106,11 @@ class TrainDatasetMetadata(Codable, DatasetMetadataInterface):
     @property
     def as_datasets(self) -> list[SingleDatasetMetadata]:
         sources = [
-            (['train'], self.train_dataset),
-            (['test'], self.test_dataset),
+            (["train"], self.train_dataset),
+            (["test"], self.test_dataset),
         ]
         if self.validation_dataset:
-            sources.append((['validation'], self.validation_dataset))
+            sources.append((["validation"], self.validation_dataset))
 
         datasets = []
         for tags, source in sources:
@@ -130,7 +130,6 @@ class TrainDatasetMetadata(Codable, DatasetMetadataInterface):
 
 @dataclass
 class GroupedDatasetList(Codable):
-
     raw_data: list[SingleDatasetMetadata]
 
     train_test: list[TrainDatasetMetadata]
@@ -151,25 +150,26 @@ class GroupedDatasetList(Codable):
 
 
 class DatasetStore(Codable, SerializableType):
-
     name: str
 
     def _serialize(self) -> dict:
-        assert self.name in DatasetStorageFactory.shared().supported_stores, f'Unknown type_name: {self.name}'
+        assert (
+            self.name in DatasetStorageFactory.shared().supported_stores
+        ), f"Unknown type_name: {self.name}"
         return self.to_dict()
 
     @classmethod
     def _deserialize(cls, value: dict) -> DatasetStore:
-        name_type = value['name']
+        name_type = value["name"]
         if name_type not in DatasetStorageFactory.shared().supported_stores:
             supported = DatasetStorageFactory.shared().supported_stores.keys()
             raise ValueError(
                 f"Unknown batch data source id: '{name_type}'.\nRemember to add the"
-                ' data source to the FolderFactory.supported_folders if'
-                ' it is a custom type.'
-                f' Have access to the following types: {supported}'
+                " data source to the FolderFactory.supported_folders if"
+                " it is a custom type."
+                f" Have access to the following types: {supported}"
             )
-        del value['name']
+        del value["name"]
         data_class = DatasetStorageFactory.shared().supported_stores[name_type]
         return data_class.from_dict(value)
 
@@ -191,18 +191,21 @@ class DatasetStore(Codable, SerializableType):
     async def datasets_with_tag(self, tag: str) -> list[SingleDatasetMetadata]:
         raise NotImplementedError(type(self))
 
-    async def latest_dataset_with_tag(self, tag: str) -> DatasetMetadataInterface | None:
+    async def latest_dataset_with_tag(
+        self, tag: str
+    ) -> DatasetMetadataInterface | None:
         raise NotImplementedError(type(self))
 
-    async def delete_metadata_for(self, dataset_id: str) -> DatasetMetadataInterface | None:
+    async def delete_metadata_for(
+        self, dataset_id: str
+    ) -> DatasetMetadataInterface | None:
         raise NotImplementedError(type(self))
 
 
 @dataclass
 class JsonDatasetStore(DatasetStore):
-
     source: StorageFileSource
-    name = 'json'
+    name = "json"
 
     async def list_datasets(self) -> GroupedDatasetList:
         try:
@@ -215,8 +218,9 @@ class JsonDatasetStore(DatasetStore):
                 train_test_validation=[],
             )
 
-    def index_of(self, metadata_id: str, array: Sequence[DatasetMetadataInterface]) -> int | None:
-
+    def index_of(
+        self, metadata_id: str, array: Sequence[DatasetMetadataInterface]
+    ) -> int | None:
         for i, dataset in enumerate(array):
             if dataset.id == metadata_id:
                 return i
@@ -233,7 +237,7 @@ class JsonDatasetStore(DatasetStore):
 
         data = datasets.to_json()
         if isinstance(data, str):
-            data = data.encode('utf-8')
+            data = data.encode("utf-8")
         await self.source.write(data)
 
     async def store_train_test_validate(self, metadata: TrainDatasetMetadata) -> None:
@@ -247,7 +251,7 @@ class JsonDatasetStore(DatasetStore):
 
         data = datasets.to_json()
         if isinstance(data, str):
-            data = data.encode('utf-8')
+            data = data.encode("utf-8")
 
         await self.source.write(data)
 
@@ -262,14 +266,20 @@ class JsonDatasetStore(DatasetStore):
 
         data = datasets.to_json()
         if isinstance(data, str):
-            data = data.encode('utf-8')
+            data = data.encode("utf-8")
         await self.source.write(data)
 
     async def datasets_with_tag(self, tag: str) -> list[SingleDatasetMetadata]:
         datasets = await self.list_datasets()
-        return [dataset for dataset in datasets.all_datasets if dataset.tags and tag in dataset.tags]
+        return [
+            dataset
+            for dataset in datasets.all_datasets
+            if dataset.tags and tag in dataset.tags
+        ]
 
-    async def latest_dataset_with_tag(self, tag: str) -> DatasetMetadataInterface | None:
+    async def latest_dataset_with_tag(
+        self, tag: str
+    ) -> DatasetMetadataInterface | None:
         datasets = await self.list_datasets()
         latest_dataset: DatasetMetadataInterface | None = None
 
@@ -277,7 +287,9 @@ class JsonDatasetStore(DatasetStore):
             if not (dataset.tags and tag in dataset.tags):
                 continue
 
-            if (latest_dataset is None) or (dataset.created_at > latest_dataset.created_at):
+            if (latest_dataset is None) or (
+                dataset.created_at > latest_dataset.created_at
+            ):
                 latest_dataset = dataset
 
         return latest_dataset
@@ -289,7 +301,9 @@ class JsonDatasetStore(DatasetStore):
                 return dataset
         return None
 
-    async def delete_metadata_for(self, dataset_id: str) -> DatasetMetadataInterface | None:
+    async def delete_metadata_for(
+        self, dataset_id: str
+    ) -> DatasetMetadataInterface | None:
         datasets = await self.list_datasets()
 
         async def delete_dataset(source: CodableBatchDataSource):

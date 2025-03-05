@@ -274,13 +274,9 @@ class TitanicPassenger:
 Then since our feature view have a `is_optional` and a `lower_bound`, will the `.validate(...)` command filter out the entites that do not follow that behavior.
 
 ```python
-from aligned.validation.pandera import PanderaValidator
-
 df = await store.model("titanic_model").features_for({
     "passenger_id": [1, 50, 110]
-}).validate(
-    PanderaValidator()  # Validates all features
-).to_pandas()
+}).drop_invalid().to_pandas()
 ```
 
 ## Contract Store
@@ -293,8 +289,8 @@ Therefore, it is also possible to manually add the different feature views and c
 
 ```python
 store = ContractStore.empty()
-store.add_feature_view(MyView)
-store.add_model(MyModel)
+store.add(MyView)
+store.add(MyModel)
 ```
 
 This makes it possible to define different contracts per project, or team. As a result, you can also combine differnet stores with.

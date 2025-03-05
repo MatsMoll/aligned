@@ -1,74 +1,78 @@
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterable
 from aligned.compiler.model import ModelContractWrapper
-from aligned.data_source.batch_data_source import CodableBatchDataSource, CustomMethodDataSource
+from aligned.data_source.batch_data_source import (
+    CodableBatchDataSource,
+    CustomMethodDataSource,
+)
 from aligned.feature_view.feature_view import FeatureViewWrapper
 import polars as pl
 from datetime import datetime
 
-from aligned.exposed_model.interface import ExposedModel, PromptModel, StreamablePredictor, RetrivalJob
+from aligned.exposed_model.interface import (
+    ExposedModel,
+    PromptModel,
+    StreamablePredictor,
+    RetrievalJob,
+)
 from aligned.feature_store import ContractStore, ModelFeatureStore
-from aligned.request.retrival_request import RetrivalRequest
+from aligned.request.retrieval_request import RetrievalRequest
 from aligned.schemas.feature import FeatureLocation
-
-try:
-    from langchain_core.language_models.base import LanguageModelLike
-    from langchain_core.retrievers import BaseRetriever
-    from langchain_core.callbacks.manager import (
-        AsyncCallbackManagerForRetrieverRun,
-        CallbackManagerForRetrieverRun,
-    )
-    from langchain_core.documents.base import Document
-except ModuleNotFoundError:
-
-    class BaseRetriever:
-        pass
-
-    class LanguageModelLike:
-        pass
+from aligned.lazy_imports import langchain_core
 
 
-class AlignedRetriver(BaseRetriever):
-
+class AlignedRetriver(langchain_core.retriveres.BaseRetriever):
     store: ContractStore
     index_name: str
     number_of_docs: int
 
     def __str__(self) -> str:
-        return f"Aligned Retriver - Loading {self.number_of_docs} from '{self.index_name}'"
+        return (
+            f"Aligned Retriver - Loading {self.number_of_docs} from '{self.index_name}'"
+        )
 
     def _get_relevant_documents(
-        self, query: str, *, run_manager: 'CallbackManagerForRetrieverRun'
-    ) -> list['Document']:
+        self,
+        query: str,
+        *,
+        run_manager: "langchain_core.callbacks.manager.CallbackManagerForRetrieverRun",
+    ) -> list["langchain_core.documents.base.Document"]:
         raise NotImplementedError()
 
     async def _aget_relevant_documents(
-        self, query: str, *, run_manager: 'AsyncCallbackManagerForRetrieverRun'
-    ) -> list['Document']:
-
+        self,
+        query: str,
+        *,
+        run_manager: "langchain_core.callbacks.manager.AsyncCallbackManagerForRetrieverRun",
+    ) -> list["langchain_core.documents.base.Document"]:
         store = self.store
         index = store.vector_index(self.index_name)
         embed_model = store.model(index.model.name)
 
-        assert (
-            embed_model.has_exposed_model()
-        ), f"The model {index.model.name} do not have an exposed model. Which means we can not use it."
+        assert embed_model.has_exposed_model(), f"The model {index.model.name} do not have an exposed model. Which means we can not use it."
 
         exposed_model = embed_model.model.exposed_model
 
-        if isinstance(exposed_model, PromptModel) and exposed_model.precomputed_prompt_key:
+        if (
+            isinstance(exposed_model, PromptModel)
+            and exposed_model.precomputed_prompt_key
+        ):
             input_name = exposed_model.precomputed_prompt_key
         else:
             inputs = list(embed_model.model.feature_references())
             assert len(inputs) == 1, (
                 f"Model have more than one inputs: {len(inputs)}. "
                 f"Unclear what to name the query: '{query}'. "
-                'This can be fixed by making sure the underlying model is a '
-                '`PromptModel` with a `precomputed_prompt_key`.'
+                "This can be fixed by making sure the underlying model is a "
+                "`PromptModel` with a `precomputed_prompt_key`."
             )
             input_name = inputs[0].name
 
-        embedding = await store.model(embed_model.model.name).predict_over({input_name: [query]}).to_polars()
+        embedding = (
+            await store.model(embed_model.model.name)
+            .predict_over({input_name: [query]})
+            .to_polars()
+        )
 
         embedding_output = [
             feature.name
@@ -77,29 +81,34 @@ class AlignedRetriver(BaseRetriever):
         ]
 
         documents = await index.nearest_n_to(
-            entities=embedding.select(pl.exclude(input_name)), number_of_records=self.number_of_docs
+            entities=embedding.select(pl.exclude(input_name)),
+            number_of_records=self.number_of_docs,
         ).to_polars()
 
         documents = documents.with_columns(
             page_content=pl.concat_str(
-                [pl.col(col).cast(pl.String) for col in embedding_output], separator='\n\n'
+                [pl.col(col).cast(pl.String) for col in embedding_output],
+                separator="\n\n",
             )
         )
 
-        return [Document(**doc) for doc in documents.to_dicts()]
+        return [
+            langchain_core.documents.base.Document(**doc)
+            for doc in documents.to_dicts()
+        ]
 
 
 @dataclass
 class LangChain(ExposedModel, StreamablePredictor):
-
     chain_bytes: bytes
     chain_output: str
     output_key: str
 
     depends_on_data: list[FeatureLocation] = field(default_factory=list)
+    model_type: str = "langchain"
 
     @property
-    def chain(self) -> LanguageModelLike:
+    def chain(self) -> langchain_core.language_models.base.LanguageModelLike:
         from dill import loads
 
         return loads(self.chain_bytes)
@@ -110,11 +119,12 @@ class LangChain(ExposedModel, StreamablePredictor):
 
     @staticmethod
     def from_chain(
-        chain: LanguageModelLike,
-        chain_output: str = 'answer',
-        output_key: str = 'answer',
-        depends_on: list[FeatureLocation | FeatureViewWrapper | ModelContractWrapper] | None = None,
-    ) -> 'LangChain':
+        chain: langchain_core.language_models.base.LanguageModelLike,
+        chain_output: str = "answer",
+        output_key: str = "answer",
+        depends_on: list[FeatureLocation | FeatureViewWrapper | ModelContractWrapper]
+        | None = None,
+    ) -> "LangChain":
         from dill import dumps
 
         return LangChain(
@@ -123,7 +133,10 @@ class LangChain(ExposedModel, StreamablePredictor):
             chain_output=chain_output,
             depends_on_data=[]
             if depends_on is None
-            else [loc if isinstance(loc, FeatureLocation) else loc.location for loc in depends_on],
+            else [
+                loc if isinstance(loc, FeatureLocation) else loc.location
+                for loc in depends_on
+            ],
         )
 
     @property
@@ -135,7 +148,9 @@ class LangChain(ExposedModel, StreamablePredictor):
     async def depends_on(self) -> list[FeatureLocation]:
         return self.depends_on_data
 
-    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+    async def run_polars(
+        self, values: RetrievalJob, store: ModelFeatureStore
+    ) -> pl.DataFrame:
         responses = []
         pred_view = store.model.predictions_view
         df = await values.to_polars()
@@ -143,14 +158,20 @@ class LangChain(ExposedModel, StreamablePredictor):
             responses.append((await self.chain.ainvoke(question))[self.chain_output])
 
         if pred_view.model_version_column:
-            df = df.with_columns(pl.lit(self.version).alias(pred_view.model_version_column.name))
+            df = df.with_columns(
+                pl.lit(self.version).alias(pred_view.model_version_column.name)
+            )
 
         if pred_view.event_timestamp:
-            df = df.with_columns(pl.lit(datetime.utcnow()).alias(pred_view.event_timestamp.name))
+            df = df.with_columns(
+                pl.lit(datetime.utcnow()).alias(pred_view.event_timestamp.name)
+            )
 
         return df.hstack([pl.Series(name=self.output_key, values=responses)])
 
-    async def stream_predict(self, input: dict[str, Any]) -> AsyncIterable[dict[str, Any]]:
+    async def stream_predict(
+        self, input: dict[str, Any]
+    ) -> AsyncIterable[dict[str, Any]]:
         async for output in self.chain.astream(input):
             try:
                 if isinstance(output, dict):
@@ -158,7 +179,7 @@ class LangChain(ExposedModel, StreamablePredictor):
                 else:
                     value = output.model_dump()
             except AttributeError:
-                value = output.dict()
+                value = output.dict()  # type: ignore
 
             if self.output_key != self.chain_output and self.chain_output in value:
                 value[self.output_key] = value[self.chain_output]
@@ -166,11 +187,11 @@ class LangChain(ExposedModel, StreamablePredictor):
 
 
 def web_chunks_source(pages: list[str]) -> CodableBatchDataSource:
-    async def load(request: RetrivalRequest) -> pl.LazyFrame:
+    async def load(request: RetrievalRequest) -> pl.LazyFrame:
         import polars as pl
         from datetime import timezone, datetime
-        from langchain_community.document_loaders import WebBaseLoader
-        from langchain_text_splitters import RecursiveCharacterTextSplitter
+        from langchain_community.document_loaders import WebBaseLoader  # type: ignore
+        from langchain_text_splitters import RecursiveCharacterTextSplitter  # type: ignore
 
         all_splits = []
 
@@ -187,18 +208,23 @@ def web_chunks_source(pages: list[str]) -> CodableBatchDataSource:
 
         df = pl.DataFrame(flattend_data)
         return df.with_columns(
-            loaded_at=pl.lit(datetime.now(tz=timezone.utc)), chunk_hash=pl.col('page_content').hash()
+            loaded_at=pl.lit(datetime.now(tz=timezone.utc)),
+            chunk_hash=pl.col("page_content").hash(),
         ).lazy()
 
     return CustomMethodDataSource.from_load(load)
 
 
-def file_chunks_source(directory: str, glob: str = '**') -> CodableBatchDataSource:
-    async def load(request: RetrivalRequest) -> pl.LazyFrame:
+def file_chunks_source(directory: str, glob: str = "**") -> CodableBatchDataSource:
+    async def load(request: RetrievalRequest) -> pl.LazyFrame:
         import polars as pl
         from datetime import timezone, datetime
-        from langchain_community.document_loaders import DirectoryLoader, TextLoader, PythonLoader
-        from langchain_text_splitters import RecursiveCharacterTextSplitter, Language
+        from langchain_community.document_loaders import (  # type: ignore
+            DirectoryLoader,
+            TextLoader,
+            PythonLoader,
+        )
+        from langchain_text_splitters import RecursiveCharacterTextSplitter, Language  # type: ignore
         import logging
 
         logger = logging.getLogger(__name__)
@@ -206,7 +232,7 @@ def file_chunks_source(directory: str, glob: str = '**') -> CodableBatchDataSour
         loader_cls = TextLoader
         splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0)
 
-        if glob.endswith('.py'):
+        if glob.endswith(".py"):
             loader_cls = PythonLoader
             splitter = RecursiveCharacterTextSplitter.from_language(
                 language=Language.PYTHON, chunk_size=500, chunk_overlap=0
@@ -223,7 +249,8 @@ def file_chunks_source(directory: str, glob: str = '**') -> CodableBatchDataSour
 
         df = pl.DataFrame(flattend_data)
         return df.with_columns(
-            loaded_at=pl.lit(datetime.now(tz=timezone.utc)), chunk_hash=pl.col('page_content').hash()
+            loaded_at=pl.lit(datetime.now(tz=timezone.utc)),
+            chunk_hash=pl.col("page_content").hash(),
         ).lazy()
 
     return CustomMethodDataSource.from_load(load)

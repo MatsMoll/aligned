@@ -25,7 +25,13 @@ from aligned.schemas.constraints import (
 from aligned.schemas.derivied_feature import DerivedFeature, AggregateOver
 from aligned.schemas.event_trigger import EventTrigger as EventTriggerSchema
 from aligned.schemas.feature import EventTimestamp as EventTimestampFeature
-from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference, FeatureType, StaticFeatureTags
+from aligned.schemas.feature import (
+    Feature,
+    FeatureLocation,
+    FeatureReference,
+    FeatureType,
+    StaticFeatureTags,
+)
 from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.target import ClassificationTarget as ClassificationTargetSchemas
 from aligned.schemas.target import ClassTargetProbability
@@ -71,7 +77,7 @@ class AggregationTransformationFactory:
         raise NotImplementedError(type(self))
 
 
-T = TypeVar('T', bound='FeatureFactory')
+T = TypeVar("T", bound="FeatureFactory")
 
 
 @dataclass
@@ -93,7 +99,7 @@ class TargetProbability:
         self._name = name
 
     def compile(self) -> ClassTargetProbability:
-        assert self._name, 'Missing the name of the feature'
+        assert self._name, "Missing the name of the feature"
         return ClassTargetProbability(
             outcome=LiteralValue.from_value(self.of_value),
             feature=Feature(self._name, dtype=FeatureType.floating_point()),
@@ -128,13 +134,12 @@ def compile_hidden_features(
         # Here will (x & y)'s result be a 'hidden' feature
         feature_deps = [(feat.depth(), feat) for feat in feature.feature_dependencies()]
 
-        # Sorting by key in order to instanciate the "core" features first
+        # Sorting by key in so the "core" features are first
         # And then making it possible for other features to reference them
         def sort_key(x: tuple[int, FeatureFactory]) -> int:
             return x[0]
 
         for depth, feature_dep in sorted(feature_deps, key=sort_key):
-
             if not feature_dep._location:
                 feature_dep._location = location
 
@@ -158,25 +163,28 @@ def compile_hidden_features(
             if isinstance(feature_dep.transformation, AggregationTransformationFactory):
                 aggregations.append(feature_dep)
             else:
-                feature_graph = feature_dep.compile()  # Should decide on which payload to send
+                feature_graph = (
+                    feature_dep.compile()
+                )  # Should decide on which payload to send
                 if feature_graph in derived_features:
                     continue
 
                 derived_features.add(feature_dep.compile())
 
         if not feature._name:
-            feature._name = 'ephemoral'
+            feature._name = "ephemoral"
         if isinstance(feature.transformation, AggregationTransformationFactory):
             aggregations.append(feature)
         else:
-            derived_features.add(feature.compile())  # Should decide on which payload to send
+            derived_features.add(
+                feature.compile()
+            )  # Should decide on which payload to send
 
     return features, derived_features
 
 
 @dataclass
 class RecommendationTarget(FeatureReferencable):
-
     feature: FeatureFactory
     rank_feature: FeatureFactory | None = field(default=None)
 
@@ -188,10 +196,10 @@ class RecommendationTarget(FeatureReferencable):
 
     def feature_reference(self) -> FeatureReference:
         if not self._name:
-            raise ValueError('Missing name, can not create reference')
+            raise ValueError("Missing name, can not create reference")
         if not self._location:
-            raise ValueError('Missing location, can not create reference')
-        return FeatureReference(self._name, self._location, self.feature.dtype)
+            raise ValueError("Missing location, can not create reference")
+        return FeatureReference(self._name, self._location)
 
     def estemating_rank(self, feature: FeatureFactory) -> RecommendationTarget:
         self.rank_feature = feature
@@ -203,7 +211,9 @@ class RecommendationTarget(FeatureReferencable):
         return RecommendationTargetSchemas(
             self.feature.feature_reference(),
             feature=self_ref.as_feature(),
-            estimating_rank=self.rank_feature.feature_reference() if self.rank_feature else None,
+            estimating_rank=self.rank_feature.feature_reference()
+            if self.rank_feature
+            else None,
         )
 
 
@@ -220,10 +230,10 @@ class RegressionLabel(FeatureReferencable):
 
     def feature_reference(self) -> FeatureReference:
         if not self._name:
-            raise ValueError('Missing name, can not create reference')
+            raise ValueError("Missing name, can not create reference")
         if not self._location:
-            raise ValueError('Missing location, can not create reference')
-        return FeatureReference(self._name, self._location, self.feature.dtype)
+            raise ValueError("Missing location, can not create reference")
+        return FeatureReference(self._name, self._location)
 
     def listen_to_ground_truth_event(self, stream: StreamDataSource) -> RegressionLabel:
         return RegressionLabel(
@@ -232,15 +242,20 @@ class RegressionLabel(FeatureReferencable):
             ground_truth_event=stream,
         )
 
-    def send_ground_truth_event(self, when: Bool, sink_to: StreamDataSource) -> RegressionLabel:
-        assert when.dtype == FeatureType.boolean(), 'A trigger needs a boolean condition'
+    def send_ground_truth_event(
+        self, when: Bool, sink_to: StreamDataSource
+    ) -> RegressionLabel:
+        assert (
+            when.dtype == FeatureType.boolean()
+        ), "A trigger needs a boolean condition"
 
         return RegressionLabel(
-            self.feature, EventTrigger(when, sink_to), ground_truth_event=self.ground_truth_event
+            self.feature,
+            EventTrigger(when, sink_to),
+            ground_truth_event=self.ground_truth_event,
         )
 
     def compile(self) -> RegressionTargetSchemas:
-
         assert self._name
 
         on_ground_truth_event = self.ground_truth_event
@@ -249,10 +264,12 @@ class RegressionLabel(FeatureReferencable):
         if self.event_trigger:
             event = self.event_trigger
             if not event.condition._name:
-                event.condition._name = '0'
+                event.condition._name = "0"
 
             trigger = EventTriggerSchema(
-                event.condition.compile(), event=event.event, payload={self.feature.feature()}
+                event.condition.compile(),
+                event=event.event,
+                payload={self.feature.feature()},
             )
             if not on_ground_truth_event:
                 on_ground_truth_event = event.event
@@ -265,12 +282,13 @@ class RegressionLabel(FeatureReferencable):
         )
 
 
-GenericClassificationT = TypeVar('GenericClassificationT', bound='CanBeClassificationLabel')
+GenericClassificationT = TypeVar(
+    "GenericClassificationT", bound="CanBeClassificationLabel"
+)
 
 
 @dataclass
 class CanBeClassificationLabel:
-
     ground_truth_feature: FeatureFactory | None = field(default=None)
     event_trigger: EventTrigger | None = field(default=None)
     ground_truth_event: StreamDataSource | None = field(default=None)
@@ -292,7 +310,9 @@ class CanBeClassificationLabel:
     def prediction_feature(self) -> Feature:
         if isinstance(self, FeatureFactory):
             return self.feature()
-        raise ValueError(f'{self} is not a feature factory, and can therefore not be a feature')
+        raise ValueError(
+            f"{self} is not a feature factory, and can therefore not be a feature"
+        )
 
     def listen_to_ground_truth_event(
         self: GenericClassificationT, stream: StreamDataSource
@@ -303,7 +323,9 @@ class CanBeClassificationLabel:
     def send_ground_truth_event(
         self: GenericClassificationT, when: Bool, sink_to: StreamDataSource
     ) -> GenericClassificationT:
-        assert when.dtype == FeatureType.boolean(), 'A trigger needs a boolean condition'
+        assert (
+            when.dtype == FeatureType.boolean()
+        ), "A trigger needs a boolean condition"
         assert isinstance(self, CanBeClassificationLabel)
 
         self.event_trigger = EventTrigger(when, sink_to)
@@ -328,13 +350,15 @@ class CanBeClassificationLabel:
             TargetProbability: A feature that contains the probability of the target class.
         """
 
-        assert self.ground_truth_feature is not None, 'Need to define the ground truth feature first'
+        assert (
+            self.ground_truth_feature is not None
+        ), "Need to define the ground truth feature first"
 
         if not isinstance(value, self.ground_truth_feature.dtype.python_type):
             raise ValueError(
                 (
-                    'Probability of target is of incorrect data type. ',
-                    f'Target is {self.ground_truth_feature.dtype}, but value is {type(value)}.',
+                    "Probability of target is of incorrect data type. ",
+                    f"Target is {self.ground_truth_feature.dtype}, but value is {type(value)}.",
                 )
             )
 
@@ -352,10 +376,12 @@ class CanBeClassificationLabel:
         if self.event_trigger:
             event = self.event_trigger
             if not event.condition._name:
-                event.condition._name = '0'
+                event.condition._name = "0"
 
             trigger = EventTriggerSchema(
-                event.condition.compile(), event=event.event, payload={self.ground_truth_feature.feature()}
+                event.condition.compile(),
+                event=event.event,
+                payload={self.ground_truth_feature.feature()},
             )
             if not on_ground_truth_event:
                 on_ground_truth_event = event.event
@@ -407,7 +433,7 @@ class FeatureFactory(FeatureReferencable):
     @property
     def name(self) -> str:
         if not self._name:
-            raise ValueError('Have not been given a name yet')
+            raise ValueError("Have not been given a name yet")
         return self._name
 
     @property
@@ -419,10 +445,10 @@ class FeatureFactory(FeatureReferencable):
     def feature_reference(self) -> FeatureReference:
         if not self._location:
             raise ValueError(
-                f'_location is not set for {self.name}. '
-                'Therefore, making it impossible to create a referance.'
+                f"_location is not set for {self.name}. "
+                "Therefore, making it impossible to create a reference."
             )
-        return FeatureReference(self.name, self._location, self.dtype)
+        return FeatureReference(self.name, self._location)
 
     def with_tag(self: T, key: str) -> T:
         if self.tags is None:
@@ -464,15 +490,27 @@ class FeatureFactory(FeatureReferencable):
     def as_annotated_by(self: T) -> T:
         return self.with_tag(StaticFeatureTags.is_annotated_by)
 
-    def compile(self) -> DerivedFeature:
+    def as_annotated_feature(
+        self: T, using: list[FeatureReferencable] | None = None
+    ) -> T:
+        refs = ",".join([ref.feature_reference().identifier for ref in using or []])
+        if refs:
+            return self.with_tag(f"{StaticFeatureTags.is_annotated_feature}-{refs}")
+        else:
+            return self.with_tag(StaticFeatureTags.is_annotated_feature)
 
+    def compile(self) -> DerivedFeature:
         if not self.transformation:
-            raise ValueError(f'Trying to create a derived feature with no transformation, {self.name}')
+            raise ValueError(
+                f"Trying to create a derived feature with no transformation, {self.name}"
+            )
 
         return DerivedFeature(
             name=self.name,
             dtype=self.dtype,
-            depending_on={feat.feature_reference() for feat in self.transformation.using_features},
+            depending_on={
+                feat.feature_reference() for feat in self.transformation.using_features
+            },
             transformation=self.transformation.compile(),
             depth=self.depth(),
             description=self._description,
@@ -538,23 +576,30 @@ class FeatureFactory(FeatureReferencable):
 
         dtype: FeatureFactory = self.copy_type()  # type: ignore [assignment]
 
-        dtype.transformation = PandasTransformationFactory(dtype, transformation, using_features or [self])
+        dtype.transformation = PandasTransformationFactory(
+            dtype, transformation, using_features or [self]
+        )
         return dtype  # type: ignore [return-value]
 
     def transform_pandas(
-        self, transformation: Callable[[pd.DataFrame, ContractStore], pd.Series], as_dtype: T
+        self,
+        transformation: Callable[[pd.DataFrame, ContractStore], pd.Series],
+        as_dtype: T,
     ) -> T:
         from aligned.compiler.transformation_factory import PandasTransformationFactory
 
         dtype: FeatureFactory = as_dtype  # type: ignore [assignment]
 
-        dtype.transformation = PandasTransformationFactory(dtype, transformation, [self])
+        dtype.transformation = PandasTransformationFactory(
+            dtype, transformation, [self]
+        )
         return dtype  # type: ignore [return-value]
 
     def transformed_using_features_polars(
         self: T,
         using_features: list[FeatureFactory],
-        transformation: Callable[[pl.LazyFrame, str, ContractStore], pl.LazyFrame] | pl.Expr,
+        transformation: Callable[[pl.LazyFrame, str, ContractStore], pl.LazyFrame]
+        | pl.Expr,
     ) -> T:
         from aligned.compiler.transformation_factory import PolarsTransformationFactory
 
@@ -578,10 +623,14 @@ class FeatureFactory(FeatureReferencable):
         return dtype  # type: ignore [return-value]
 
     def polars_aggregation(self, aggregation: pl.Expr, as_type: T) -> T:
-        from aligned.compiler.aggregation_factory import PolarsTransformationFactoryAggregation
+        from aligned.compiler.aggregation_factory import (
+            PolarsTransformationFactoryAggregation,
+        )
 
         value = as_type.copy_type()  # type: ignore [assignment]
-        value.transformation = PolarsTransformationFactoryAggregation(as_type, aggregation, [self])
+        value.transformation = PolarsTransformationFactoryAggregation(
+            as_type, aggregation, [self]
+        )
 
         return value
 
@@ -590,10 +639,14 @@ class FeatureFactory(FeatureReferencable):
         using_features: list[FeatureFactory],
         aggregation: pl.Expr,
     ) -> T:
-        from aligned.compiler.aggregation_factory import PolarsTransformationFactoryAggregation
+        from aligned.compiler.aggregation_factory import (
+            PolarsTransformationFactoryAggregation,
+        )
 
         value = self.copy_type()  # type: ignore [assignment]
-        value.transformation = PolarsTransformationFactoryAggregation(self, aggregation, using_features)
+        value.transformation = PolarsTransformationFactoryAggregation(
+            self, aggregation, using_features
+        )
 
         return value
 
@@ -618,7 +671,7 @@ class FeatureFactory(FeatureReferencable):
         if isinstance(constraint, Constraint):
             self.constraints.add(constraint)
         else:
-            raise ValueError(f'Unable to add constraint {constraint}.')
+            raise ValueError(f"Unable to add constraint {constraint}.")
 
     def is_not_null(self) -> Bool:
         from aligned.compiler.transformation_factory import NotNullFactory
@@ -641,7 +694,7 @@ class FeatureFactory(FeatureReferencable):
         from aligned.compiler.transformation_factory import LoadFeature
 
         new = self.copy_type()
-        new.transformation = LoadFeature(entities, self.feature_reference())
+        new.transformation = LoadFeature(entities, self.feature_reference(), self.dtype)
         new._loads_feature = self.feature_reference()
         return new
 
@@ -651,7 +704,9 @@ class CouldBeModelVersion:
         if isinstance(self, FeatureFactory):
             return ModelVersion(self).with_tag(StaticFeatureTags.is_model_version)
 
-        raise ValueError(f'{self} is not a feature factory, and can therefore not be a model version')
+        raise ValueError(
+            f"{self} is not a feature factory, and can therefore not be a model version"
+        )
 
 
 class CouldBeEntityFeature:
@@ -660,7 +715,6 @@ class CouldBeEntityFeature:
 
 
 class EquatableFeature(FeatureFactory):
-
     # Comparable operators
     def __eq__(self, right: FeatureFactory | Any) -> Bool:  # type: ignore[override]
         from aligned.compiler.transformation_factory import EqualsFactory
@@ -729,44 +783,47 @@ class ComparableFeature(EquatableFeature):
 
 
 class ArithmeticFeature(ComparableFeature):
-    def __sub__(self, other: FeatureFactory | Any) -> Float:
-        from aligned.compiler.transformation_factory import DifferanceBetweenFactory, TimeDifferanceFactory
+    def __sub__(self, other: FeatureFactory | Any) -> Float32:
+        from aligned.compiler.transformation_factory import (
+            DifferanceBetweenFactory,
+            TimeDifferanceFactory,
+        )
 
-        feature = Float()
+        feature = Float32()
         if self.dtype == FeatureType.datetime():
             feature.transformation = TimeDifferanceFactory(self, other)
         else:
             feature.transformation = DifferanceBetweenFactory(self, other)
         return feature
 
-    def __radd__(self, other: FeatureFactory | Any) -> Float:
+    def __radd__(self, other: FeatureFactory | Any) -> Float32:
         from aligned.compiler.transformation_factory import AdditionBetweenFactory
 
-        feature = Float()
+        feature = Float32()
         feature.transformation = AdditionBetweenFactory(self, other)
         return feature
 
-    def __add__(self, other: FeatureFactory | Any) -> Float:
+    def __add__(self, other: FeatureFactory | Any) -> Float32:
         from aligned.compiler.transformation_factory import AdditionBetweenFactory
 
-        feature = Float()
+        feature = Float32()
         feature.transformation = AdditionBetweenFactory(self, other)
         return feature
 
-    def __truediv__(self, other: FeatureFactory | Any) -> Float:
+    def __truediv__(self, other: FeatureFactory | Any) -> Float32:
         from aligned.compiler.transformation_factory import RatioFactory
 
-        feature = Float()
+        feature = Float32()
         if isinstance(other, FeatureFactory):
             feature.transformation = RatioFactory(self, other)
         else:
             feature.transformation = RatioFactory(self, LiteralValue.from_value(other))
         return feature
 
-    def __floordiv__(self, other: FeatureFactory | Any) -> Float:
+    def __floordiv__(self, other: FeatureFactory | Any) -> Float32:
         from aligned.compiler.transformation_factory import RatioFactory
 
-        feature = Float()
+        feature = Float32()
         if isinstance(other, FeatureFactory):
             feature.transformation = RatioFactory(self, other)
         else:
@@ -780,37 +837,41 @@ class ArithmeticFeature(ComparableFeature):
         feature.transformation = AbsoluteFactory(self)
         return feature
 
-    def __mul__(self, other: FeatureFactory | Any) -> Float:
+    def __mul__(self, other: FeatureFactory | Any) -> Float32:
         from aligned.compiler.transformation_factory import MultiplyFactory
 
-        feature = Float()
+        feature = Float32()
         if isinstance(other, FeatureFactory):
             feature.transformation = MultiplyFactory(self, other)
         else:
-            feature.transformation = MultiplyFactory(self, LiteralValue.from_value(other))
+            feature.transformation = MultiplyFactory(
+                self, LiteralValue.from_value(other)
+            )
         return feature
 
-    def __rmul__(self, other: FeatureFactory | Any) -> Float:
+    def __rmul__(self, other: FeatureFactory | Any) -> Float32:
         from aligned.compiler.transformation_factory import MultiplyFactory
 
-        feature = Float()
+        feature = Float32()
         if isinstance(other, FeatureFactory):
             feature.transformation = MultiplyFactory(self, other)
         else:
-            feature.transformation = MultiplyFactory(self, LiteralValue.from_value(other))
+            feature.transformation = MultiplyFactory(
+                self, LiteralValue.from_value(other)
+            )
         return feature
 
-    def __pow__(self, other: FeatureFactory | Any) -> Float:
+    def __pow__(self, other: FeatureFactory | Any) -> Float32:
         from aligned.compiler.transformation_factory import PowerFactory
 
-        feature = Float()
+        feature = Float32()
         feature.transformation = PowerFactory(self, other)
         return feature
 
-    def log1p(self) -> Float:
+    def log1p(self) -> Float32:
         from aligned.compiler.transformation_factory import LogTransformFactory
 
-        feature = Float()
+        feature = Float32()
         feature.transformation = LogTransformFactory(self)
         return feature
 
@@ -860,17 +921,17 @@ class TruncatableFeature(FeatureFactory):
 
 
 class NumberConvertableFeature(FeatureFactory):
-    def as_float(self) -> Float:
+    def as_float(self) -> Float32:
         from aligned.compiler.transformation_factory import ToNumericalFactory
 
-        feature = Float()
+        feature = Float32()
         feature.transformation = ToNumericalFactory(self)
         return feature
 
     def __int__(self) -> Int64:
         raise NotImplementedError()
 
-    def __float__(self) -> Float:
+    def __float__(self) -> Float32:
         raise NotImplementedError()
 
 
@@ -930,34 +991,45 @@ class DateFeature(FeatureFactory):
         return feature
 
     def day(self) -> Int32:
-        return self.date_component('day')
+        return self.date_component("day")
 
     def hour(self) -> Int32:
-        return self.date_component('hour')
+        return self.date_component("hour")
 
     def second(self) -> Int32:
-        return self.date_component('second')
+        return self.date_component("second")
 
     def minute(self) -> Int32:
-        return self.date_component('minute')
+        return self.date_component("minute")
 
     def quarter(self) -> Int32:
-        return self.date_component('quarter')
+        return self.date_component("quarter")
 
     def week(self) -> Int32:
-        return self.date_component('week')
+        return self.date_component("week")
 
     def year(self) -> Int32:
-        return self.date_component('year')
+        return self.date_component("year")
 
     def month(self) -> Int32:
-        return self.date_component('month')
+        return self.date_component("month")
 
     def weekday(self) -> Int32:
-        return self.date_component('dayofweek')
+        return self.date_component("dayofweek")
 
     def day_of_year(self) -> Int32:
-        return self.date_component('ordinal_day')
+        return self.date_component("ordinal_day")
+
+
+class Binary(FeatureFactory):
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType.binary()
+
+    def copy_type(self) -> Binary:
+        if self.constraints and Optional() in self.constraints:
+            return Binary().is_optional()
+        return Binary()
 
 
 class Bool(EquatableFeature, LogicalOperatableFeature, CanBeClassificationLabel):
@@ -975,14 +1047,42 @@ class Bool(EquatableFeature, LogicalOperatableFeature, CanBeClassificationLabel)
 
 
 class Float(ArithmeticFeature, DecimalOperations):
-    def copy_type(self) -> Float:
+    def copy_type(self) -> Float32:
         if self.constraints and Optional() in self.constraints:
-            return Float().is_optional()
-        return Float()
+            return Float32().is_optional()
+        return Float32()
 
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType.floating_point()
+        return FeatureType.float32()
+
+    def aggregate(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
+
+
+class Float32(ArithmeticFeature, DecimalOperations):
+    def copy_type(self) -> Float32:
+        if self.constraints and Optional() in self.constraints:
+            return Float32().is_optional()
+        return Float32()
+
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType.float32()
+
+    def aggregate(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
+
+
+class Float64(ArithmeticFeature, DecimalOperations):
+    def copy_type(self) -> Float64:
+        if self.constraints and Optional() in self.constraints:
+            return Float64().is_optional()
+        return Float64()
+
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType.float64()
 
     def aggregate(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
@@ -1213,18 +1313,22 @@ class String(
     def aggregate(self) -> StringAggregation:
         return StringAggregation(self)
 
-    def ollama_embedding(self, model: str, embedding_size: int, host_env: str | None = None) -> Embedding:
+    def ollama_embedding(
+        self, model: str, embedding_size: int, host_env: str | None = None
+    ) -> Embedding:
         from aligned.compiler.transformation_factory import OllamaEmbedding
 
         feature = Embedding(embedding_size)
         feature.transformation = OllamaEmbedding(model, self, host_env)
         return feature
 
-    def ollama_generate(self, model: str, system: str | None = None, host_env: str | None = None) -> String:
+    def ollama_generate(
+        self, model: str, system: str | None = None, host_env: str | None = None
+    ) -> String:
         from aligned.compiler.transformation_factory import OllamaGenerate
 
         feature = String()
-        feature.transformation = OllamaGenerate(model, system or '', self, host_env)
+        feature.transformation = OllamaGenerate(model, system or "", self, host_env)
         return feature
 
     def split(self, pattern: str) -> String:
@@ -1276,7 +1380,10 @@ class String(
         return feature
 
     def prepend(self, other: FeatureFactory | str) -> String:
-        from aligned.compiler.transformation_factory import AppendStrings, PrependConstString
+        from aligned.compiler.transformation_factory import (
+            AppendStrings,
+            PrependConstString,
+        )
 
         feature = self.copy_type()
         if isinstance(other, FeatureFactory):
@@ -1285,11 +1392,15 @@ class String(
             feature.transformation = PrependConstString(other, self)
         return feature
 
-    def as_presigned_aws_url(self, credentials: AwsS3Config, max_age_seconds: int | None = None) -> ImageUrl:
+    def as_presigned_aws_url(
+        self, credentials: AwsS3Config, max_age_seconds: int | None = None
+    ) -> ImageUrl:
         from aligned.compiler.transformation_factory import PresignedAwsUrlFactory
 
         feature = ImageUrl()
-        feature.transformation = PresignedAwsUrlFactory(credentials, self, max_age_seconds or 30)
+        feature.transformation = PresignedAwsUrlFactory(
+            credentials, self, max_age_seconds or 30
+        )
 
         return feature
 
@@ -1297,6 +1408,35 @@ class String(
         image_url = ImageUrl()
         image_url.transformation = self.transformation
         return image_url
+
+    def as_prompt_completion(self) -> String:
+        return self.with_tag(StaticFeatureTags.is_prompt_completion)
+
+
+@dataclass
+class Struct(FeatureFactory):
+    subtype: Any
+
+    def copy_type(self: Struct) -> Struct:
+        if self.constraints and Optional() in self.constraints:
+            return Struct(self.subtype).is_optional()
+        return Struct(self.subtype)
+
+    def as_input_features(self) -> Struct:
+        return self.with_tag(StaticFeatureTags.is_input_features)
+
+    @property
+    def dtype(self) -> FeatureType:
+        dtype = FeatureType.from_type(self.subtype)
+        assert dtype, f"Was unable to find type for {self.subtype}"
+        return dtype
+
+    def field(self, field: str, as_type: T) -> T:
+        from aligned.compiler.transformation_factory import StructFieldFactory
+
+        feature = as_type.copy_type()
+        feature.transformation = StructFieldFactory(self, field)
+        return feature
 
 
 class Json(FeatureFactory):
@@ -1328,7 +1468,6 @@ class Json(FeatureFactory):
 
 
 class ModelVersion(FeatureFactory):
-
     _dtype: FeatureFactory
 
     @property
@@ -1342,11 +1481,16 @@ class ModelVersion(FeatureFactory):
         return CategoricalAggregation(self)
 
 
-class Timestamp(DateFeature, ArithmeticFeature):
+class Date(DateFeature, ArithmeticFeature):
+    @property
+    def dtype(self) -> FeatureType:
+        return FeatureType.date()
 
+
+class Timestamp(DateFeature, ArithmeticFeature):
     time_zone: str | None
 
-    def __init__(self, time_zone: str | None = 'UTC') -> None:
+    def __init__(self, time_zone: str | None = "UTC") -> None:
         self.time_zone = time_zone
 
     def as_freshness(self) -> Timestamp:
@@ -1356,11 +1500,12 @@ class Timestamp(DateFeature, ArithmeticFeature):
     def dtype(self) -> FeatureType:
         from zoneinfo import ZoneInfo
 
-        return FeatureType.datetime(ZoneInfo(self.time_zone) if self.time_zone else None)
+        return FeatureType.datetime(
+            ZoneInfo(self.time_zone) if self.time_zone else None
+        )
 
 
 class EventTimestamp(DateFeature, ArithmeticFeature):
-
     ttl: timedelta | None
     time_zone: str | None
 
@@ -1368,9 +1513,13 @@ class EventTimestamp(DateFeature, ArithmeticFeature):
     def dtype(self) -> FeatureType:
         from zoneinfo import ZoneInfo
 
-        return FeatureType.datetime(ZoneInfo(self.time_zone) if self.time_zone else None)
+        return FeatureType.datetime(
+            ZoneInfo(self.time_zone) if self.time_zone else None
+        )
 
-    def __init__(self, ttl: timedelta | None = None, time_zone: str | None = 'UTC') -> None:
+    def __init__(
+        self, ttl: timedelta | None = None, time_zone: str | None = "UTC"
+    ) -> None:
         self.ttl = ttl
         self.time_zone = time_zone
 
@@ -1388,14 +1537,15 @@ ValidFrom = EventTimestamp
 
 @dataclass
 class Embedding(FeatureFactory):
-
     embedding_size: int
     indexes: list[VectorIndexFactory] | None = None
-    sub_type: FeatureFactory = field(default_factory=Float)
+    sub_type: FeatureFactory = field(default_factory=Float32)
 
     def copy_type(self) -> Embedding:
         if self.constraints and Optional() in self.constraints:
-            return Embedding(sub_type=self.sub_type, embedding_size=self.embedding_size).is_optional()
+            return Embedding(
+                sub_type=self.sub_type, embedding_size=self.embedding_size
+            ).is_optional()
 
         return Embedding(sub_type=self.sub_type, embedding_size=self.embedding_size)
 
@@ -1403,16 +1553,18 @@ class Embedding(FeatureFactory):
     def dtype(self) -> FeatureType:
         return FeatureType.embedding(self.embedding_size or 0)
 
-    def dot_product(self, embedding: Embedding, check_embedding_size: bool = True) -> Float:
+    def dot_product(
+        self, embedding: Embedding, check_embedding_size: bool = True
+    ) -> Float32:
         from aligned.compiler.transformation_factory import ListDotProduct
 
         if check_embedding_size:
             assert self.embedding_size == embedding.embedding_size, (
-                'Expected similar embedding size, but got two different ones. '
+                "Expected similar embedding size, but got two different ones. "
                 f"Left: {self.embedding_size}, right: {embedding.embedding_size}"
             )
 
-        feat = Float()
+        feat = Float32()
         feat.transformation = ListDotProduct(self, embedding)
         return feat
 
@@ -1428,7 +1580,9 @@ class Embedding(FeatureFactory):
         if not embedding_size:
             embedding_size = self.embedding_size
 
-        assert embedding_size, 'An embedding size is needed in order to create a vector index'
+        assert (
+            embedding_size
+        ), "An embedding size is needed in order to create a vector index"
 
         self.indexes.append(
             VectorIndexFactory(
@@ -1440,12 +1594,11 @@ class Embedding(FeatureFactory):
         return self
 
 
-GenericFeature = TypeVar('GenericFeature', bound=FeatureFactory)
+GenericFeature = TypeVar("GenericFeature", bound=FeatureFactory)
 
 
 @dataclass
 class List(FeatureFactory, Generic[GenericFeature]):
-
     sub_type: GenericFeature
 
     def copy_type(self) -> List:
@@ -1479,7 +1632,9 @@ class List(FeatureFactory, Generic[GenericFeature]):
         from aligned.compiler.transformation_factory import ArrayContainsFactory
 
         feature = Bool()
-        feature.transformation = ArrayContainsFactory(LiteralValue.from_value(value), self)
+        feature.transformation = ArrayContainsFactory(
+            LiteralValue.from_value(value), self
+        )
         return feature
 
     def at_index(self, index: int) -> GenericFeature:
@@ -1502,6 +1657,9 @@ class Url(StringValidatable):
 
 
 class ImageUrl(StringValidatable):
+    def __init__(self) -> None:
+        self.tags = {StaticFeatureTags.is_image}
+
     @property
     def dtype(self) -> FeatureType:
         return FeatureType.string()
@@ -1514,8 +1672,15 @@ class ImageUrl(StringValidatable):
     def load_image(self) -> Image:
         from aligned.compiler.transformation_factory import LoadImageFactory
 
-        image = Image()
+        image = Image().with_tag(StaticFeatureTags.is_image)
         image.transformation = LoadImageFactory(self)
+        return image
+
+    def load_bytes(self) -> Binary:
+        from aligned.compiler.transformation_factory import LoadImageBytesFactory
+
+        image = Binary().with_tag(StaticFeatureTags.is_image)
+        image.transformation = LoadImageBytesFactory(self)
         return image
 
 
@@ -1539,28 +1704,30 @@ class Image(FeatureFactory):
 
 @dataclass
 class Coordinate:
-
     x: ArithmeticFeature
     y: ArithmeticFeature
 
-    def eucledian_distance(self, to: Coordinate) -> Float:
+    def eucledian_distance(self, to: Coordinate) -> Float32:
         sub = self.x - to.x
         return (sub**2 + (self.y - to.y) ** 2) ** 0.5
 
 
 @dataclass
 class CustomAggregation:
-    def transform_polars(self, expression: pl.Expr, using_features: list[FeatureFactory], as_dtype: T) -> T:
+    def transform_polars(
+        self, expression: pl.Expr, using_features: list[FeatureFactory], as_dtype: T
+    ) -> T:
         from aligned.compiler.transformation_factory import PolarsTransformationFactory
 
         dtype: FeatureFactory = as_dtype  # type: ignore [assignment]
-        dtype.transformation = PolarsTransformationFactory(dtype, expression, using_features)
+        dtype.transformation = PolarsTransformationFactory(
+            dtype, expression, using_features
+        )
         return dtype  # type: ignore [return-value]
 
 
 @dataclass
 class StringAggregation:
-
     feature: String
     time_window: timedelta | None = None
     every_window: timedelta | None = None
@@ -1579,9 +1746,15 @@ class StringAggregation:
         seconds: float | None = None,
     ) -> StringAggregation:
         every_interval = timedelta(
-            weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
+            weeks=weeks or 0,
+            days=days or 0,
+            hours=hours or 0,
+            minutes=minutes or 0,
+            seconds=seconds or 0,
         )
-        return StringAggregation(self.feature, self.time_window, every_interval, self.offset_interval)
+        return StringAggregation(
+            self.feature, self.time_window, every_interval, self.offset_interval
+        )
 
     def offset(
         self,
@@ -1592,9 +1765,15 @@ class StringAggregation:
         seconds: float | None = None,
     ) -> StringAggregation:
         offset_interval = timedelta(
-            weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
+            weeks=weeks or 0,
+            days=days or 0,
+            hours=hours or 0,
+            minutes=minutes or 0,
+            seconds=seconds or 0,
         )
-        return StringAggregation(self.feature, self.time_window, self.every_window, offset_interval)
+        return StringAggregation(
+            self.feature, self.time_window, self.every_window, offset_interval
+        )
 
     def concat(self, separator: str | None = None) -> String:
         from aligned.compiler.aggregation_factory import ConcatStringsAggrigationFactory
@@ -1624,7 +1803,6 @@ class StringAggregation:
 
 @dataclass
 class CategoricalAggregation:
-
     feature: FeatureFactory
     time_window: timedelta | None = None
     every_interval: timedelta | None = None
@@ -1639,9 +1817,15 @@ class CategoricalAggregation:
         seconds: float | None = None,
     ) -> CategoricalAggregation:
         time_window = timedelta(
-            weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
+            weeks=weeks or 0,
+            days=days or 0,
+            hours=hours or 0,
+            minutes=minutes or 0,
+            seconds=seconds or 0,
         )
-        return CategoricalAggregation(self.feature, time_window, self.every_interval, self.offset_interval)
+        return CategoricalAggregation(
+            self.feature, time_window, self.every_interval, self.offset_interval
+        )
 
     def every(
         self,
@@ -1652,9 +1836,15 @@ class CategoricalAggregation:
         seconds: float | None = None,
     ) -> CategoricalAggregation:
         every_interval = timedelta(
-            weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
+            weeks=weeks or 0,
+            days=days or 0,
+            hours=hours or 0,
+            minutes=minutes or 0,
+            seconds=seconds or 0,
         )
-        return CategoricalAggregation(self.feature, self.time_window, every_interval, self.offset_interval)
+        return CategoricalAggregation(
+            self.feature, self.time_window, every_interval, self.offset_interval
+        )
 
     def offset(
         self,
@@ -1665,9 +1855,15 @@ class CategoricalAggregation:
         seconds: float | None = None,
     ) -> CategoricalAggregation:
         offset_interval = timedelta(
-            weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
+            weeks=weeks or 0,
+            days=days or 0,
+            hours=hours or 0,
+            minutes=minutes or 0,
+            seconds=seconds or 0,
         )
-        return CategoricalAggregation(self.feature, self.time_window, self.every_interval, offset_interval)
+        return CategoricalAggregation(
+            self.feature, self.time_window, self.every_interval, offset_interval
+        )
 
     def count(self) -> Int64:
         from aligned.compiler.aggregation_factory import CountAggregationFactory
@@ -1684,7 +1880,6 @@ class CategoricalAggregation:
 
 @dataclass
 class ArithmeticAggregation:
-
     feature: ArithmeticFeature
     time_window: timedelta | None = None
     every_interval: timedelta | None = None
@@ -1699,9 +1894,15 @@ class ArithmeticAggregation:
         seconds: float | None = None,
     ) -> ArithmeticAggregation:
         time_window = timedelta(
-            weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
+            weeks=weeks or 0,
+            days=days or 0,
+            hours=hours or 0,
+            minutes=minutes or 0,
+            seconds=seconds or 0,
         )
-        return ArithmeticAggregation(self.feature, time_window, self.every_interval, self.offset_interval)
+        return ArithmeticAggregation(
+            self.feature, time_window, self.every_interval, self.offset_interval
+        )
 
     def every(
         self,
@@ -1712,9 +1913,15 @@ class ArithmeticAggregation:
         seconds: float | None = None,
     ) -> ArithmeticAggregation:
         every_interval = timedelta(
-            weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
+            weeks=weeks or 0,
+            days=days or 0,
+            hours=hours or 0,
+            minutes=minutes or 0,
+            seconds=seconds or 0,
         )
-        return ArithmeticAggregation(self.feature, self.time_window, every_interval, self.offset_interval)
+        return ArithmeticAggregation(
+            self.feature, self.time_window, every_interval, self.offset_interval
+        )
 
     def offset(
         self,
@@ -1725,14 +1932,20 @@ class ArithmeticAggregation:
         seconds: float | None = None,
     ) -> ArithmeticAggregation:
         offset_interval = timedelta(
-            weeks=weeks or 0, days=days or 0, hours=hours or 0, minutes=minutes or 0, seconds=seconds or 0
+            weeks=weeks or 0,
+            days=days or 0,
+            hours=hours or 0,
+            minutes=minutes or 0,
+            seconds=seconds or 0,
         )
-        return ArithmeticAggregation(self.feature, self.time_window, self.every_interval, offset_interval)
+        return ArithmeticAggregation(
+            self.feature, self.time_window, self.every_interval, offset_interval
+        )
 
-    def sum(self) -> Float:
+    def sum(self) -> Float32:
         from aligned.compiler.aggregation_factory import SumAggregationFactory
 
-        feat = Float()
+        feat = Float32()
         feat.transformation = SumAggregationFactory(
             self.feature,
             time_window=self.time_window,
@@ -1741,10 +1954,10 @@ class ArithmeticAggregation:
         )
         return feat
 
-    def mean(self) -> Float:
+    def mean(self) -> Float32:
         from aligned.compiler.aggregation_factory import MeanAggregationFactory
 
-        feat = Float()
+        feat = Float32()
         feat.transformation = MeanAggregationFactory(
             self.feature,
             time_window=self.time_window,
@@ -1753,10 +1966,10 @@ class ArithmeticAggregation:
         )
         return feat
 
-    def min(self) -> Float:
+    def min(self) -> Float32:
         from aligned.compiler.aggregation_factory import MinAggregationFactory
 
-        feat = Float()
+        feat = Float32()
         feat.transformation = MinAggregationFactory(
             self.feature,
             time_window=self.time_window,
@@ -1765,10 +1978,10 @@ class ArithmeticAggregation:
         )
         return feat
 
-    def max(self) -> Float:
+    def max(self) -> Float32:
         from aligned.compiler.aggregation_factory import MaxAggregationFactory
 
-        feat = Float()
+        feat = Float32()
         feat.transformation = MaxAggregationFactory(
             self.feature,
             time_window=self.time_window,
@@ -1801,10 +2014,10 @@ class ArithmeticAggregation:
         )
         return feat
 
-    def std(self) -> Float:
+    def std(self) -> Float32:
         from aligned.compiler.aggregation_factory import StdAggregationFactory
 
-        feat = Float()
+        feat = Float32()
         feat.transformation = StdAggregationFactory(
             self.feature,
             time_window=self.time_window,
@@ -1813,10 +2026,10 @@ class ArithmeticAggregation:
         )
         return feat
 
-    def variance(self) -> Float:
+    def variance(self) -> Float32:
         from aligned.compiler.aggregation_factory import VarianceAggregationFactory
 
-        feat = Float()
+        feat = Float32()
         feat.transformation = VarianceAggregationFactory(
             self.feature,
             time_window=self.time_window,
@@ -1825,10 +2038,10 @@ class ArithmeticAggregation:
         )
         return feat
 
-    def median(self) -> Float:
+    def median(self) -> Float32:
         from aligned.compiler.aggregation_factory import MedianAggregationFactory
 
-        feat = Float()
+        feat = Float32()
         feat.transformation = MedianAggregationFactory(
             self.feature,
             time_window=self.time_window,
@@ -1837,10 +2050,10 @@ class ArithmeticAggregation:
         )
         return feat
 
-    def percentile(self, percentile: float) -> Float:
+    def percentile(self, percentile: float) -> Float32:
         from aligned.compiler.aggregation_factory import PercentileAggregationFactory
 
-        feat = Float()
+        feat = Float32()
         feat.transformation = PercentileAggregationFactory(
             self.feature,
             percentile=percentile,
@@ -1854,9 +2067,12 @@ class ArithmeticAggregation:
 def transform_polars(
     using_features: list[FeatureFactory], return_type: T
 ) -> Callable[[Callable[[Any, pl.LazyFrame, str, ContractStore], pl.LazyFrame]], T]:
-    def wrapper(method: Callable[[Any, pl.LazyFrame, str, ContractStore], pl.LazyFrame]) -> T:
+    def wrapper(
+        method: Callable[[Any, pl.LazyFrame, str, ContractStore], pl.LazyFrame],
+    ) -> T:
         return return_type.transformed_using_features_polars(
-            using_features=using_features, transformation=method  # type: ignore
+            using_features=using_features,
+            transformation=method,  # type: ignore
         )
 
     return wrapper
@@ -1867,7 +2083,8 @@ def transform_pandas(
 ) -> Callable[[Callable[[Any, pd.DataFrame, ContractStore], pd.Series]], T]:
     def wrapper(method: Callable[[Any, pd.DataFrame, ContractStore], pd.Series]) -> T:
         return return_type.transformed_using_features_pandas(
-            using_features=using_features, transformation=method  # type: ignore
+            using_features=using_features,
+            transformation=method,  # type: ignore
         )
 
     return wrapper
@@ -1881,7 +2098,9 @@ def transform_row(
 
         new_value = return_type.copy_type()
         new_value.transformation = MapRowTransformation(
-            dtype=new_value, method=method, _using_features=using_features  # type: ignore
+            dtype=new_value,
+            method=method,
+            _using_features=using_features,
         )
         return new_value
 

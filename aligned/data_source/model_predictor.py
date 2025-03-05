@@ -4,18 +4,17 @@ from datetime import datetime
 
 from aligned.feature_store import ModelFeatureStore
 from aligned.data_source.batch_data_source import BatchDataSource
-from aligned.request.retrival_request import RetrivalRequest
+from aligned.request.retrieval_request import RetrievalRequest
 from aligned.schemas.feature import FeatureLocation, FeatureType
 from aligned.schemas.model import Model
-from aligned.retrival_job import RetrivalJob
+from aligned.retrieval_job import RetrievalJob
 
 
 @dataclass
 class PredictModelSource(BatchDataSource):
-
     store: ModelFeatureStore
     cache_source: BatchDataSource | None = None
-    type_name: str = 'pred_model_source'
+    type_name: str = "pred_model_source"
 
     @property
     def model(self) -> Model:
@@ -33,18 +32,20 @@ class PredictModelSource(BatchDataSource):
             return await self.model.predictions_view.source.schema()
         return {}
 
-    def all_data(self, request: RetrivalRequest, limit: int | None = None) -> RetrivalJob:
+    def all_data(
+        self, request: RetrievalRequest, limit: int | None = None
+    ) -> RetrievalJob:
         reqs = self.store.request()
         if len(reqs.needed_requests) != 1:
             raise NotImplementedError(
-                f'Type: {type(self)} have not implemented how to load fact data with multiple sources.'
+                f"Type: {type(self)} have not implemented how to load fact data with multiple sources."
             )
 
         req = reqs.needed_requests[0]
         location = req.location
-        if location.location_type != 'feature_view':
+        if location.location_type != "feature_view":
             raise NotImplementedError(
-                f'Type: {type(self)} have not implemented how to load fact data with multiple sources.'
+                f"Type: {type(self)} have not implemented how to load fact data with multiple sources."
             )
 
         entities = (
@@ -55,19 +56,19 @@ class PredictModelSource(BatchDataSource):
         return self.store.predict_over(entities).with_request([request])
 
     def all_between_dates(
-        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
-    ) -> RetrivalJob:
+        self, request: RetrievalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrievalJob:
         reqs = self.store.request()
         if len(reqs.needed_requests) != 1:
             raise NotImplementedError(
-                f'Type: {type(self)} have not implemented how to load fact data with multiple sources.'
+                f"Type: {type(self)} have not implemented how to load fact data with multiple sources."
             )
 
         req = reqs.needed_requests[0]
         location = req.location
-        if location.location_type != 'feature_view':
+        if location.location_type != "feature_view":
             raise NotImplementedError(
-                f'Type: {type(self)} have not implemented how to load fact data with multiple sources.'
+                f"Type: {type(self)} have not implemented how to load fact data with multiple sources."
             )
 
         entities = (
@@ -77,7 +78,9 @@ class PredictModelSource(BatchDataSource):
         )
         return self.store.predict_over(entities).with_request([request])
 
-    def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
+    def features_for(
+        self, facts: RetrievalJob, request: RetrievalRequest
+    ) -> RetrievalJob:
         import polars as pl
 
         if self.cache_source:
@@ -86,18 +89,23 @@ class PredictModelSource(BatchDataSource):
             async def add_missing(df: pl.LazyFrame) -> pl.LazyFrame:
                 request.feature_names
                 full_features = df.filter(
-                    pl.all_horizontal([pl.col(feat.name).is_not_null() for feat in request.features])
+                    pl.all_horizontal(
+                        [pl.col(feat.name).is_not_null() for feat in request.features]
+                    )
                 )
                 missing_features = df.filter(
-                    pl.all_horizontal([pl.col(feat.name).is_not_null() for feat in request.features]).not_()
+                    pl.all_horizontal(
+                        [pl.col(feat.name).is_not_null() for feat in request.features]
+                    ).not_()
                 )
                 preds = await self.store.predict_over(
                     missing_features.select(request.entity_names)
                 ).to_polars()
 
+                full_schema = full_features.collect_schema()
                 return (
                     full_features.collect()
-                    .vstack(preds.select(full_features.columns).cast(full_features.schema))  # type: ignore
+                    .vstack(preds.select(full_features.columns).cast(full_schema))  # type: ignore
                     .lazy()
                 )
 
@@ -107,12 +115,13 @@ class PredictModelSource(BatchDataSource):
 
     @classmethod
     def multi_source_features_for(  # type: ignore
-        cls, facts: RetrivalJob, requests: list[tuple[PredictModelSource, RetrivalRequest]]
-    ) -> RetrivalJob:
-
+        cls,
+        facts: RetrievalJob,
+        requests: list[tuple[PredictModelSource, RetrievalRequest]],
+    ) -> RetrievalJob:
         if len(requests) != 1:
             raise NotImplementedError(
-                f'Type: {cls} have not implemented how to load fact data with multiple sources.'
+                f"Type: {cls} have not implemented how to load fact data with multiple sources."
             )
 
         source, _ = requests[0]

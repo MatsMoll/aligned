@@ -3,29 +3,48 @@ from __future__ import annotations
 import polars as pl
 from typing import TYPE_CHECKING, Any, AsyncIterable, Callable, Coroutine
 from dataclasses import dataclass
-from aligned.retrival_job import RetrivalJob
+from aligned.config_value import ConfigValue, LiteralValue
+from aligned.retrieval_job import RetrievalJob
 from aligned.schemas.codable import Codable
 from mashumaro.types import SerializableType
 import logging
 
-from aligned.schemas.feature import Feature, FeatureLocation, FeatureReference
+from aligned.schemas.feature import (
+    Feature,
+    FeatureLocation,
+    FeatureReference,
+    FeatureType,
+)
 
 if TYPE_CHECKING:
     from aligned.feature_store import ModelFeatureStore
     from aligned.schemas.model import Model
+    from aligned.exposed_model.mlflow import MlflowConfig
+    from aligned.exposed_model.openai import OpenAiConfig
 
 logger = logging.getLogger(__name__)
 
 
 class PredictorFactory:
-
     supported_predictors: dict[str, type[ExposedModel]]
     _shared: PredictorFactory | None = None
 
     def __init__(self) -> None:
         from aligned.exposed_model.mlflow import MLFlowServer, InMemMLFlowAlias
-        from aligned.exposed_model.ollama import OllamaGeneratePredictor, OllamaEmbeddingPredictor
-        from aligned.exposed_model.sentence_transformer import SentenceTransformerPredictor
+        from aligned.exposed_model.ollama import (
+            OllamaGeneratePredictor,
+            OllamaEmbeddingPredictor,
+        )
+        from aligned.exposed_model.sentence_transformer import (
+            SentenceTransformerPredictor,
+        )
+        from aligned.exposed_model.langchain import LangChain
+        from aligned.exposed_model.openai import (
+            OpenAiEmbeddingPredictor,
+            OpenAiPromptModel,
+            OpenAiExtractModel,
+        )
+        from aligned.exposed_model.partitioned import PartitionedModel
 
         self.supported_predictors = {}
 
@@ -39,6 +58,11 @@ class PredictorFactory:
             ABTestModel,
             DillPredictor,
             SentenceTransformerPredictor,
+            LangChain,
+            PartitionedModel,
+            OpenAiEmbeddingPredictor,
+            OpenAiPromptModel,
+            OpenAiExtractModel,
         ]
         for predictor in types:
             self.supported_predictors[predictor.model_type] = predictor
@@ -58,7 +82,7 @@ class PromptModel:
         This is the property that contains the fully compiled prompt.
         Meaning a user can bypass the prompt templating step.
 
-        This is usefull in some scanarios where we want to do similarity search
+        This is useful in some scanarios where we want to do similarity search
         when the prompt components do not make sense to provide.
         """
         return None
@@ -70,7 +94,6 @@ class VersionedModel:
 
 
 class ExposedModel(Codable, SerializableType):
-
     model_type: str
 
     @property
@@ -80,6 +103,10 @@ class ExposedModel(Codable, SerializableType):
     @property
     def as_markdown(self) -> str:
         raise NotImplementedError(type(self))
+
+    def needed_configs(self) -> list[ConfigValue]:
+        "Returns the config variables to set in order to use the model."
+        return []
 
     async def depends_on(self) -> list[FeatureLocation]:
         """
@@ -98,7 +125,9 @@ class ExposedModel(Codable, SerializableType):
     async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
         raise NotImplementedError(type(self))
 
-    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+    async def run_polars(
+        self, values: RetrievalJob, store: ModelFeatureStore
+    ) -> pl.DataFrame:
         raise NotImplementedError(type(self))
 
     async def potential_drift_from_model(self, old_model: ExposedModel) -> str | None:
@@ -107,7 +136,7 @@ class ExposedModel(Codable, SerializableType):
     def _serialize(self) -> dict:
         assert (
             self.model_type in PredictorFactory.shared().supported_predictors
-        ), f'Unknown predictor_type: {self.model_type}'
+        ), f"Unknown predictor_type: {self.model_type}"
         return self.to_dict()
 
     def with_shadow(self, shadow_model: ExposedModel) -> ShadowModel:
@@ -115,24 +144,28 @@ class ExposedModel(Codable, SerializableType):
 
     @classmethod
     def _deserialize(cls, value: dict) -> ExposedModel:
-        name_type = value['model_type']
+        name_type = value["model_type"]
         if name_type not in PredictorFactory.shared().supported_predictors:
             raise ValueError(
                 f"Unknown batch data source id: '{name_type}'.\nRemember to add the"
-                ' data source to the BatchDataSourceFactory.supported_data_sources if'
-                ' it is a custom type.'
+                " data source to the BatchDataSourceFactory.supported_data_sources if"
+                " it is a custom type."
             )
-        del value['model_type']
+        del value["model_type"]
         data_class = PredictorFactory.shared().supported_predictors[name_type]
         return data_class.from_dict(value)
 
     @staticmethod
     def polars_predictor(
-        callable: Callable[[pl.DataFrame, ModelFeatureStore], Coroutine[None, None, pl.DataFrame]]
-    ) -> 'ExposedModel':
+        callable: Callable[
+            [pl.DataFrame, ModelFeatureStore], Coroutine[None, None, pl.DataFrame]
+        ],
+    ) -> "ExposedModel":
         import dill
 
-        async def function_wrapper(values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+        async def function_wrapper(
+            values: RetrievalJob, store: ModelFeatureStore
+        ) -> pl.DataFrame:
             features = await store.features_for(values).to_polars()
             return await callable(features, store)
 
@@ -144,7 +177,7 @@ class ExposedModel(Codable, SerializableType):
         model: str,
         prompt_template: str,
         input_features_versions: str,
-    ) -> 'ExposedModel':
+    ) -> "ExposedModel":
         from aligned.exposed_model.ollama import OllamaGeneratePredictor
 
         return OllamaGeneratePredictor(
@@ -161,8 +194,8 @@ class ExposedModel(Codable, SerializableType):
         input_features_versions: str,
         prompt_template: str,
         embedding_name: str | None = None,
-        precomputed_prompt_key: str = 'full_prompt',
-    ) -> 'ExposedModel':
+        precomputed_prompt_key: str = "full_prompt",
+    ) -> "ExposedModel":
         from aligned.exposed_model.ollama import OllamaEmbeddingPredictor
 
         return OllamaEmbeddingPredictor(
@@ -170,31 +203,33 @@ class ExposedModel(Codable, SerializableType):
             model_name=model,
             prompt_template=prompt_template,
             input_features_versions=input_features_versions,
-            embedding_name=embedding_name or 'embedding',
+            embedding_name=embedding_name or "embedding",
             precomputed_prompt_key_overwrite=precomputed_prompt_key,
         )
 
     @staticmethod
     def in_memory_mlflow(
         model_name: str,
-        model_alias: str,
-        model_contract_version_tag: str | None = None,
-    ) -> 'ExposedModel':
+        model_alias: str = "champion",
+        reference_tag: str = "feature_refs",
+        mlflow_config: MlflowConfig | None = None,
+    ) -> "ExposedModel":
         from aligned.exposed_model.mlflow import in_memory_mlflow
 
         return in_memory_mlflow(
             model_name=model_name,
             model_alias=model_alias,
-            model_contract_version_tag=model_contract_version_tag,
+            reference_tag=reference_tag,
+            mlflow_config=mlflow_config,
         )
 
     @staticmethod
     def mlflow_server(
         host: str,
-        model_alias: str | None = None,
+        model_alias: str = "champion",
         model_name: str | None = None,
         timeout: int = 30,
-    ) -> 'ExposedModel':
+    ) -> "ExposedModel":
         from aligned.exposed_model.mlflow import mlflow_server
 
         return mlflow_server(
@@ -206,16 +241,17 @@ class ExposedModel(Codable, SerializableType):
 
 
 class StreamablePredictor:
-    async def stream_predict(self, input: dict[str, Any]) -> AsyncIterable[dict[str, Any]]:
+    async def stream_predict(
+        self, input: dict[str, Any]
+    ) -> AsyncIterable[dict[str, Any]]:
         raise NotImplementedError(type(self))
 
 
 @dataclass
 class DillPredictor(ExposedModel):
-
     function: bytes
 
-    model_type: str = 'dill_predictor'
+    model_type: str = "dill_predictor"
 
     @property
     def exposed_at_url(self) -> str | None:
@@ -223,7 +259,7 @@ class DillPredictor(ExposedModel):
 
     @property
     def as_markdown(self) -> str:
-        return 'A function stored in a dill file.'
+        return "A function stored in a dill file."
 
     async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
         default = store.model.features.default_version
@@ -232,7 +268,9 @@ class DillPredictor(ExposedModel):
     async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
         return store.request().request_result.entities
 
-    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+    async def run_polars(
+        self, values: RetrievalJob, store: ModelFeatureStore
+    ) -> pl.DataFrame:
         import dill
         import inspect
 
@@ -245,12 +283,11 @@ class DillPredictor(ExposedModel):
 
 @dataclass
 class EnitityPredictor(ExposedModel):
-
     endpoint: str
 
     input_features_versions: str
 
-    model_type: str = 'entity'
+    model_type: str = "entity"
 
     @property
     def exposed_at_url(self) -> str | None:
@@ -266,7 +303,9 @@ class EnitityPredictor(ExposedModel):
     async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
         return store.using_version(self.input_features_versions).needed_entities()
 
-    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+    async def run_polars(
+        self, values: RetrievalJob, store: ModelFeatureStore
+    ) -> pl.DataFrame:
         from httpx import AsyncClient
         import polars as pl
 
@@ -281,11 +320,10 @@ class EnitityPredictor(ExposedModel):
 
 @dataclass
 class ShadowModel(ExposedModel):
-
     model: ExposedModel
     shadow_model: ExposedModel
 
-    model_type: str = 'shadow'
+    model_type: str = "shadow"
 
     @property
     def exposed_at_url(self) -> str | None:
@@ -305,20 +343,26 @@ class ShadowModel(ExposedModel):
         shadow_entities = await self.shadow_model.needed_entities(store)
         return model_entities.union(shadow_entities)
 
-    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+    async def run_polars(
+        self, values: RetrievalJob, store: ModelFeatureStore
+    ) -> pl.DataFrame:
         pred_view = store.model.predictions_view
 
         model_df = await self.model.run_polars(values, store)
         shadow_df = await self.shadow_model.run_polars(values, store)
 
         if pred_view.is_shadow_model_flag:
-            model_df = model_df.with_columns(pl.lit(False).alias(pred_view.is_shadow_model_flag.name))
-            shadow_df = shadow_df.with_columns(pl.lit(True).alias(pred_view.is_shadow_model_flag.name))
+            model_df = model_df.with_columns(
+                pl.lit(False).alias(pred_view.is_shadow_model_flag.name)
+            )
+            shadow_df = shadow_df.with_columns(
+                pl.lit(True).alias(pred_view.is_shadow_model_flag.name)
+            )
         else:
             logger.info(
-                'The model does not have a shadow model flag. '
-                'This makes it harder to seperate shadow and production predictions.\n'
-                'This can be set with `is_shadow = Bool().is_shadow_model_flag()`'
+                "The model does not have a shadow model flag. "
+                "This makes it harder to separate shadow and production predictions.\n"
+                "This can be set with `is_shadow = Bool().is_shadow_model_flag()`"
             )
         return model_df.vstack(shadow_df)
 
@@ -332,7 +376,7 @@ class ABTestModel(ExposedModel):
 
     models: list[tuple[ExposedModel, float]]
 
-    model_type: str = 'abtest'
+    model_type: str = "abtest"
 
     @property
     def exposed_at_url(self) -> str | None:
@@ -344,7 +388,7 @@ class ABTestModel(ExposedModel):
             f"Model {i}: {model.as_markdown} with weight {weight}."
             for i, (model, weight) in enumerate(self.models)
         ]
-        return '\n\n'.join(model_definitions)
+        return "\n\n".join(model_definitions)
 
     async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
         features = []
@@ -358,7 +402,9 @@ class ABTestModel(ExposedModel):
             entities = entities.union(await model.needed_entities(store))
         return entities
 
-    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+    async def run_polars(
+        self, values: RetrievalJob, store: ModelFeatureStore
+    ) -> pl.DataFrame:
         import random
 
         total_weight = sum([weight for _, weight in self.models])
@@ -380,10 +426,9 @@ def ab_test_model(models: list[tuple[ExposedModel, float]]) -> ABTestModel:
 
 @dataclass
 class DillFunction(ExposedModel, VersionedModel):
-
     function: bytes
 
-    model_type: str = 'dill_function'
+    model_type: str = "dill_function"
 
     @property
     def exposed_at_url(self) -> str | None:
@@ -391,7 +436,7 @@ class DillFunction(ExposedModel, VersionedModel):
 
     @property
     def as_markdown(self) -> str:
-        return 'A function stored in a dill file.'
+        return "A function stored in a dill file."
 
     async def model_version(self) -> str:
         from hashlib import md5
@@ -405,7 +450,9 @@ class DillFunction(ExposedModel, VersionedModel):
     async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
         return store.request().request_result.entities
 
-    async def run_polars(self, values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
+    async def run_polars(
+        self, values: RetrievalJob, store: ModelFeatureStore
+    ) -> pl.DataFrame:
         import dill
         import inspect
 
@@ -419,23 +466,31 @@ class DillFunction(ExposedModel, VersionedModel):
 def python_function(function: Callable[[pl.DataFrame], pl.Series]) -> DillFunction:
     import dill
 
-    async def function_wrapper(values: RetrivalJob, store: ModelFeatureStore) -> pl.DataFrame:
-
+    async def function_wrapper(
+        values: RetrievalJob, store: ModelFeatureStore
+    ) -> pl.DataFrame:
         pred_columns = store.model.predictions_view.labels()
         if len(pred_columns) != 1:
-            raise ValueError(f"Expected exactly one prediction column, got {len(pred_columns)} columns.")
+            raise ValueError(
+                f"Expected exactly one prediction column, got {len(pred_columns)} columns."
+            )
 
         feature_request = store.features_for(values)
         features = await feature_request.to_polars()
 
-        result = features.with_columns(function(features).alias(next(iter(pred_columns)).name))
+        result = features.with_columns(
+            function(features).alias(next(iter(pred_columns)).name)
+        )
         return result
 
     return DillFunction(function=dill.dumps(function_wrapper))
 
 
 def openai_embedding(
-    model: str, batch_on_n_chunks: int | None = 100, prompt_template: str | None = None
+    model: str,
+    config: OpenAiConfig | None = None,
+    batch_on_n_chunks: int | None = 100,
+    prompt_template: str | None = None,
 ) -> ExposedModel:
     """
     Returns an OpenAI embedding model.
@@ -467,8 +522,126 @@ def openai_embedding(
         ExposedModel: a model that sends embedding requests to OpenAI
 
     """
-    from aligned.exposed_model.openai import OpenAiEmbeddingPredictor
+    from aligned.exposed_model.openai import OpenAiEmbeddingPredictor, OpenAiConfig
 
     return OpenAiEmbeddingPredictor(
-        model=model, batch_on_n_chunks=batch_on_n_chunks, prompt_template=prompt_template or ''
+        model=model,
+        config=config or OpenAiConfig(),
+        batch_on_n_chunks=batch_on_n_chunks,
+        prompt_template=prompt_template or "",
+    )
+
+
+def openai_completion(
+    model: str, prompt_template: str | None = None, config: OpenAiConfig | None = None
+) -> ExposedModel:
+    """
+    Returns an OpenAI completion model.
+
+    ```python
+    @model_contract(
+        input_features=[MyFeature().name],
+        exposed_model=openai_completion(""),
+    )
+    class MyCompletion:
+        my_entity = Int32().as_entity()
+        name = String()
+        response = String().as_prompt_completion()
+        predicted_at = EventTimestamp()
+
+    embeddings = await store.model(MyCompletion).predict_over({
+        "my_entity": [1, 2, 3],
+        "name": ["Hello", "World", "foo"]
+    }).to_polars()
+    ```
+
+
+    Args:
+        model (str): the model to use. Look at the OpenAi docs to find the correct one.
+        batch_on_n_chunks (int): When to change to the batch API. Given that the batch size is too big.
+        prompt_template (str): A custom prompt template if wanted. The default will be based on the input features.
+
+    Returns:
+        ExposedModel: a model that sends embedding requests to OpenAI
+    """
+
+    from aligned.exposed_model.openai import OpenAiPromptModel, OpenAiConfig
+
+    return OpenAiPromptModel(
+        model=model,
+        prompt_template=prompt_template or "",
+        config=config or OpenAiConfig(),
+    )
+
+
+def openai_extraction(
+    model: str,
+    extraction_description: str = "Extract the output from the following input features.",
+    config: OpenAiConfig | None = None,
+) -> ExposedModel:
+    from aligned.exposed_model.openai import OpenAiExtractModel, OpenAiConfig
+
+    return OpenAiExtractModel(
+        model=model,
+        extract_task_description=extraction_description,
+        config=config or OpenAiConfig(),
+    )
+
+
+def ollama_extraction(
+    model: str,
+    base_url: str | ConfigValue = "http://localhost:11434/v1",
+    api_key: str | ConfigValue = "ollama",
+    extraction_description: str = "Extract the output from the following input features.",
+) -> ExposedModel:
+    from aligned.exposed_model.interface import openai_extraction
+    from aligned.exposed_model.openai import OpenAiConfig
+
+    return openai_extraction(
+        model,
+        extraction_description=extraction_description,
+        config=OpenAiConfig(
+            api_key=LiteralValue.from_value(api_key),
+            base_url=LiteralValue.from_value(base_url),
+        ),
+    )
+
+
+def partitioned_on(
+    key: str, partitions: dict[str, ExposedModel], default_partition: str | None = None
+) -> ExposedModel:
+    """Returns an model that routes the inference request to a new model based on a partition key
+
+    ```python
+    @model_contract(
+        input_features=[MyFeature().name],
+        exposed_model=partitioned_on(
+            "lang",
+            partitions={
+                "no": openai_embedding("text-embedding-3-large"),
+                "en": openai_embedding("text-embedding-ada-002"),
+            },
+            default_partition="no"
+        ),
+    )
+    class MyEmbedding:
+        my_entity = Int32().as_entity()
+        name = String()
+        lang = String()
+        embedding = Embedding(1536)
+        predicted_at = EventTimestamp()
+
+    embeddings = await store.model(MyEmbedding).predict_over({
+        "my_entity": [1, 2, 3],
+        "name": ["Hello", "Hei", "Hola"],
+        "lang": ["en", "no", "es"]
+    }).to_polars()
+    ```
+    """
+    from aligned.exposed_model.partitioned import PartitionedModel
+
+    return PartitionedModel(
+        Feature(key, FeatureType.string()),
+        partitions=partitions,
+        default_partition=default_partition,
     )

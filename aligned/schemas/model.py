@@ -2,26 +2,33 @@ import logging
 from dataclasses import dataclass, field
 from datetime import timedelta, datetime
 
-from aligned.request.retrival_request import EventTimestampRequest, FeatureRequest, RetrivalRequest
+from aligned.request.retrieval_request import (
+    EventTimestampRequest,
+    FeatureRequest,
+    RetrievalRequest,
+)
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import FeatureLocation, FeatureType, StaticFeatureTags
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureReference
 from aligned.schemas.event_trigger import EventTrigger
-from aligned.schemas.target import ClassificationTarget, RecommendationTarget, RegressionTarget
+from aligned.schemas.target import (
+    ClassificationTarget,
+    RecommendationTarget,
+    RegressionTarget,
+)
 from aligned.schemas.feature_view import CompiledFeatureView, FeatureViewReferenceSource
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.folder import DatasetStore
 from aligned.exposed_model.interface import ExposedModel
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.data_source.batch_data_source import CodableBatchDataSource
-from aligned.retrival_job import RetrivalJob
+from aligned.retrieval_job import RetrievalJob
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class FeatureInputVersions(Codable):
-
     default_version: str
     versions: dict[str, list[FeatureReference]]
 
@@ -73,6 +80,16 @@ class PredictionsView(Codable):
     unacceptable_freshness: timedelta | None = field(default=None)
 
     @property
+    def freshness_feature(self) -> Feature | None:
+        if self.event_timestamp:
+            return self.event_timestamp.as_feature()
+
+        for feat in self.features:
+            if feat.tags and StaticFeatureTags.is_freshness in feat.tags:
+                return feat
+        return None
+
+    @property
     def is_shadow_model_flag(self) -> Feature | None:
         for feature in self.features:
             if feature.tags and StaticFeatureTags.is_shadow_model in feature.tags:
@@ -83,6 +100,13 @@ class PredictionsView(Codable):
     def model_version_column(self) -> Feature | None:
         for feature in self.features:
             if feature.tags and StaticFeatureTags.is_model_version in feature.tags:
+                return feature
+        return None
+
+    @property
+    def prompt_completion_feature(self) -> Feature | None:
+        for feature in self.features:
+            if feature.tags and StaticFeatureTags.is_prompt_completion in feature.tags:
                 return feature
         return None
 
@@ -109,7 +133,7 @@ class PredictionsView(Codable):
     def schema_hash(self) -> bytes:
         from hashlib import md5
 
-        schema_string = ''
+        schema_string = ""
 
         schema_features = self.features.union(self.entities)
         if self.event_timestamp:
@@ -123,7 +147,6 @@ class PredictionsView(Codable):
 
     @property
     def full_schema(self) -> set[Feature]:
-
         schema = self.features.union(self.entities).union(self.derived_features)
 
         for target in self.classification_targets or {}:
@@ -150,13 +173,15 @@ class PredictionsView(Codable):
         embeds = [feat for feat in self.full_schema if feat.dtype.is_embedding]
         return sorted(embeds, key=lambda feat: feat.name)
 
-    def request(self, name: str, model_version_as_entity: bool = False) -> RetrivalRequest:
+    def request(
+        self, name: str, model_version_as_entity: bool = False
+    ) -> RetrievalRequest:
         entities = self.entities
 
         if model_version_as_entity and self.model_version_column:
             entities = entities.union({self.model_version_column})
 
-        return RetrivalRequest(
+        return RetrievalRequest(
             name=name,
             location=FeatureLocation.model(name),
             entities=entities,
@@ -171,7 +196,7 @@ class PredictionsView(Codable):
         name: str,
         model_version_as_entity: bool = False,
         event_timestamp_column: str | None = None,
-    ) -> RetrivalRequest:
+    ) -> RetrievalRequest:
         entities = self.entities
 
         if model_version_as_entity and self.model_version_column:
@@ -180,15 +205,18 @@ class PredictionsView(Codable):
         event_timestamp_request = None
         if self.event_timestamp:
             event_timestamp_request = EventTimestampRequest(
-                event_timestamp=self.event_timestamp, entity_column=event_timestamp_column
+                event_timestamp=self.event_timestamp,
+                entity_column=event_timestamp_column,
             )
 
-        return RetrivalRequest(
+        return RetrievalRequest(
             name=name,
             location=FeatureLocation.model(name),
             entities=entities,
             features={feature for feature in self.features if feature.name in features},
-            derived_features={feature for feature in self.derived_features if feature.name in features},
+            derived_features={
+                feature for feature in self.derived_features if feature.name in features
+            },
             event_timestamp_request=event_timestamp_request,
         )
 
@@ -200,7 +228,7 @@ class PredictionsView(Codable):
         elif self.recommendation_targets:
             return {feature.estimating for feature in self.recommendation_targets}
         else:
-            raise ValueError('Found no targets in the model')
+            return set()
 
     def labels(self) -> set[Feature]:
         if self.classification_targets:
@@ -210,7 +238,7 @@ class PredictionsView(Codable):
         elif self.recommendation_targets:
             return {feature.feature for feature in self.recommendation_targets}
         else:
-            raise ValueError('Found no targets in the model')
+            return set()
 
 
 @dataclass
@@ -237,7 +265,7 @@ class Model(Codable):
             FeatureLocation.model(self.name),
             {feature.name for feature in self.predictions_view.full_schema},
             needed_requests=[
-                RetrivalRequest(
+                RetrievalRequest(
                     name=self.name,
                     location=FeatureLocation.model(self.name),
                     features=self.predictions_view.full_schema,
@@ -251,11 +279,10 @@ class Model(Codable):
 
 @dataclass
 class ModelSource(CodableBatchDataSource):
-
     model: Model
     pred_view: CompiledFeatureView
 
-    type_name: str = 'model_source'
+    type_name: str = "model_source"
 
     def job_group_key(self) -> str:
         return FeatureLocation.model(self.pred_view.name).identifier
@@ -269,9 +296,13 @@ class ModelSource(CodableBatchDataSource):
         return {}
 
     def source(self) -> FeatureViewReferenceSource:
-        return FeatureViewReferenceSource(self.pred_view, FeatureLocation.model(self.pred_view.name))
+        return FeatureViewReferenceSource(
+            self.pred_view, FeatureLocation.model(self.pred_view.name)
+        )
 
-    def all_data(self, request: RetrivalRequest, limit: int | None = None) -> RetrivalJob:
+    def all_data(
+        self, request: RetrievalRequest, limit: int | None = None
+    ) -> RetrievalJob:
         job = self.source().all_data(request, limit)
 
         model_version = self.model.predictions_view.model_version_column
@@ -283,8 +314,8 @@ class ModelSource(CodableBatchDataSource):
         return job
 
     def all_between_dates(
-        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
-    ) -> RetrivalJob:
+        self, request: RetrievalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrievalJob:
         job = self.source().all_between_dates(request, start_date, end_date)
 
         model_version = self.model.predictions_view.model_version_column
@@ -295,17 +326,18 @@ class ModelSource(CodableBatchDataSource):
 
         return job
 
-    def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
+    def features_for(
+        self, facts: RetrievalJob, request: RetrievalRequest
+    ) -> RetrievalJob:
         return self.source().features_for(facts, request)
 
     @classmethod
     def multi_source_features_for(  # type: ignore
-        cls, facts: RetrivalJob, requests: list[tuple['ModelSource', RetrivalRequest]]
-    ) -> RetrivalJob:
-
+        cls, facts: RetrievalJob, requests: list[tuple["ModelSource", RetrievalRequest]]
+    ) -> RetrievalJob:
         if len(requests) != 1:
             raise NotImplementedError(
-                f'Type: {cls} have not implemented how to load fact data with multiple sources.'
+                f"Type: {cls} have not implemented how to load fact data with multiple sources."
             )
 
         source, _ = requests[0]

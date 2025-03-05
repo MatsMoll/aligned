@@ -1,10 +1,5 @@
 default_stages: [commit]
 repos:
-  - repo: https://github.com/psf/black
-    rev: 22.3.0
-    hooks:
-      - id: black
-        args: [ "--quiet" ]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
@@ -19,7 +14,11 @@ repos:
       - id: trailing-whitespace
       - id: mixed-line-ending
       - id: trailing-whitespace
-      - id: double-quote-string-fixer
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.4
+    hooks:
+      - id: codespell
 
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.7.0
@@ -29,12 +28,25 @@ repos:
         args: [ "--py36-plus", "--py37-plus", "--py38-plus", "--py39-plus", "--py310-plus"]
         files: 'cloud\/.*\.py'
 
-  # Static type and code checkers below
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: 'v0.6.0'
+  - repo: local
     hooks:
-      - id: ruff
-        args: [ --fix ]
+    - id: ruff format
+      name: "Ruff Format"
+      language: system
+      types: [python]
+      entry: ruff format
+
+    - id: ruff lint
+      name: "Ruff Lint"
+      language: system
+      types: [python]
+      entry: ruff check --fix
+
+    - id: typecheck
+      name: "Pyright Type Checking"
+      language: system
+      types: [python]
+      entry: pyright
 
   - repo: https://github.com/python-poetry/poetry
     rev: 1.5.0

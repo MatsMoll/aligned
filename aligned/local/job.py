@@ -8,8 +8,12 @@ from datetime import datetime
 import polars as pl
 
 from aligned.lazy_imports import pandas as pd
-from aligned.request.retrival_request import AggregatedFeature, AggregateOver, RetrivalRequest
-from aligned.retrival_job import RequestResult, RetrivalJob
+from aligned.request.retrieval_request import (
+    AggregatedFeature,
+    AggregateOver,
+    RetrievalRequest,
+)
+from aligned.retrieval_job import RequestResult, RetrievalJob
 from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.feature import Feature
 from aligned.data_file import DataFileReference
@@ -18,12 +22,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class LiteralRetrivalJob(RetrivalJob):
-
+class LiteralRetrievalJob(RetrievalJob):
     df: pl.LazyFrame
-    requests: list[RetrivalRequest]
+    requests: list[RetrievalRequest]
 
-    def __init__(self, df: pl.LazyFrame | pd.DataFrame, requests: list[RetrivalRequest]) -> None:
+    def __init__(
+        self,
+        df: pl.LazyFrame | pd.DataFrame | pl.DataFrame,
+        requests: list[RetrievalRequest],
+    ) -> None:
         self.requests = requests
 
         if isinstance(df, pl.DataFrame):
@@ -37,10 +44,10 @@ class LiteralRetrivalJob(RetrivalJob):
 
     @property
     def loaded_columns(self) -> list[str]:
-        return self.df.columns
+        return self.df.collect_schema().names()
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
+    def retrieval_requests(self) -> list[RetrievalRequest]:
         return self.requests
 
     @property
@@ -48,7 +55,9 @@ class LiteralRetrivalJob(RetrivalJob):
         return RequestResult.from_request_list(self.requests)
 
     def describe(self) -> str:
-        return f'Using literal data frame with columns {self.df.columns}'
+        return (
+            f"Using literal data frame with columns {self.df.collect_schema().names()}"
+        )
 
     async def to_pandas(self) -> pd.DataFrame:
         return self.df.collect().to_pandas()
@@ -57,14 +66,13 @@ class LiteralRetrivalJob(RetrivalJob):
         return self.df
 
 
-async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.LazyFrame:
+async def aggregate(request: RetrievalRequest, core_data: pl.LazyFrame) -> pl.LazyFrame:
     from aligned import ContractStore
 
     aggregate_over = request.aggregate_over()
 
     first_over = list(aggregate_over.keys())[0]
     if len(aggregate_over) == 1 and first_over.window is None:
-
         exprs = []
         for feat in aggregate_over[first_over]:
             tran = await feat.derived_feature.transformation.transform_polars(
@@ -72,7 +80,7 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
             )
 
             if not isinstance(tran, pl.Expr):
-                raise ValueError(f'Aggregation needs to be an expression, got {tran}')
+                raise ValueError(f"Aggregation needs to be an expression, got {tran}")
             exprs.append(tran.alias(feat.name))
 
         return core_data.group_by(first_over.group_by_names).agg(exprs)
@@ -80,7 +88,7 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
     group_by_names = first_over.group_by_names
 
     if not first_over.window:
-        raise ValueError('Found no time column to aggregate over.')
+        raise ValueError("Found no time column to aggregate over.")
 
     time_name = first_over.window.time_column.name
 
@@ -95,11 +103,11 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
             )
 
             if not isinstance(tran, pl.Expr):
-                raise ValueError(f'Aggregation needs to be an expression, got {tran}')
+                raise ValueError(f"Aggregation needs to be an expression, got {tran}")
             exprs.append(tran.alias(feat.name))
 
         if not over.window:
-            raise ValueError('No time window spesificed.')
+            raise ValueError("No time window spesificed.")
 
         if over.window.every_interval:
             sub = (
@@ -112,7 +120,10 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
                 )
                 .agg(exprs)
                 .with_columns(pl.col(time_name) + over.window.time_window)
-            ).filter(pl.col(time_name) <= sorted_data.select(pl.col(time_name).max()).collect()[0, 0])
+            ).filter(
+                pl.col(time_name)
+                <= sorted_data.select(pl.col(time_name).max()).collect()[0, 0]
+            )
         else:
             sub = sorted_data.rolling(
                 time_name,
@@ -134,22 +145,25 @@ async def aggregate(request: RetrivalRequest, core_data: pl.LazyFrame) -> pl.Laz
                 right_df = existing_result
                 left_df = new_aggregations
 
-            results = left_df.join_asof(right_df, on=time_name, by=group_by_names).lazy()
+            results = left_df.join_asof(
+                right_df, on=time_name, by=group_by_names
+            ).lazy()
         else:
             results = sub
 
     if results is None:
-        raise ValueError(f'Generated no results for aggregate request {request.name}.')
+        raise ValueError(f"Generated no results for aggregate request {request.name}.")
 
     return results
 
 
-def decode_timestamps(df: pl.LazyFrame, request: RetrivalRequest, formatter: DateFormatter) -> pl.LazyFrame:
-
+def decode_timestamps(
+    df: pl.LazyFrame, request: RetrievalRequest, formatter: DateFormatter
+) -> pl.LazyFrame:
     decode_columns: dict[str, str | None] = {}
     check_timezone_columns: dict[str, str | None] = {}
 
-    dtypes = dict(zip(df.columns, df.dtypes))
+    dtypes = df.collect_schema()
 
     all_features = request.all_features
 
@@ -157,8 +171,7 @@ def decode_timestamps(df: pl.LazyFrame, request: RetrivalRequest, formatter: Dat
         all_features.add(request.event_timestamp.as_feature())
 
     for feature in all_features:
-        if feature.dtype.is_datetime and feature.name in df.columns:
-
+        if feature.dtype.is_datetime and feature.name in dtypes:
             if not isinstance(dtypes[feature.name], pl.Datetime):
                 decode_columns[feature.name] = feature.dtype.datetime_timezone
             else:
@@ -167,15 +180,23 @@ def decode_timestamps(df: pl.LazyFrame, request: RetrivalRequest, formatter: Dat
     exprs = []
 
     for column, time_zone in decode_columns.items():
-        logger.info(f'Decoding column {column} using {formatter} with timezone {time_zone}')
+        logger.info(
+            f"Decoding column {column} using {formatter} with timezone {time_zone}"
+        )
 
         if time_zone is None:
-            exprs.append(formatter.decode_polars(column).dt.replace_time_zone(None).alias(column))
+            exprs.append(
+                formatter.decode_polars(column).dt.replace_time_zone(None).alias(column)
+            )
         else:
-            exprs.append(formatter.decode_polars(column).dt.convert_time_zone(time_zone).alias(column))
+            exprs.append(
+                formatter.decode_polars(column)
+                .dt.convert_time_zone(time_zone)
+                .alias(column)
+            )
 
     for column, time_zone in check_timezone_columns.items():
-        logger.info(f'Checking timezone for column {column} with timezone {time_zone}')
+        logger.info(f"Checking timezone for column {column} with timezone {time_zone}")
         if time_zone is None:
             exprs.append(pl.col(column).dt.replace_time_zone(None).alias(column))
         else:
@@ -185,10 +206,9 @@ def decode_timestamps(df: pl.LazyFrame, request: RetrivalRequest, formatter: Dat
 
 
 @dataclass
-class FileFullJob(RetrivalJob):
-
-    source: DataFileReference | RetrivalJob
-    request: RetrivalRequest
+class FileFullJob(RetrievalJob):
+    source: DataFileReference | RetrievalJob
+    request: RetrievalRequest
     limit: int | None = field(default=None)
     date_formatter: DateFormatter = field(default_factory=DateFormatter.iso_8601)
 
@@ -204,11 +224,11 @@ class FileFullJob(RetrivalJob):
         return self.request.request_result
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
+    def retrieval_requests(self) -> list[RetrievalRequest]:
         return [self.request]
 
     def describe(self) -> str:
-        return f'Reading everything form file {self.source}.'
+        return f"Reading everything form file {self.source}."
 
     async def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
         from aligned.data_source.batch_data_source import ColumnFeatureMappable
@@ -219,7 +239,7 @@ class FileFullJob(RetrivalJob):
 
         if self.request.aggregated_features:
             first_feature = list(self.request.aggregated_features)[0]
-            if first_feature.name in df.columns:
+            if first_feature.name in df.collect_schema().names():
                 return df
 
         entity_names = self.request.entity_names
@@ -260,10 +280,9 @@ class FileFullJob(RetrivalJob):
 
 
 @dataclass
-class FileDateJob(RetrivalJob):
-
+class FileDateJob(RetrievalJob):
     source: DataFileReference
-    request: RetrivalRequest
+    request: RetrievalRequest
     start_date: datetime
     end_date: datetime
     date_formatter: DateFormatter = field(default_factory=DateFormatter.iso_8601)
@@ -273,7 +292,7 @@ class FileDateJob(RetrivalJob):
         return self.request.request_result
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
+    def retrieval_requests(self) -> list[RetrievalRequest]:
         return [self.request]
 
     def file_transform_polars(self, df: pl.LazyFrame) -> pl.LazyFrame:
@@ -287,7 +306,9 @@ class FileDateJob(RetrivalJob):
         all_names = list(self.request.all_required_feature_names.union(entity_names))
 
         if self.request.event_timestamp is None:
-            raise ValueError(f'Source {self.source} have no event timestamp to filter on')
+            raise ValueError(
+                f"Source {self.source} have no event timestamp to filter on"
+            )
 
         request_features = all_names
         feature_column_map = {}
@@ -307,10 +328,19 @@ class FileDateJob(RetrivalJob):
             end_date = self.end_date.replace(tzinfo=None)
         else:
             tz = timezone(time_zone)
-            start_date = self.start_date.astimezone(tz)
-            end_date = self.end_date.astimezone(tz)
+            if self.start_date == datetime.min:
+                start_date = self.start_date.replace(tzinfo=tz)
+            else:
+                start_date = self.start_date.astimezone(tz)
 
-        return df.filter(pl.col(event_timestamp_column).is_between(start_date, end_date))
+            if self.end_date == datetime.max:
+                end_date = self.end_date.replace(tzinfo=tz)
+            else:
+                end_date = self.end_date.astimezone(tz)
+
+        return df.filter(
+            pl.col(event_timestamp_column).is_between(start_date, end_date)
+        )
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
@@ -330,11 +360,13 @@ async def aggregate_over(
     from aligned import ContractStore
 
     if not group_by:
-        group_by = ['row_id']
+        group_by = ["row_id"]
 
     subset = df
     if group.condition:
-        raise NotImplementedError('Condition aggregation not implemented for file data source')
+        raise NotImplementedError(
+            "Condition aggregation not implemented for file data source"
+        )
 
     if group.window:
         event_timestamp = group.window.time_column.name
@@ -350,17 +382,18 @@ async def aggregate_over(
         if isinstance(expr, pl.Expr):
             transformations.append(expr.alias(feature.name))
         else:
-            raise NotImplementedError('Only expressions are supported for file data source')
+            raise NotImplementedError(
+                "Only expressions are supported for file data source"
+            )
 
     return subset.group_by(group_by).agg(transformations)
 
 
 @dataclass
-class FileFactualJob(RetrivalJob):
-
-    source: DataFileReference | RetrivalJob
-    requests: list[RetrivalRequest]
-    facts: RetrivalJob
+class FileFactualJob(RetrievalJob):
+    source: DataFileReference | RetrievalJob
+    requests: list[RetrievalRequest]
+    facts: RetrievalJob
     date_formatter: DateFormatter = field(default_factory=DateFormatter.iso_8601)
 
     @property
@@ -368,11 +401,11 @@ class FileFactualJob(RetrivalJob):
         return RequestResult.from_request_list(self.requests)
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
+    def retrieval_requests(self) -> list[RetrievalRequest]:
         return self.requests
 
     def describe(self) -> str:
-        return f'Reading file at {self.source}'
+        return f"Reading file at {self.source}"
 
     async def file_transformations(self, df: pl.LazyFrame) -> pl.LazyFrame:
         """Selects only the wanted subset from the loaded source
@@ -402,10 +435,12 @@ class FileFactualJob(RetrivalJob):
                     date_features.add(feature.name)
 
         result = await self.facts.to_lazy_polars()
-        event_timestamp_col = 'aligned_event_timestamp'
+        event_timestamp_col = "aligned_event_timestamp"
 
         event_timestamp_entity_columns = [
-            req.event_timestamp_request.entity_column for req in self.requests if req.event_timestamp_request
+            req.event_timestamp_request.entity_column
+            for req in self.requests
+            if req.event_timestamp_request
         ]
         event_timestamp_entity_column = None
         did_rename_event_timestamp = False
@@ -413,17 +448,21 @@ class FileFactualJob(RetrivalJob):
         if event_timestamp_entity_columns:
             event_timestamp_entity_column = event_timestamp_entity_columns[0]
 
-            if event_timestamp_entity_column and event_timestamp_entity_column in result:
-                result = result.rename({event_timestamp_entity_column: event_timestamp_col})
+            if (
+                event_timestamp_entity_column
+                and event_timestamp_entity_column in result
+            ):
+                result = result.rename(
+                    {event_timestamp_entity_column: event_timestamp_col}
+                )
                 did_rename_event_timestamp = True
 
-        row_id_name = 'row_id'
+        row_id_name = "row_id"
         result = result.with_row_index(row_id_name)
 
         for request in self.requests:
-
             entity_names = request.entity_names
-            assert entity_names, 'Need at there will be at least one entity to join'
+            assert entity_names, "Need at there will be at least one entity to join"
             all_names = request.all_required_feature_names.union(entity_names)
 
             request_features = list(all_names)
@@ -433,11 +472,13 @@ class FileFactualJob(RetrivalJob):
                 feature_column_map = dict(zip(all_names, request_features))
 
             df = fill_missing_in_request(request, df, feature_column_map)
+            df_columns = df.collect_schema().names()
+
             for derived_feature in request.derived_features:
-                if derived_feature.name in df.columns:
+                if derived_feature.name in df_columns:
                     all_names.add(derived_feature.name)
 
-            column_selects = list(entity_names.union({'row_id'}))
+            column_selects = list(entity_names.union({"row_id"}))
 
             if request.event_timestamp_request:
                 using_event_timestamp = event_timestamp_entity_column is not None
@@ -451,11 +492,15 @@ class FileFactualJob(RetrivalJob):
                 column_selects.append(event_timestamp_col)
 
             missing_agg_features = [
-                feat for feat in request.aggregated_features if feat.name not in df.columns
+                feat
+                for feat in request.aggregated_features
+                if feat.name not in df_columns
             ]
             if request.aggregated_features and not missing_agg_features:
                 new_result = result.join(
-                    df.select(request.all_returned_columns), on=list(entity_names), how='left'
+                    df.select(request.all_returned_columns),
+                    on=list(entity_names),
+                    how="left",
                 )
             else:
                 all_names = list(all_names)
@@ -477,24 +522,34 @@ class FileFactualJob(RetrivalJob):
                 feature_df = decode_timestamps(feature_df, request, self.date_formatter)
 
                 for entity in request.entities:
-                    feature_df = feature_df.with_columns(pl.col(entity.name).cast(entity.dtype.polars_type))
-                    result = result.with_columns(pl.col(entity.name).cast(entity.dtype.polars_type))
+                    feature_df = feature_df.with_columns(
+                        pl.col(entity.name).cast(entity.dtype.polars_type)
+                    )
+                    result = result.with_columns(
+                        pl.col(entity.name).cast(entity.dtype.polars_type)
+                    )
 
-                # Need to only select the relevent entities and row_id
+                # Need to only select the relevant entities and row_id
                 # Otherwise will we get a duplicate column error
                 # We also need to remove the entities after the row_id is joined
                 new_result: pl.LazyFrame = result.select(column_selects).join(
-                    feature_df, on=list(entity_names), how='left'
+                    feature_df, on=list(entity_names), how="left"
                 )
                 new_result = new_result.select(pl.exclude(list(entity_names)))
 
                 for group, features in request.aggregate_over().items():
                     missing_features = [
-                        feature.name for feature in features if feature.name not in df.columns
+                        feature.name
+                        for feature in features
+                        if feature.name not in df.collect_schema().names()
                     ]
                     if missing_features:
-                        aggregated_df = await aggregate_over(group, features, new_result, event_timestamp_col)
-                        new_result = new_result.join(aggregated_df, on='row_id', how='left')
+                        aggregated_df = await aggregate_over(
+                            group, features, new_result, event_timestamp_col
+                        )
+                        new_result = new_result.join(
+                            aggregated_df, on="row_id", how="left"
+                        )
 
             if request.event_timestamp and using_event_timestamp:
                 field = request.event_timestamp.name
@@ -504,28 +559,42 @@ class FileFactualJob(RetrivalJob):
                     ttl_request = (pl.col(field) <= pl.col(event_timestamp_col)) & (
                         pl.col(field) >= pl.col(event_timestamp_col) - ttl
                     )
-                    new_result = new_result.filter(pl.col(field).is_null() | ttl_request)
+                    new_result = new_result.filter(
+                        pl.col(field).is_null() | ttl_request
+                    )
                 else:
                     new_result = new_result.filter(
-                        pl.col(field).is_null() | (pl.col(field) <= pl.col(event_timestamp_col))
+                        pl.col(field).is_null()
+                        | (pl.col(field) <= pl.col(event_timestamp_col))
                     )
-                new_result = new_result.sort(field, descending=True, nulls_last=True).select(
-                    pl.exclude(field)
-                )
+                new_result = new_result.sort(
+                    field, descending=True, nulls_last=True
+                ).select(pl.exclude(field))
             elif request.event_timestamp:
-                new_result = new_result.sort([row_id_name, request.event_timestamp.name], descending=True)
+                new_result = new_result.sort(
+                    [row_id_name, request.event_timestamp.name], descending=True
+                )
+                print(request.features_to_include)
+                print(request.event_timestamp.name)
+                if request.event_timestamp.name not in request.features_to_include:
+                    new_result = new_result.select(
+                        pl.exclude(request.event_timestamp.name)
+                    )
 
-            unique = new_result.unique(subset=row_id_name, keep='first')
-            column_selects.remove('row_id')
+            unique = new_result.unique(subset=row_id_name, keep="first")
+            column_selects.remove("row_id")
             result = result.join(
-                unique.select(pl.exclude(column_selects)), on=row_id_name, how='left', coalesce=True
+                unique.select(pl.exclude(column_selects)),
+                on=row_id_name,
+                how="left",
+                coalesce=True,
             )
-            result = result.select(pl.exclude('.*_right'))
+            result = result.select(pl.exclude(".*_right"))
 
         if did_rename_event_timestamp:
-            result = result.rename({event_timestamp_col: event_timestamp_entity_column})
+            result = result.rename({event_timestamp_col: event_timestamp_entity_column})  # type: ignore
 
-        return result.select([pl.exclude('row_id')])
+        return result.select([pl.exclude("row_id")])
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
@@ -533,8 +602,10 @@ class FileFactualJob(RetrivalJob):
     async def to_lazy_polars(self) -> pl.LazyFrame:
         return await self.file_transformations(await self.source.to_lazy_polars())
 
-    def log_each_job(self, logger_func: Callable[[object], None] | None = None) -> RetrivalJob:
-        if isinstance(self.source, RetrivalJob):
+    def log_each_job(
+        self, logger_func: Callable[[object], None] | None = None
+    ) -> RetrievalJob:
+        if isinstance(self.source, RetrievalJob):
             return FileFactualJob(
                 self.source.log_each_job(logger_func),
                 self.requests,

@@ -174,17 +174,10 @@ class FastAPIServer:
         from asgi_correlation_id import CorrelationIdMiddleware
         from fastapi import FastAPI
         from fastapi.middleware import Middleware
-        from prometheus_fastapi_instrumentator import Instrumentator
         from starlette.status import HTTP_200_OK
 
         app = FastAPI(middleware=[Middleware(CorrelationIdMiddleware)])
         app.docs_url = '/docs'
-
-        prom_instrument = Instrumentator().instrument(app)
-
-        @app.on_event('startup')
-        async def startup():
-            prom_instrument.expose(app)
 
         @app.get('health', status_code=HTTP_200_OK)
         def health() -> None:

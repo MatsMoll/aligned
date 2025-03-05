@@ -6,11 +6,15 @@ from io import BytesIO
 import polars as pl
 from httpx import HTTPStatusError
 
+from aligned.config_value import ConfigValue
 from aligned.lazy_imports import pandas as pd
-from aligned.data_source.batch_data_source import CodableBatchDataSource, ColumnFeatureMappable
+from aligned.data_source.batch_data_source import (
+    CodableBatchDataSource,
+    ColumnFeatureMappable,
+)
 from aligned.exceptions import UnableToFindFileException
 from aligned.local.job import FileDateJob, FileFullJob
-from aligned.retrival_job import RetrivalRequest, RetrivalJob
+from aligned.retrieval_job import RetrievalRequest, RetrievalJob
 from aligned.s3.storage import AwsS3Storage
 from aligned.schemas.codable import Codable
 from aligned.sources.local import (
@@ -39,7 +43,6 @@ except ModuleNotFoundError:
 
 @dataclass
 class AwsS3Config(Codable):
-
     access_token_env: str
     secret_token_env: str
     bucket_env: str
@@ -62,30 +65,58 @@ class AwsS3Config(Codable):
 
         region = os.environ[self.bucket_env]
         bucket = os.environ[self.bucket_env]
-        return f'https://{region}.amazoneaws.com/{bucket}/'
+        return f"https://{region}.amazoneaws.com/{bucket}/"
 
-    def json_at(self, path: str, mapping_keys: dict[str, str] | None = None) -> 'AwsS3DataSource':
+    def json_at(
+        self, path: str, mapping_keys: dict[str, str] | None = None
+    ) -> "AwsS3DataSource":
         return AwsS3DataSource(config=self, path=path)
 
     def csv_at(
-        self, path: str, mapping_keys: dict[str, str] | None = None, csv_config: CsvConfig | None = None
-    ) -> 'AwsS3CsvDataSource':
+        self,
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        csv_config: CsvConfig | None = None,
+    ) -> "AwsS3CsvDataSource":
         return AwsS3CsvDataSource(
-            config=self, path=path, mapping_keys=mapping_keys or {}, csv_config=csv_config or CsvConfig()
+            config=self,
+            path=path,
+            mapping_keys=mapping_keys or {},
+            csv_config=csv_config or CsvConfig(),
         )
 
     def parquet_at(
-        self, path: str, mapping_keys: dict[str, str] | None = None, config: ParquetConfig | None = None
-    ) -> 'AwsS3ParquetDataSource':
+        self,
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        config: ParquetConfig | None = None,
+    ) -> "AwsS3ParquetDataSource":
         return AwsS3ParquetDataSource(
-            config=self, path=path, mapping_keys=mapping_keys or {}, parquet_config=config or ParquetConfig()
+            config=self,
+            path=path,
+            mapping_keys=mapping_keys or {},
+            parquet_config=config or ParquetConfig(),
         )
 
-    def sub_directory(self, path: str) -> 'AwsS3Directory':
+    def sub_directory(self, path: str | ConfigValue) -> "AwsS3Directory":
+        assert isinstance(path, str)
         return AwsS3Directory(config=self, path=path)
 
-    def directory(self, path: str) -> 'AwsS3Directory':
+    def directory(self, path: str | ConfigValue) -> "AwsS3Directory":
         return self.sub_directory(path)
+
+    def with_schema_version(
+        self, sub_directory: str | ConfigValue | None = None
+    ) -> Directory:
+        raise NotImplementedError(type(self))
+
+    def delta_at(
+        self,
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        config: DeltaFileConfig | None = None,
+    ) -> CodableBatchDataSource:
+        raise NotImplementedError(type(self))
 
     @property
     def storage(self) -> Storage:
@@ -94,29 +125,35 @@ class AwsS3Config(Codable):
 
 @dataclass
 class AwsS3Directory(Directory):
-
     config: AwsS3Config
     path: str
 
-    def json_at(self, path: str) -> 'AwsS3DataSource':
-        return AwsS3DataSource(config=self.config, path=f'{self.path}/{path}')
+    def json_at(self, path: str) -> "AwsS3DataSource":
+        return AwsS3DataSource(config=self.config, path=f"{self.path}/{path}")
 
     def csv_at(
-        self, path: str, mapping_keys: dict[str, str] | None = None, csv_config: CsvConfig | None = None
-    ) -> 'AwsS3CsvDataSource':
+        self,
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        csv_config: CsvConfig | None = None,
+    ) -> "AwsS3CsvDataSource":
         return AwsS3CsvDataSource(
             config=self.config,
-            path=f'{self.path}/{path}',
+            path=f"{self.path}/{path}",
             mapping_keys=mapping_keys or {},
             csv_config=csv_config or CsvConfig(),
         )
 
     def parquet_at(
-        self, path: str, mapping_keys: dict[str, str] | None = None, config: ParquetConfig | None = None
-    ) -> 'AwsS3ParquetDataSource':
+        self,
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        config: ParquetConfig | None = None,
+        date_formatter: DateFormatter | None = None,
+    ) -> "AwsS3ParquetDataSource":
         return AwsS3ParquetDataSource(
             config=self.config,
-            path=f'{self.path}/{path}',
+            path=f"{self.path}/{path}",
             mapping_keys=mapping_keys or {},
             parquet_config=config or ParquetConfig(),
         )
@@ -131,28 +168,35 @@ class AwsS3Directory(Directory):
     ) -> PartitionedParquetFileSource:
         raise NotImplementedError(type(self))
 
-    def delta_at(
-        self, path: str, mapping_keys: dict[str, str] | None = None, config: DeltaFileConfig | None = None
-    ) -> CodableBatchDataSource:
+    def sub_directory(self, path: str | ConfigValue) -> "AwsS3Directory":
+        return AwsS3Directory(config=self.config, path=f"{self.path}/{path}")
+
+    def directory(self, path: str | ConfigValue) -> "AwsS3Directory":
+        return self.sub_directory(path)
+
+    def with_schema_version(
+        self, sub_directory: str | ConfigValue | None = None
+    ) -> Directory:
         raise NotImplementedError(type(self))
 
-    def sub_directory(self, path: str) -> 'AwsS3Directory':
-        return AwsS3Directory(config=self.config, path=f'{self.path}/{path}')
-
-    def directory(self, path: str) -> 'AwsS3Directory':
-        return self.sub_directory(path)
+    def delta_at(
+        self,
+        path: str,
+        mapping_keys: dict[str, str] | None = None,
+        config: DeltaFileConfig | None = None,
+    ) -> CodableBatchDataSource:
+        raise NotImplementedError(type(self))
 
 
 @dataclass
 class AwsS3DataSource(StorageFileReference, ColumnFeatureMappable):
-
     config: AwsS3Config
     path: str
 
-    type_name: str = 'aws_s3'
+    type_name: str = "aws_s3"
 
     def job_group_key(self) -> str:
-        return f'{self.type_name}/{self.path}'
+        return f"{self.type_name}/{self.path}"
 
     @property
     def storage(self) -> Storage:
@@ -160,7 +204,7 @@ class AwsS3DataSource(StorageFileReference, ColumnFeatureMappable):
 
     @property
     def url(self) -> str:
-        return f'{self.config.url}{self.path}'
+        return f"{self.config.url}{self.path}"
 
     async def read(self) -> bytes:
         return await self.storage.read(self.path)
@@ -170,17 +214,18 @@ class AwsS3DataSource(StorageFileReference, ColumnFeatureMappable):
 
 
 @dataclass
-class AwsS3CsvDataSource(CodableBatchDataSource, DataFileReference, ColumnFeatureMappable):
-
+class AwsS3CsvDataSource(
+    CodableBatchDataSource, DataFileReference, ColumnFeatureMappable
+):
     config: AwsS3Config
     path: str
     mapping_keys: dict[str, str]
     csv_config: CsvConfig
 
-    type_name: str = 'aws_s3_csv'
+    type_name: str = "aws_s3_csv"
 
     def job_group_key(self) -> str:
-        return f'{self.type_name}/{self.path}'
+        return f"{self.type_name}/{self.path}"
 
     @property
     def storage(self) -> Storage:
@@ -188,23 +233,27 @@ class AwsS3CsvDataSource(CodableBatchDataSource, DataFileReference, ColumnFeatur
 
     @property
     def url(self) -> str:
-        return f'{self.config.url}{self.path}'
+        return f"{self.config.url}{self.path}"
 
     async def read_pandas(self) -> pd.DataFrame:
         try:
             data = await self.storage.read(self.path)
             buffer = BytesIO(data)
-            return pd.read_csv(buffer, sep=self.csv_config.seperator, compression=self.csv_config.compression)
+            return pd.read_csv(
+                buffer,
+                sep=self.csv_config.separator,
+                compression=self.csv_config.compression,
+            )
         except FileNotFoundError:
-            raise UnableToFindFileException()
+            raise UnableToFindFileException(self.path)
         except HTTPStatusError:
-            raise UnableToFindFileException()
+            raise UnableToFindFileException(self.path)
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
         buffer = BytesIO()
         df.to_csv(
             buffer,
-            sep=self.csv_config.seperator,
+            sep=self.csv_config.separator,
             index=self.csv_config.should_write_index,
             compression=self.csv_config.compression,
         )
@@ -215,32 +264,33 @@ class AwsS3CsvDataSource(CodableBatchDataSource, DataFileReference, ColumnFeatur
         buffer = BytesIO()
         df.collect().write_csv(
             buffer,
-            sep=self.csv_config.seperator,
+            separator=self.csv_config.separator,
         )
         buffer.seek(0)
         await self.storage.write(self.path, buffer.read())
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+    def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
         return FileFullJob(self, request=request, limit=limit)
 
     def all_between_dates(
-        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
-    ) -> RetrivalJob:
+        self, request: RetrievalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrievalJob:
         return FileDateJob(self, request, start_date, end_date)
 
 
 @dataclass
-class AwsS3ParquetDataSource(CodableBatchDataSource, DataFileReference, ColumnFeatureMappable):
-
+class AwsS3ParquetDataSource(
+    CodableBatchDataSource, DataFileReference, ColumnFeatureMappable
+):
     config: AwsS3Config
     path: str
     mapping_keys: dict[str, str]
 
     parquet_config: ParquetConfig
-    type_name: str = 'aws_s3_parquet'
+    type_name: str = "aws_s3_parquet"
 
     def job_group_key(self) -> str:
-        return f'{self.type_name}/{self.path}'
+        return f"{self.type_name}/{self.path}"
 
     @property
     def storage(self) -> Storage:
@@ -248,7 +298,7 @@ class AwsS3ParquetDataSource(CodableBatchDataSource, DataFileReference, ColumnFe
 
     @property
     def url(self) -> str:
-        return f'{self.config.url}{self.path}'
+        return f"{self.config.url}{self.path}"
 
     async def read_pandas(self) -> pd.DataFrame:
         try:
@@ -256,9 +306,9 @@ class AwsS3ParquetDataSource(CodableBatchDataSource, DataFileReference, ColumnFe
             buffer = BytesIO(data)
             return pd.read_parquet(buffer)
         except FileNotFoundError:
-            raise UnableToFindFileException()
+            raise UnableToFindFileException(self.path)
         except HTTPStatusError:
-            raise UnableToFindFileException()
+            raise UnableToFindFileException(self.path)
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         try:
@@ -266,13 +316,17 @@ class AwsS3ParquetDataSource(CodableBatchDataSource, DataFileReference, ColumnFe
             buffer = BytesIO(data)
             return pl.read_parquet(buffer).lazy()
         except FileNotFoundError:
-            raise UnableToFindFileException()
+            raise UnableToFindFileException(self.path)
         except HTTPStatusError:
-            raise UnableToFindFileException()
+            raise UnableToFindFileException(self.path)
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
         buffer = BytesIO()
-        df.to_parquet(buffer, compression=self.parquet_config.compression, engine=self.parquet_config.engine)
+        df.to_parquet(
+            buffer,
+            compression=self.parquet_config.compression,
+            engine=self.parquet_config.engine,
+        )
         buffer.seek(0)
         await self.storage.write(self.path, buffer.read())
 

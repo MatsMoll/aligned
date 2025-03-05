@@ -8,15 +8,21 @@ from dataclasses import dataclass, field
 
 from aligned.data_source.batch_data_source import CodableBatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
-from aligned.request.retrival_request import FeatureRequest, RetrivalRequest
+from aligned.request.retrieval_request import FeatureRequest, RetrievalRequest
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import AggregatedFeature, DerivedFeature
 from aligned.schemas.event_trigger import EventTrigger
-from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation, FeatureType, StaticFeatureTags
+from aligned.schemas.feature import (
+    EventTimestamp,
+    Feature,
+    FeatureLocation,
+    FeatureType,
+    StaticFeatureTags,
+)
 from aligned.schemas.vector_storage import VectorIndex
 
 if TYPE_CHECKING:
-    from aligned.retrival_job import RetrivalJob
+    from aligned.retrieval_job import RetrievalJob
 
 
 @dataclass
@@ -55,7 +61,7 @@ class CompiledFeatureView(Codable):
     event_triggers: set[EventTrigger] | None = field(default=None)
 
     contacts: list[str] | None = field(default=None)
-    indexes: list[VectorIndex] | None = field(default=None)
+    indexes: list[VectorIndex] = field(default_factory=list)
 
     def __pre_serialize__(self) -> CompiledFeatureView:
         assert isinstance(self.name, str)
@@ -111,7 +117,7 @@ class CompiledFeatureView(Codable):
             FeatureLocation.feature_view(self.name),
             {feature.name for feature in self.full_schema},
             needed_requests=[
-                RetrivalRequest(
+                RetrievalRequest(
                     name=self.name,
                     location=FeatureLocation.feature_view(self.name),
                     entities=self.entities,
@@ -125,8 +131,8 @@ class CompiledFeatureView(Codable):
         )
 
     @property
-    def retrival_request(self) -> RetrivalRequest:
-        return RetrivalRequest(
+    def retrieval_request(self) -> RetrievalRequest:
+        return RetrievalRequest(
             name=self.name,
             location=FeatureLocation.feature_view(self.name),
             entities=self.entities,
@@ -150,7 +156,7 @@ class CompiledFeatureView(Codable):
     def schema_hash(self) -> bytes:
         from hashlib import md5
 
-        schema_string = ''
+        schema_string = ""
 
         schema_features = self.features.union(self.entities)
         if self.event_timestamp:
@@ -163,15 +169,22 @@ class CompiledFeatureView(Codable):
         return md5(schema_string.encode(), usedforsecurity=False).digest()
 
     def request_for(self, feature_names: set[str]) -> FeatureRequest:
-
-        features = {feature for feature in self.features if feature.name in feature_names}.union(
-            self.entities
-        )
-        derived_features = {feature for feature in self.derived_features if feature.name in feature_names}
-        aggregated_features = {
-            feature for feature in self.aggregated_features if feature.name in feature_names
+        features = {
+            feature for feature in self.features if feature.name in feature_names
+        }.union(self.entities)
+        derived_features = {
+            feature
+            for feature in self.derived_features
+            if feature.name in feature_names
         }
-        derived_aggregated_feautres = {feature.derived_feature for feature in self.aggregated_features}
+        aggregated_features = {
+            feature
+            for feature in self.aggregated_features
+            if feature.name in feature_names
+        }
+        derived_aggregated_feautres = {
+            feature.derived_feature for feature in self.aggregated_features
+        }
 
         if self.event_timestamp and self.event_timestamp.name in feature_names:
             features.add(self.event_timestamp.as_feature())
@@ -188,7 +201,9 @@ class CompiledFeatureView(Codable):
                     continue
 
                 dep_feature = [
-                    feat for feat in self.features.union(self.entities) if feat.name == dep_ref.name
+                    feat
+                    for feat in self.features.union(self.entities)
+                    if feat.name == dep_ref.name
                 ]
                 if len(dep_feature) == 1:
                     core_features.add(dep_feature[0])
@@ -205,7 +220,9 @@ class CompiledFeatureView(Codable):
                 dep_feature = dep_features[0]
                 if dep_feature in derived_aggregated_feautres:
                     agg_feat = [
-                        feat for feat in self.aggregated_features if feat.derived_feature == dep_feature
+                        feat
+                        for feat in self.aggregated_features
+                        if feat.derived_feature == dep_feature
                     ][0]
                     aggregated_features.add(agg_feat)
                 else:
@@ -225,7 +242,9 @@ class CompiledFeatureView(Codable):
             aggregated_features.update(aggregated)
 
         for dep_feature in aggregated_features.copy():
-            core, intermediate, aggregated = dependent_features_for(dep_feature)
+            core, intermediate, aggregated = dependent_features_for(
+                dep_feature.derived_feature
+            )
             features.update(core)
             derived_features.update(intermediate)
             aggregated_features.update(aggregated)
@@ -234,7 +253,7 @@ class CompiledFeatureView(Codable):
             FeatureLocation.feature_view(self.name),
             feature_names,
             needed_requests=[
-                RetrivalRequest(
+                RetrievalRequest(
                     name=self.name,
                     location=FeatureLocation.feature_view(self.name),
                     entities=self.entities,
@@ -251,16 +270,18 @@ class CompiledFeatureView(Codable):
         return hash(self.name)
 
     def __str__(self) -> str:
-        entites = '\n'.join([str(entity) for entity in self.entities])
-        input_features = '\n'.join([str(features) for features in self.features])
-        transformed_features = '\n'.join([str(features) for features in self.derived_features])
+        entities = "\n".join([str(entity) for entity in self.entities])
+        input_features = "\n".join([str(features) for features in self.features])
+        transformed_features = "\n".join(
+            [str(features) for features in self.derived_features]
+        )
         return f"""
 {self.name}
 Description: {self.description}
 Tags: {self.tags}
 
 Entities:
-{entites}
+{entities}
 
 Event Timestamp:
 {self.event_timestamp}
@@ -275,12 +296,11 @@ Transformed features:
 
 @dataclass
 class FeatureViewReferenceSource(CodableBatchDataSource):
-
     view: CompiledFeatureView
     location: FeatureLocation
     renames: dict[str, str] = field(default_factory=dict)
 
-    type_name = 'view_ref'
+    type_name = "view_ref"
 
     def job_group_key(self) -> str:
         return FeatureLocation.feature_view(self.view.name).identifier
@@ -294,8 +314,7 @@ class FeatureViewReferenceSource(CodableBatchDataSource):
 
         return await self.view.source.schema()
 
-    def sub_request(self, request: RetrivalRequest) -> RetrivalRequest:
-
+    def sub_request(self, request: RetrievalRequest) -> RetrievalRequest:
         sub_references: set[str] = request.entity_names.union(request.feature_names)
         if request.event_timestamp:
             sub_references.add(request.event_timestamp.name)
@@ -315,24 +334,28 @@ class FeatureViewReferenceSource(CodableBatchDataSource):
         sub_request = self.view.request_for(sub_references)
 
         if len(sub_request.needed_requests) != 1:
-            raise ValueError('Got mulitple requests for one view. Something odd happend.')
+            raise ValueError(
+                "Got multiple requests for one view. Something odd happened."
+            )
 
         return sub_request.needed_requests[0]
 
     @classmethod
     def multi_source_features_for(  # type: ignore
         cls: type[FeatureViewReferenceSource],
-        facts: RetrivalJob,
-        requests: list[tuple[FeatureViewReferenceSource, RetrivalRequest]],
-    ) -> RetrivalJob:
+        facts: RetrievalJob,
+        requests: list[tuple[FeatureViewReferenceSource, RetrievalRequest]],
+    ) -> RetrievalJob:
         from aligned.local.job import FileFactualJob
 
         sources = {
-            source.job_group_key() for source, _ in requests if isinstance(source, CodableBatchDataSource)
+            source.job_group_key()
+            for source, _ in requests
+            if isinstance(source, CodableBatchDataSource)
         }
         if len(sources) != 1:
             raise NotImplementedError(
-                f'Type: {cls} have not implemented how to load fact data with multiple sources.'
+                f"Type: {cls} have not implemented how to load fact data with multiple sources."
             )
 
         source, request = requests[0]
@@ -352,9 +375,11 @@ class FeatureViewReferenceSource(CodableBatchDataSource):
         else:
             available_features = sub_job.derive_features([request])
 
-        return FileFactualJob(available_features, [request], facts).rename(source.renames)
+        return FileFactualJob(available_features, [request], facts).rename(
+            source.renames
+        )
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+    def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
         sub_source = self.view.materialized_source or self.view.source
 
         sub_req = self.sub_request(request)
@@ -364,23 +389,33 @@ class FeatureViewReferenceSource(CodableBatchDataSource):
         if request.aggregated_features:
             job = core_job.aggregate(request)
         else:
-            job = core_job.derive_features().with_request([request]).fill_missing_columns()
+            job = (
+                core_job.derive_features()
+                .with_request([request])
+                .fill_missing_columns()
+            )
 
         return job.derive_features([request]).rename(self.renames)
 
     def all_between_dates(
-        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
-    ) -> RetrivalJob:
+        self, request: RetrievalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrievalJob:
         sub_source = self.view.materialized_source or self.view.source
 
         sub_req = self.sub_request(request)
 
-        core_job = sub_source.all_between_dates(sub_req, start_date, end_date).fill_missing_columns()
+        core_job = sub_source.all_between_dates(
+            sub_req, start_date, end_date
+        ).fill_missing_columns()
 
         if request.aggregated_features:
             job = core_job.aggregate(request)
         else:
-            job = core_job.derive_features().with_request([request]).fill_missing_columns()
+            job = (
+                core_job.derive_features()
+                .with_request([request])
+                .fill_missing_columns()
+            )
         return job.derive_features([request]).rename(self.renames)
 
     def depends_on(self) -> set[FeatureLocation]:

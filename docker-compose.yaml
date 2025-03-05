@@ -1,4 +1,3 @@
-version: '3'
 services:
   psql_app_db:
     image: postgres:latest
@@ -16,13 +15,22 @@ services:
     ports:
       - 6379:6379
 
+  mlflow-tracker:
+    image: ghcr.io/mlflow/mlflow:v2.15.0
+    command: "mlflow server --backend-store-uri file:///app/mlflow-server/experiments --artifacts-destination file:///app/mlflow-server/artifacts --host 0.0.0.0 --port 8000"
+    volumes:
+      - ./mlflow:/app/mlflow-server
+
   testing:
     build:
       context: .
       dockerfile: Dockerfile.test
-    command: "pytest aligned/sources/tests/test_psql.py"
+    command: "pytest"
     environment:
       - PSQL_DATABASE_TEST=postgresql://postgres:postgres@psql_app_db:5432/aligned-test
+      - MLFLOW_TRACKING_URI=http://mlflow-tracker:8000
+      - MLFLOW_REGISTRY_URI=http://mlflow-tracker:8000
     volumes:
-      - ./pyproject.toml:/opt/app/pyproject.toml
-      - ./:/opt/app/
+      - ${PWD}:/opt/app
+    depends_on:
+      - mlflow-tracker

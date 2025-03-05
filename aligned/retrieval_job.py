@@ -1,6 +1,7 @@
 from __future__ import annotations
 from io import StringIO
-from aligned.schemas.date_formatter import DateFormatter
+from aligned.config_value import PathResolver
+from aligned.schemas.date_formatter import DateFormatter, TimeUnit
 
 from pytz import timezone
 import asyncio
@@ -10,17 +11,27 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Callable, Collection, Literal, Union, TypeVar, Coroutine, Any
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Collection,
+    Literal,
+    Union,
+    TypeVar,
+    Coroutine,
+    Any,
+)
 
 import polars as pl
 from aligned.lazy_imports import pandas as pd
 
-from polars.type_aliases import TimeUnit
-from prometheus_client import Histogram
-
 from aligned.exceptions import UnableToFindFileException
 
-from aligned.request.retrival_request import FeatureRequest, RequestResult, RetrivalRequest
+from aligned.request.retrieval_request import (
+    FeatureRequest,
+    RequestResult,
+    RetrievalRequest,
+)
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureType
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.vector_storage import VectorIndex
@@ -32,6 +43,7 @@ if TYPE_CHECKING:
     from aligned.sources.local import Directory
     from aligned.schemas.folder import DatasetMetadata, DatasetStore
     from aligned.feature_source import WritableFeatureSource
+    from aligned.exposed_model.interface import ExposedModel
 
     from aligned.schemas.derivied_feature import AggregatedFeature, AggregateOver
     from aligned.schemas.model import EventTrigger, Model
@@ -43,12 +55,15 @@ logger = logging.getLogger(__name__)
 
 
 def split(
-    data: pd.DataFrame, start_ratio: float, end_ratio: float, event_timestamp_column: str | None = None
+    data: pd.DataFrame,
+    start_ratio: float,
+    end_ratio: float,
+    event_timestamp_column: str | None = None,
 ) -> pd.Index:
     index = pd.Index([], dtype=data.index.dtype)
     if event_timestamp_column:
         column = data[event_timestamp_column]
-        if column.dtype != 'datetime64[ns]':
+        if column.dtype != "datetime64[ns]":
             column = pd.to_datetime(data[event_timestamp_column])
         data = data.iloc[column.sort_values().index]  # type: ignore
 
@@ -64,23 +79,50 @@ def split(
 
 
 def subset_polars(
-    data: pl.DataFrame, start_ratio: float, end_ratio: float, event_timestamp_column: str | None = None
+    data: pl.DataFrame,
+    start_ratio: float,
+    end_ratio: float,
+    event_timestamp_column: str | None = None,
+    strategies_on: list[str] | None = None,
 ) -> pl.DataFrame:
-
     if event_timestamp_column:
         data = data.sort(event_timestamp_column)
 
-    group_size = data.height
-    start_index = round(group_size * start_ratio)
-    end_index = round(group_size * end_ratio)
+    if strategies_on is None:
+        strategies_on = []
 
-    if end_index >= group_size:
-        return data[start_index:]
+    if not strategies_on:
+        datasets: list[pl.DataFrame] = [data]
     else:
-        return data[start_index:end_index]
+        datasets: list[pl.DataFrame] = []
+
+        for cats in data.select(strategies_on).unique(strategies_on).rows(named=True):
+            datasets.append(
+                data.filter(*[pl.col(key) == val for key, val in cats.items()])
+            )
+
+    ret_dataset: pl.DataFrame | None = None
+
+    for dataset in datasets:
+        group_size = dataset.height
+        start_index = round(group_size * start_ratio)
+        end_index = round(group_size * end_ratio)
+
+        if end_index >= group_size:
+            subset = dataset[start_index:]
+        else:
+            subset = dataset[start_index:end_index]
+
+        if ret_dataset is None:
+            ret_dataset = subset
+        else:
+            ret_dataset = ret_dataset.vstack(subset)
+
+    assert ret_dataset is not None
+    return ret_dataset
 
 
-def fraction_from_job(job: RetrivalJob) -> float | None:
+def fraction_from_job(job: RetrievalJob) -> float | None:
     if isinstance(job, SubsetJob):
         return job.fraction
     elif isinstance(job, InMemorySplitCacheJob):
@@ -90,9 +132,8 @@ def fraction_from_job(job: RetrivalJob) -> float | None:
 
 @dataclass
 class TrainTestJob:
-
-    train_job: RetrivalJob
-    test_job: RetrivalJob
+    train_job: RetrievalJob
+    test_job: RetrievalJob
 
     target_columns: set[str]
 
@@ -103,6 +144,14 @@ class TrainTestJob:
     @property
     def test(self) -> SupervisedJob:
         return SupervisedJob(self.test_job, self.target_columns)
+
+    @property
+    def input_features(self) -> list[Feature]:
+        return [
+            feat
+            for feat in self.train_job.request_result.features
+            if feat.name not in self.target_columns
+        ]
 
     async def store_dataset_at_directory(
         self,
@@ -118,16 +167,16 @@ class TrainTestJob:
         if not metadata:
             metadata = DatasetMetadata(
                 id=id or str(uuid4()),
-                name='train_test - ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                description='A train and test dataset.',
+                name="train_test - " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                description="A train and test dataset.",
                 tags=tags,
             )
 
         run_dir = directory.sub_directory(metadata.id)
         return await self.store_dataset(
             dataset_store=dataset_store,
-            train_source=run_dir.parquet_at('train.parquet'),  # type: ignore
-            test_source=run_dir.parquet_at('test.parquet'),  # type: ignore
+            train_source=run_dir.parquet_at("train.parquet"),  # type: ignore
+            test_source=run_dir.parquet_at("test.parquet"),  # type: ignore
             metadata=metadata,
         )
 
@@ -155,7 +204,7 @@ class TrainTestJob:
         elif isinstance(dataset_store, DatasetStore):
             data_store = dataset_store
         else:
-            raise ValueError(f'Unknown dataset store type: {type(dataset_store)}')
+            raise ValueError(f"Unknown dataset store type: {type(dataset_store)}")
 
         if train_size is None:
             train_size = fraction_from_job(self.train_job)
@@ -164,10 +213,10 @@ class TrainTestJob:
             test_size = fraction_from_job(self.test_job)
 
         if not isinstance(test_source, CodableBatchDataSource):
-            raise ValueError('test_source should be a BatchDataSource')
+            raise ValueError("test_source should be a BatchDataSource")
 
         if not isinstance(train_source, CodableBatchDataSource):
-            raise ValueError('train_source should be a BatchDataSource')
+            raise ValueError("train_source should be a BatchDataSource")
 
         test_metadata = TrainDatasetMetadata(
             id=metadata.id,
@@ -206,10 +255,9 @@ class TrainTestJob:
 
 @dataclass
 class TrainTestValidateJob:
-
-    train_job: RetrivalJob
-    test_job: RetrivalJob
-    validate_job: RetrivalJob
+    train_job: RetrievalJob
+    test_job: RetrievalJob
+    validate_job: RetrievalJob
 
     target_columns: set[str]
 
@@ -217,15 +265,28 @@ class TrainTestValidateJob:
 
     @property
     def train(self) -> SupervisedJob:
-        return SupervisedJob(self.train_job, self.target_columns, self.should_filter_out_null_targets)
+        return SupervisedJob(
+            self.train_job, self.target_columns, self.should_filter_out_null_targets
+        )
 
     @property
     def test(self) -> SupervisedJob:
-        return SupervisedJob(self.test_job, self.target_columns, self.should_filter_out_null_targets)
+        return SupervisedJob(
+            self.test_job, self.target_columns, self.should_filter_out_null_targets
+        )
 
     @property
     def validate(self) -> SupervisedJob:
-        return SupervisedJob(self.validate_job, self.target_columns, self.should_filter_out_null_targets)
+        return SupervisedJob(
+            self.validate_job, self.target_columns, self.should_filter_out_null_targets
+        )
+
+    def input_features(self) -> list[Feature]:
+        return [
+            feat
+            for feat in self.train_job.request_result.features
+            if feat.name not in self.target_columns
+        ]
 
     async def store_dataset_at_directory(
         self,
@@ -241,17 +302,18 @@ class TrainTestValidateJob:
         if not metadata:
             metadata = DatasetMetadata(
                 id=id or str(uuid4()),
-                name='train_test_validate - ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                description='A train, test and validation dataset.',
+                name="train_test_validate - "
+                + datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                description="A train, test and validation dataset.",
                 tags=tags,
             )
 
         run_dir = directory.sub_directory(metadata.id)
         return await self.store_dataset(
             dataset_store=dataset_store,
-            train_source=run_dir.parquet_at('train.parquet'),  # type: ignore
-            test_source=run_dir.parquet_at('test.parquet'),  # type: ignore
-            validate_source=run_dir.parquet_at('validate.parquet'),  # type: ignore
+            train_source=run_dir.parquet_at("train.parquet"),  # type: ignore
+            test_source=run_dir.parquet_at("test.parquet"),  # type: ignore
+            validate_source=run_dir.parquet_at("validate.parquet"),  # type: ignore
             metadata=metadata,
         )
 
@@ -279,8 +341,9 @@ class TrainTestValidateJob:
         if metadata is None:
             metadata = DatasetMetadata(
                 id=str(uuid4()),
-                name='train_test_validate - ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                description='A train, test and validation dataset.',
+                name="train_test_validate - "
+                + datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                description="A train, test and validation dataset.",
             )
 
         if isinstance(dataset_store, StorageFileSource):
@@ -288,7 +351,7 @@ class TrainTestValidateJob:
         elif isinstance(dataset_store, DatasetStore):
             data_store = dataset_store
         else:
-            raise ValueError(f'Unknown dataset store type: {type(dataset_store)}')
+            raise ValueError(f"Unknown dataset store type: {type(dataset_store)}")
 
         request_result = self.train_job.request_result
 
@@ -302,13 +365,13 @@ class TrainTestValidateJob:
             validation_size = fraction_from_job(self.validate_job)
 
         if not isinstance(test_source, CodableBatchDataSource):
-            raise ValueError('test_source should be a BatchDataSource')
+            raise ValueError("test_source should be a BatchDataSource")
 
         if not isinstance(train_source, CodableBatchDataSource):
-            raise ValueError('train_source should be a BatchDataSource')
+            raise ValueError("train_source should be a BatchDataSource")
 
         if not isinstance(validate_source, CodableBatchDataSource):
-            raise ValueError('validation_source should be a BatchDataSource')
+            raise ValueError("validation_source should be a BatchDataSource")
 
         test_metadata = TrainDatasetMetadata(
             id=metadata.id,
@@ -340,7 +403,9 @@ class TrainTestValidateJob:
             .to_lazy_polars()
         )
         _ = await (
-            self.validate_job.cached_at(validate_source).on_load(update_metadata).cached_at(validate_source)
+            self.validate_job.cached_at(validate_source)
+            .on_load(update_metadata)
+            .cached_at(validate_source)
         ).to_lazy_polars()
 
         return TrainTestValidateJob(
@@ -356,8 +421,7 @@ SplitterCallable = Callable[[pl.DataFrame], tuple[pl.DataFrame, pl.DataFrame]]
 
 @dataclass
 class SupervisedJob:
-
-    job: RetrivalJob
+    job: RetrievalJob
     target_columns: set[str]
     should_filter_out_null_targets: bool = True
 
@@ -374,7 +438,11 @@ class SupervisedJob:
         }
         entities = {feature.name for feature in self.job.request_result.entities}
         return SupervisedDataSet(
-            data, entities, features, self.target_columns, self.job.request_result.event_timestamp
+            data,
+            entities,
+            features,
+            self.target_columns,
+            self.job.request_result.event_timestamp,
         )
 
     async def to_polars(self) -> SupervisedDataSet[pl.DataFrame]:
@@ -400,7 +468,11 @@ class SupervisedJob:
         ]
         entities = [feature.name for feature in self.job.request_result.entities]
         return SupervisedDataSet(
-            data, set(entities), set(features), self.target_columns, self.job.request_result.event_timestamp
+            data,
+            set(entities),
+            set(features),
+            self.target_columns,
+            self.job.request_result.event_timestamp,
         )
 
     def should_filter_null_targets(self, should_filter: bool) -> SupervisedJob:
@@ -411,13 +483,30 @@ class SupervisedJob:
     def request_result(self) -> RequestResult:
         return self.job.request_result
 
+    @property
+    def input_features(self) -> list[Feature]:
+        return [
+            feat
+            for feat in self.job.request_result.features
+            if feat.name not in self.target_columns
+        ]
+
     def train_test(
-        self, train_size: float, splitter_factory: Callable[[SplitConfig], SplitterCallable] | None = None
+        self,
+        train_size: float,
+        splitter_factory: Callable[[SplitConfig], SplitterCallable] | None = None,
     ) -> TrainTestJob:
+        if len(self.target_columns) == 1:
+            return self.job.train_test(
+                train_size=train_size,
+                target_column=next(iter(self.target_columns)),
+                splitter_factory=splitter_factory,
+            )
 
         cached_job = InMemoryCacheJob(self.job)
 
-        event_timestamp = self.job.request_result.event_timestamp
+        result = self.job.request_result
+        event_timestamp = result.event_timestamp
 
         train_config = SplitConfig(
             left_size=train_size,
@@ -429,14 +518,26 @@ class SupervisedJob:
         if splitter_factory:
             train_splitter = splitter_factory(train_config)  # type: ignore
         else:
+            strategies_on = [
+                feat.name
+                for feat in result.features.union(result.entities)
+                if feat.name in self.target_columns
+                and feat.dtype.is_categorical_representable
+            ]
 
             def train_splitter(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
                 return (
-                    subset_polars(df, 0, train_config.left_size, event_timestamp),
-                    subset_polars(df, train_config.left_size, 1, event_timestamp),
+                    subset_polars(
+                        df, 0, train_config.left_size, event_timestamp, strategies_on
+                    ),
+                    subset_polars(
+                        df, train_config.left_size, 1, event_timestamp, strategies_on
+                    ),
                 )
 
-        train_job, test_job = cached_job.split(train_splitter, (train_size, 1 - train_size))
+        train_job, test_job = cached_job.split(
+            train_splitter, (train_size, 1 - train_size)
+        )
         return TrainTestJob(
             train_job=train_job,
             test_job=test_job,
@@ -449,12 +550,23 @@ class SupervisedJob:
         validate_size: float,
         splitter_factory: Callable[[SplitConfig], SplitterCallable] | None = None,
     ) -> TrainTestValidateJob:
+        if len(self.target_columns) == 1:
+            return self.job.train_test_validate(
+                train_size=train_size,
+                validate_size=validate_size,
+                target_column=next(iter(self.target_columns)),
+                splitter_factory=splitter_factory,
+                should_filter_out_null_targets=self.should_filter_out_null_targets,
+            )
 
         job_to_cache = self.job
         if self.should_filter_out_null_targets:
-            job_to_cache = self.job.polars_method(lambda df: df.drop_nulls(self.target_columns))
+            job_to_cache = self.job.polars_method(
+                lambda df: df.drop_nulls(self.target_columns)
+            )
 
-        event_timestamp = self.job.request_result.event_timestamp
+        result = self.job.request_result
+        event_timestamp = result.event_timestamp
 
         leftover_size = 1 - train_size
 
@@ -475,20 +587,38 @@ class SupervisedJob:
             train_splitter = splitter_factory(train_config)  # type: ignore
             validate_splitter = splitter_factory(test_config)  # type: ignore
         else:
+            strategies_on = [
+                feat.name
+                for feat in result.features.union(result.entities)
+                if feat.name in self.target_columns
+                and feat.dtype.is_categorical_representable
+            ]
 
             def train_splitter(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
                 return (
-                    subset_polars(df, 0, train_config.left_size, event_timestamp),
-                    subset_polars(df, train_config.left_size, 1, event_timestamp),
+                    subset_polars(
+                        df, 0, train_config.left_size, event_timestamp, strategies_on
+                    ),
+                    subset_polars(
+                        df, train_config.left_size, 1, event_timestamp, strategies_on
+                    ),
                 )
 
-            def validate_splitter(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
+            def validate_splitter(
+                df: pl.DataFrame,
+            ) -> tuple[pl.DataFrame, pl.DataFrame]:
                 return (
-                    subset_polars(df, 0, test_config.left_size, event_timestamp),
-                    subset_polars(df, test_config.left_size, 1, event_timestamp),
+                    subset_polars(
+                        df, 0, test_config.left_size, event_timestamp, strategies_on
+                    ),
+                    subset_polars(
+                        df, test_config.left_size, 1, event_timestamp, strategies_on
+                    ),
                 )
 
-        train_job, rem_job = job_to_cache.split(train_splitter, (train_size, 1 - train_size))
+        train_job, rem_job = job_to_cache.split(
+            train_splitter, (train_size, 1 - train_size)
+        )
         test_job, validate_job = rem_job.split(
             validate_splitter, (1 - train_size - validate_size, validate_size)
         )
@@ -522,7 +652,9 @@ class SupervisedJob:
             self.target_columns,
         )
 
-    def log_each_job(self, logger_func: Callable[[object], None] | None = None) -> SupervisedJob:
+    def log_each_job(
+        self, logger_func: Callable[[object], None] | None = None
+    ) -> SupervisedJob:
         return SupervisedJob(
             self.job.log_each_job(logger_func),
             self.target_columns,
@@ -535,15 +667,15 @@ class SupervisedJob:
         )
 
     def describe(self) -> str:
-        return f'{self.job.describe()} with target columns {self.target_columns}'
+        return f"{self.job.describe()} with target columns {self.target_columns}"
 
 
-ConvertableToRetrivalJob = Union[
-    list[dict[str, Any]], dict[str, list], 'pd.DataFrame', pl.DataFrame, pl.LazyFrame
+ConvertableToRetrievalJob = Union[
+    list[dict[str, Any]], dict[str, list], "pd.DataFrame", pl.DataFrame, pl.LazyFrame
 ]
 
 
-class RetrivalJob(ABC):
+class RetrievalJob(ABC):
     @property
     def loaded_columns(self) -> list[str]:
         if isinstance(self, ModificationJob):
@@ -554,63 +686,66 @@ class RetrivalJob(ABC):
     def request_result(self) -> RequestResult:
         if isinstance(self, ModificationJob):
             return self.job.request_result
-        raise NotImplementedError(f'For {type(self)}')
+        raise NotImplementedError(f"For {type(self)}")
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
+    def retrieval_requests(self) -> list[RetrievalRequest]:
         if isinstance(self, ModificationJob):
-            return self.job.retrival_requests
-        raise NotImplementedError(f'For {type(self)}')
+            return self.job.retrieval_requests
+        raise NotImplementedError(f"For {type(self)}")
 
     @abstractmethod
     async def to_pandas(self) -> pd.DataFrame:
-        raise NotImplementedError(f'For {type(self)}')
+        raise NotImplementedError(f"For {type(self)}")
 
     @abstractmethod
     async def to_lazy_polars(self) -> pl.LazyFrame:
-        raise NotImplementedError(f'For {type(self)}')
+        raise NotImplementedError(f"For {type(self)}")
 
     async def to_polars(self) -> pl.DataFrame:
         return await (await self.to_lazy_polars()).collect_async()
 
-    def inject_store(self, store: ContractStore) -> RetrivalJob:
+    def inject_store(self, store: ContractStore) -> RetrievalJob:
         if isinstance(self, ModificationJob):
             return self.copy_with(self.job.inject_store(store))
         return self
 
     def describe(self) -> str:
         if isinstance(self, ModificationJob):
-            return f'{self.job.describe()} -> {self.__class__.__name__}'
-        raise NotImplementedError(f'Describe not implemented for {self.__class__.__name__}')
+            return f"{self.job.describe()} -> {self.__class__.__name__}"
+        raise NotImplementedError(
+            f"Describe not implemented for {self.__class__.__name__}"
+        )
 
-    def remove_derived_features(self) -> RetrivalJob:
+    def remove_derived_features(self) -> RetrievalJob:
         return self.without_derived_features()
 
-    def without_derived_features(self) -> RetrivalJob:
+    def without_derived_features(self) -> RetrievalJob:
         if isinstance(self, ModificationJob):
             return self.copy_with(self.job.remove_derived_features())
         return self
 
-    def log_each_job(self, logger_func: Callable[[object], None] | None = None) -> RetrivalJob:
+    def log_each_job(
+        self, logger_func: Callable[[object], None] | None = None
+    ) -> RetrievalJob:
         if isinstance(self, ModificationJob):
             return LogJob(self.copy_with(self.job.log_each_job(logger_func)))
         return LogJob(self, logger_func or logger.debug)
 
-    def unpack_embeddings(self) -> RetrivalJob:
+    def unpack_embeddings(self) -> RetrievalJob:
         if isinstance(self, ModificationJob):
             return self.copy_with(self.job.unpack_embeddings())
         return self
 
     def join_asof(
         self,
-        job: RetrivalJob,
+        job: RetrievalJob,
         left_event_timestamp: str | None = None,
         right_event_timestamp: str | None = None,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
-        timestamp_unit: TimeUnit = 'us',
-    ) -> RetrivalJob:
-
+        timestamp_unit: TimeUnit = "us",
+    ) -> RetrievalJob:
         if isinstance(left_on, str):
             left_on = [left_on]
 
@@ -623,9 +758,9 @@ class RetrivalJob(ABC):
             right_event_timestamp = job.request_result.event_timestamp
 
         if not left_event_timestamp:
-            raise ValueError('Missing an event_timestamp for left request.')
+            raise ValueError("Missing an event_timestamp for left request.")
         if not right_event_timestamp:
-            raise ValueError('Missing an event_timestamp for right request.')
+            raise ValueError("Missing an event_timestamp for right request.")
 
         return JoinAsofJob(
             left_job=self,
@@ -637,7 +772,9 @@ class RetrivalJob(ABC):
             timestamp_unit=timestamp_unit,
         )
 
-    def return_invalid(self, should_return_validation: bool | None = None) -> RetrivalJob:
+    def return_invalid(
+        self, should_return_validation: bool | None = None
+    ) -> RetrievalJob:
         if should_return_validation is None:
             should_return_validation = False
         return ReturnInvalidJob(self, should_return_validation)
@@ -646,31 +783,37 @@ class RetrivalJob(ABC):
         self,
         splitter: Callable[[pl.DataFrame], tuple[pl.DataFrame, pl.DataFrame]],
         dataset_sizes: tuple[float, float],
-    ) -> tuple[RetrivalJob, RetrivalJob]:
-
+    ) -> tuple[RetrievalJob, RetrievalJob]:
         job = InMemorySplitCacheJob(self, splitter, dataset_sizes, 0)
         return (job, job.with_dataset_index(1))
 
     def join(
         self,
-        job: RetrivalJob,
-        method: Literal['inner', 'left', 'outer'],
+        job: RetrievalJob,
+        method: Literal["inner", "left", "outer"],
         left_on: str | list[str],
         right_on: str | list[str],
-    ) -> RetrivalJob:
-
+    ) -> RetrievalJob:
         if isinstance(left_on, str):
             left_on = [left_on]
 
         if isinstance(right_on, str):
             right_on = [right_on]
 
-        return JoinJobs(method=method, left_job=self, right_job=job, left_on=left_on, right_on=right_on)
+        return JoinJobs(
+            method=method,
+            left_job=self,
+            right_job=job,
+            left_on=left_on,
+            right_on=right_on,
+        )
 
-    def on_load(self, on_load: Callable[[], Coroutine[Any, Any, None]]) -> RetrivalJob:
+    def on_load(self, on_load: Callable[[], Coroutine[Any, Any, None]]) -> RetrievalJob:
         return OnLoadJob(self, on_load)
 
-    def filter(self, condition: str | Feature | DerivedFeature | pl.Expr) -> RetrivalJob:
+    def filter(
+        self, condition: str | Feature | DerivedFeature | pl.Expr
+    ) -> RetrievalJob:
         """
         Filters based on a condition referencing either a feature,
         a feature name, or an polars expression to filter on.
@@ -679,56 +822,165 @@ class RetrivalJob(ABC):
             return self.copy_with(self.job.filter(condition))
         return FilteredJob(self, condition)
 
-    def chuncked(self, size: int) -> DataLoaderJob:
+    def chunked(self, size: int) -> DataLoaderJob:
         return DataLoaderJob(self, size)
 
-    def with_subfeatures(self) -> RetrivalJob:
+    def with_subfeatures(self) -> RetrievalJob:
         if isinstance(self, ModificationJob):
             return self.copy_with(self.job.with_subfeatures())
         return self
 
-    def cache_raw_data(self, location: DataFileReference | str) -> RetrivalJob:
+    def cache_raw_data(self, location: DataFileReference | str) -> RetrievalJob:
         if isinstance(self, ModificationJob):
             return self.copy_with(self.job.cache_raw_data(location))
         return self.cached_at(location)
 
-    def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
+    def cached_at(self, location: DataFileReference | str) -> RetrievalJob:
         if isinstance(location, str):
             from aligned.sources.local import ParquetFileSource
 
-            return FileCachedJob(ParquetFileSource(location), self).derive_features()
+            return FileCachedJob(
+                ParquetFileSource(PathResolver.from_value(location)), self
+            ).derive_features()
         else:
             return FileCachedJob(location, self).derive_features()
 
-    def train_test(self, train_size: float, target_column: str) -> TrainTestJob:
-        cached = InMemoryCacheJob(self)
+    def train_test(
+        self,
+        train_size: float,
+        target_column: str,
+        splitter_factory: Callable[[SplitConfig], SplitterCallable] | None = None,
+    ) -> TrainTestJob:
+        cached_job = InMemoryCacheJob(self)
 
-        event_timestamp = self.request_result.event_timestamp
+        result = self.request_result
+        event_timestamp = result.event_timestamp
 
+        train_config = SplitConfig(
+            left_size=train_size,
+            right_size=1 - train_size,
+            event_timestamp_column=event_timestamp,
+            target_columns=[target_column],
+        )
+
+        if splitter_factory:
+            train_splitter = splitter_factory(train_config)  # type: ignore
+        else:
+            strategies_on = [
+                next(
+                    iter(
+                        feat.name
+                        for feat in result.features.union(result.entities)
+                        if feat.name == target_column
+                        and feat.dtype.is_categorical_representable
+                    )
+                )
+            ]
+
+            def train_splitter(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
+                return (
+                    subset_polars(
+                        df, 0, train_config.left_size, event_timestamp, strategies_on
+                    ),
+                    subset_polars(
+                        df, train_config.left_size, 1, event_timestamp, strategies_on
+                    ),
+                )
+
+        train_job, test_job = cached_job.split(
+            train_splitter, (train_size, 1 - train_size)
+        )
         return TrainTestJob(
-            train_job=SubsetJob(cached, 0, train_size, event_timestamp),
-            test_job=SubsetJob(cached, train_size, 1, event_timestamp),
+            train_job=train_job,
+            test_job=test_job,
             target_columns={target_column},
         )
 
     def train_test_validate(
-        self, train_size: float, validate_size: float, target_column: str
+        self,
+        train_size: float,
+        validate_size: float,
+        target_column: str,
+        splitter_factory: Callable[[SplitConfig], SplitterCallable] | None = None,
+        should_filter_out_null_targets: bool = True,
     ) -> TrainTestValidateJob:
+        job_to_cache = self
+        if should_filter_out_null_targets:
+            job_to_cache = job_to_cache.polars_method(
+                lambda df: df.drop_nulls(target_column)
+            )
 
-        cached = InMemoryCacheJob(self)
+        result = self.request_result
+        event_timestamp = result.event_timestamp
 
-        event_timestamp = self.request_result.event_timestamp
+        leftover_size = 1 - train_size
 
-        validate_ratio_start = train_size + validate_size
-
-        return TrainTestValidateJob(
-            train_job=SubsetJob(cached, 0, train_size, event_timestamp),
-            test_job=SubsetJob(cached, train_size, validate_ratio_start, event_timestamp),
-            validate_job=SubsetJob(cached, validate_ratio_start, 1, event_timestamp),
-            target_columns={target_column},
+        train_config = SplitConfig(
+            left_size=train_size,
+            right_size=leftover_size,
+            event_timestamp_column=event_timestamp,
+            target_columns=[target_column],
+        )
+        test_config = SplitConfig(
+            left_size=(leftover_size - validate_size) / leftover_size,
+            right_size=validate_size / leftover_size,
+            event_timestamp_column=event_timestamp,
+            target_columns=[target_column],
         )
 
-    def drop_invalid(self, validator: Validator | None = None) -> RetrivalJob:
+        if splitter_factory:
+            train_splitter = splitter_factory(train_config)  # type: ignore
+            validate_splitter = splitter_factory(test_config)  # type: ignore
+        else:
+            strategies_on = [
+                next(
+                    iter(
+                        feat.name
+                        for feat in result.features.union(result.entities)
+                        if feat.name == target_column
+                        and feat.dtype.is_categorical_representable
+                    )
+                )
+            ]
+
+            def train_splitter(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
+                return (
+                    subset_polars(
+                        df, 0, train_config.left_size, event_timestamp, strategies_on
+                    ),
+                    subset_polars(
+                        df, train_config.left_size, 1, event_timestamp, strategies_on
+                    ),
+                )
+
+            def validate_splitter(
+                df: pl.DataFrame,
+            ) -> tuple[pl.DataFrame, pl.DataFrame]:
+                return (
+                    subset_polars(
+                        df, 0, test_config.left_size, event_timestamp, strategies_on
+                    ),
+                    subset_polars(
+                        df, test_config.left_size, 1, event_timestamp, strategies_on
+                    ),
+                )
+
+        train_job, rem_job = job_to_cache.split(
+            train_splitter, (train_size, 1 - train_size)
+        )
+        test_job, validate_job = rem_job.split(
+            validate_splitter, (1 - train_size - validate_size, validate_size)
+        )
+
+        return TrainTestValidateJob(
+            train_job=train_job,
+            test_job=test_job,
+            validate_job=validate_job,
+            target_columns={target_column},
+            should_filter_out_null_targets=should_filter_out_null_targets,
+        )
+
+    def drop_invalid(self, validator: Validator | None = None) -> RetrievalJob:
         """
         Drops invalid row based on the defined features.
 
@@ -756,136 +1008,162 @@ class RetrivalJob(ABC):
                 The default uses the `PolarsValidator`
 
         Returns:
-            RetrivalJob: A new retrival job with only valid rows.
+            RetrievalJob: A new retrieval job with only valid rows.
         """
         if isinstance(self, ModificationJob):
             return self.copy_with(self.job.drop_invalid(validator))
         return DropInvalidJob(self, validator or PolarsValidator())
 
-    def monitor_time_used(self, time_metric: Histogram, labels: list[str] | None = None) -> RetrivalJob:
-        return TimeMetricLoggerJob(self, time_metric, labels)
+    def monitor_time_used(self, callback: Callable[[float], None]) -> RetrievalJob:
+        return TimeMetricLoggerJob(self, callback=callback)
 
-    def derive_features(self, requests: list[RetrivalRequest] | None = None) -> RetrivalJob:
-        requests = requests or self.retrival_requests
+    def derive_features(
+        self, requests: list[RetrievalRequest] | None = None
+    ) -> RetrievalJob:
+        requests = requests or self.retrieval_requests
 
         for request in requests:
             if request.derived_features:
                 return DerivedFeatureJob(job=self, requests=requests)
         return self
 
-    def combined_features(self, requests: list[RetrivalRequest] | None = None) -> RetrivalJob:
-        return CombineFactualJob([self], requests or self.retrival_requests)
+    def combined_features(
+        self, requests: list[RetrievalRequest] | None = None
+    ) -> RetrievalJob:
+        return CombineFactualJob([self], requests or self.retrieval_requests)
 
     def ensure_types(
-        self, requests: list[RetrivalRequest] | None = None, date_formatter: DateFormatter | None = None
-    ) -> RetrivalJob:
+        self,
+        requests: list[RetrievalRequest] | None = None,
+        date_formatter: DateFormatter | None = None,
+    ) -> RetrievalJob:
         if not requests:
-            requests = self.retrival_requests
+            requests = self.retrieval_requests
 
         return EnsureTypesJob(
-            job=self, requests=requests, date_formatter=date_formatter or DateFormatter.iso_8601()
+            job=self,
+            requests=requests,
+            date_formatter=date_formatter or DateFormatter.iso_8601(),
         )
 
-    def select(self, include_features: Collection[str]) -> RetrivalJob:
+    def select(self, include_features: Collection[str]) -> RetrievalJob:
         return SelectColumnsJob(list(include_features), self)
 
-    def select_columns(self, include_features: Collection[str]) -> RetrivalJob:
+    def select_columns(self, include_features: Collection[str]) -> RetrievalJob:
         return self.select(include_features)
 
-    def aggregate(self, request: RetrivalRequest) -> RetrivalJob:
+    def aggregate(self, request: RetrievalRequest) -> RetrievalJob:
         if not request.aggregated_features:
             return self
         return AggregateJob(self, request)
 
-    def with_request(self, requests: list[RetrivalRequest]) -> RetrivalJob:
+    def with_request(self, requests: list[RetrievalRequest]) -> RetrievalJob:
         return WithRequests(self, requests)
 
-    def listen_to_events(self, events: set[EventTrigger]) -> RetrivalJob:
+    def listen_to_events(self, events: set[EventTrigger]) -> RetrievalJob:
         return ListenForTriggers(self, events)
 
-    def update_vector_index(self, indexes: list[VectorIndex]) -> RetrivalJob:
+    def update_vector_index(self, indexes: list[VectorIndex]) -> RetrievalJob:
         return UpdateVectorIndexJob(self, indexes)
 
-    def validate_entites(self) -> RetrivalJob:
+    def validate_entites(self) -> RetrievalJob:
         return ValidateEntitiesJob(self)
 
-    def unique_on(self, unique_on: list[str], sort_key: str | None = None) -> RetrivalJob:
-        return UniqueRowsJob(job=self, unique_on=unique_on, sort_key=sort_key)
+    def unique_on(
+        self, unique_on: list[str], sort_key: str | None = None, descending: bool = True
+    ) -> RetrievalJob:
+        return UniqueRowsJob(
+            job=self, unique_on=unique_on, sort_key=sort_key, descending=descending
+        )
 
-    def unique_entities(self) -> RetrivalJob:
+    def unique_entities(self) -> RetrievalJob:
         request = self.request_result
 
         if not request.event_timestamp:
             logger.info(
-                'Unable to find event_timestamp for `unique_entities`. '
-                'This can lead to inconsistent features.'
+                "Unable to find event_timestamp for `unique_entities`. "
+                "This can lead to inconsistent features."
             )
 
-        return self.unique_on(unique_on=request.entity_columns, sort_key=request.event_timestamp)
+        return self.unique_on(
+            unique_on=request.entity_columns, sort_key=request.event_timestamp
+        )
 
-    def fill_missing_columns(self) -> RetrivalJob:
+    def fill_missing_columns(self) -> RetrievalJob:
         return FillMissingColumnsJob(self)
 
-    def rename(self, mappings: dict[str, str]) -> RetrivalJob:
+    def rename(self, mappings: dict[str, str]) -> RetrievalJob:
         if not mappings:
             return self
         return RenameJob(self, mappings)
 
-    def drop_duplicate_entities(self) -> RetrivalJob:
+    def drop_duplicate_entities(self) -> RetrievalJob:
         return DropDuplicateEntities(self)
 
-    def ignore_event_timestamp(self) -> RetrivalJob:
+    def ignore_event_timestamp(self) -> RetrievalJob:
         if isinstance(self, ModificationJob):
             return self.copy_with(self.job.ignore_event_timestamp())
-        raise NotImplementedError('Not implemented ignore_event_timestamp')
+        raise NotImplementedError("Not implemented ignore_event_timestamp")
 
-    def transform_polars(self, polars_method: CustomPolarsTransform) -> RetrivalJob:
+    def transform_polars(self, polars_method: CustomPolarsTransform) -> RetrievalJob:
         return CustomPolarsJob(self, polars_method)
 
-    def polars_method(self, polars_method: Callable[[pl.LazyFrame], pl.LazyFrame]) -> RetrivalJob:
+    def polars_method(
+        self, polars_method: Callable[[pl.LazyFrame], pl.LazyFrame]
+    ) -> RetrievalJob:
         return self.transform_polars(polars_method)
 
     @staticmethod
-    def from_dict(data: dict[str, list], request: list[RetrivalRequest] | RetrivalRequest) -> RetrivalJob:
-        if isinstance(request, RetrivalRequest):
+    def from_dict(
+        data: dict[str, list], request: list[RetrievalRequest] | RetrievalRequest
+    ) -> RetrievalJob:
+        if isinstance(request, RetrievalRequest):
             request = [request]
         return LiteralDictJob(data, request)
 
     @staticmethod
-    def from_polars_df(df: pl.DataFrame, request: list[RetrivalRequest]) -> RetrivalJob:
-        from aligned.local.job import LiteralRetrivalJob
+    def from_polars_df(
+        df: pl.DataFrame | pl.LazyFrame, request: list[RetrievalRequest]
+    ) -> RetrievalJob:
+        from aligned.local.job import LiteralRetrievalJob
 
-        return LiteralRetrivalJob(df.lazy(), request)
+        return LiteralRetrievalJob(df, request)
 
     @staticmethod
     def from_lazy_function(
-        callable: Callable[[], Coroutine[None, None, pl.LazyFrame]], request: RetrivalRequest
-    ) -> RetrivalJob:
+        callable: Callable[[], Coroutine[None, None, pl.LazyFrame]],
+        request: RetrievalRequest,
+    ) -> RetrievalJob:
         return CustomLazyPolarsJob(request=request, method=callable)
 
     @staticmethod
     def from_convertable(
-        data: ConvertableToRetrivalJob, request: list[RetrivalRequest] | RetrivalRequest | FeatureRequest
-    ) -> RetrivalJob:
+        data: ConvertableToRetrievalJob,
+        request: list[RetrievalRequest] | RetrievalRequest | FeatureRequest,
+    ) -> RetrievalJob:
         import polars as pl
-        from aligned.local.job import LiteralRetrivalJob
+        from aligned.local.job import LiteralRetrievalJob
 
-        if isinstance(request, RetrivalRequest):
+        if isinstance(request, RetrievalRequest):
             request = [request]
         elif isinstance(request, FeatureRequest):
             request = request.needed_requests
 
         def remove_features(
-            loaded_features: set[str], requests: list[RetrivalRequest]
-        ) -> list[RetrivalRequest]:
-            revised_requests: list[RetrivalRequest] = []
+            loaded_features: set[str], requests: list[RetrievalRequest]
+        ) -> list[RetrievalRequest]:
+            revised_requests: list[RetrievalRequest] = []
             for req in requests:
                 revised_requests.append(
-                    RetrivalRequest(
+                    RetrievalRequest(
                         name=req.name,
                         location=req.location,
                         entities=req.entities,
-                        features={feat for feat in req.features if feat.name in loaded_features},
+                        features={
+                            feat
+                            for feat in req.features
+                            if feat.name in loaded_features
+                        },
                         derived_features=req.derived_features,
                         event_timestamp_request=req.event_timestamp_request,
                     )
@@ -894,9 +1172,8 @@ class RetrivalJob(ABC):
             return revised_requests
 
         def add_additional_features(
-            schema: dict[str, pl.DataType], requests: list[RetrivalRequest]
-        ) -> list[RetrivalRequest]:
-
+            schema: dict[str, pl.DataType], requests: list[RetrievalRequest]
+        ) -> list[RetrievalRequest]:
             additional_features = set()
 
             for req in requests:
@@ -911,9 +1188,9 @@ class RetrivalJob(ABC):
 
             if additional_features:
                 return requests + [
-                    RetrivalRequest(
-                        name='additional',
-                        location=FeatureLocation.feature_view('additional'),
+                    RetrievalRequest(
+                        name="additional",
+                        location=FeatureLocation.feature_view("additional"),
                         entities=set(),
                         features=additional_features,
                         derived_features=set(),
@@ -952,13 +1229,15 @@ class RetrivalJob(ABC):
         elif isinstance(data, pd.DataFrame):
             df = pl.from_pandas(data, schema_overrides=schema).lazy()
         else:
-            raise ValueError(f'Unable to convert {type(data)} to RetrivalJob')
+            raise ValueError(f"Unable to convert {type(data)} to RetrievalJob")
 
-        return LiteralRetrivalJob(df, add_additional_features(df.schema, requests))
+        return LiteralRetrievalJob(df, add_additional_features(schema, requests))
 
-    async def write_to_source(self, source: WritableFeatureSource | DataFileReference) -> None:
+    async def write_to_source(
+        self, source: WritableFeatureSource | DataFileReference
+    ) -> None:
         """
-        Writes the output of the retrival job to the passed source.
+        Writes the output of the retrieval job to the passed source.
 
         ```python
         redis_cluster = RedisConfig.localhost()
@@ -980,28 +1259,31 @@ class RetrivalJob(ABC):
         if isinstance(source, DataFileReference):
             await source.write_polars(await self.to_lazy_polars())
         else:
-            requests = self.retrival_requests
+            requests = self.retrieval_requests
             if len(requests) > 1:
-                request = RetrivalRequest.unsafe_combine(requests)
+                request = RetrievalRequest.unsafe_combine(requests)
             else:
-                assert len(requests) == 1, 'No requests. this should not happen and is a but'
+                assert (
+                    len(requests) == 1
+                ), "No requests. this should not happen and is a but"
                 request = requests[0]
             await source.insert(self, request)
 
 
-JobType = TypeVar('JobType')
+JobType = TypeVar("JobType")
 
 
 class ModificationJob:
+    job: RetrievalJob
 
-    job: RetrivalJob
-
-    def copy_with(self: JobType, job: RetrivalJob) -> JobType:
+    def copy_with(self: JobType, job: RetrievalJob) -> JobType:
         self.job = job  # type: ignore
         return self
 
 
-def polars_filter_expressions_from(features: list[Feature]) -> list[tuple[pl.Expr, str]]:
+def polars_filter_expressions_from(
+    features: list[Feature],
+) -> list[tuple[pl.Expr, str]]:
     from aligned.schemas.constraints import (
         Optional,
         LowerBound,
@@ -1022,17 +1304,24 @@ def polars_filter_expressions_from(features: list[Feature]) -> list[tuple[pl.Exp
 
     for feature in features:
         if not feature.constraints:
-            exprs.append((pl.col(feature.name).is_not_null(), f"Required {feature.name}"))
+            exprs.append(
+                (pl.col(feature.name).is_not_null(), f"Required {feature.name}")
+            )
             continue
 
         if optional_constraint not in feature.constraints:
-            exprs.append((pl.col(feature.name).is_not_null(), f"Required {feature.name}"))
+            exprs.append(
+                (pl.col(feature.name).is_not_null(), f"Required {feature.name}")
+            )
             continue
 
         for constraint in feature.constraints:
             if isinstance(constraint, LowerBound):
                 exprs.append(
-                    (pl.col(feature.name) > constraint.value, f"LowerBound {feature.name} {constraint.value}")
+                    (
+                        pl.col(feature.name) > constraint.value,
+                        f"LowerBound {feature.name} {constraint.value}",
+                    )
                 )
             elif isinstance(constraint, LowerBoundInclusive):
                 exprs.append(
@@ -1043,7 +1332,10 @@ def polars_filter_expressions_from(features: list[Feature]) -> list[tuple[pl.Exp
                 )
             elif isinstance(constraint, UpperBound):
                 exprs.append(
-                    (pl.col(feature.name) < constraint.value, f"UpperBound {feature.name} {constraint.value}")
+                    (
+                        pl.col(feature.name) < constraint.value,
+                        f"UpperBound {feature.name} {constraint.value}",
+                    )
                 )
             elif isinstance(constraint, UpperBoundInclusive):
                 exprs.append(
@@ -1099,18 +1391,24 @@ def polars_filter_expressions_from(features: list[Feature]) -> list[tuple[pl.Exp
 
 
 @dataclass
-class ReturnInvalidJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class ReturnInvalidJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
     should_return_validation: bool
 
     def describe(self) -> str:
         expressions = [
             expr.not_().alias(f"not {name}")
-            for expr, name in polars_filter_expressions_from(list(self.request_result.features))
+            for expr, name in polars_filter_expressions_from(
+                list(self.request_result.features)
+            )
         ]
 
-        return 'ReturnInvalidJob ' + self.job.describe() + ' with filter expressions ' + str(expressions)
+        return (
+            "ReturnInvalidJob "
+            + self.job.describe()
+            + " with filter expressions "
+            + str(expressions)
+        )
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         raw_exprs = polars_filter_expressions_from(list(self.request_result.features))
@@ -1124,21 +1422,23 @@ class ReturnInvalidJob(RetrivalJob, ModificationJob):
                 .filter(pl.any_horizontal(*condition_cols))
             )
         else:
-            return (await self.job.to_lazy_polars()).filter(pl.any_horizontal(expressions))
+            return (await self.job.to_lazy_polars()).filter(
+                pl.any_horizontal(expressions)
+            )
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
 
 
 CustomPolarsTransform = (
-    Callable[[pl.LazyFrame], pl.LazyFrame] | Callable[[pl.LazyFrame], Coroutine[None, None, pl.LazyFrame]]
+    Callable[[pl.LazyFrame], pl.LazyFrame]
+    | Callable[[pl.LazyFrame], Coroutine[None, None, pl.LazyFrame]]
 )  # noqa: E501
 
 
 @dataclass
-class CustomPolarsJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class CustomPolarsJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
     polars_function: CustomPolarsTransform
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
@@ -1157,9 +1457,8 @@ class CustomPolarsJob(RetrivalJob, ModificationJob):
 
 
 @dataclass
-class SubsetJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class SubsetJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
     start_ratio: float
     end_ratio: float
     sort_column: str | None = None
@@ -1170,7 +1469,9 @@ class SubsetJob(RetrivalJob, ModificationJob):
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         data = (await self.job.to_lazy_polars()).collect()
-        return subset_polars(data, self.start_ratio, self.end_ratio, self.sort_column).lazy()
+        return subset_polars(
+            data, self.start_ratio, self.end_ratio, self.sort_column
+        ).lazy()
 
     async def to_pandas(self) -> pd.DataFrame:
         data = await self.job.to_pandas()
@@ -1179,9 +1480,8 @@ class SubsetJob(RetrivalJob, ModificationJob):
 
 
 @dataclass
-class OnLoadJob(RetrivalJob, ModificationJob):  # type: ignore
-
-    job: RetrivalJob  # type
+class OnLoadJob(RetrievalJob, ModificationJob):  # type: ignore
+    job: RetrievalJob  # type
     on_load: Callable[[], Coroutine[Any, Any, None]]  # type: ignore
 
     async def to_pandas(self) -> pd.DataFrame:
@@ -1195,19 +1495,20 @@ class OnLoadJob(RetrivalJob, ModificationJob):  # type: ignore
         return data.lazy()
 
     def describe(self) -> str:
-        return f'OnLoadJob {self.on_load} -> {self.job.describe()}'
+        return f"OnLoadJob {self.on_load} -> {self.job.describe()}"
 
 
 @dataclass
-class EncodeDatesJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class EncodeDatesJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
     formatter: DateFormatter
     columns: list[str]
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         data = await self.job.to_lazy_polars()
-        return data.with_columns([self.formatter.encode_polars(column) for column in self.columns])
+        return data.with_columns(
+            [self.formatter.encode_polars(column) for column in self.columns]
+        )
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
@@ -1215,7 +1516,6 @@ class EncodeDatesJob(RetrivalJob, ModificationJob):
 
 @dataclass
 class SplitConfig:
-
     left_size: float
     right_size: float
 
@@ -1224,9 +1524,8 @@ class SplitConfig:
 
 
 @dataclass
-class InMemorySplitCacheJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class InMemorySplitCacheJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
 
     splitter: Callable[[pl.DataFrame], tuple[pl.DataFrame, pl.DataFrame]]
     dataset_sizes: tuple[float, float]
@@ -1252,16 +1551,17 @@ class InMemorySplitCacheJob(RetrivalJob, ModificationJob):
         return self.cached_data[self.dataset_index].lazy()
 
     def with_dataset_index(self, dataset_index: int) -> InMemorySplitCacheJob:
-        return InMemorySplitCacheJob(self, self.splitter, self.dataset_sizes, dataset_index, self.cached_data)
+        return InMemorySplitCacheJob(
+            self, self.splitter, self.dataset_sizes, dataset_index, self.cached_data
+        )
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
 
 
 @dataclass
-class InMemoryCacheJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class InMemoryCacheJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
     cached_data: pl.DataFrame | None = None
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
@@ -1282,17 +1582,16 @@ class InMemoryCacheJob(RetrivalJob, ModificationJob):
 
 
 @dataclass
-class AggregateJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
-    agg_request: RetrivalRequest
+class AggregateJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
+    agg_request: RetrievalRequest
 
     @property
     def request_result(self) -> RequestResult:
         return self.agg_request.request_result
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
+    def retrieval_requests(self) -> list[RetrievalRequest]:
         return [self.agg_request]
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
@@ -1305,17 +1604,17 @@ class AggregateJob(RetrivalJob, ModificationJob):
         missing_features = agg_features - existing_cols
 
         if not missing_features:
-            logger.debug(f'Skipping aggregation of {agg_features}. Already existed.')
+            logger.debug(f"Skipping aggregation of {agg_features}. Already existed.")
             return core_frame
         else:
-            logger.debug(f'Aggregating {agg_features}, missing {missing_features}.')
+            logger.debug(f"Aggregating {agg_features}, missing {missing_features}.")
             return await aggregate(self.agg_request, core_frame)
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
 
     def describe(self) -> str:
-        return f'Aggregating over {self.job.describe()}'
+        return f"Aggregating over {self.job.describe()}"
 
 
 @dataclass
@@ -1326,10 +1625,9 @@ class StackSourceColumn:
 
 
 @dataclass
-class StackJob(RetrivalJob):
-
-    top: RetrivalJob
-    bottom: RetrivalJob
+class StackJob(RetrievalJob):
+    top: RetrievalJob
+    bottom: RetrievalJob
 
     source_column: StackSourceColumn | None
 
@@ -1338,8 +1636,10 @@ class StackJob(RetrivalJob):
         return self.top.request_result
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return RetrivalRequest.combine(self.top.retrival_requests + self.bottom.retrival_requests)
+    def retrieval_requests(self) -> list[RetrievalRequest]:
+        return RetrievalRequest.combine(
+            self.top.retrieval_requests + self.bottom.retrieval_requests
+        )
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         top = await self.top.to_lazy_polars()
@@ -1347,26 +1647,34 @@ class StackJob(RetrivalJob):
 
         if self.source_column:
             top = top.with_columns(
-                pl.lit(self.source_column.top_source_name).alias(self.source_column.source_column)
+                pl.lit(self.source_column.top_source_name).alias(
+                    self.source_column.source_column
+                )
             )
             bottom = bottom.with_columns(
-                pl.lit(self.source_column.bottom_source_name).alias(self.source_column.source_column)
+                pl.lit(self.source_column.bottom_source_name).alias(
+                    self.source_column.source_column
+                )
             )
 
-        return top.select(top.columns).collect().vstack(bottom.select(top.columns).collect()).lazy()
+        return (
+            top.select(top.columns)
+            .collect()
+            .vstack(bottom.select(top.columns).collect())
+            .lazy()
+        )
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
 
     def describe(self) -> str:
-        return f'Stacking {self.top.describe()} on top of {self.bottom.describe()}'
+        return f"Stacking {self.top.describe()} on top of {self.bottom.describe()}"
 
 
 @dataclass
-class JoinAsofJob(RetrivalJob):
-
-    left_job: RetrivalJob
-    right_job: RetrivalJob
+class JoinAsofJob(RetrievalJob):
+    left_job: RetrievalJob
+    right_job: RetrievalJob
 
     left_event_timestamp: str
     right_event_timestamp: str
@@ -1374,15 +1682,19 @@ class JoinAsofJob(RetrivalJob):
     left_on: list[str] | None
     right_on: list[str] | None
 
-    timestamp_unit: TimeUnit = field(default='us')
+    timestamp_unit: TimeUnit = field(default="us")
 
     @property
     def request_result(self) -> RequestResult:
-        return RequestResult.from_result_list([self.left_job.request_result, self.right_job.request_result])
+        return RequestResult.from_result_list(
+            [self.left_job.request_result, self.right_job.request_result]
+        )
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return RetrivalRequest.combine(self.left_job.retrival_requests + self.right_job.retrival_requests)
+    def retrieval_requests(self) -> list[RetrievalRequest]:
+        return RetrievalRequest.combine(
+            self.left_job.retrieval_requests + self.right_job.retrieval_requests
+        )
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         left = await self.left_job.to_lazy_polars()
@@ -1391,14 +1703,20 @@ class JoinAsofJob(RetrivalJob):
         return left.with_columns(
             pl.col(self.left_event_timestamp).dt.cast_time_unit(self.timestamp_unit),
         ).join_asof(
-            right.with_columns(pl.col(self.right_event_timestamp).dt.cast_time_unit(self.timestamp_unit)),
+            right.with_columns(
+                pl.col(self.right_event_timestamp).dt.cast_time_unit(
+                    self.timestamp_unit
+                )
+            ),
             by_left=self.left_on,
             by_right=self.right_on,
             left_on=self.left_event_timestamp,
             right_on=self.right_event_timestamp,
         )
 
-    def log_each_job(self, logger_func: Callable[[object], None] | None = None) -> RetrivalJob:
+    def log_each_job(
+        self, logger_func: Callable[[object], None] | None = None
+    ) -> RetrievalJob:
         sub_log = JoinAsofJob(
             left_job=self.left_job.log_each_job(logger_func),
             right_job=self.right_job.log_each_job(logger_func),
@@ -1414,18 +1732,17 @@ class JoinAsofJob(RetrivalJob):
 
     def describe(self) -> str:
         return (
-            f'({self.left_job.describe()}) -> '
-            f'Joining on time {self.left_event_timestamp} with {self.left_on} and '
-            f'{self.right_event_timestamp} and {self.right_on} ({self.right_job.describe()})'
+            f"({self.left_job.describe()}) -> "
+            f"Joining on time {self.left_event_timestamp} with {self.left_on} and "
+            f"{self.right_event_timestamp} and {self.right_on} ({self.right_job.describe()})"
         )
 
 
 @dataclass
-class JoinJobs(RetrivalJob):
-
-    method: Literal['inner', 'left', 'outer']
-    left_job: RetrivalJob
-    right_job: RetrivalJob
+class JoinJobs(RetrievalJob):
+    method: Literal["inner", "left", "outer"]
+    left_job: RetrievalJob
+    right_job: RetrievalJob
 
     left_on: list[str]
     right_on: list[str]
@@ -1445,8 +1762,10 @@ class JoinJobs(RetrivalJob):
         return request
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return RetrivalRequest.combine(self.left_job.retrival_requests + self.right_job.retrival_requests)
+    def retrieval_requests(self) -> list[RetrievalRequest]:
+        return RetrievalRequest.combine(
+            self.left_job.retrieval_requests + self.right_job.retrieval_requests
+        )
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         left = await self.left_job.to_lazy_polars()
@@ -1462,12 +1781,14 @@ class JoinJobs(RetrivalJob):
                 if feature.name == left_col
             ]
             if not polars_types:
-                raise ValueError(f'Unable to find {left_col} in left request {return_request}.')
+                raise ValueError(
+                    f"Unable to find {left_col} in left request {return_request}."
+                )
 
             polars_type = polars_types[0].dtype.polars_type
 
-            left_column_dtypes = dict(zip(left.columns, left.dtypes))
-            right_column_dtypes = dict(zip(right.columns, right.dtypes))
+            left_column_dtypes = left.collect_schema()
+            right_column_dtypes = right.collect_schema()
 
             if not left_column_dtypes[left_col].is_(polars_type):
                 left = left.with_columns(pl.col(left_col).cast(polars_type))
@@ -1475,9 +1796,13 @@ class JoinJobs(RetrivalJob):
             if not right_column_dtypes[right_col].is_(polars_type):
                 right = right.with_columns(pl.col(right_col).cast(polars_type))
 
-        return left.join(right, left_on=self.left_on, right_on=self.right_on, how=self.method)
+        return left.join(
+            right, left_on=self.left_on, right_on=self.right_on, how=self.method
+        )
 
-    def log_each_job(self, logger_func: Callable[[object], None] | None = None) -> RetrivalJob:
+    def log_each_job(
+        self, logger_func: Callable[[object], None] | None = None
+    ) -> RetrievalJob:
         sub_log = JoinJobs(
             method=self.method,
             left_job=self.left_job.log_each_job(logger_func),
@@ -1490,20 +1815,21 @@ class JoinJobs(RetrivalJob):
     async def to_pandas(self) -> pd.DataFrame:
         left = await self.left_job.to_pandas()
         right = await self.right_job.to_pandas()
-        return left.merge(right, how=self.method, left_on=self.left_on, right_on=self.right_on)
+        return left.merge(
+            right, how=self.method, left_on=self.left_on, right_on=self.right_on
+        )
 
     def describe(self) -> str:
         return (
-            f'({self.left_job.describe()}) -> '
-            f'Joining with {self.method} {self.left_on} and '
-            f'{self.right_on} ({self.right_job.describe()})'
+            f"({self.left_job.describe()}) -> "
+            f"Joining with {self.method} {self.left_on} and "
+            f"{self.right_on} ({self.right_job.describe()})"
         )
 
 
 @dataclass
-class FilteredJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class FilteredJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
     condition: Feature | str | pl.Expr | DerivedFeature
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
@@ -1520,7 +1846,9 @@ class FilteredJob(RetrivalJob, ModificationJob):
             from aligned.feature_store import ContractStore
 
             store = ContractStore.empty()
-            expr = await self.condition.transformation.transform_polars(df, self.condition.name, store)
+            expr = await self.condition.transformation.transform_polars(
+                df, self.condition.name, store
+            )
             if isinstance(expr, pl.Expr):
                 col = expr
             else:
@@ -1552,13 +1880,12 @@ class FilteredJob(RetrivalJob, ModificationJob):
         return df.loc[mask]
 
     def describe(self) -> str:
-        return f'{self.job.describe()} -> Filter based on {self.condition}'
+        return f"{self.job.describe()} -> Filter based on {self.condition}"
 
 
 @dataclass
-class RenameJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class RenameJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
     mappings: dict[str, str]
 
     async def to_pandas(self) -> pd.DataFrame:
@@ -1571,9 +1898,8 @@ class RenameJob(RetrivalJob, ModificationJob):
 
 
 @dataclass
-class DropDuplicateEntities(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class DropDuplicateEntities(RetrievalJob, ModificationJob):
+    job: RetrievalJob
 
     @property
     def entity_columns(self) -> list[str]:
@@ -1589,9 +1915,8 @@ class DropDuplicateEntities(RetrivalJob, ModificationJob):
 
 
 @dataclass
-class UpdateVectorIndexJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class UpdateVectorIndexJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
     indexes: list[VectorIndex]
 
     @property
@@ -1599,8 +1924,8 @@ class UpdateVectorIndexJob(RetrivalJob, ModificationJob):
         return self.job.request_result
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return self.job.retrival_requests
+    def retrieval_requests(self) -> list[RetrievalRequest]:
+        return self.job.retrieval_requests
 
     async def to_pandas(self) -> pd.DataFrame:
         raise NotImplementedError()
@@ -1610,7 +1935,6 @@ class UpdateVectorIndexJob(RetrivalJob, ModificationJob):
 
         update_jobs = []
         for index in self.indexes:
-
             select = index.entities + index.metadata + [index.vector]
             select_names = {feat.name for feat in select}
 
@@ -1626,10 +1950,9 @@ class UpdateVectorIndexJob(RetrivalJob, ModificationJob):
 
 
 @dataclass
-class LiteralDictJob(RetrivalJob):
-
+class LiteralDictJob(RetrievalJob):
     data: dict[str, list]
-    requests: list[RetrivalRequest]
+    requests: list[RetrievalRequest]
 
     @property
     def loaded_columns(self) -> list[str]:
@@ -1640,7 +1963,7 @@ class LiteralDictJob(RetrivalJob):
         return RequestResult.from_request_list(self.requests)
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
+    def retrieval_requests(self) -> list[RetrievalRequest]:
         return self.requests
 
     async def to_pandas(self) -> pd.DataFrame:
@@ -1650,13 +1973,12 @@ class LiteralDictJob(RetrivalJob):
         return pl.DataFrame(self.data).lazy()
 
     def describe(self) -> str:
-        return f'LiteralDictJob {self.data}'
+        return f"LiteralDictJob {self.data}"
 
 
 @dataclass
-class LogJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class LogJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
     logger: Callable[[object], None] = field(default=logger.debug)
 
     @property
@@ -1664,21 +1986,21 @@ class LogJob(RetrivalJob, ModificationJob):
         return self.job.request_result
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return self.job.retrival_requests
+    def retrieval_requests(self) -> list[RetrievalRequest]:
+        return self.job.retrieval_requests
 
     async def to_pandas(self) -> pd.DataFrame:
         if logger.level == 0:
             logging.basicConfig(level=logging.DEBUG)
 
-        job_name = self.retrival_requests[0].name
-        self.logger(f'Starting to run {type(self.job).__name__} - {job_name}')
+        job_name = self.retrieval_requests[0].name
+        self.logger(f"Starting to run {type(self.job).__name__} - {job_name}")
         try:
             df = await self.job.to_pandas()
         except Exception as error:
-            self.logger(f'Failed in job: {type(self.job).__name__} - {job_name}')
+            self.logger(f"Failed in job: {type(self.job).__name__} - {job_name}")
             raise error
-        self.logger(f'Results from {type(self.job).__name__} - {job_name}')
+        self.logger(f"Results from {type(self.job).__name__} - {job_name}")
         self.logger(df.columns)
         self.logger(df.head())
         return df
@@ -1687,30 +2009,31 @@ class LogJob(RetrivalJob, ModificationJob):
         if logger.level == 0:
             logging.basicConfig(level=logging.DEBUG)
 
-        job_name = self.retrival_requests[0].name
-        self.logger(f'Starting to run {type(self.job).__name__} - {job_name}')
+        job_name = self.retrieval_requests[0].name
+        self.logger(f"Starting to run {type(self.job).__name__} - {job_name}")
         try:
             df = await self.job.to_lazy_polars()
         except Exception as error:
-            self.logger(f'Failed in job: {type(self.job).__name__} - {job_name}')
+            self.logger(f"Failed in job: {type(self.job).__name__} - {job_name}")
             raise error
-        self.logger(f'Results from {type(self.job).__name__} - {job_name}')
+        self.logger(f"Results from {type(self.job).__name__} - {job_name}")
         self.logger(df.columns)
         self.logger(df)
         self.logger(df.head(10).collect())
         return df
 
-    def remove_derived_features(self) -> RetrivalJob:
+    def remove_derived_features(self) -> RetrievalJob:
         return self.job.remove_derived_features()
 
-    def log_each_job(self, logger_func: Callable[[object], None] | None = None) -> RetrivalJob:
+    def log_each_job(
+        self, logger_func: Callable[[object], None] | None = None
+    ) -> RetrievalJob:
         return self.job
 
 
 @dataclass
-class DropInvalidJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class DropInvalidJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
     validator: Validator
 
     @property
@@ -1718,44 +2041,49 @@ class DropInvalidJob(RetrivalJob, ModificationJob):
         return self.job.request_result
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return self.job.retrival_requests
+    def retrieval_requests(self) -> list[RetrievalRequest]:
+        return self.job.retrieval_requests
 
     @staticmethod
-    def features_to_validate(retrival_requests: list[RetrivalRequest]) -> set[Feature]:
-        result = RequestResult.from_request_list(retrival_requests)
+    def features_to_validate(
+        retrieval_requests: list[RetrievalRequest],
+    ) -> set[Feature]:
+        result = RequestResult.from_request_list(retrieval_requests)
         return result.features.union(result.entities)
 
     async def to_pandas(self) -> pd.DataFrame:
         return self.validator.validate_pandas(
-            list(DropInvalidJob.features_to_validate(self.retrival_requests)), await self.job.to_pandas()
+            list(DropInvalidJob.features_to_validate(self.retrieval_requests)),
+            await self.job.to_pandas(),
         )
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         return self.validator.validate_polars(
-            list(DropInvalidJob.features_to_validate(self.retrival_requests)), await self.job.to_lazy_polars()
+            list(DropInvalidJob.features_to_validate(self.retrieval_requests)),
+            await self.job.to_lazy_polars(),
         )
 
-    def with_subfeatures(self) -> RetrivalJob:
+    def with_subfeatures(self) -> RetrievalJob:
         return DropInvalidJob(self.job.with_subfeatures(), self.validator)
 
-    def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
+    def cached_at(self, location: DataFileReference | str) -> RetrievalJob:
         if isinstance(location, str):
             from aligned.sources.local import ParquetFileSource
 
-            return FileCachedJob(ParquetFileSource(location), self)
+            return FileCachedJob(
+                ParquetFileSource(PathResolver.from_value(location)), self
+            )
         else:
             return FileCachedJob(location, self)
 
-    def remove_derived_features(self) -> RetrivalJob:
+    def remove_derived_features(self) -> RetrievalJob:
         return self.job.remove_derived_features()
 
 
 @dataclass
-class DerivedFeatureJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
-    requests: list[RetrivalRequest]
+class DerivedFeatureJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
+    requests: list[RetrievalRequest]
     store: ContractStore | None = field(default=None)
 
     @property
@@ -1763,16 +2091,17 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
         return self.job.request_result
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return self.job.retrival_requests
+    def retrieval_requests(self) -> list[RetrievalRequest]:
+        return self.job.retrieval_requests
 
-    def inject_store(self, store: ContractStore) -> RetrivalJob:
+    def inject_store(self, store: ContractStore) -> RetrievalJob:
         job = self.copy_with(self.job.inject_store(store))
         job.store = store
         return job
 
-    def filter(self, condition: str | Feature | DerivedFeature | pl.Expr) -> RetrivalJob:
-
+    def filter(
+        self, condition: str | Feature | DerivedFeature | pl.Expr
+    ) -> RetrievalJob:
         if isinstance(condition, str):
             column_name = condition
         elif isinstance(condition, pl.Expr):
@@ -1784,7 +2113,8 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
             return FilteredJob(self, condition)
 
         if any(
-            column_name in [feature.name for feature in request.derived_features] for request in self.requests
+            column_name in [feature.name for feature in request.derived_features]
+            for request in self.requests
         ):
             return FilteredJob(self, condition)
 
@@ -1794,36 +2124,45 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
         from aligned.feature_store import ContractStore
 
         for request in self.requests:
-            missing_features = request.features_to_include - set(df.columns)
+            df_columns = df.collect_schema().names()
+            missing_features = request.features_to_include - set(df_columns)
 
             if len(missing_features) == 0:
-                logger.debug('Skipping to compute derived features as they are already computed')
+                logger.debug(
+                    "Skipping to compute derived features as they are already computed"
+                )
                 continue
 
             for feature_round in request.derived_features_order():
-
                 round_expressions: list[pl.Expr] = []
 
                 for feature in feature_round:
-                    if feature.transformation.should_skip(feature.name, df.columns):
-                        logger.debug(f'Skipped adding feature {feature.name} to computation plan')
+                    if feature.transformation.should_skip(feature.name, df_columns):
+                        logger.debug(
+                            f"Skipped adding feature {feature.name} to computation plan"
+                        )
                         continue
 
-                    logger.debug(f'Adding feature to computation plan in polars: {feature.name}')
+                    logger.debug(
+                        f"Adding feature to computation plan in polars: {feature.name}"
+                    )
 
                     method = await feature.transformation.transform_polars(
                         df, feature.name, self.store or ContractStore.empty()
                     )
                     if isinstance(method, pl.LazyFrame):
                         df = method
+                        df_columns = df.collect_schema().names()
                     elif isinstance(method, pl.Expr):
                         round_expressions.append(method.alias(feature.name))
                     else:
-                        raise ValueError('Invalid result from transformation')
+                        raise ValueError("Invalid result from transformation")
 
                 if round_expressions:
                     df = df.with_columns(round_expressions)
+                    df_columns = df.collect_schema().names()
 
+            df = df.select(pl.exclude(request.intermediate_columns))
         return df
 
     async def compute_derived_features_pandas(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -1832,13 +2171,18 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
         for request in self.requests:
             for feature_round in request.derived_features_order():
                 for feature in feature_round:
-                    if feature.transformation.should_skip(feature.name, list(df.columns)):
-                        logger.debug(f'Skipping to compute {feature.name} as it is aleady computed')
+                    if feature.transformation.should_skip(
+                        feature.name, list(df.columns)
+                    ):
+                        logger.debug(
+                            f"Skipping to compute {feature.name} as it is already computed"
+                        )
                         continue
 
-                    logger.debug(f'Computing feature with pandas: {feature.name}')
+                    logger.debug(f"Computing feature with pandas: {feature.name}")
                     df[feature.name] = await feature.transformation.transform_pandas(
-                        df[feature.depending_on_names], self.store or ContractStore.empty()  # type: ignore
+                        df[feature.depending_on_names],  # type: ignore
+                        self.store or ContractStore.empty(),
                     )
         return df
 
@@ -1846,19 +2190,21 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
         return await self.compute_derived_features_pandas(await self.job.to_pandas())
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
-        return await self.compute_derived_features_polars(await self.job.to_lazy_polars())
+        return await self.compute_derived_features_polars(
+            await self.job.to_lazy_polars()
+        )
 
-    def drop_invalid(self, validator: Validator | None = None) -> RetrivalJob:
+    def drop_invalid(self, validator: Validator | None = None) -> RetrievalJob:
         # We may validate a derived feature, so the validation should not propegate lower.
         # Or it can, but then we need to do multi stage validation.
         # So this is a temporary solution.
         return DropInvalidJob(self, validator or PolarsValidator())
 
-    def remove_derived_features(self) -> RetrivalJob:
+    def remove_derived_features(self) -> RetrievalJob:
         new_requests = []
-        for req in self.job.retrival_requests:
+        for req in self.job.retrieval_requests:
             new_requests.append(
-                RetrivalRequest(
+                RetrievalRequest(
                     req.name,
                     location=req.location,
                     features=req.features,
@@ -1872,11 +2218,11 @@ class DerivedFeatureJob(RetrivalJob, ModificationJob):
 
 
 @dataclass
-class UniqueRowsJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class UniqueRowsJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
     unique_on: list[str]  # type: ignore
     sort_key: str | None = field(default=None)
+    descending: bool = field(default=True)
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
@@ -1885,20 +2231,19 @@ class UniqueRowsJob(RetrivalJob, ModificationJob):
         data = await self.job.to_lazy_polars()
 
         if self.sort_key:
-            data = data.sort(self.sort_key, descending=True)
+            data = data.sort(self.sort_key, descending=self.descending)
 
-        return data.unique(self.unique_on, keep='first').lazy()
+        return data.unique(self.unique_on, keep="first", maintain_order=True)
 
 
 @dataclass
-class ValidateEntitiesJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class ValidateEntitiesJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
 
     async def to_pandas(self) -> pd.DataFrame:
         data = await self.job.to_pandas()
 
-        for request in self.retrival_requests:
+        for request in self.retrieval_requests:
             if request.entity_names - set(data.columns):
                 return pd.DataFrame({})
 
@@ -1907,7 +2252,7 @@ class ValidateEntitiesJob(RetrivalJob, ModificationJob):
     async def to_lazy_polars(self) -> pl.LazyFrame:
         data = await self.job.to_lazy_polars()
 
-        for request in self.retrival_requests:
+        for request in self.retrieval_requests:
             if request.entity_names - set(data.columns):
                 return pl.DataFrame({}).lazy()
 
@@ -1915,16 +2260,14 @@ class ValidateEntitiesJob(RetrivalJob, ModificationJob):
 
 
 @dataclass
-class FillMissingColumnsJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class FillMissingColumnsJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
 
     async def to_pandas(self) -> pd.DataFrame:
         from aligned.schemas.constraints import Optional
 
         data = await self.job.to_pandas()
-        for request in self.retrival_requests:
-
+        for request in self.retrieval_requests:
             optional_constraint = Optional()
             for feature in request.features:
                 if (
@@ -1942,8 +2285,7 @@ class FillMissingColumnsJob(RetrivalJob, ModificationJob):
         data = await self.job.to_lazy_polars()
         optional_constraint = Optional()
 
-        for request in self.retrival_requests:
-
+        for request in self.retrieval_requests:
             missing_columns = [
                 feature.name
                 for feature in request.features
@@ -1953,21 +2295,22 @@ class FillMissingColumnsJob(RetrivalJob, ModificationJob):
             ]
 
             if missing_columns:
-                data = data.with_columns([pl.lit(None).alias(feature) for feature in missing_columns])
+                data = data.with_columns(
+                    [pl.lit(None).alias(feature) for feature in missing_columns]
+                )
 
         return data
 
 
 @dataclass
-class StreamAggregationJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class StreamAggregationJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
     checkpoints: dict[AggregateOver, DataFileReference]
 
     @property
     def time_windows(self) -> set[AggregateOver]:
         windows = set()
-        for request in self.retrival_requests:
+        for request in self.retrieval_requests:
             for feature in request.aggregated_features:
                 windows.add(feature.aggregate_over)
         return windows
@@ -1975,36 +2318,40 @@ class StreamAggregationJob(RetrivalJob, ModificationJob):
     @property
     def aggregated_features(self) -> dict[AggregateOver, set[AggregatedFeature]]:
         features = defaultdict(set)
-        for request in self.retrival_requests:
+        for request in self.retrieval_requests:
             for feature in request.aggregated_features:
                 features[feature.aggregate_over].add(feature)
         return features
 
-    async def data_windows(self, window: AggregateOver, data: pl.DataFrame, now: datetime) -> pl.DataFrame:
+    async def data_windows(
+        self, window: AggregateOver, data: pl.DataFrame, now: datetime
+    ) -> pl.DataFrame:
         checkpoint = self.checkpoints[window]
         filter_expr: pl.Expr | None = None
 
         if window.window:
             time_window = window.window
-            filter_expr = pl.col(time_window.time_column.name) > now - time_window.time_window
+            filter_expr = (
+                pl.col(time_window.time_column.name) > now - time_window.time_window
+            )
 
         if window.condition:
-            raise ValueError('Condition is not supported for stream aggregation, yet')
+            raise ValueError("Condition is not supported for stream aggregation, yet")
 
         try:
             window_data = (await checkpoint.to_lazy_polars()).collect()
 
             if filter_expr is not None:
                 new_data = pl.concat(
-                    [window_data.filter(filter_expr), data.filter(filter_expr)], how='vertical_relaxed'
+                    [window_data.filter(filter_expr), data.filter(filter_expr)],
+                    how="vertical_relaxed",
                 )
             else:
-                new_data = pl.concat([window_data, data], how='vertical_relaxed')
+                new_data = pl.concat([window_data, data], how="vertical_relaxed")
 
             await checkpoint.write_polars(new_data.lazy())
             return new_data
         except FileNotFoundError:
-
             if filter_expr is not None:
                 window_data = data.filter(filter_expr)
             else:
@@ -2024,7 +2371,6 @@ class StreamAggregationJob(RetrivalJob, ModificationJob):
         now = datetime.utcnow()
 
         for window in self.time_windows:
-
             aggregations = self.aggregated_features[window]
 
             assert window.window is not None
@@ -2032,11 +2378,15 @@ class StreamAggregationJob(RetrivalJob, ModificationJob):
             for agg in aggregations:
                 required_features.update(agg.derived_feature.depending_on)
 
-            required_features_name = sorted({feature.name for feature in required_features})
+            required_features_name = sorted(
+                {feature.name for feature in required_features}
+            )
 
             agg_transformations = await asyncio.gather(
                 *[
-                    agg.derived_feature.transformation.transform_polars(lazy_df, 'dummy')
+                    agg.derived_feature.transformation.transform_polars(
+                        lazy_df, "dummy", ContractStore.empty()
+                    )
                     for agg in aggregations
                 ]
             )
@@ -2046,32 +2396,40 @@ class StreamAggregationJob(RetrivalJob, ModificationJob):
                 if isinstance(agg, pl.Expr)
             ]
 
-            window_data = await self.data_windows(window, data.select(required_features_name), now)
+            window_data = await self.data_windows(
+                window, data.select(required_features_name), now
+            )
 
-            agg_data = window_data.lazy().group_by(window.group_by_names).agg(agg_expr).collect()
-            data = data.join(agg_data, on=window.group_by_names, how='left')
+            agg_data = (
+                window_data.lazy()
+                .group_by(window.group_by_names)
+                .agg(agg_expr)
+                .collect()
+            )
+            data = data.join(agg_data, on=window.group_by_names, how="left")
 
         return data.lazy()
 
-    def remove_derived_features(self) -> RetrivalJob:
+    def remove_derived_features(self) -> RetrievalJob:
         return self.job.remove_derived_features()
 
 
 @dataclass
 class DataLoaderJob:
-
-    job: RetrivalJob
+    job: RetrievalJob
     chunk_size: int
 
     async def to_polars(self) -> AsyncIterator[pl.LazyFrame]:
         from math import ceil
 
-        from aligned.local.job import LiteralRetrivalJob
+        from aligned.local.job import LiteralRetrievalJob
 
-        needed_requests = self.job.retrival_requests
+        needed_requests = self.job.retrieval_requests
         without_derived = self.job.remove_derived_features()
         raw_files = (await without_derived.to_lazy_polars()).collect()
-        features_to_include = self.job.request_result.features.union(self.job.request_result.entities)
+        features_to_include = self.job.request_result.features.union(
+            self.job.request_result.entities
+        )
         features_to_include_names = {feature.name for feature in features_to_include}
 
         iterations = ceil(raw_files.shape[0] / self.chunk_size)
@@ -2081,7 +2439,7 @@ class DataLoaderJob:
             df = raw_files[start:end, :]
 
             chunked_job = (
-                LiteralRetrivalJob(df.lazy(), needed_requests)
+                LiteralRetrievalJob(df.lazy(), needed_requests)
                 .derive_features(needed_requests)
                 .select_columns(features_to_include_names)
             )
@@ -2095,18 +2453,17 @@ class DataLoaderJob:
 
 
 @dataclass
-class RawFileCachedJob(RetrivalJob, ModificationJob):
-
+class RawFileCachedJob(RetrievalJob, ModificationJob):
     location: DataFileReference
-    job: RetrivalJob
+    job: RetrievalJob
 
     @property
     def request_result(self) -> RequestResult:
         return self.job.request_result
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return self.job.retrival_requests
+    def retrieval_requests(self) -> list[RetrievalRequest]:
+        return self.job.retrieval_requests
 
     async def to_pandas(self) -> pd.DataFrame:
         from aligned.local.job import FileFullJob
@@ -2114,12 +2471,12 @@ class RawFileCachedJob(RetrivalJob, ModificationJob):
 
         assert isinstance(self.job, DerivedFeatureJob)
         try:
-            logger.debug('Trying to read cache file')
+            logger.debug("Trying to read cache file")
             df = await self.location.read_pandas()
         except UnableToFindFileException:
-            logger.debug('Unable to load file, so fetching from source')
+            logger.debug("Unable to load file, so fetching from source")
             df = await self.job.job.to_pandas()
-            logger.debug('Writing result to cache')
+            logger.debug("Writing result to cache")
             await self.location.write_pandas(df)
         return (
             await FileFullJob(LiteralReference(df), request=self.job.requests[0])
@@ -2130,26 +2487,25 @@ class RawFileCachedJob(RetrivalJob, ModificationJob):
     async def to_lazy_polars(self) -> pl.LazyFrame:
         return await self.job.to_lazy_polars()
 
-    def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
+    def cached_at(self, location: DataFileReference | str) -> RetrievalJob:
         return self
 
-    def remove_derived_features(self) -> RetrivalJob:
+    def remove_derived_features(self) -> RetrievalJob:
         return self.job.remove_derived_features()
 
 
 @dataclass
-class LoadedAtJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
-    request: RetrivalRequest
+class LoadedAtJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
+    request: RetrievalRequest
 
     @property
     def request_result(self) -> RequestResult:
         return self.job.request_result
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return self.job.retrival_requests
+    def retrieval_requests(self) -> list[RetrievalRequest]:
+        return self.job.retrieval_requests
 
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.job.to_pandas()
@@ -2166,7 +2522,6 @@ class LoadedAtJob(RetrivalJob, ModificationJob):
         return df
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
-
         df = await self.job.to_lazy_polars()
         if not self.request.event_timestamp:
             return df
@@ -2182,65 +2537,63 @@ class LoadedAtJob(RetrivalJob, ModificationJob):
 
 
 @dataclass
-class FileCachedJob(RetrivalJob, ModificationJob):
-
+class FileCachedJob(RetrievalJob, ModificationJob):
     location: DataFileReference
-    job: RetrivalJob
+    job: RetrievalJob
 
     @property
     def request_result(self) -> RequestResult:
         return self.job.request_result
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return self.job.retrival_requests
+    def retrieval_requests(self) -> list[RetrievalRequest]:
+        return self.job.retrieval_requests
 
     async def to_pandas(self) -> pd.DataFrame:
         try:
-            logger.debug('Trying to read cache file')
+            logger.debug("Trying to read cache file")
             df = await self.location.read_pandas()
         except UnableToFindFileException:
-            logger.debug('Unable to load file, so fetching from source')
+            logger.debug("Unable to load file, so fetching from source")
             df = await self.job.to_pandas()
-            logger.debug('Writing result to cache')
+            logger.debug("Writing result to cache")
             await self.location.write_pandas(df)
         return df
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         try:
-            logger.debug('Trying to read cache file')
+            logger.debug("Trying to read cache file")
             df = await self.location.to_lazy_polars()
         except UnableToFindFileException:
-            logger.debug('Unable to load file, so fetching from source')
+            logger.debug("Unable to load file, so fetching from source")
             df = await self.job.to_lazy_polars()
-            logger.debug('Writing result to cache')
+            logger.debug("Writing result to cache")
             await self.location.write_polars(df)
         except FileNotFoundError:
-            logger.debug('Unable to load file, so fetching from source')
+            logger.debug("Unable to load file, so fetching from source")
             df = await self.job.to_lazy_polars()
-            logger.debug('Writing result to cache')
+            logger.debug("Writing result to cache")
             await self.location.write_polars(df)
         return df
 
-    def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
+    def cached_at(self, location: DataFileReference | str) -> RetrievalJob:
         return self
 
-    def remove_derived_features(self) -> RetrivalJob:
+    def remove_derived_features(self) -> RetrievalJob:
         return self.job.remove_derived_features()
 
 
 @dataclass
-class WithRequests(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
-    requests: list[RetrivalRequest]
+class WithRequests(RetrievalJob, ModificationJob):
+    job: RetrievalJob
+    requests: list[RetrievalRequest]
 
     @property
     def request_result(self) -> RequestResult:
         return RequestResult.from_request_list(self.requests)
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
+    def retrieval_requests(self) -> list[RetrievalRequest]:
         return self.requests
 
     async def to_pandas(self) -> pd.DataFrame:
@@ -2251,22 +2604,16 @@ class WithRequests(RetrivalJob, ModificationJob):
 
 
 @dataclass
-class TimeMetricLoggerJob(RetrivalJob, ModificationJob):
+class TimeMetricLoggerJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
 
-    job: RetrivalJob
-
-    time_metric: Histogram
-    labels: list[str] | None = field(default=None)
+    callback: Callable[[float], None]
 
     async def to_pandas(self) -> pd.DataFrame:
         start_time = timeit.default_timer()
         df = await self.job.to_pandas()
         elapsed = timeit.default_timer() - start_time
-        logger.debug(f'Computed records in {elapsed} seconds')
-        if self.labels:
-            self.time_metric.labels(*self.labels).observe(elapsed)
-        else:
-            self.time_metric.observe(elapsed)
+        self.callback(elapsed)
         return df
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
@@ -2274,19 +2621,14 @@ class TimeMetricLoggerJob(RetrivalJob, ModificationJob):
         df = await self.job.to_lazy_polars()
         concrete = df.collect()
         elapsed = timeit.default_timer() - start_time
-        logger.debug(f'Computed records in {elapsed} seconds')
-        if self.labels:
-            self.time_metric.labels(*self.labels).observe(elapsed)
-        else:
-            self.time_metric.observe(elapsed)
+        self.callback(elapsed)
         return concrete.lazy()
 
 
 @dataclass
-class EnsureTypesJob(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
-    requests: list[RetrivalRequest]
+class EnsureTypesJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
+    requests: list[RetrievalRequest]
     date_formatter: DateFormatter = field(default_factory=DateFormatter.iso_8601)
 
     @property
@@ -2294,7 +2636,7 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
         return self.job.request_result
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
+    def retrieval_requests(self) -> list[RetrievalRequest]:
         return self.requests
 
     async def to_pandas(self) -> pd.DataFrame:
@@ -2303,52 +2645,65 @@ class EnsureTypesJob(RetrivalJob, ModificationJob):
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         df = await self.job.to_lazy_polars()
-        org_schema = dict(df.schema)
+        org_schema = dict(df.collect_schema())
         for request in self.requests:
             features_to_check = request.all_required_features
 
             if request.aggregated_features:
-                features_to_check.update({feature.derived_feature for feature in request.aggregated_features})
+                features_to_check.update(
+                    {feature.derived_feature for feature in request.aggregated_features}
+                )
 
             if request.event_timestamp:
                 features_to_check.add(request.event_timestamp.as_feature())
 
             for feature in features_to_check:
-
                 if feature.name not in org_schema:
                     continue
 
                 if feature.dtype.polars_type.is_(org_schema[feature.name]):
-                    logger.debug(f'Skipping feature {feature.name}, already correct type')
+                    logger.debug(
+                        f"Skipping feature {feature.name}, already correct type"
+                    )
                     continue
 
                 if feature.dtype == FeatureType.boolean():
-                    df = df.with_columns(pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean))
+                    df = df.with_columns(
+                        pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean)
+                    )
                 elif feature.dtype.is_array:
                     dtype = df.select(feature.name).dtypes[0]
                     if dtype == pl.Utf8:
-                        df = df.with_columns(pl.col(feature.name).str.json_decode(pl.List(pl.Utf8)))
+                        df = df.with_columns(
+                            pl.col(feature.name).str.json_decode(pl.List(pl.Utf8))
+                        )
                 elif feature.dtype.is_embedding:
                     dtype = df.select(feature.name).dtypes[0]
                     if dtype == pl.Utf8:
-                        df = df.with_columns(pl.col(feature.name).str.json_decode(pl.List(pl.Float64)))
+                        df = df.with_columns(
+                            pl.col(feature.name).str.json_decode(pl.List(pl.Float64))
+                        )
                 elif (feature.dtype == FeatureType.json()) or feature.dtype.is_datetime:
-                    logger.debug(f'Converting {feature.name} to {feature.dtype.name}')
+                    logger.debug(f"Converting {feature.name} to {feature.dtype.name}")
                     pass
                 else:
                     logger.debug(
-                        f'Converting {feature.name} to {feature.dtype.name} - {feature.dtype.polars_type}'
+                        f"Converting {feature.name} to {feature.dtype.name} - {feature.dtype.polars_type}"
                     )
-                    df = df.with_columns(pl.col(feature.name).cast(feature.dtype.polars_type, strict=False))
+                    df = df.with_columns(
+                        pl.col(feature.name).cast(
+                            feature.dtype.polars_type, strict=False
+                        )
+                    )
 
         return df
 
-    def remove_derived_features(self) -> RetrivalJob:
+    def remove_derived_features(self) -> RetrievalJob:
         return self.job.remove_derived_features()
 
 
 @dataclass
-class CombineFactualJob(RetrivalJob):
+class CombineFactualJob(RetrievalJob):
     """Computes features that depend on different retrical jobs
 
     The `job` therefore take in a list of jobs that output some data,
@@ -2381,8 +2736,8 @@ class CombineFactualJob(RetrivalJob):
         added = some.a + other.c
     """
 
-    jobs: list[RetrivalJob]
-    combined_requests: list[RetrivalRequest]
+    jobs: list[RetrievalJob]
+    combined_requests: list[RetrievalRequest]
     store: ContractStore | None = field(default=None)
 
     @property
@@ -2392,18 +2747,22 @@ class CombineFactualJob(RetrivalJob):
         ) + RequestResult.from_request_list(self.combined_requests)
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
+    def retrieval_requests(self) -> list[RetrievalRequest]:
         jobs = []
         for job in self.jobs:
-            jobs.extend(job.retrival_requests)
+            jobs.extend(job.retrieval_requests)
         return jobs + self.combined_requests
 
-    def ignore_event_timestamp(self) -> RetrivalJob:
-        return CombineFactualJob([job.ignore_event_timestamp() for job in self.jobs], self.combined_requests)
-
-    def inject_store(self, store: ContractStore) -> RetrivalJob:
+    def ignore_event_timestamp(self) -> RetrievalJob:
         return CombineFactualJob(
-            [job.inject_store(store) for job in self.jobs], self.combined_requests, store=store
+            [job.ignore_event_timestamp() for job in self.jobs], self.combined_requests
+        )
+
+    def inject_store(self, store: ContractStore) -> RetrievalJob:
+        return CombineFactualJob(
+            [job.inject_store(store) for job in self.jobs],
+            self.combined_requests,
+            store=store,
         )
 
     async def combine_data(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -2412,11 +2771,12 @@ class CombineFactualJob(RetrivalJob):
         for request in self.combined_requests:
             for feature in request.derived_features:
                 if feature.name in df.columns:
-                    logger.debug(f'Skipping feature {feature.name}, already computed')
+                    logger.debug(f"Skipping feature {feature.name}, already computed")
                     continue
-                logger.debug(f'Computing feature: {feature.name}')
+                logger.debug(f"Computing feature: {feature.name}")
                 df[feature.name] = await feature.transformation.transform_pandas(
-                    df[feature.depending_on_names], self.store or ContractStore.empty()  # type: ignore
+                    df[feature.depending_on_names],  # type: ignore
+                    self.store or ContractStore.empty(),
                 )
         return df
 
@@ -2424,12 +2784,12 @@ class CombineFactualJob(RetrivalJob):
         from aligned import ContractStore
 
         for request in self.combined_requests:
-            logger.debug(f'{request.name}, {len(request.derived_features)}')
+            logger.debug(f"{request.name}, {len(request.derived_features)}")
             for feature in request.derived_features:
-                if feature.name in df.columns:
-                    logger.debug(f'Skipping feature {feature.name}, already computed')
+                if feature.name in df.collect_schema().names():
+                    logger.debug(f"Skipping feature {feature.name}, already computed")
                     continue
-                logger.debug(f'Computing feature: {feature.name}')
+                logger.debug(f"Computing feature: {feature.name}")
                 result = await feature.transformation.transform_polars(
                     df, feature.name, self.store or ContractStore.empty()
                 )
@@ -2438,7 +2798,9 @@ class CombineFactualJob(RetrivalJob):
                 elif isinstance(result, pl.LazyFrame):
                     df = result
                 else:
-                    raise ValueError(f'Unsupported transformation result type, got {type(result)}')
+                    raise ValueError(
+                        f"Unsupported transformation result type, got {type(result)}"
+                    )
         return df
 
     async def to_pandas(self) -> pd.DataFrame:
@@ -2447,19 +2809,20 @@ class CombineFactualJob(RetrivalJob):
     async def to_lazy_polars(self) -> pl.LazyFrame:
         if not self.jobs:
             raise ValueError(
-                'Have no jobs to fetch. This is probably an internal error.\n'
-                'Please submit an issue, and describe how to reproduce it.\n'
-                'Or maybe even submit a PR'
+                "Have no jobs to fetch. This is probably an internal error.\n"
+                "Please submit an issue, and describe how to reproduce it.\n"
+                "Or maybe even submit a PR"
             )
 
-        dfs: list[pl.LazyFrame] = await asyncio.gather(*[job.to_lazy_polars() for job in self.jobs])
+        dfs: list[pl.LazyFrame] = await asyncio.gather(
+            *[job.to_lazy_polars() for job in self.jobs]
+        )
         results = [job.request_result for job in self.jobs]
 
         joined_entities = set(results[0].entity_columns)
         df = dfs[0].collect()
 
         for other_df, job_result in list(zip(dfs, results))[1:]:
-
             other_df = other_df.collect()
 
             join_on = job_result.entity_columns
@@ -2475,45 +2838,62 @@ class CombineFactualJob(RetrivalJob):
 
         return await self.combine_polars_data(df.lazy())
 
-    def cache_raw_data(self, location: DataFileReference | str) -> RetrivalJob:
-        return CombineFactualJob([job.cache_raw_data(location) for job in self.jobs], self.combined_requests)
+    def cache_raw_data(self, location: DataFileReference | str) -> RetrievalJob:
+        return CombineFactualJob(
+            [job.cache_raw_data(location) for job in self.jobs], self.combined_requests
+        )
 
-    def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
-        return CombineFactualJob([job.cached_at(location) for job in self.jobs], self.combined_requests)
+    def cached_at(self, location: DataFileReference | str) -> RetrievalJob:
+        return CombineFactualJob(
+            [job.cached_at(location) for job in self.jobs], self.combined_requests
+        )
 
-    def remove_derived_features(self) -> RetrivalJob:
-        return CombineFactualJob([job.remove_derived_features() for job in self.jobs], self.combined_requests)
+    def remove_derived_features(self) -> RetrievalJob:
+        return CombineFactualJob(
+            [job.remove_derived_features() for job in self.jobs], self.combined_requests
+        )
 
-    def log_each_job(self, logger_func: Callable[[object], None] | None = None) -> RetrivalJob:
+    def log_each_job(
+        self, logger_func: Callable[[object], None] | None = None
+    ) -> RetrievalJob:
         return LogJob(
-            CombineFactualJob([job.log_each_job(logger_func) for job in self.jobs], self.combined_requests)
+            CombineFactualJob(
+                [job.log_each_job(logger_func) for job in self.jobs],
+                self.combined_requests,
+            )
         )
 
     def describe(self) -> str:
-        description = f'Combining {len(self.jobs)} jobs:\n'
+        description = f"Combining {len(self.jobs)} jobs:\n"
         for index, job in enumerate(self.jobs):
-            description += f'{index + 1}: {job.describe()}\n'
+            description += f"{index + 1}: {job.describe()}\n"
         return description
 
 
 @dataclass
-class SelectColumnsJob(RetrivalJob, ModificationJob):
-
+class SelectColumnsJob(RetrievalJob, ModificationJob):
     include_features: list[str]
-    job: RetrivalJob
+    job: RetrievalJob
 
     @property
     def request_result(self) -> RequestResult:
         return self.job.request_result.filter_features(set(self.include_features))
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return [request.filter_features(set(self.include_features)) for request in self.job.retrival_requests]
+    def retrieval_requests(self) -> list[RetrievalRequest]:
+        return [
+            request.filter_features(set(self.include_features))
+            for request in self.job.retrieval_requests
+        ]
 
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.job.to_pandas()
         if self.include_features:
-            total_list = list({ent.name for ent in self.request_result.entities}.union(self.include_features))
+            total_list = list(
+                {ent.name for ent in self.request_result.entities}.union(
+                    self.include_features
+                )
+            )
             return df[total_list]  # type: ignore
         else:
             return df
@@ -2521,31 +2901,34 @@ class SelectColumnsJob(RetrivalJob, ModificationJob):
     async def to_lazy_polars(self) -> pl.LazyFrame:
         df = await self.job.to_lazy_polars()
         if self.include_features:
-            total_list = list({ent.name for ent in self.request_result.entities}.union(self.include_features))
+            total_list = list(
+                {ent.name for ent in self.request_result.entities}.union(
+                    self.include_features
+                )
+            )
             return df.select(total_list)
         else:
             return df
 
-    def cached_at(self, location: DataFileReference | str) -> RetrivalJob:
+    def cached_at(self, location: DataFileReference | str) -> RetrievalJob:
         return SelectColumnsJob(self.include_features, self.job.cached_at(location))
 
-    def with_subfeatures(self) -> RetrivalJob:
+    def with_subfeatures(self) -> RetrievalJob:
         return self.job.with_subfeatures()
 
-    def remove_derived_features(self) -> RetrivalJob:
+    def remove_derived_features(self) -> RetrievalJob:
         return self.job.remove_derived_features()
 
-    def ignore_event_timestamp(self) -> RetrivalJob:
+    def ignore_event_timestamp(self) -> RetrievalJob:
         return SelectColumnsJob(
-            include_features=list(set(self.include_features) - {'event_timestamp'}),
+            include_features=list(set(self.include_features) - {"event_timestamp"}),
             job=self.job.ignore_event_timestamp(),
         )
 
 
 @dataclass
-class ListenForTriggers(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class ListenForTriggers(RetrievalJob, ModificationJob):
+    job: RetrievalJob
     triggers: set[EventTrigger]
 
     @property
@@ -2553,35 +2936,44 @@ class ListenForTriggers(RetrivalJob, ModificationJob):
         return self.job.request_result
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return self.job.retrival_requests
+    def retrieval_requests(self) -> list[RetrievalRequest]:
+        return self.job.retrieval_requests
 
     async def to_pandas(self) -> pd.DataFrame:
         import asyncio
 
         df = await self.job.to_pandas()
-        await asyncio.gather(*[trigger.check_pandas(df, self.request_result) for trigger in self.triggers])
+        await asyncio.gather(
+            *[
+                trigger.check_pandas(df, self.request_result)
+                for trigger in self.triggers
+            ]
+        )
         return df
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         import asyncio
 
         df = await self.job.to_lazy_polars()
-        await asyncio.gather(*[trigger.check_polars(df, self.request_result) for trigger in self.triggers])
+        await asyncio.gather(
+            *[
+                trigger.check_polars(df, self.request_result)
+                for trigger in self.triggers
+            ]
+        )
         return df
 
-    def remove_derived_features(self) -> RetrivalJob:
+    def remove_derived_features(self) -> RetrievalJob:
         return self.job.remove_derived_features()
 
 
 @dataclass
-class CustomLazyPolarsJob(RetrivalJob):
-
-    request: RetrivalRequest
+class CustomLazyPolarsJob(RetrievalJob):
+    request: RetrievalRequest
     method: Callable[[], Coroutine[None, None, pl.LazyFrame]]
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
+    def retrieval_requests(self) -> list[RetrievalRequest]:
         return [self.request]
 
     def describe(self) -> str:
@@ -2599,19 +2991,23 @@ class CustomLazyPolarsJob(RetrivalJob):
 
 
 @dataclass
-class UnpackEmbedding(RetrivalJob, ModificationJob):
-
-    job: RetrivalJob
+class UnpackEmbedding(RetrievalJob, ModificationJob):
+    job: RetrievalJob
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         df = await self.job.to_lazy_polars()
 
         list_features = [
-            feature.name for feature in self.request_result.features if feature.dtype.is_embedding
+            feature.name
+            for feature in self.request_result.features
+            if feature.dtype.is_embedding
         ]
 
         df = df.with_columns(
-            [pl.col(feature).list.to_struct(n_field_strategy='max_width') for feature in list_features]
+            [
+                pl.col(feature).list.to_struct(n_field_strategy="max_width")
+                for feature in list_features
+            ]
         )
         df = df.unnest(list_features)
 
@@ -2622,12 +3018,17 @@ class UnpackEmbedding(RetrivalJob, ModificationJob):
 
 
 @dataclass
-class PredictionJob(RetrivalJob):
+class SqlJob(RetrievalJob):
+    sql: str
 
-    job: RetrivalJob
+
+@dataclass
+class PredictionJob(RetrievalJob):
+    job: RetrievalJob
     model: Model
     store: ContractStore
-    output_requests: list[RetrivalRequest]
+    predictor: ExposedModel
+    output_requests: list[RetrievalRequest]
 
     def added_features(self) -> set[Feature]:
         pred_view = self.model.predictions_view
@@ -2636,12 +3037,14 @@ class PredictionJob(RetrivalJob):
 
     @property
     def request_result(self) -> RequestResult:
-        reqs = self.retrival_requests
+        reqs = self.retrieval_requests
         return RequestResult.from_request_list(reqs)
 
     @property
-    def retrival_requests(self) -> list[RetrivalRequest]:
-        return self.output_requests + [self.model.predictions_view.request(self.model.name)]
+    def retrieval_requests(self) -> list[RetrievalRequest]:
+        return self.output_requests + [
+            self.model.predictions_view.request(self.model.name)
+        ]
 
     def describe(self) -> str:
         added = self.added_features()
@@ -2652,16 +3055,13 @@ class PredictionJob(RetrivalJob):
         )
 
     async def to_pandas(self) -> pd.DataFrame:
-        return await self.job.to_pandas()
+        return (await self.to_polars()).to_pandas()
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         from aligned.exposed_model.interface import VersionedModel
         from datetime import datetime, timezone
 
-        predictor = self.model.exposed_model
-        if not predictor:
-            raise ValueError('No predictor defined for model')
-
+        predictor = self.predictor
         output = self.model.predictions_view
         model_version_column = output.model_version_column
 
@@ -2674,23 +3074,40 @@ class PredictionJob(RetrivalJob):
                 pl.lit(datetime.now(timezone.utc)).alias(output.event_timestamp.name),
             )
 
-        if (
-            model_version_column
-            and isinstance(predictor, VersionedModel)
-            and model_version_column.name not in df.columns
-        ):
+        if model_version_column and isinstance(predictor, VersionedModel):
             df = df.with_columns(
-                pl.lit(await predictor.model_version()).alias(model_version_column.name),
+                pl.lit(await predictor.model_version()).alias(
+                    model_version_column.name
+                ),
             )
         return df.lazy()
 
-    def log_each_job(self, logger_func: Callable[[object], None] | None = None) -> RetrivalJob:
-        return PredictionJob(self.job.log_each_job(logger_func), self.model, self.store, self.output_requests)
+    def log_each_job(
+        self, logger_func: Callable[[object], None] | None = None
+    ) -> RetrievalJob:
+        return LogJob(
+            PredictionJob(
+                self.job.log_each_job(logger_func),
+                self.model,
+                self.store,
+                output_requests=self.output_requests,
+                predictor=self.predictor,
+            ),
+            logger_func or logger.debug,
+        )
 
-    def filter(self, condition: str | Feature | DerivedFeature | pl.Expr) -> RetrivalJob:
-        return PredictionJob(self.job.filter(condition), self.model, self.store, self.output_requests)
+    def filter(
+        self, condition: str | Feature | DerivedFeature | pl.Expr
+    ) -> RetrievalJob:
+        return PredictionJob(
+            self.job.filter(condition),
+            self.model,
+            self.store,
+            output_requests=self.output_requests,
+            predictor=self.predictor,
+        )
 
-    def remove_derived_features(self) -> RetrivalJob:
+    def remove_derived_features(self) -> RetrievalJob:
         return self.job.remove_derived_features()
 
     async def insert_into_output_source(self) -> None:
@@ -2698,12 +3115,12 @@ class PredictionJob(RetrivalJob):
 
         pred_source = self.model.predictions_view.source
         if not pred_source:
-            raise ValueError('No source defined for predictions view')
+            raise ValueError("No source defined for predictions view")
 
         if not isinstance(pred_source, WritableFeatureSource):
-            raise ValueError('Source for predictions view is not writable')
+            raise ValueError("Source for predictions view is not writable")
 
-        req = self.model.predictions_view.request('preds')
+        req = self.model.predictions_view.request("preds")
         await pred_source.insert(self, req)
 
     async def upsert_into_output_source(self) -> None:
@@ -2711,12 +3128,12 @@ class PredictionJob(RetrivalJob):
 
         pred_source = self.model.predictions_view.source
         if not pred_source:
-            raise ValueError('No source defined for predictions view')
+            raise ValueError("No source defined for predictions view")
 
         if not isinstance(pred_source, WritableFeatureSource):
-            raise ValueError('Source for predictions view is not writable')
+            raise ValueError("Source for predictions view is not writable")
 
-        req = self.model.predictions_view.request('preds')
+        req = self.model.predictions_view.request("preds")
         await pred_source.upsert(self, req)
 
     async def overwrite_output_source(self) -> None:
@@ -2724,10 +3141,10 @@ class PredictionJob(RetrivalJob):
 
         pred_source = self.model.predictions_view.source
         if not pred_source:
-            raise ValueError('No source defined for predictions view')
+            raise ValueError("No source defined for predictions view")
 
         if not isinstance(pred_source, WritableFeatureSource):
-            raise ValueError('Source for predictions view is not writable')
+            raise ValueError("Source for predictions view is not writable")
 
-        req = self.model.predictions_view.request('preds')
+        req = self.model.predictions_view.request("preds")
         await pred_source.overwrite(self, req)

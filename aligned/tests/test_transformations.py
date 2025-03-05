@@ -1,5 +1,5 @@
 import pytest
-from aligned.compiler.feature_factory import EventTimestamp, Int32, String, Float, List
+from aligned.compiler.feature_factory import EventTimestamp, Int32, String, Float32, List
 
 from aligned.feature_store import ContractStore
 from aligned.feature_view.feature_view import feature_view
@@ -77,15 +77,15 @@ async def test_aggregations_on_all_no_window() -> None:
 
         custom_mean_aggregation = student_loan_due.polars_aggregation(
             pl.col('student_loan_due').mean(),
-            as_type=Float(),
+            as_type=Float32(),
         )
-        custom_mean_aggregation_using_features = Float().polars_aggregation_using_features(
+        custom_mean_aggregation_using_features = Float32().polars_aggregation_using_features(
             using_features=[student_loan_due],
             aggregation=pl.col('student_loan_due').mean(),
         )
         custom_sum_aggregation = credit_card_due.polars_aggregation(
             pl.col('credit_card_due').sum(),
-            as_type=Float(),
+            as_type=Float32(),
         )
 
     df = await TestAgg.query().all().to_pandas()  # type: ignore
@@ -180,8 +180,8 @@ async def test_load_features() -> None:
         age_value = Test().age.for_entities({'passenger_id': lookup_id})
 
     store = ContractStore.empty()
-    store.add_feature_view(Test)
-    store.add_feature_view(Other)
+    store.add(Test)
+    store.add(Other)
 
     df = await store.feature_view(Other).features_for({'some_value': [1, 10, 5]}).to_polars()
 

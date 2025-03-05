@@ -1,5 +1,5 @@
 import pytest
-from aligned import feature_view, String, Int32, FileSource, Float
+from aligned import feature_view, String, Int32, FileSource, Float32
 from aligned.compiler.feature_factory import EventTimestamp
 from aligned.schemas.feature import FeatureLocation
 
@@ -14,7 +14,7 @@ class DefaultValueTest:
     other_value = String().default_value('Hello')
     optional_value = Int32().is_optional()
 
-    other_default = Float().default_value(0)
+    other_default = Float32().default_value(0)
 
 
 @feature_view(name='test', source=FileSource.csv_at('some_file.csv'))
@@ -81,11 +81,6 @@ async def test_feature_view_wrapper_from_data() -> None:
     result = await test_job.derive_features().to_pandas()
     assert result.shape[0] == 3
     assert result.shape[1] == 3
-
-    test_invalid_result = Test.drop_invalid({'some_id': ['hello', 10, 2], 'feature': ['Hello', 'test', 2]})
-
-    # Returns two as the int can be casted to a str, but a str can not be casted to int
-    assert len(test_invalid_result['some_id']) == 2
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,4 @@
-name: publish package
+name: Publish Package
 
 on:
   workflow_dispatch:
@@ -19,6 +19,11 @@ jobs:
           POSTGRES_PASSWORD: postgres
         ports:
           - '127.0.0.1:5432:5432'
+
+      mlflow:
+        image: ghcr.io/mlflow/mlflow:v2.15.0
+        options: >
+          --entrypoint "mlflow server --backend-store-uri file:///app/mlflow-server/experiments --artifacts-destination file:///app/mlflow-server/artifacts --host 0.0.0.0 --port 8000"
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -47,6 +52,8 @@ jobs:
       - name: Run tests
         env:
           PSQL_DATABASE_TEST: postgresql://postgres:postgres@localhost:5432/postgres
+          MLFLOW_TRACKING_URI: http://mlflow-tracker:8000
+          MLFLOW_REGISTRY_URI: http://mlflow-tracker:8000
         run: |
           source .venv/bin/activate
           pytest

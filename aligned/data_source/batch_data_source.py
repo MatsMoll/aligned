@@ -2,16 +2,30 @@ from __future__ import annotations
 from copy import copy
 from datetime import datetime
 
-from typing import TYPE_CHECKING, Awaitable, TypeVar, Any, Callable, Coroutine
-from dataclasses import dataclass
+from typing import (
+    TYPE_CHECKING,
+    Awaitable,
+    Iterable,
+    Literal,
+    TypeVar,
+    Any,
+    Callable,
+    Coroutine,
+)
+from dataclasses import dataclass, field
 
 from mashumaro.types import SerializableType
+from aligned.config_value import ConfigValue
 from aligned.data_file import DataFileReference
 
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import DerivedFeature
-from aligned.schemas.feature import Feature, FeatureLocation, FeatureType
-from aligned.request.retrival_request import RequestResult, RetrivalRequest
+from aligned.schemas.feature import (
+    Feature,
+    FeatureLocation,
+    FeatureType,
+)
+from aligned.request.retrieval_request import RequestResult, RetrievalRequest
 from aligned.compiler.feature_factory import FeatureFactory
 from polars.type_aliases import TimeUnit
 import polars as pl
@@ -22,14 +36,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from aligned.retrival_job import RetrivalJob
+    from aligned.retrieval_job import RetrievalJob
     from aligned.schemas.feature_view import CompiledFeatureView
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class BatchDataSourceFactory:
-
     supported_data_sources: dict[str, type[CodableBatchDataSource]]
 
     _shared: BatchDataSourceFactory | None = None
@@ -84,7 +97,9 @@ class BatchDataSourceFactory:
             LoadedAtSource,
         ]
 
-        self.supported_data_sources = {source.type_name: source for source in source_types}
+        self.supported_data_sources = {
+            source.type_name: source for source in source_types
+        }
 
     @classmethod
     def shared(cls) -> BatchDataSourceFactory:
@@ -95,10 +110,9 @@ class BatchDataSourceFactory:
 
 
 class BatchSourceModification:
-
     source: CodableBatchDataSource
 
-    def wrap_job(self, job: RetrivalJob) -> RetrivalJob:
+    def wrap_job(self, job: RetrievalJob) -> RetrievalJob:
         raise NotImplementedError()
 
 
@@ -115,13 +129,16 @@ class BatchDataSource:
         """
         return self.job_group_key()
 
+    def needed_configs(self) -> list[ConfigValue]:
+        return []
+
     def with_view(self: T, view: CompiledFeatureView) -> T:
         return self
 
     def __hash__(self) -> int:
         return hash(self.job_group_key())
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
+    def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
         if isinstance(self, BatchSourceModification):
             return self.wrap_job(self.source.all_data(request, limit))
 
@@ -134,32 +151,36 @@ class BatchDataSource:
 
     def all_between_dates(
         self,
-        request: RetrivalRequest,
+        request: RetrievalRequest,
         start_date: datetime,
         end_date: datetime,
-    ) -> RetrivalJob:
-
+    ) -> RetrievalJob:
         if isinstance(self, BatchSourceModification):
-            return self.wrap_job(self.source.all_between_dates(request, start_date, end_date))
+            return self.wrap_job(
+                self.source.all_between_dates(request, start_date, end_date)
+            )
 
         if isinstance(self, DataFileReference):
             from aligned.local.job import FileDateJob
 
-            return FileDateJob(self, request=request, start_date=start_date, end_date=end_date)
+            return FileDateJob(
+                self, request=request, start_date=start_date, end_date=end_date
+            )
 
         raise NotImplementedError(type(self))
 
     @classmethod
     def multi_source_features_for(
-        cls: type[T], facts: RetrivalJob, requests: list[tuple[T, RetrivalRequest]]
-    ) -> RetrivalJob:
-
+        cls: type[T], facts: RetrievalJob, requests: list[tuple[T, RetrievalRequest]]
+    ) -> RetrievalJob:
         sources = {
-            source.job_group_key() for source, _ in requests if isinstance(source, CodableBatchDataSource)
+            source.job_group_key()
+            for source, _ in requests
+            if isinstance(source, CodableBatchDataSource)
         }
         if len(sources) != 1:
             raise NotImplementedError(
-                f'Type: {cls} have not implemented how to load fact data with multiple sources.'
+                f"Type: {cls} have not implemented how to load fact data with multiple sources."
             )
 
         source, _ = requests[0]
@@ -172,9 +193,13 @@ class BatchDataSource:
 
             return FileFactualJob(source, [request for _, request in requests], facts)
         else:
-            raise NotImplementedError(f'Type: {cls} have not implemented how to load fact data')
+            raise NotImplementedError(
+                f"Type: {cls} have not implemented how to load fact data"
+            )
 
-    def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
+    def features_for(
+        self, facts: RetrievalJob, request: RetrievalRequest
+    ) -> RetrievalJob:
         return type(self).multi_source_features_for(facts, [(self, request)])
 
     async def schema(self) -> dict[str, FeatureType]:
@@ -192,14 +217,16 @@ class BatchDataSource:
         if isinstance(self, BatchSourceModification):
             return await self.source.schema()
 
-        raise NotImplementedError(f'`schema()` is not implemented for {type(self)}.')
+        raise NotImplementedError(f"`schema()` is not implemented for {type(self)}.")
 
-    def all_columns(self, limit: int | None = None) -> RetrivalJob:
+    def all_columns(self, limit: int | None = None) -> RetrievalJob:
         return self.all(RequestResult(set(), set(), None), limit=limit)
 
-    def all(self, result: RequestResult, limit: int | None = None) -> RetrivalJob:
+    def all(self, result: RequestResult, limit: int | None = None) -> RetrievalJob:
         return self.all_data(
-            result.as_retrival_request('read_all', location=FeatureLocation.feature_view('read_all')),
+            result.as_retrieval_request(
+                "read_all", location=FeatureLocation.feature_view("read_all")
+            ),
             limit=limit,
         )
 
@@ -240,8 +267,12 @@ class BatchDataSource:
         from aligned.feature_view.feature_view import FeatureView
 
         schema = await self.schema()
-        feature_types = {name: feature_type.feature_factory for name, feature_type in schema.items()}
-        return FeatureView.feature_view_code_template(feature_types, f'{self}', view_name)
+        feature_types = {
+            name: feature_type.feature_factory for name, feature_type in schema.items()
+        }
+        return FeatureView.feature_view_code_template(
+            feature_types, f"{self}", view_name
+        )
 
     async def freshness(self, feature: Feature) -> datetime | None:
         """
@@ -256,7 +287,7 @@ class BatchDataSource:
         if isinstance(self, DataFileReference):
             return await data_file_freshness(self, feature.name)
 
-        raise NotImplementedError(f'Freshness is not implemented for {type(self)}.')
+        raise NotImplementedError(f"Freshness is not implemented for {type(self)}.")
 
     def filter(self, condition: DerivedFeature | Feature) -> CodableBatchDataSource:
         assert isinstance(self, CodableBatchDataSource)
@@ -280,9 +311,11 @@ class BatchDataSource:
 
     def transform_with_polars(
         self,
-        method: Callable[[pl.LazyFrame], Awaitable[pl.LazyFrame]] | Callable[[pl.LazyFrame], pl.LazyFrame],
+        method: Callable[[pl.LazyFrame], Awaitable[pl.LazyFrame]]
+        | Callable[[pl.LazyFrame], pl.LazyFrame],
+        docker_config: DockerConfig | str | None = None,
     ) -> CodableBatchDataSource:
-        async def all(request: RetrivalRequest, limit: int | None) -> pl.LazyFrame:
+        async def all(request: RetrievalRequest, limit: int | None) -> pl.LazyFrame:
             import inspect
 
             df = await self.all_data(request, limit).to_lazy_polars()
@@ -293,18 +326,22 @@ class BatchDataSource:
                 return method(df)  # type: ignore
 
         async def all_between_dates(
-            request: RetrivalRequest, start_date: datetime, end_date: datetime
+            request: RetrievalRequest, start_date: datetime, end_date: datetime
         ) -> pl.LazyFrame:
             import inspect
 
-            df = await self.all_between_dates(request, start_date, end_date).to_lazy_polars()
+            df = await self.all_between_dates(
+                request, start_date, end_date
+            ).to_lazy_polars()
 
             if inspect.iscoroutinefunction(method):
                 return await method(df)
             else:
                 return method(df)  # type: ignore
 
-        async def features_for(entities: RetrivalJob, request: RetrivalRequest) -> pl.LazyFrame:
+        async def features_for(
+            entities: RetrievalJob, request: RetrievalRequest
+        ) -> pl.LazyFrame:
             import inspect
 
             df = await self.features_for(entities, request).to_lazy_polars()
@@ -319,91 +356,108 @@ class BatchDataSource:
             all_between_dates=all_between_dates,
             features_for=features_for,
             depends_on_sources=self.location_id(),
+            docker_config=docker_config,
         )
 
 
 class CodableBatchDataSource(Codable, SerializableType, BatchDataSource):
     """
-    A definition to where a specific pice of data can be found.
+    A definition to where a specific piece of data can be found.
     E.g: A database table, a file, a web service, etc.
 
-    Ths can thereafter be combined with other BatchDataSources in order to create a rich dataset.
+    This can thereafter be combined with other BatchDataSources in order to create a rich dataset.
     """
 
     type_name: str
 
+    @property
+    def as_markdown(self) -> str:
+        return str(type(self))
+
     def _serialize(self) -> dict:
         assert (
             self.type_name in BatchDataSourceFactory.shared().supported_data_sources
-        ), f'Unknown type_name: {self.type_name}'
+        ), f"Unknown type_name: {self.type_name}"
         return self.to_dict()
 
     @classmethod
     def _deserialize(cls, value: dict) -> CodableBatchDataSource:
-        name_type = value['type_name']
+        name_type = value["type_name"]
         if name_type not in BatchDataSourceFactory.shared().supported_data_sources:
             raise ValueError(
                 f"Unknown batch data source id: '{name_type}'.\nRemember to add the"
-                ' data source to the BatchDataSourceFactory.supported_data_sources if'
-                ' it is a custom type.'
+                " data source to the BatchDataSourceFactory.supported_data_sources if"
+                " it is a custom type."
             )
-        del value['type_name']
+        del value["type_name"]
         data_class = BatchDataSourceFactory.shared().supported_data_sources[name_type]
         return data_class.from_dict(value)
 
 
 @dataclass
-class CustomMethodDataSource(CodableBatchDataSource):
+class DockerConfig:
+    image_url: str
+    username: ConfigValue | None = field(default=None)
+    password: ConfigValue | None = field(default=None)
 
+
+@dataclass
+class CustomMethodDataSource(CodableBatchDataSource):
     all_data_method: bytes
     all_between_dates_method: bytes
     features_for_method: bytes
     depends_on_sources: set[FeatureLocation] | None = None
+    docker_config: DockerConfig | None = None
 
-    type_name: str = 'custom_method'
+    type_name: str = "custom_method"
 
     def job_group_key(self) -> str:
-        return 'custom_method'
+        return "custom_method"
 
     @property
-    def to_markdown(self) -> str:
-        return '### Custom method\n\nThis uses dill which can be unsafe in some scenarios.'
+    def as_markdown(self) -> str:
+        return f"### Custom method\n\n**Docker config**: {self.docker_config}\n\nThis uses dill which can be unsafe in some scenarios."
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
-        from aligned.retrival_job import CustomLazyPolarsJob
-        import dill
-
-        return CustomLazyPolarsJob(
-            request=request, method=lambda: dill.loads(self.all_data_method)(request, limit)
-        ).fill_missing_columns()
-
-    def all_between_dates(
-        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
-    ) -> RetrivalJob:
-        from aligned.retrival_job import CustomLazyPolarsJob
+    def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
+        from aligned.retrieval_job import CustomLazyPolarsJob
         import dill
 
         return CustomLazyPolarsJob(
             request=request,
-            method=lambda: dill.loads(self.all_between_dates_method)(request, start_date, end_date),
+            method=lambda: dill.loads(self.all_data_method)(request, limit),
         ).fill_missing_columns()
 
-    def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
-        from aligned.retrival_job import CustomLazyPolarsJob
+    def all_between_dates(
+        self, request: RetrievalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrievalJob:
+        from aligned.retrieval_job import CustomLazyPolarsJob
         import dill
 
         return CustomLazyPolarsJob(
-            request=request, method=lambda: dill.loads(self.features_for_method)(facts, request)
+            request=request,
+            method=lambda: dill.loads(self.all_between_dates_method)(
+                request, start_date, end_date
+            ),
+        ).fill_missing_columns()
+
+    def features_for(
+        self, facts: RetrievalJob, request: RetrievalRequest
+    ) -> RetrievalJob:
+        from aligned.retrieval_job import CustomLazyPolarsJob
+        import dill
+
+        return CustomLazyPolarsJob(
+            request=request,
+            method=lambda: dill.loads(self.features_for_method)(facts, request),
         ).fill_missing_columns()
 
     @classmethod
     def multi_source_features_for(
-        cls: type[T], facts: RetrivalJob, requests: list[tuple[T, RetrivalRequest]]
-    ) -> RetrivalJob:
-
+        cls: type[T], facts: RetrievalJob, requests: list[tuple[T, RetrievalRequest]]
+    ) -> RetrievalJob:
         if len(requests) != 1:
             raise NotImplementedError(
-                f'Type: {cls} have not implemented how to load fact data with multiple sources.'
+                f"Type: {cls} have not implemented how to load fact data with multiple sources."
             )
 
         source, request = requests[0]
@@ -411,14 +465,14 @@ class CustomMethodDataSource(CodableBatchDataSource):
 
     @staticmethod
     def from_load(
-        method: Callable[[RetrivalRequest], Coroutine[None, None, pl.LazyFrame]],
+        method: Callable[[RetrievalRequest], Coroutine[None, None, pl.LazyFrame]],
         depends_on: set[FeatureLocation] | None = None,
-    ) -> 'CustomMethodDataSource':
-        async def all(request: RetrivalRequest, limit: int | None) -> pl.LazyFrame:
+    ) -> "CustomMethodDataSource":
+        async def all(request: RetrievalRequest, limit: int | None) -> pl.LazyFrame:
             return await method(request)
 
         async def all_between(
-            request: RetrivalRequest, start_date: datetime, end_date: datetime
+            request: RetrievalRequest, start_date: datetime, end_date: datetime
         ) -> pl.LazyFrame:
             return await method(request)
 
@@ -428,36 +482,51 @@ class CustomMethodDataSource(CodableBatchDataSource):
 
     @staticmethod
     def from_methods(
-        all_data: Callable[[RetrivalRequest, int | None], Coroutine[None, None, pl.LazyFrame]] | None = None,
-        all_between_dates: Callable[
-            [RetrivalRequest, datetime, datetime], Coroutine[None, None, pl.LazyFrame]
+        all_data: Callable[
+            [RetrievalRequest, int | None], Coroutine[None, None, pl.LazyFrame]
         ]
         | None = None,
-        features_for: Callable[[RetrivalJob, RetrivalRequest], Coroutine[None, None, pl.LazyFrame]]
+        all_between_dates: Callable[
+            [RetrievalRequest, datetime, datetime], Coroutine[None, None, pl.LazyFrame]
+        ]
+        | None = None,
+        features_for: Callable[
+            [RetrievalJob, RetrievalRequest], Coroutine[None, None, pl.LazyFrame]
+        ]
         | None = None,
         depends_on_sources: set[FeatureLocation] | None = None,
-    ) -> 'CustomMethodDataSource':
+        docker_config: DockerConfig | str | None = None,
+    ) -> "CustomMethodDataSource":
         import dill
+
+        if all_between_dates is None:
+            all_between_dates = CustomMethodDataSource.default_throw  # type: ignore
+        else:
+            if all_data is None:
+                all_data = lambda req, limit: all_between_dates(  # noqa: E731
+                    req, datetime.min, datetime.max
+                )
 
         if not all_data:
             all_data = CustomMethodDataSource.default_throw  # type: ignore
 
-        if not all_between_dates:
-            all_between_dates = CustomMethodDataSource.default_throw  # type: ignore
-
         if not features_for:
             features_for = CustomMethodDataSource.default_throw  # type: ignore
+
+        if isinstance(docker_config, str):
+            docker_config = DockerConfig(image_url=docker_config)
 
         return CustomMethodDataSource(
             all_data_method=dill.dumps(all_data),
             all_between_dates_method=dill.dumps(all_between_dates),
             features_for_method=dill.dumps(features_for),
             depends_on_sources=depends_on_sources,
+            docker_config=docker_config,
         )
 
     @staticmethod
     def default_throw(**kwargs: Any) -> pl.LazyFrame:
-        raise NotImplementedError('No method is defined for this data source.')
+        raise NotImplementedError("No method is defined for this data source.")
 
     def depends_on(self) -> set[FeatureLocation]:
         return self.depends_on_sources or set()
@@ -465,20 +534,19 @@ class CustomMethodDataSource(CodableBatchDataSource):
 
 @dataclass
 class FilteredDataSource(CodableBatchDataSource):
-
     source: CodableBatchDataSource
     condition: DerivedFeature | Feature | str | bytes
 
-    type_name: str = 'subset'
+    type_name: str = "subset"
 
     @property
     def polars_expression(self) -> pl.Expr:
         if isinstance(self.condition, bytes):
-            return pl.Expr.deserialize(self.condition, format='binary')
+            return pl.Expr.deserialize(self.condition, format="binary")
         elif isinstance(self.condition, str):
             try:
-                return pl.Expr.deserialize(self.condition, format='json')
-            except:
+                return pl.Expr.deserialize(self.condition, format="json")
+            except:  # noqa: E722
                 return pl.col(self.condition)
         elif isinstance(self.condition, (DerivedFeature, Feature)):
             return pl.col(self.condition.name)
@@ -486,7 +554,7 @@ class FilteredDataSource(CodableBatchDataSource):
             raise ValueError(f"Unable to `{self.condition}`")
 
     def job_group_key(self) -> str:
-        return f'subset/{self.source.job_group_key()}'
+        return f"subset/{self.source.job_group_key()}"
 
     async def schema(self) -> dict[str, FeatureType]:
         return await self.source.schema()
@@ -494,16 +562,17 @@ class FilteredDataSource(CodableBatchDataSource):
     @classmethod
     def multi_source_features_for(  # type: ignore
         cls: type[FilteredDataSource],
-        facts: RetrivalJob,
-        requests: list[tuple[FilteredDataSource, RetrivalRequest]],
-    ) -> RetrivalJob:
-
+        facts: RetrievalJob,
+        requests: list[tuple[FilteredDataSource, RetrievalRequest]],
+    ) -> RetrievalJob:
         sources = {
-            source.job_group_key() for source, _ in requests if isinstance(source, CodableBatchDataSource)
+            source.job_group_key()
+            for source, _ in requests
+            if isinstance(source, CodableBatchDataSource)
         }
         if len(sources) != 1:
             raise NotImplementedError(
-                f'Type: {cls} have not implemented how to load fact data with multiple sources.'
+                f"Type: {cls} have not implemented how to load fact data with multiple sources."
             )
         source, request = requests[0]
 
@@ -522,9 +591,8 @@ class FilteredDataSource(CodableBatchDataSource):
         return await self.source.freshness(feature)
 
     def all_between_dates(
-        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
-    ) -> RetrivalJob:
-
+        self, request: RetrievalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrievalJob:
         if isinstance(self.condition, DerivedFeature):
             request.derived_features.add(self.condition)
         elif isinstance(self.condition, Feature):
@@ -537,8 +605,7 @@ class FilteredDataSource(CodableBatchDataSource):
             .derive_features([request])
         )
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
-
+    def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
         if isinstance(self.condition, DerivedFeature):
             request.derived_features.add(self.condition)
             return (
@@ -561,8 +628,9 @@ class FilteredDataSource(CodableBatchDataSource):
         return self.source.depends_on()
 
 
-def resolve_keys(keys: str | FeatureFactory | list[str] | list[FeatureFactory]) -> list[str]:
-
+def resolve_keys(
+    keys: str | FeatureFactory | list[str] | list[FeatureFactory],
+) -> list[str]:
     if isinstance(keys, FeatureFactory):
         return [keys.name]
 
@@ -577,16 +645,16 @@ def resolve_keys(keys: str | FeatureFactory | list[str] | list[FeatureFactory]) 
 
 def model_prediction_instance_source(
     model: Any,
-) -> tuple[CodableBatchDataSource, RetrivalRequest] | Exception:
+) -> tuple[CodableBatchDataSource, RetrievalRequest] | Exception:
     from aligned.schemas.feature_view import FeatureViewReferenceSource
     from aligned.compiler.model import ModelContractWrapper
 
-    if not hasattr(model, '__model_wrapper__'):
+    if not hasattr(model, "__model_wrapper__"):
         return ValueError(
-            f'Unable to join {model} as a __view_wrapper__ is needed. Make sure you have used @feature_view'
+            f"Unable to join {model} as a __view_wrapper__ is needed. Make sure you have used @feature_view"
         )
 
-    wrapper = getattr(model, '__model_wrapper__')
+    wrapper = getattr(model, "__model_wrapper__")
     if not isinstance(wrapper, ModelContractWrapper):
         return ValueError()
 
@@ -595,40 +663,45 @@ def model_prediction_instance_source(
         return ValueError()
 
     return (
-        FeatureViewReferenceSource(compiled_view, FeatureLocation.model(compiled_view.name)),
+        FeatureViewReferenceSource(
+            compiled_view, FeatureLocation.model(compiled_view.name)
+        ),
         compiled_view.request_all.needed_requests[0],
     )
 
 
-def view_wrapper_instance_source(view: Any) -> tuple[CodableBatchDataSource, RetrivalRequest] | Exception:
+def view_wrapper_instance_source(
+    view: Any,
+) -> tuple[CodableBatchDataSource, RetrievalRequest] | Exception:
     from aligned.feature_view.feature_view import FeatureViewWrapper
     from aligned.schemas.feature_view import FeatureViewReferenceSource
 
-    if not hasattr(view, '__view_wrapper__'):
+    if not hasattr(view, "__view_wrapper__"):
         return ValueError(
-            f'Unable to join {view} as a __view_wrapper__ is needed. Make sure you have used @feature_view'
+            f"Unable to join {view} as a __view_wrapper__ is needed. Make sure you have used @feature_view"
         )
 
-    wrapper = getattr(view, '__view_wrapper__')
+    wrapper = getattr(view, "__view_wrapper__")
     if not isinstance(wrapper, FeatureViewWrapper):
         return ValueError()
 
     compiled_view = wrapper.compile()
 
     return (
-        FeatureViewReferenceSource(compiled_view, FeatureLocation.feature_view(compiled_view.name)),
+        FeatureViewReferenceSource(
+            compiled_view, FeatureLocation.feature_view(compiled_view.name)
+        ),
         compiled_view.request_all.needed_requests[0],
     )
 
 
 def join_asof_source(
     source: CodableBatchDataSource,
-    left_request: RetrivalRequest,
+    left_request: RetrievalRequest,
     view: Any,
     left_on: list[str] | None = None,
     right_on: list[str] | None = None,
 ) -> JoinAsofDataSource:
-
     wrapped_source = view_wrapper_instance_source(view)
     if isinstance(wrapped_source, Exception):
         wrapped_source = model_prediction_instance_source(view)
@@ -642,9 +715,9 @@ def join_asof_source(
     right_event_timestamp = right_request.event_timestamp
 
     if left_event_timestamp is None:
-        raise ValueError('A left event timestamp is needed, but found none.')
+        raise ValueError("A left event timestamp is needed, but found none.")
     if right_event_timestamp is None:
-        raise ValueError('A right event timestamp is needed, but found none.')
+        raise ValueError("A right event timestamp is needed, but found none.")
 
     return JoinAsofDataSource(
         source=source,
@@ -663,8 +736,8 @@ def join_source(
     view: Any,
     on_left: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
     on_right: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
-    how: str = 'inner',
-    left_request: RetrivalRequest | None = None,
+    how: Literal["inner", "left", "outer"] = "inner",
+    left_request: RetrievalRequest | None = None,
 ) -> JoinDataSource:
     from aligned.data_source.batch_data_source import JoinDataSource
     from aligned.feature_view.feature_view import FeatureViewWrapper
@@ -690,12 +763,16 @@ def join_source(
 
     if left_request is None:
         if isinstance(source, JoinDataSource):
-            left_request = RetrivalRequest.unsafe_combine([source.left_request, source.right_request])
+            left_request = RetrievalRequest.unsafe_combine(
+                [source.left_request, source.right_request]
+            )
         elif isinstance(source, FeatureViewWrapper):
             left_request = source.compile().request_all.needed_requests[0]
 
     if left_request is None:
-        raise ValueError('Unable to resolve the left request. Concider adding a `left_request` param.')
+        raise ValueError(
+            "Unable to resolve the left request. Consider adding a `left_request` param."
+        )
 
     return JoinDataSource(
         source=source,
@@ -710,11 +787,10 @@ def join_source(
 
 @dataclass
 class JoinAsofDataSource(CodableBatchDataSource):
-
     source: CodableBatchDataSource
-    left_request: RetrivalRequest
+    left_request: RetrievalRequest
     right_source: CodableBatchDataSource
-    right_request: RetrivalRequest
+    right_request: RetrievalRequest
 
     left_event_timestamp: str
     right_event_timestamp: str
@@ -722,9 +798,9 @@ class JoinAsofDataSource(CodableBatchDataSource):
     left_on: list[str] | None = None
     right_on: list[str] | None = None
 
-    timestamp_unit: TimeUnit = 'us'
+    timestamp_unit: TimeUnit = "us"
 
-    type_name: str = 'join_asof'
+    type_name: str = "join_asof"
 
     async def schema(self) -> dict[str, FeatureType]:
         left_schema = await self.source.schema()
@@ -733,13 +809,12 @@ class JoinAsofDataSource(CodableBatchDataSource):
         return {**left_schema, **right_schema}
 
     def job_group_key(self) -> str:
-        return f'join/{self.source.job_group_key()}'
+        return f"join/{self.source.job_group_key()}"
 
-    def all_with_limit(self, limit: int | None) -> RetrivalJob:
-
-        right_job = self.right_source.all_data(self.right_request, limit=None).derive_features(
-            [self.right_request]
-        )
+    def all_with_limit(self, limit: int | None) -> RetrievalJob:
+        right_job = self.right_source.all_data(
+            self.right_request, limit=None
+        ).derive_features([self.right_request])
 
         return (
             self.source.all_data(self.left_request, limit=limit)
@@ -755,11 +830,10 @@ class JoinAsofDataSource(CodableBatchDataSource):
             .fill_missing_columns()
         )
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
-
-        right_job = self.right_source.all_data(self.right_request, limit=None).derive_features(
-            [self.right_request]
-        )
+    def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
+        right_job = self.right_source.all_data(
+            self.right_request, limit=None
+        ).derive_features([self.right_request])
 
         return (
             self.source.all_data(self.left_request, limit=limit)
@@ -778,12 +852,11 @@ class JoinAsofDataSource(CodableBatchDataSource):
         )
 
     def all_between_dates(
-        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
-    ) -> RetrivalJob:
-
-        right_job = self.right_source.all_data(self.right_request, limit=None).derive_features(
-            [self.right_request]
-        )
+        self, request: RetrievalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrievalJob:
+        right_job = self.right_source.all_data(
+            self.right_request, limit=None
+        ).derive_features([self.right_request])
 
         return (
             self.source.all_between_dates(self.left_request, start_date, end_date)
@@ -816,24 +889,29 @@ class JoinAsofDataSource(CodableBatchDataSource):
         self,
         view: Any,
         on: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
-        how: str = 'inner',
+        how: str = "inner",
     ) -> JoinDataSource:
         return join_source(self, view, on, how)
 
     def join_asof(
         self, view: Any, on: str | FeatureFactory | list[str] | list[FeatureFactory]
     ) -> JoinAsofDataSource:
-
         left_on = None
         right_on = None
         if on:
             left_on = resolve_keys(on)
             right_on = left_on
 
-        left_request = RetrivalRequest.unsafe_combine([self.left_request, self.right_request])
+        left_request = RetrievalRequest.unsafe_combine(
+            [self.left_request, self.right_request]
+        )
 
         return join_asof_source(
-            self, left_request=left_request, view=view, left_on=left_on, right_on=right_on
+            self,
+            left_request=left_request,
+            view=view,
+            left_on=left_on,
+            right_on=right_on,
         )
 
     def depends_on(self) -> set[FeatureLocation]:
@@ -842,17 +920,16 @@ class JoinAsofDataSource(CodableBatchDataSource):
 
 @dataclass
 class StackSource(CodableBatchDataSource):
-
     top: CodableBatchDataSource
     bottom: CodableBatchDataSource
 
     source_column: str | None = None
 
-    type_name: str = 'stack'
+    type_name: str = "stack"
 
     @property
     def source_column_config(self):  # type: ignore
-        from aligned.retrival_job import StackSourceColumn
+        from aligned.retrieval_job import StackSourceColumn
 
         if not self.source_column:
             return None
@@ -863,16 +940,22 @@ class StackSource(CodableBatchDataSource):
             source_column=self.source_column,
         )
 
-    def sub_request(self, request: RetrivalRequest, config) -> RetrivalRequest:  # type: ignore
-        return RetrivalRequest(
+    def sub_request(self, request: RetrievalRequest, config) -> RetrievalRequest:  # type: ignore
+        return RetrievalRequest(
             name=request.name,
             location=request.location,
-            features={feature for feature in request.features if feature.name != config.source_column},
+            features={
+                feature
+                for feature in request.features
+                if feature.name != config.source_column
+            },
             entities=request.entities,
             derived_features={
                 feature
                 for feature in request.derived_features
-                if not any(dep.name == config.source_column for dep in feature.depending_on)
+                if not any(
+                    dep.name == config.source_column for dep in feature.depending_on
+                )
             },
             aggregated_features=request.aggregated_features,
             event_timestamp_request=request.event_timestamp_request,
@@ -880,7 +963,7 @@ class StackSource(CodableBatchDataSource):
         )
 
     def job_group_key(self) -> str:
-        return f'stack/{self.top.job_group_key()}/{self.bottom.job_group_key()}'
+        return f"stack/{self.top.job_group_key()}/{self.bottom.job_group_key()}"
 
     async def schema(self) -> dict[str, FeatureType]:
         top_schema = await self.top.schema()
@@ -888,8 +971,8 @@ class StackSource(CodableBatchDataSource):
 
         return {**top_schema, **bottom_schema}
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
-        from aligned.retrival_job import StackJob
+    def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
+        from aligned.retrieval_job import StackJob
 
         config = self.source_column_config
 
@@ -901,7 +984,9 @@ class StackSource(CodableBatchDataSource):
         return (
             StackJob(
                 top=self.top.all_data(sub_request, int(limit / 2) if limit else None),
-                bottom=self.bottom.all_data(sub_request, int(limit / 2) if limit else None),
+                bottom=self.bottom.all_data(
+                    sub_request, int(limit / 2) if limit else None
+                ),
                 source_column=self.source_column_config,
             )
             .with_request([request])
@@ -910,21 +995,23 @@ class StackSource(CodableBatchDataSource):
 
     @classmethod
     def multi_source_features_for(  # type: ignore
-        cls, facts: RetrivalJob, requests: list[tuple[StackSource, RetrivalRequest]]
-    ) -> RetrivalJob:
+        cls, facts: RetrievalJob, requests: list[tuple[StackSource, RetrievalRequest]]
+    ) -> RetrievalJob:
         sources = {source.job_group_key() for source, _ in requests}
         if len(sources) != 1:
-            raise ValueError(f'Only able to load one {requests} at a time')
+            raise ValueError(f"Only able to load one {requests} at a time")
 
         source = requests[0][0]
         if not isinstance(source, cls):
-            raise ValueError(f'Only {cls} is supported, recived: {source}')
+            raise ValueError(f"Only {cls} is supported, received: {source}")
 
         return source.features_for(facts, requests[0][1])
 
-    def features_for(self, facts: RetrivalJob, request: RetrivalRequest) -> RetrivalJob:
+    def features_for(
+        self, facts: RetrievalJob, request: RetrievalRequest
+    ) -> RetrievalJob:
         from aligned.local.job import FileFactualJob
-        from aligned.retrival_job import StackJob
+        from aligned.retrieval_job import StackJob
 
         config = self.source_column_config
         sub_request = request
@@ -940,9 +1027,9 @@ class StackSource(CodableBatchDataSource):
         return FileFactualJob(stack_job, [request], facts)
 
     def all_between_dates(
-        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
-    ) -> RetrivalJob:
-        from aligned.retrival_job import StackJob
+        self, request: RetrievalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrievalJob:
+        from aligned.retrieval_job import StackJob
 
         top = self.top.all_between_dates(request, start_date, end_date)
         bottom = self.bottom.all_between_dates(request, start_date, end_date)
@@ -957,8 +1044,8 @@ class StackSource(CodableBatchDataSource):
         return self.top.depends_on().union(self.bottom.depends_on())
 
 
-def request_without_event_timestamp(request: RetrivalRequest) -> RetrivalRequest:
-    return RetrivalRequest(
+def request_without_event_timestamp(request: RetrievalRequest) -> RetrievalRequest:
+    return RetrievalRequest(
         request.name,
         location=request.location,
         features=request.features,
@@ -972,14 +1059,12 @@ def request_without_event_timestamp(request: RetrivalRequest) -> RetrivalRequest
 
 @dataclass
 class LoadedAtSource(CodableBatchDataSource):
-
     source: CodableBatchDataSource
-    type_name: str = 'loaded_at'
+    type_name: str = "loaded_at"
 
     @property
-    def to_markdown(self) -> str:
-        source_markdown = self.source.to_markdown if hasattr(self.source, 'to_markdown') else str(self.source)
-
+    def as_markdown(self) -> str:
+        source_markdown = self.source.as_markdown
         return f"""### Loaded At Source
 
 Adding a loaded at timestamp to the source:
@@ -992,15 +1077,18 @@ Adding a loaded at timestamp to the source:
     async def schema(self) -> dict[str, FeatureType]:
         return await self.source.schema()
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
-        from aligned.retrival_job import LoadedAtJob
+    def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
+        from aligned.retrieval_job import LoadedAtJob
 
-        return LoadedAtJob(self.source.all_data(request_without_event_timestamp(request), limit), request)
+        return LoadedAtJob(
+            self.source.all_data(request_without_event_timestamp(request), limit),
+            request,
+        )
 
     def all_between_dates(
-        self, request: RetrivalRequest, start_date: datetime, end_date: datetime
-    ) -> RetrivalJob:
-        from aligned.retrival_job import LoadedAtJob
+        self, request: RetrievalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrievalJob:
+        from aligned.retrieval_job import LoadedAtJob
 
         return LoadedAtJob(
             self.all_data(request, limit=None),
@@ -1016,25 +1104,23 @@ Adding a loaded at timestamp to the source:
     @classmethod
     def multi_source_features_for(  # type: ignore
         cls: type[CodableBatchDataSource],
-        facts: RetrivalJob,
-        requests: list[tuple[CodableBatchDataSource, RetrivalRequest]],
-    ) -> RetrivalJob:
-
+        facts: RetrievalJob,
+        requests: list[tuple[CodableBatchDataSource, RetrievalRequest]],
+    ) -> RetrievalJob:
         return type(requests[0][0]).multi_source_features_for(facts, requests)
 
 
 @dataclass
 class JoinDataSource(CodableBatchDataSource):
-
     source: CodableBatchDataSource
-    left_request: RetrivalRequest
+    left_request: RetrievalRequest
     right_source: CodableBatchDataSource
-    right_request: RetrivalRequest
+    right_request: RetrievalRequest
     left_on: list[str]
     right_on: list[str]
-    method: str
+    method: Literal["left", "inner", "outer"]
 
-    type_name: str = 'join'
+    type_name: str = "join"
 
     async def schema(self) -> dict[str, FeatureType]:
         left_schema = await self.source.schema()
@@ -1043,30 +1129,39 @@ class JoinDataSource(CodableBatchDataSource):
         return {**left_schema, **right_schema}
 
     def job_group_key(self) -> str:
-        return f'join/{self.source.job_group_key()}'
+        return f"join/{self.source.job_group_key()}"
 
-    def all_with_limit(self, limit: int | None) -> RetrivalJob:
-        right_job = self.right_source.all_data(self.right_request, limit=None).derive_features(
-            [self.right_request]
-        )
+    def all_with_limit(self, limit: int | None) -> RetrievalJob:
+        right_job = self.right_source.all_data(
+            self.right_request, limit=None
+        ).derive_features([self.right_request])
 
         return (
             self.source.all_data(self.left_request, limit=limit)
             .derive_features([self.left_request])
-            .join(right_job, method=self.method, left_on=self.left_on, right_on=self.right_on)
+            .join(
+                right_job,
+                method=self.method,
+                left_on=self.left_on,
+                right_on=self.right_on,
+            )
             .fill_missing_columns()
         )
 
-    def all_data(self, request: RetrivalRequest, limit: int | None) -> RetrivalJob:
-
-        right_job = self.right_source.all_data(self.right_request, limit=None).derive_features(
-            [self.right_request]
-        )
+    def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
+        right_job = self.right_source.all_data(
+            self.right_request, limit=None
+        ).derive_features([self.right_request])
 
         return (
             self.source.all_data(self.left_request, limit=limit)
             .derive_features([self.left_request])
-            .join(right_job, method=self.method, left_on=self.left_on, right_on=self.right_on)
+            .join(
+                right_job,
+                method=self.method,
+                left_on=self.left_on,
+                right_on=self.right_on,
+            )
             .fill_missing_columns()
             .aggregate(request)
             .derive_features([request])
@@ -1074,21 +1169,28 @@ class JoinDataSource(CodableBatchDataSource):
 
     def all_between_dates(
         self,
-        request: RetrivalRequest,
+        request: RetrievalRequest,
         start_date: datetime,
         end_date: datetime,
-    ) -> RetrivalJob:
-        right_job = self.right_source.all_data(self.right_request, limit=None).derive_features(
-            [self.right_request]
-        )
+    ) -> RetrievalJob:
+        right_et = request.event_timestamp
+        assert right_et
+
+        right_job = self.right_source.all_data(
+            self.right_request, limit=None
+        ).derive_features([self.right_request])
+
+        left_et = self.left_request.event_timestamp
+        assert left_et
+        left_timestamp = left_et.name
 
         return (
             self.source.all_between_dates(self.left_request, start_date, end_date)
             .derive_features([self.left_request])
             .join_asof(
                 right_job,
-                left_event_timestamp=self.left_event_timestamp,
-                right_event_timestamp=self.right_event_timestamp,
+                left_event_timestamp=left_timestamp,
+                right_event_timestamp=right_et.name,
                 left_on=self.left_on,
                 right_on=self.right_on,
             )
@@ -1115,9 +1217,8 @@ class JoinDataSource(CodableBatchDataSource):
         on: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
         on_left: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
         on_right: str | FeatureFactory | list[str] | list[FeatureFactory] | None = None,
-        how: str = 'inner',
+        how: Literal["left", "inner", "outer"] = "inner",
     ) -> JoinDataSource:
-
         if on:
             on_left = on
             on_right = on
@@ -1137,8 +1238,10 @@ class ColumnFeatureMappable:
         return new
 
     def columns_for(self, features: list[Feature]) -> list[str]:
-        return [self.mapping_keys.get(feature.name, feature.name) for feature in features]
+        return [
+            self.mapping_keys.get(feature.name, feature.name) for feature in features
+        ]
 
-    def feature_identifier_for(self, columns: list[str]) -> list[str]:
+    def feature_identifier_for(self, columns: Iterable[str]) -> list[str]:
         reverse_map = {v: k for k, v in self.mapping_keys.items()}
         return [reverse_map.get(column, column) for column in columns]
