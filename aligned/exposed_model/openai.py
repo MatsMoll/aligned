@@ -194,7 +194,7 @@ class OpenAiConfig(Codable):
         default_factory=lambda: EnvironmentValue(env="OPENAI_API_KEY")
     )
     base_url: ConfigValue = field(
-        default_factory=lambda: LiteralValue("https://api.openai.com/")
+        default_factory=lambda: LiteralValue("https://api.openai.com/v1/")
     )
 
     def client(self) -> AsyncClient:

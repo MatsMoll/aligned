@@ -1466,8 +1466,8 @@ class VectorIndexStore:
         return source.nearest_n_to(features, number_of_records, response)
 
     def as_langchain_retriver(self, number_of_docs: int = 5):
-        from aligned.exposed_model.langchain import AlignedRetriver
+        from aligned.exposed_model.langchain_retriever import AlignedRetriever
 
-        return AlignedRetriver(
+        return AlignedRetriever(
             store=self.store, index_name=self.index_name, number_of_docs=number_of_docs
         )

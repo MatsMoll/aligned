@@ -37,6 +37,7 @@ from aligned.data_source.batch_data_source import (
     resolve_keys,
 )
 from aligned.data_source.stream_data_source import StreamDataSource
+from aligned.local.job import LiteralRetrievalJob
 from aligned.request.retrieval_request import RetrievalRequest
 from aligned.retrieval_job import ConvertableToRetrievalJob, RetrievalJob
 from aligned.schemas.derivied_feature import (
@@ -207,6 +208,20 @@ class FeatureViewWrapper(Generic[T]):
             view, FeatureLocation.feature_view(self.metadata.name)
         )
         return FeatureView.compile_with_metadata(view, self.metadata)
+
+    def empty(self) -> RetrievalJob:
+        view = self.compile()
+        req = view.retrieval_request
+        return LiteralRetrievalJob(
+            pl.DataFrame(
+                data=[],
+                schema={
+                    feature.name: feature.dtype.polars_type
+                    for feature in req.all_returned_features
+                },
+            ),
+            requests=[req],
+        )
 
     def vstack(
         self,

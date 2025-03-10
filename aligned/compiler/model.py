@@ -143,12 +143,12 @@ class ModelContractWrapper(Generic[T]):
             copy_transformations=copy_transformations,
         )
 
-    def as_langchain_retriver(
+    def as_langchain_retriever(
         self,
         number_of_docs: int = 5,
         needed_views: list[FeatureViewWrapper | ModelContractWrapper] | None = None,
     ):
-        from aligned.exposed_model.langchain import AlignedRetriver
+        from aligned.exposed_model.langchain_retriever import AlignedRetriever
         from aligned.sources.vector_index import VectorIndex
 
         source = self.metadata.output_source
@@ -159,7 +159,7 @@ class ModelContractWrapper(Generic[T]):
 
         index_name = source.vector_index_name() or self.metadata.name
 
-        return AlignedRetriver(
+        return AlignedRetriever(
             store=store.store, index_name=index_name, number_of_docs=number_of_docs
         )
 

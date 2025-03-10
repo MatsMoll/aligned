@@ -1415,7 +1415,7 @@ class String(
 
 @dataclass
 class Struct(FeatureFactory):
-    subtype: Any
+    subtype: Any | None = None
 
     def copy_type(self: Struct) -> Struct:
         if self.constraints and Optional() in self.constraints:
@@ -1427,6 +1427,8 @@ class Struct(FeatureFactory):
 
     @property
     def dtype(self) -> FeatureType:
+        if self.subtype is None:
+            return FeatureType.struct()
         dtype = FeatureType.from_type(self.subtype)
         assert dtype, f"Was unable to find type for {self.subtype}"
         return dtype

@@ -7,6 +7,7 @@ from datetime import datetime
 
 import polars as pl
 
+from aligned.exceptions import UnableToFindFileException
 from aligned.lazy_imports import pandas as pd
 from aligned.request.retrieval_request import (
     AggregatedFeature,
@@ -574,8 +575,6 @@ class FileFactualJob(RetrievalJob):
                 new_result = new_result.sort(
                     [row_id_name, request.event_timestamp.name], descending=True
                 )
-                print(request.features_to_include)
-                print(request.event_timestamp.name)
                 if request.event_timestamp.name not in request.features_to_include:
                     new_result = new_result.select(
                         pl.exclude(request.event_timestamp.name)
@@ -600,7 +599,25 @@ class FileFactualJob(RetrievalJob):
         return (await self.to_lazy_polars()).collect().to_pandas()
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
-        return await self.file_transformations(await self.source.to_lazy_polars())
+        try:
+            return await self.file_transformations(await self.source.to_lazy_polars())
+        except UnableToFindFileException:
+            entities = await self.facts.to_lazy_polars()
+
+            columns: list[pl.Expr] = []
+            for req in self.retrieval_requests:
+                columns.extend(
+                    [
+                        pl.lit(
+                            feat.default_value.python_value
+                            if feat.default_value
+                            else None
+                        ).alias(feat.name)
+                        for feat in req.all_returned_features
+                    ]
+                )
+
+            return entities.with_columns(columns)
 
     def log_each_job(
         self, logger_func: Callable[[object], None] | None = None

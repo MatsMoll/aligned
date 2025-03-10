@@ -2287,16 +2287,25 @@ class FillMissingColumnsJob(RetrievalJob, ModificationJob):
 
         for request in self.retrieval_requests:
             missing_columns = [
-                feature.name
+                feature
                 for feature in request.features
                 if feature.constraints
-                and optional_constraint in feature.constraints
+                and (
+                    optional_constraint in feature.constraints or feature.default_value
+                )
                 and feature.name not in data.columns
             ]
 
             if missing_columns:
                 data = data.with_columns(
-                    [pl.lit(None).alias(feature) for feature in missing_columns]
+                    [
+                        pl.lit(
+                            feature.default_value.python_value
+                            if feature.default_value
+                            else None
+                        ).alias(feature.name)
+                        for feature in missing_columns
+                    ]
                 )
 
         return data

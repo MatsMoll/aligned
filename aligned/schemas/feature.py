@@ -14,15 +14,20 @@ from aligned.schemas.literal_value import LiteralValue
 
 if TYPE_CHECKING:
     from aligned.compiler.feature_factory import FeatureFactory
+    from pyspark.sql.types import DataType
 
 
 class StaticFeatureTags:
     is_shadow_model = "is_shadow_model"
     is_model_version = "is_model_version"
     is_entity = "is_entity"
+
     is_annotated_by = "is_annotated_by"
     is_annotated_feature = "is_annotated_feature"
+
     is_input_features = "is_input_features"
+    "Used to tag which features are used for a log and wait approach"
+
     is_freshness = "is_updated_at_feature"
     is_image = "is_image_url"
     is_prompt_completion = "is_prompt_completion"
@@ -52,6 +57,7 @@ NAME_POLARS_MAPPING = [
     ("embedding", pl.List),
     ("json", pl.Utf8),
     ("binary", pl.Binary),
+    ("sturct", pl.Struct),
 ]
 
 
@@ -97,7 +103,14 @@ class FeatureType(Codable):
     def is_struct(self) -> bool:
         return self.name.startswith("struct")
 
+    @property
+    def has_structured_fields(self) -> bool:
+        return self.name.startswith("struct-")
+
     def struct_fields(self) -> dict[str, FeatureType]:
+        if self.name == "struct":
+            raise ValueError("Has no structured subfields.")
+
         raw_content = self.name.removeprefix("struct-")
         content = json.loads(raw_content)
 
@@ -175,10 +188,93 @@ class FeatureType(Codable):
         }[self.name]
 
     @property
+    def spark_type(self) -> DataType:
+        from pyspark.sql.types import (
+            ArrayType,
+            BooleanType,
+            ByteType,
+            DoubleType,
+            FloatType,
+            IntegerType,
+            LongType,
+            ShortType,
+            StringType,
+            DateType,
+            StructField,
+            StructType,
+            TimestampType,
+            BinaryType,
+            MapType,
+        )
+
+        if self.is_datetime:
+            return TimestampType()
+
+        if self.is_struct:
+            if not self.has_structured_fields:
+                return MapType(StringType(), StringType())
+            else:
+                sub_fields = self.struct_fields()
+                return StructType(
+                    [
+                        StructField(name=key, dataType=dtype.spark_type)
+                        for key, dtype in sub_fields.items()
+                    ]
+                )
+
+        if self.is_array:
+            sub_type = self.array_subtype()
+            if sub_type:
+                return ArrayType(sub_type.spark_type)
+            else:
+                return ArrayType(StringType())
+
+        if self.is_embedding:
+            return ArrayType(FloatType())
+
+        spark_dtypes = [
+            ("string", StringType()),
+            ("int8", ByteType()),
+            ("int16", ShortType()),
+            ("int32", IntegerType()),
+            ("int64", LongType()),
+            ("uint8", ByteType()),
+            ("uint16", ShortType()),
+            ("uint32", IntegerType()),
+            ("uint64", LongType()),
+            ("float", FloatType()),
+            ("float32", FloatType()),
+            ("float64", DoubleType()),
+            ("double", DoubleType()),
+            ("bool", BooleanType()),
+            ("date", DateType()),
+            ("datetime", TimestampType()),
+            ("uuid", StringType()),
+            ("json", StringType()),
+            ("binary", BinaryType()),
+        ]
+        for name, dtype in spark_dtypes:
+            if name == self.name:
+                return dtype
+
+        raise ValueError(f"Unable to find a value that can represent {self.name}")
+
+    @property
     def polars_type(self) -> pl.DataType:
         if self.is_datetime:
             time_zone = self.datetime_timezone
             return pl.Datetime(time_zone=time_zone)  # type: ignore
+
+        if self.is_struct:
+            if not self.has_structured_fields:
+                return pl.Struct([])
+            else:
+                return pl.Struct(
+                    [
+                        pl.Field(name=name, dtype=dtype.polars_type)
+                        for name, dtype in self.struct_fields().items()
+                    ]
+                )
 
         if self.is_array:
             sub_type = self.array_subtype()
@@ -269,7 +365,12 @@ class FeatureType(Codable):
             return FeatureType(name="array")
 
         if isinstance(polars_type, pl.Struct):
-            return FeatureType(name="json")
+            return FeatureType.struct(
+                {
+                    field.name: FeatureType.from_polars(field.dtype)  # type: ignore
+                    for field in polars_type.fields
+                }
+            )
 
         for name, dtype in NAME_POLARS_MAPPING:
             if polars_type.is_(dtype):
@@ -414,7 +515,10 @@ class FeatureType(Codable):
         return FeatureType(name="json")
 
     @staticmethod
-    def struct(subtypes: dict[str, FeatureType]) -> FeatureType:
+    def struct(subtypes: dict[str, FeatureType] | None = None) -> FeatureType:
+        if subtypes is None:
+            return FeatureType(name="struct")
+
         content = json.dumps({key: value.name for key, value in subtypes.items()})
         return FeatureType(name=f"struct-{content}")
 
