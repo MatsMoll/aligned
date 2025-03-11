@@ -1610,7 +1610,7 @@ class List(FeatureFactory, Generic[GenericFeature]):
 
     @property
     def dtype(self) -> FeatureType:
-        return FeatureType.array()
+        return FeatureType.array(self.sub_type.dtype)
 
     def feature(self) -> Feature:
         from aligned.schemas.constraints import ListConstraint

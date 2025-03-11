@@ -218,7 +218,9 @@ class FeatureType(Codable):
                 return StructType(
                     [
                         StructField(name=key, dataType=dtype.spark_type)
-                        for key, dtype in sub_fields.items()
+                        for key, dtype in sorted(
+                            sub_fields.items(), key=lambda vals: vals[0]
+                        )
                     ]
                 )
 

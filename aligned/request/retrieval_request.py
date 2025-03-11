@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import pyarrow as pa
 import polars as pl
@@ -11,6 +12,9 @@ from aligned.schemas.derivied_feature import (
     DerivedFeature,
 )
 from aligned.schemas.feature import EventTimestamp, Feature, FeatureLocation
+
+if TYPE_CHECKING:
+    from pyspark.sql.types import StructType
 
 
 @dataclass
@@ -232,6 +236,18 @@ class RetrievalRequest(Codable):
             self.all_returned_features, key=lambda feature: feature.name
         )
         return {feat.name: feat.dtype.polars_type for feat in sorted_features}
+
+    def spark_schema(self) -> "StructType":
+        from pyspark.sql.types import StructField, StructType
+
+        return StructType(
+            [
+                StructField(name=feature.name, dataType=feature.dtype.spark_type)
+                for feature in sorted(
+                    self.all_returned_features, key=lambda feat: feat.name
+                )
+            ]
+        )
 
     def aggregate_over(self) -> dict[AggregateOver, set[AggregatedFeature]]:
         features = defaultdict(set)

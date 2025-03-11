@@ -18,6 +18,7 @@ from aligned.compiler.feature_factory import (
     RegressionLabel,
     TargetProbability,
 )
+from aligned.request.retrieval_request import RetrievalRequest
 from aligned.sources.random_source import RandomDataSource
 from aligned.data_source.batch_data_source import CodableBatchDataSource
 from aligned.data_source.stream_data_source import StreamDataSource
@@ -117,6 +118,9 @@ class ModelContractWrapper(Generic[T]):
         setattr(contract, "__model_wrapper__", self)
         return contract
 
+    def request(self) -> RetrievalRequest:
+        return self.as_view().retrieval_request
+
     def compile(self) -> ModelSchema:
         return compile_with_metadata(self.contract(), self.metadata)
 
@@ -194,7 +198,7 @@ class ModelContractWrapper(Generic[T]):
 
         return self.query(needed_views).predict_over(values)
 
-    def as_view(self) -> CompiledFeatureView | None:
+    def as_view(self) -> CompiledFeatureView:
         compiled = self.compile()
         view = compiled.predictions_view
 
