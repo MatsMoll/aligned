@@ -50,17 +50,16 @@ def test_from_type() -> None:
     assert len(dtype.struct_fields()) == 4
 
 
-@feature_view(source=source.table("test"))
-class WithStructure:
-    a = UUID().as_entity()
-
-    structure = Struct(BaseModelTest)
-    list_with_struct = List(Struct(TestingClass))
-    list_of_type = List(Float32())
-
-
 def test_struct_as_type() -> None:
     from pyspark.sql.types import StructType, ArrayType
+
+    @feature_view(source=source.table("test"))
+    class WithStructure:
+        a = UUID().as_entity()
+
+        structure = Struct(BaseModelTest)
+        list_with_struct = List(Struct(TestingClass))
+        list_of_type = List(Float32())
 
     req = WithStructure.request
     schema = req.spark_schema()
