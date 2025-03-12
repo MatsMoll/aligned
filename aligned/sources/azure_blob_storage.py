@@ -598,7 +598,7 @@ Partition Keys: *{self.partition_keys}*
         try:
             url = f"az://{self.directory}/**/*.parquet"
             creds = self.config.read_creds()
-            return pl.scan_parquet(url, storage_options=creds)
+            return pl.scan_parquet(url, storage_options=creds, hive_partitioning=True)
         except FileNotFoundError as error:
             raise UnableToFindFileException(self.directory.as_posix()) from error
         except HTTPStatusError as error:

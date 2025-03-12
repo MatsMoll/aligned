@@ -1,6 +1,9 @@
 import polars as pl
 import json
-from aligned.data_source.batch_data_source import CodableBatchDataSource
+from aligned.data_source.batch_data_source import (
+    CodableBatchDataSource,
+    UnknownDataSource,
+)
 from aligned.request.retrieval_request import RetrievalRequest
 from aligned.sources.local import CsvFileSource
 import pytest
@@ -51,3 +54,12 @@ async def test_custom_transformation_as_function(
     new_df = await ds.all_data(RetrievalRequest.all_data(), limit=None).to_polars()
 
     assert new_df.sort("bucket").equals(df.sort("bucket").select(new_df.columns))
+
+
+def test_decode_unknown_source():
+    content = {"type_name": "some-random-source", "some_random_prop": "foo"}
+    source = CodableBatchDataSource._deserialize(content)
+    assert isinstance(source, UnknownDataSource)
+
+    dict_vals = source.to_dict()
+    assert len(dict_vals) == len(content)

@@ -375,23 +375,49 @@ class CodableBatchDataSource(Codable, SerializableType, BatchDataSource):
         return str(type(self))
 
     def _serialize(self) -> dict:
-        assert (
-            self.type_name in BatchDataSourceFactory.shared().supported_data_sources
-        ), f"Unknown type_name: {self.type_name}"
         return self.to_dict()
 
     @classmethod
     def _deserialize(cls, value: dict) -> CodableBatchDataSource:
-        name_type = value["type_name"]
+        name_type = value.get("type_name", "missing type name in source")
         if name_type not in BatchDataSourceFactory.shared().supported_data_sources:
-            raise ValueError(
-                f"Unknown batch data source id: '{name_type}'.\nRemember to add the"
-                " data source to the BatchDataSourceFactory.supported_data_sources if"
-                " it is a custom type."
-            )
+            return UnknownDataSource(type_name=name_type, content=value)
+
         del value["type_name"]
         data_class = BatchDataSourceFactory.shared().supported_data_sources[name_type]
         return data_class.from_dict(value)
+
+
+@dataclass
+class UnknownDataSource(CodableBatchDataSource):
+    type_name: str
+    content: dict
+
+    @property
+    def as_markdown(self) -> str:
+        return f"Unknown source named {self.type_name} with content {self.content}"
+
+    def __post_serialize__(self, d: dict[Any, Any]) -> dict[Any, Any]:
+        return d["content"]
+
+    def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
+        raise NotImplementedError(
+            f"Missing implementation for source with content {self.content}"
+        )
+
+    def all_between_dates(
+        self, request: RetrievalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrievalJob:
+        raise NotImplementedError(
+            f"Missing implementation for source with content {self.content}"
+        )
+
+    def features_for(
+        self, facts: RetrievalJob, request: RetrievalRequest
+    ) -> RetrievalJob:
+        raise NotImplementedError(
+            f"Missing implementation for source with content {self.content}"
+        )
 
 
 @dataclass

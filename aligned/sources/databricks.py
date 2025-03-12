@@ -585,10 +585,23 @@ class UCFeatureTableSource(
         return UCFeatureTableSource(config, self.table)
 
 
-def features_to_read(request: RetrievalRequest) -> list[str]:
-    columns = list(request.all_required_feature_names.union(request.entity_names))
+def features_to_read(request: RetrievalRequest, schema: StructType) -> list[str]:
+    stored_fields = schema.fieldNames()
+
+    columns = list(request.entity_names)
+
+    for feat in request.all_returned_features:
+        if feat.name in stored_fields:
+            columns.append(feat.name)
+        elif not feat.default_value:
+            raise ValueError(
+                f"Missing column '{feat.name}'. Either add it to the table {request.location}, or add a default value"
+                f"Available schema is {schema}"
+            )
+
     if request.event_timestamp:
         columns.append(request.event_timestamp.name)
+
     return columns
 
 
@@ -678,7 +691,7 @@ class UnityCatalogTableAllJob(RetrievalJob):
         spark_df = con.read.table(self.table.identifier())
 
         if self.request.features_to_include:
-            spark_df = spark_df.select(features_to_read(self.request))
+            spark_df = spark_df.select(features_to_read(self.request, spark_df.schema))
 
         if self.where:
             spark_df = spark_df.filter(self.where)
@@ -750,9 +763,8 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
         spark = source.config.connection()
 
         async def load() -> pl.LazyFrame:
-            df = spark.read.table(source.table.identifier()).select(
-                features_to_read(request)
-            )
+            df = spark.read.table(source.table.identifier())
+            df = df.select(features_to_read(request, df.schema))
             return pl.from_pandas(df.toPandas()).lazy()
 
         return FileFactualJob(
