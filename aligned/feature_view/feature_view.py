@@ -702,9 +702,6 @@ class FeatureView(ABC):
             if not isinstance(feature, FeatureFactory):
                 continue
 
-            if feature._description is None:
-                feature._description = feature.__doc__
-
             feature._name = var_name
             feature._location = FeatureLocation.feature_view(metadata.name)
             compiled_feature = feature.feature()
