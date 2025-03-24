@@ -131,6 +131,16 @@
         
 
         
+            <div class="itemName"><code><a href="#extract_raw_values" class="internal-link" title="aligned.sql.extract_raw_values">extract<wbr></wbr>_raw<wbr></wbr>_values</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
             <div class="itemName"><code><a href="#glot_to_polars" class="internal-link" title="aligned.sql.glot_to_polars">glot<wbr></wbr>_to<wbr></wbr>_polars</a></code>
             </div>
         
@@ -238,6 +248,16 @@
 
         
             <div class="itemName"><code><a href="aligned.exceptions.html" class="internal-link" title="aligned.exceptions">exceptions</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.exposed_model.html" class="internal-link" title="aligned.exposed_model">exposed<wbr></wbr>_model</a></code>
             </div>
         
 
@@ -622,7 +642,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <a href="https://github.com/MatsMoll/aligned/tree/1a5051c86a413eab5d3f53389de269e949b535c0/aligned/sql.py" class="sourceLink">(source)</a>
+          <a href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/sql.py" class="sourceLink">(source)</a>
           <p></p>
         </div>
 
@@ -631,10 +651,15 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id381">
+          <table class="children sortable" id="id427">
   
   
   <tr class="function">
+    
+    <td>Function</td>
+    <td><code><a href="#extract_raw_values" class="internal-link" title="aligned.sql.extract_raw_values">extract<wbr></wbr>_raw<wbr></wbr>_values</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="function">
     
     <td>Function</td>
     <td><code><a href="#glot_to_polars" class="internal-link" title="aligned.sql.glot_to_polars">glot<wbr></wbr>_to<wbr></wbr>_polars</a></code></td>
@@ -660,6 +685,33 @@
           <div class="basefunction">
   
   
+  <a name="aligned.sql.extract_raw_values">
+    
+  </a>
+  <a name="extract_raw_values">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">extract_raw_values</span><span class="function-signature">(query: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code>pl.DataFrame | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/sql.py#L85">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#extract_raw_values" title="aligned.sql.extract_raw_values">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basefunction">
+  
+  
   <a name="aligned.sql.glot_to_polars">
     
   </a>
@@ -670,7 +722,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">glot_to_polars</span><span class="function-signature">(glot_exp: <code>exp.Expression</code>) -&gt; <code>pl.Expr</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/1a5051c86a413eab5d3f53389de269e949b535c0/aligned/sql.py#L21">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/sql.py#L21">
       
       (source)
     </a>
@@ -697,7 +749,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">request_for_sql</span><span class="function-signature">(query: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, store: <code>ContractStore</code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr>RetrievalRequest, <wbr></wbr>exp.Where | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>]]</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/1a5051c86a413eab5d3f53389de269e949b535c0/aligned/sql.py#L85">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/sql.py#L104">
       
       (source)
     </a>
@@ -724,7 +776,7 @@
     
     
     <span class="py-keyword">def</span> <span class="py-defname">sql_to_polars</span><span class="function-signature">(sql: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code>pl.Expr</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/1a5051c86a413eab5d3f53389de269e949b535c0/aligned/sql.py#L12">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/sql.py#L12">
       
       (source)
     </a>
@@ -750,7 +802,7 @@
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    24.11.2 at 2025-03-12 21:52:21.
+    24.11.2 at 2025-03-24 21:44:45.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

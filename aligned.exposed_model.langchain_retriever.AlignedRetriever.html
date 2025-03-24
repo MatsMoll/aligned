@@ -1,0 +1,513 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+          "DTD/xhtml1-strict.dtd">
+<html>
+  
+
+  <head>
+    
+    <title>aligned.exposed_model.langchain_retriever.AlignedRetriever</title>
+    <meta name="generator" content="pydoctor 24.11.2"> 
+        
+    </meta>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1 maximum-scale=1" />
+    <link rel="stylesheet" type="text/css" href="bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="apidocs.css" />
+    <link rel="stylesheet" type="text/css" href="extra.css" />
+    
+</head>
+
+  <body>
+
+    
+
+    <nav class="navbar navbar-default mainnavbar">
+      
+  
+  <div class="container-fluid">
+
+
+    <div class="navbar-header">
+      
+      <div class="navlinks">
+        <span class="navbar-brand">
+          <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a> <a href="index.html">API Documentation</a>
+        </span>
+
+        <a href="moduleIndex.html">
+          Modules
+        </a>
+
+        <a href="classIndex.html">
+          Classes
+        </a>
+
+        <a href="nameIndex.html">
+          Names
+        </a>
+
+        <div id="search-box-container">
+          <div class="input-group">
+            <input id="search-box" type="search" name="search-query" placeholder="Search..." aria-label="Search" minlength="2" class="form-control" autocomplete="off" />
+            
+            <span class="input-group-btn">
+              <a style="display: none;" class="btn btn-default" id="search-clear-button" title="Clear" onclick="clearSearch()"><img src="fonts/x-circle.svg" alt="Clear" /></a>
+              <a class="btn btn-default" id="apidocs-help-button" title="Help" href="apidocs-help.html"><img src="fonts/info.svg" alt="Help" /></a>
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="search-results-container" style="display: none;">
+        
+        <div id="search-buttons">
+          <span class="label label-default" id="search-docstrings-button">
+          <label class="checkbox-inline">
+            <input type="checkbox" id="toggle-search-in-docstrings-checkbox" value="false" onclick="toggleSearchInDocstrings()">
+              search in docstrings
+            </input>
+          </label>
+          </span>
+          
+        </div>
+        
+        <noscript>
+            <h1>Cannot search: JavaScript is not supported/enabled in your browser.</h1>
+        </noscript>
+
+        <div id="search-status"> </div>
+
+        <div class="warning" id="search-warn-box" style="display: none;">
+          <p class="rst-last"><span id="search-warn"></span></p>
+        </div>
+
+        <table id="search-results">
+          <!-- Filled dynamically by JS -->
+        </table>
+        
+        <div style="margin-top: 10px;">
+          <p>For more information on the search, visit the <a href="apidocs-help.html#rst-search">help page</a>.</p>
+        </div>
+      </div>
+
+    </div>
+
+
+  </div>
+</nav>
+    
+    <div class="container-fluid">
+
+      <!-- Side navigation -->
+      <div class="sidebarcontainer" style="display: none;">
+        
+        <div class="sidebar"><nav class="sidebar">
+  
+
+  <div>
+
+      <div class="thingTitle">
+        <span>Class</span>
+        <code class="thisobject"><a href="aligned.exposed_model.langchain_retriever.AlignedRetriever.html" class="internal-link" title="This class"><wbr></wbr>Aligned<wbr></wbr>Retriever</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        
+        
+
+        <div class="childrenKindTitle">Methods</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#__str__" class="internal-link" title="aligned.exposed_model.langchain_retriever.AlignedRetriever.__str__">__str__</a></code>
+            </div>
+        
+
+    </li><li class="private">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#_aget_relevant_documents" class="internal-link" title="aligned.exposed_model.langchain_retriever.AlignedRetriever._aget_relevant_documents">_aget<wbr></wbr>_relevant<wbr></wbr>_documents</a></code>
+            </div>
+        
+
+    </li><li class="private">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#_get_relevant_documents" class="internal-link" title="aligned.exposed_model.langchain_retriever.AlignedRetriever._get_relevant_documents">_get<wbr></wbr>_relevant<wbr></wbr>_documents</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+
+        <div class="childrenKindTitle">Attributes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#index_name" class="internal-link" title="aligned.exposed_model.langchain_retriever.AlignedRetriever.index_name">index<wbr></wbr>_name</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#number_of_docs" class="internal-link" title="aligned.exposed_model.langchain_retriever.AlignedRetriever.number_of_docs">number<wbr></wbr>_of<wbr></wbr>_docs</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#store" class="internal-link" title="aligned.exposed_model.langchain_retriever.AlignedRetriever.store">store</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div><div>
+
+      <div class="thingTitle">
+        <span>Module</span>
+        <code><a href="aligned.exposed_model.langchain_retriever.html" class="internal-link" title="The parent of this class">langchain<wbr></wbr>_retriever</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        <div class="childrenKindTitle">Classes</div>
+        <ul>
+    
+    <li class=" thisobject">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.exposed_model.langchain_retriever.AlignedRetriever.html" class="internal-link" title="aligned.exposed_model.langchain_retriever.AlignedRetriever"><wbr></wbr>Aligned<wbr></wbr>Retriever</a></code>
+            </div>
+        
+
+    </li>
+</ul>
+
+        
+         
+
+        
+         
+
+        
+         
+
+        
+         
+        
+      </div>
+  </div>
+
+</nav>
+        </div>
+        <div id="collapseSideBar">
+          <a class="btn btn-link" onclick="toggleSideBarCollapse()" title="Toggle Sidebar Collapse">
+          </a>
+        </div> 
+        <script src="sidebartoggle.js" type="text/javascript"></script>
+       
+      </div>
+
+      <div id="main" class="">
+        
+
+        
+
+        <div class="page-header">
+          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.exposed_model.html" class="internal-link" title="aligned.exposed_model">exposed_model</a></code><wbr></wbr>.<code><a href="aligned.exposed_model.langchain_retriever.html" class="internal-link" title="aligned.exposed_model.langchain_retriever">langchain_retriever</a></code><wbr></wbr>.<code><a href="aligned.exposed_model.langchain_retriever.AlignedRetriever.html" class="internal-link" title="aligned.exposed_model.langchain_retriever.AlignedRetriever">AlignedRetriever</a></code></code></h1>
+          <div id="showPrivate">
+            <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
+          </div>
+        </div>
+
+        <div class="categoryHeader">
+          class documentation
+        </div>
+
+        <div class="extrasDocstring">
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">AlignedRetriever</span>(langchain_core.retriveres.BaseRetriever): <a href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/langchain_retriever.py#L8" class="sourceLink">(source)</a></code></p>
+          <p><a href="classIndex.html#aligned.exposed_model.langchain_retriever.AlignedRetriever">View In Hierarchy</a></p>
+        </div>
+
+        <div class="moduleDocstring">
+          <div><p class="undocumented">Undocumented</p></div>
+        </div>
+
+        <div id="splitTables">
+          <table class="children sortable" id="id87">
+  
+  
+  <tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#__str__" class="internal-link" title="aligned.exposed_model.langchain_retriever.AlignedRetriever.__str__">__str__</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#index_name" class="internal-link" title="aligned.exposed_model.langchain_retriever.AlignedRetriever.index_name">index<wbr></wbr>_name</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#number_of_docs" class="internal-link" title="aligned.exposed_model.langchain_retriever.AlignedRetriever.number_of_docs">number<wbr></wbr>_of<wbr></wbr>_docs</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#store" class="internal-link" title="aligned.exposed_model.langchain_retriever.AlignedRetriever.store">store</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method private">
+    
+    <td>Async Method</td>
+    <td><code><a href="#_aget_relevant_documents" class="internal-link" title="aligned.exposed_model.langchain_retriever.AlignedRetriever._aget_relevant_documents">_aget<wbr></wbr>_relevant<wbr></wbr>_documents</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="method private">
+    
+    <td>Method</td>
+    <td><code><a href="#_get_relevant_documents" class="internal-link" title="aligned.exposed_model.langchain_retriever.AlignedRetriever._get_relevant_documents">_get<wbr></wbr>_relevant<wbr></wbr>_documents</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr>
+</table>
+          
+
+            
+        </div>
+
+        <div id="childList">
+          <div class="basemethod">
+  
+  
+  <a name="aligned.exposed_model.langchain_retriever.AlignedRetriever.__str__">
+    
+  </a>
+  <a name="__str__">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">__str__</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/langchain_retriever.py#L13">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#__str__" title="aligned.exposed_model.langchain_retriever.AlignedRetriever.__str__">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.exposed_model.langchain_retriever.AlignedRetriever.index_name">
+    
+  </a>
+  <a name="index_name">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">index_name</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/langchain_retriever.py#L10">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#index_name" title="aligned.exposed_model.langchain_retriever.AlignedRetriever.index_name">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.exposed_model.langchain_retriever.AlignedRetriever.number_of_docs">
+    
+  </a>
+  <a name="number_of_docs">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">number_of_docs</span>: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/langchain_retriever.py#L11">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#number_of_docs" title="aligned.exposed_model.langchain_retriever.AlignedRetriever.number_of_docs">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.exposed_model.langchain_retriever.AlignedRetriever.store">
+    
+  </a>
+  <a name="store">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">store</span>: <code>ContractStore</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/langchain_retriever.py#L9">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#store" title="aligned.exposed_model.langchain_retriever.AlignedRetriever.store">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="basemethod private">
+  
+  
+  <a name="aligned.exposed_model.langchain_retriever.AlignedRetriever._aget_relevant_documents">
+    
+  </a>
+  <a name="_aget_relevant_documents">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async def</span> <span class="py-defname">_aget_relevant_documents</span><span class="function-signature">(self, query: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, *, run_manager: <code>langchain_core.callbacks.manager.AsyncCallbackManagerForRetrieverRun</code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>langchain_core.documents.base.Document]</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/langchain_retriever.py#L26">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#_aget_relevant_documents" title="aligned.exposed_model.langchain_retriever.AlignedRetriever._aget_relevant_documents">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod private">
+  
+  
+  <a name="aligned.exposed_model.langchain_retriever.AlignedRetriever._get_relevant_documents">
+    
+  </a>
+  <a name="_get_relevant_documents">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span> <span class="py-defname">_get_relevant_documents</span><span class="function-signature">(self, query: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, *, run_manager: <code>langchain_core.callbacks.manager.CallbackManagerForRetrieverRun</code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>langchain_core.documents.base.Document]</code></span>:
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/langchain_retriever.py#L18">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#_get_relevant_documents" title="aligned.exposed_model.langchain_retriever.AlignedRetriever._get_relevant_documents">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div>
+        </div>
+      
+      </div>
+    </div>
+
+    <footer class="navbar navbar-default">
+
+  
+  <div class="container-fluid">
+    <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
+  generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
+    24.11.2 at 2025-03-24 21:44:45.
+  </div>
+
+  <!-- Search related scripts needs to be loaded at the end of HTML 
+    parsing not to introduce overhead and display HTML data asap -->
+  <script src="ajax.js" type="text/javascript"></script>
+  <script src="searchlib.js" type="text/javascript"></script>
+  <script src="search.js" type="text/javascript"></script>
+
+</footer>
+  
+    <script src="pydoctor.js" type="text/javascript"></script>
+
+  </body>
+</html>

@@ -1,0 +1,754 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+          "DTD/xhtml1-strict.dtd">
+<html>
+  
+
+  <head>
+    
+    <title>aligned.exposed_model.ollama.OllamaGeneration</title>
+    <meta name="generator" content="pydoctor 24.11.2"> 
+        
+    </meta>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1 maximum-scale=1" />
+    <link rel="stylesheet" type="text/css" href="bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="apidocs.css" />
+    <link rel="stylesheet" type="text/css" href="extra.css" />
+    
+</head>
+
+  <body>
+
+    
+
+    <nav class="navbar navbar-default mainnavbar">
+      
+  
+  <div class="container-fluid">
+
+
+    <div class="navbar-header">
+      
+      <div class="navlinks">
+        <span class="navbar-brand">
+          <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a> <a href="index.html">API Documentation</a>
+        </span>
+
+        <a href="moduleIndex.html">
+          Modules
+        </a>
+
+        <a href="classIndex.html">
+          Classes
+        </a>
+
+        <a href="nameIndex.html">
+          Names
+        </a>
+
+        <div id="search-box-container">
+          <div class="input-group">
+            <input id="search-box" type="search" name="search-query" placeholder="Search..." aria-label="Search" minlength="2" class="form-control" autocomplete="off" />
+            
+            <span class="input-group-btn">
+              <a style="display: none;" class="btn btn-default" id="search-clear-button" title="Clear" onclick="clearSearch()"><img src="fonts/x-circle.svg" alt="Clear" /></a>
+              <a class="btn btn-default" id="apidocs-help-button" title="Help" href="apidocs-help.html"><img src="fonts/info.svg" alt="Help" /></a>
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="search-results-container" style="display: none;">
+        
+        <div id="search-buttons">
+          <span class="label label-default" id="search-docstrings-button">
+          <label class="checkbox-inline">
+            <input type="checkbox" id="toggle-search-in-docstrings-checkbox" value="false" onclick="toggleSearchInDocstrings()">
+              search in docstrings
+            </input>
+          </label>
+          </span>
+          
+        </div>
+        
+        <noscript>
+            <h1>Cannot search: JavaScript is not supported/enabled in your browser.</h1>
+        </noscript>
+
+        <div id="search-status"> </div>
+
+        <div class="warning" id="search-warn-box" style="display: none;">
+          <p class="rst-last"><span id="search-warn"></span></p>
+        </div>
+
+        <table id="search-results">
+          <!-- Filled dynamically by JS -->
+        </table>
+        
+        <div style="margin-top: 10px;">
+          <p>For more information on the search, visit the <a href="apidocs-help.html#rst-search">help page</a>.</p>
+        </div>
+      </div>
+
+    </div>
+
+
+  </div>
+</nav>
+    
+    <div class="container-fluid">
+
+      <!-- Side navigation -->
+      <div class="sidebarcontainer" style="display: none;">
+        
+        <div class="sidebar"><nav class="sidebar">
+  
+
+  <div>
+
+      <div class="thingTitle">
+        <span>Class</span>
+        <code class="thisobject"><a href="aligned.exposed_model.ollama.OllamaGeneration.html" class="internal-link" title="This class"><wbr></wbr>Ollama<wbr></wbr>Generation</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        
+        
+
+        
+         
+
+        
+         
+
+        <div class="childrenKindTitle">Attributes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#context" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.context">context</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#created_at" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.created_at">created<wbr></wbr>_at</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#eval_count" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.eval_count">eval<wbr></wbr>_count</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#eval_duration" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.eval_duration">eval<wbr></wbr>_duration</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#load_duration" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.load_duration">load<wbr></wbr>_duration</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#model" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.model">model</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#prompt_eval_count" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.prompt_eval_count">prompt<wbr></wbr>_eval<wbr></wbr>_count</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#prompt_eval_duration" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.prompt_eval_duration">prompt<wbr></wbr>_eval<wbr></wbr>_duration</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#response" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.response">response</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#total_duration" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.total_duration">total<wbr></wbr>_duration</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div><div>
+
+      <div class="thingTitle">
+        <span>Module</span>
+        <code><a href="aligned.exposed_model.ollama.html" class="internal-link" title="The parent of this class">ollama</a></code> 
+      </div>
+      
+      <div>
+        
+
+        
+         
+
+        <div class="childrenKindTitle">Classes</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.exposed_model.ollama.OllamaEmbeddingPredictor.html" class="internal-link" title="aligned.exposed_model.ollama.OllamaEmbeddingPredictor"><wbr></wbr>Ollama<wbr></wbr>Embedding<wbr></wbr>Predictor</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.exposed_model.ollama.OllamaEmbeddingPredictorWithRef.html" class="internal-link" title="aligned.exposed_model.ollama.OllamaEmbeddingPredictorWithRef"><wbr></wbr>Ollama<wbr></wbr>Embedding<wbr></wbr>Predictor<wbr></wbr>With<wbr></wbr>Ref</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.exposed_model.ollama.OllamaGeneratePredictor.html" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneratePredictor"><wbr></wbr>Ollama<wbr></wbr>Generate<wbr></wbr>Predictor</a></code>
+            </div>
+        
+
+    </li><li class=" thisobject">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.exposed_model.ollama.OllamaGeneration.html" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration"><wbr></wbr>Ollama<wbr></wbr>Generation</a></code>
+            </div>
+        
+
+    </li>
+</ul>
+
+        <div class="childrenKindTitle">Functions</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.exposed_model.ollama.html#ollama_embedding" class="internal-link" title="aligned.exposed_model.ollama.ollama_embedding">ollama<wbr></wbr>_embedding</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.exposed_model.ollama.html#ollama_generate" class="internal-link" title="aligned.exposed_model.ollama.ollama_generate">ollama<wbr></wbr>_generate</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.exposed_model.ollama.html#ollama_generate_contract" class="internal-link" title="aligned.exposed_model.ollama.ollama_generate_contract">ollama<wbr></wbr>_generate<wbr></wbr>_contract</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+
+        <div class="childrenKindTitle">Variables</div>
+        <ul>
+    
+    <li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.exposed_model.ollama.html#logger" class="internal-link" title="aligned.exposed_model.ollama.logger">logger</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
+
+        
+         
+        
+      </div>
+  </div>
+
+</nav>
+        </div>
+        <div id="collapseSideBar">
+          <a class="btn btn-link" onclick="toggleSideBarCollapse()" title="Toggle Sidebar Collapse">
+          </a>
+        </div> 
+        <script src="sidebartoggle.js" type="text/javascript"></script>
+       
+      </div>
+
+      <div id="main" class="">
+        
+
+        
+
+        <div class="page-header">
+          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.exposed_model.html" class="internal-link" title="aligned.exposed_model">exposed_model</a></code><wbr></wbr>.<code><a href="aligned.exposed_model.ollama.html" class="internal-link" title="aligned.exposed_model.ollama">ollama</a></code><wbr></wbr>.<code><a href="aligned.exposed_model.ollama.OllamaGeneration.html" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration">OllamaGeneration</a></code></code></h1>
+          <div id="showPrivate">
+            <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
+          </div>
+        </div>
+
+        <div class="categoryHeader">
+          class documentation
+        </div>
+
+        <div class="extrasDocstring">
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">OllamaGeneration</span>: <a href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/ollama.py#L432" class="sourceLink">(source)</a></code></p>
+          <p><a href="classIndex.html#aligned.exposed_model.ollama.OllamaGeneration">View In Hierarchy</a></p>
+        </div>
+
+        <div class="moduleDocstring">
+          <div><p class="undocumented">Undocumented</p></div>
+        </div>
+
+        <div id="splitTables">
+          <table class="children sortable" id="id98">
+  
+  
+  <tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#context" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.context">context</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#created_at" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.created_at">created<wbr></wbr>_at</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#eval_count" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.eval_count">eval<wbr></wbr>_count</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#eval_duration" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.eval_duration">eval<wbr></wbr>_duration</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#load_duration" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.load_duration">load<wbr></wbr>_duration</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#model" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.model">model</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#prompt_eval_count" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.prompt_eval_count">prompt<wbr></wbr>_eval<wbr></wbr>_count</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#prompt_eval_duration" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.prompt_eval_duration">prompt<wbr></wbr>_eval<wbr></wbr>_duration</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#response" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.response">response</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#total_duration" class="internal-link" title="aligned.exposed_model.ollama.OllamaGeneration.total_duration">total<wbr></wbr>_duration</a></code></td>
+    <td><span class="undocumented">Undocumented</span></td>
+  </tr>
+</table>
+          
+
+            
+        </div>
+
+        <div id="childList">
+          <div class="baseclassvariable">
+  
+  
+  <a name="aligned.exposed_model.ollama.OllamaGeneration.context">
+    
+  </a>
+  <a name="context">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">context</span>: <code>List</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/ollama.py#L438">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#context" title="aligned.exposed_model.ollama.OllamaGeneration.context">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.exposed_model.ollama.OllamaGeneration.created_at">
+    
+  </a>
+  <a name="created_at">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">created_at</span>: <code>EventTimestamp</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/ollama.py#L436">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#created_at" title="aligned.exposed_model.ollama.OllamaGeneration.created_at">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.exposed_model.ollama.OllamaGeneration.eval_count">
+    
+  </a>
+  <a name="eval_count">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">eval_count</span>: <code>Int32</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/ollama.py#L446">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#eval_count" title="aligned.exposed_model.ollama.OllamaGeneration.eval_count">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.exposed_model.ollama.OllamaGeneration.eval_duration">
+    
+  </a>
+  <a name="eval_duration">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">eval_duration</span>: <code>Int64</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/ollama.py#L447">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#eval_duration" title="aligned.exposed_model.ollama.OllamaGeneration.eval_duration">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.exposed_model.ollama.OllamaGeneration.load_duration">
+    
+  </a>
+  <a name="load_duration">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">load_duration</span>: <code>Int64</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/ollama.py#L440">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#load_duration" title="aligned.exposed_model.ollama.OllamaGeneration.load_duration">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.exposed_model.ollama.OllamaGeneration.model">
+    
+  </a>
+  <a name="model">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">model</span>: <code>String</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/ollama.py#L433">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#model" title="aligned.exposed_model.ollama.OllamaGeneration.model">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.exposed_model.ollama.OllamaGeneration.prompt_eval_count">
+    
+  </a>
+  <a name="prompt_eval_count">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">prompt_eval_count</span>: <code>Int32</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/ollama.py#L443">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#prompt_eval_count" title="aligned.exposed_model.ollama.OllamaGeneration.prompt_eval_count">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.exposed_model.ollama.OllamaGeneration.prompt_eval_duration">
+    
+  </a>
+  <a name="prompt_eval_duration">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">prompt_eval_duration</span>: <code>Int64</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/ollama.py#L444">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#prompt_eval_duration" title="aligned.exposed_model.ollama.OllamaGeneration.prompt_eval_duration">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.exposed_model.ollama.OllamaGeneration.response">
+    
+  </a>
+  <a name="response">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">response</span>: <code>String</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/ollama.py#L435">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#response" title="aligned.exposed_model.ollama.OllamaGeneration.response">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.exposed_model.ollama.OllamaGeneration.total_duration">
+    
+  </a>
+  <a name="total_duration">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">total_duration</span>: <code>Int64</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/exposed_model/ollama.py#L441">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#total_duration" title="aligned.exposed_model.ollama.OllamaGeneration.total_duration">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div>
+        </div>
+      
+      </div>
+    </div>
+
+    <footer class="navbar navbar-default">
+
+  
+  <div class="container-fluid">
+    <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
+  generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
+    24.11.2 at 2025-03-24 21:44:45.
+  </div>
+
+  <!-- Search related scripts needs to be loaded at the end of HTML 
+    parsing not to introduce overhead and display HTML data asap -->
+  <script src="ajax.js" type="text/javascript"></script>
+  <script src="searchlib.js" type="text/javascript"></script>
+  <script src="search.js" type="text/javascript"></script>
+
+</footer>
+  
+    <script src="pydoctor.js" type="text/javascript"></script>
+
+  </body>
+</html>
