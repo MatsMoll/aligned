@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from math import ceil
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Iterable
 from uuid import uuid4
 
 import polars as pl
@@ -21,7 +21,7 @@ from aligned.exposed_model.interface import (
 )
 from aligned.feature_store import ModelFeatureStore
 from aligned.schemas.codable import Codable
-from aligned.schemas.constraints import InDomain, Optional
+from aligned.schemas.constraints import Constraint, InDomain, Optional
 from aligned.schemas.feature import StaticFeatureTags, FeatureType
 from aligned.schemas.model import Model
 
@@ -430,6 +430,10 @@ class OpenAiExtractModel(ExposedModel, VersionedModel):
 
     model_type: str = field(default="openai_extract")
 
+    @staticmethod
+    def default_extract_message() -> str:
+        return "Extract as many features as possible based on the expected output schema. Do not explain why or how you found the value, only return the value."
+
     def input_template(self, refs: list[Feature]) -> str:
         return "\n".join([f"<{ref.name}>{{{ref.name}}}</{ref.name}>" for ref in refs])
 
@@ -490,11 +494,16 @@ By sending a request to a the model '{self.model}' using the config {self.config
     def with_contract(self, model: Model) -> ExposedModel:
         if self.output_name == "":
             completion = model.predictions_view.prompt_completion_feature
-            assert completion
-            self.output_name = completion.name
+            self.output_name = completion.name if completion else "prompt_output"
 
         if not self.feature_refs:
             self.feature_refs = list(model.feature_references())
+
+        if (
+            self.extract_task_description
+            == OpenAiExtractModel.default_extract_message()
+        ):
+            self.extract_task_description += f"You are extracting a '{model.name}'\n"
 
         if not self.extract_features:
             ignore_tags = [
@@ -572,7 +581,9 @@ By sending a request to a the model '{self.model}' using the config {self.config
             return "jpeg"
 
         for row in df.to_dicts():
-            message = f"{self.extract_task_description}\n{input_template.format(**row)}\nOutput format should be in JSON with the following schema and description\n{output_format}"
+            message = f"{self.extract_task_description}\n{input_template.format(**row)}\nOutput format should be in JSON with the following schema and description\n{output_format}. If you are unsure return 'null' or exclude the field."
+
+            message = f"{self.extract_task_description}\n{input_template.format(**row)}.\nIf you are unsure about a feature, then do not return anything for that feature."
 
             if image_features:
                 import base64
@@ -603,13 +614,35 @@ By sending a request to a the model '{self.model}' using the config {self.config
             else:
                 messages.append({"role": "user", "content": message})
 
-        def feature_for(feature: Feature) -> dict:
-            if feature.dtype.is_numeric:
-                return {"type": "number", "description": feature.description}
+        def schema_for_dtype(
+            dtype: FeatureType,
+            description: str | None = None,
+            constraints: Iterable[Constraint] | None = None,
+        ) -> dict:
+            if dtype.is_numeric:
+                return {"type": "number", "description": description}
 
-            ret = {"type": feature.dtype.name, "description": feature.description}
-            if feature.constraints:
-                for constraint in feature.constraints:
+            if dtype.is_array:
+                sub_type = dtype.array_subtype() or FeatureType.string()
+                return {
+                    "type": "array",
+                    "description": description,
+                    "items": schema_for_dtype(sub_type),
+                }
+
+            if dtype.is_struct:
+                fields = dtype.struct_fields()
+
+                return {
+                    "type": "object",
+                    "parameters": {
+                        name: schema_for_dtype(dtype) for name, dtype in fields.items()
+                    },
+                }
+
+            ret = {"type": dtype.name, "description": description}
+            if constraints:
+                for constraint in constraints:
                     if isinstance(constraint, InDomain):
                         ret["enum"] = constraint.values
             return ret
@@ -630,7 +663,9 @@ By sending a request to a the model '{self.model}' using the config {self.config
                             "schema": {
                                 "type": "object",
                                 "properties": {
-                                    feat.name: feature_for(feat)
+                                    feat.name: schema_for_dtype(
+                                        feat.dtype, feat.description, feat.constraints
+                                    )
                                     for feat in self.extract_features
                                 },
                                 "required": [

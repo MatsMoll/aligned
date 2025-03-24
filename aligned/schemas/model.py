@@ -16,7 +16,11 @@ from aligned.schemas.target import (
     RecommendationTarget,
     RegressionTarget,
 )
-from aligned.schemas.feature_view import CompiledFeatureView, FeatureViewReferenceSource
+from aligned.schemas.feature_view import (
+    CompiledFeatureView,
+    Contact,
+    FeatureViewReferenceSource,
+)
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.folder import DatasetStore
 from aligned.exposed_model.interface import ExposedModel
@@ -98,10 +102,17 @@ class PredictionsView(Codable):
 
     @property
     def model_version_column(self) -> Feature | None:
+        # Can use annotated by, but is is lower pri then a model version
+        annotated_by = None
+
         for feature in self.features:
-            if feature.tags and StaticFeatureTags.is_model_version in feature.tags:
+            if not feature.tags:
+                continue
+            if StaticFeatureTags.is_model_version in feature.tags:
                 return feature
-        return None
+            if StaticFeatureTags.is_annotated_by in feature.tags:
+                annotated_by = feature
+        return annotated_by
 
     @property
     def prompt_completion_feature(self) -> Feature | None:
@@ -238,7 +249,11 @@ class PredictionsView(Codable):
         elif self.recommendation_targets:
             return {feature.feature for feature in self.recommendation_targets}
         else:
-            return set()
+            return {
+                feat
+                for feat in self.full_schema
+                if feat.tags and StaticFeatureTags.is_annotated_feature in feat.tags
+            }
 
 
 @dataclass
@@ -247,7 +262,7 @@ class Model(Codable):
     features: FeatureInputVersions
     predictions_view: PredictionsView
     description: str | None = field(default=None)
-    contacts: list[str] | None = field(default=None)
+    contacts: list[Contact] | None = field(default=None)
     tags: list[str] | None = field(default=None)
     dataset_store: DatasetStore | None = field(default=None)
     exposed_at_url: str | None = field(default=None)

@@ -177,10 +177,14 @@ async def compile(
 @coro
 @click.option("--view")
 @click.option("--contract", default="contract_store.json")
+@click.option("--mode", default="insert")
 async def materialize(
     contract: str,
     view: str,
+    mode: str,
 ):
+    assert mode in ["overwrite", "append", "insert"]
+
     click.echo(f"Loading contract from: '{contract}'")
     if contract.startswith("http"):
         store = await AlignedCloudSource(contract).as_contract_store()
@@ -198,7 +202,12 @@ async def materialize(
         click.echo("Planned job to run")
         click.echo(job_description)
 
-    await view_store.using_source(view_store.view.materialized_source).overwrite(job)
+    if mode == "overwrite":
+        await view_store.using_source(view_store.view.materialized_source).overwrite(
+            job
+        )
+    else:
+        await view_store.using_source(view_store.view.materialized_source).insert(job)
 
 
 @cli.command("check-updates")

@@ -493,11 +493,13 @@ class FeatureFactory(FeatureReferencable):
     def as_annotated_feature(
         self: T, using: list[FeatureReferencable] | None = None
     ) -> T:
+        new_feat = self.with_tag(StaticFeatureTags.is_annotated_feature)
+
         refs = ",".join([ref.feature_reference().identifier for ref in using or []])
         if refs:
-            return self.with_tag(f"{StaticFeatureTags.is_annotated_feature}-{refs}")
+            return new_feat.with_tag(f"{StaticFeatureTags.is_annotated_feature}-{refs}")
         else:
-            return self.with_tag(StaticFeatureTags.is_annotated_feature)
+            return new_feat
 
     def compile(self) -> DerivedFeature:
         if not self.transformation:
@@ -689,6 +691,13 @@ class FeatureFactory(FeatureReferencable):
 
         self._add_constraint(ReferencingColumn(entity.feature_reference()))
         return self
+
+    def hash_value(self) -> UInt64:
+        from aligned.compiler.transformation_factory import HashColumns
+
+        feat = UInt64()
+        feat.transformation = HashColumns([self])
+        return feat
 
     def for_entities(self: T, entities: dict[str, FeatureFactory]) -> T:
         from aligned.compiler.transformation_factory import LoadFeature
@@ -1645,6 +1654,17 @@ class List(FeatureFactory, Generic[GenericFeature]):
         feature = self.sub_type.copy_type()
         feature.transformation = ArrayAtIndexFactory(self, index)
         return feature
+
+
+def hash_from(features: list[FeatureFactory]) -> UInt64:
+    from aligned.compiler.transformation_factory import HashColumns
+
+    feat = UInt64()
+    feat.transformation = HashColumns(features)
+    return feat
+
+
+RowHash = hash_from
 
 
 class Url(StringValidatable):

@@ -223,6 +223,7 @@ class SupportedTransformations:
             Logarithm,
             LogarithmOnePluss,
             ToNumerical,
+            HashColumns,
             ReplaceStrings,
             IsIn,
             And,
@@ -462,14 +463,16 @@ class PolarsExpression(Transformation):
     ) -> pd.Series:
         pl_df = pl.from_pandas(df)
         pl_df = pl_df.with_columns(
-            pl.Expr.from_json(self.polars_expression).alias("polars_tran_column")
+            pl.Expr.deserialize(self.polars_expression.encode(), format="json").alias(
+                "polars_tran_column"
+            )
         )
         return pl_df["polars_tran_column"].to_pandas()
 
     async def transform_polars(
         self, df: pl.LazyFrame, alias: str, store: ContractStore
     ) -> pl.LazyFrame | pl.Expr:
-        return pl.Expr.from_json(self.polars_expression)
+        return pl.Expr.deserialize(self.polars_expression.encode(), format="json")
 
 
 @dataclass
@@ -2923,3 +2926,26 @@ class ListDotProduct(Transformation):
             },
             output=[6, 10],
         )
+
+
+@dataclass
+class HashColumns(Transformation):
+    columns: list[str]
+
+    name = "hash_columns"
+    dtype = FeatureType.uint64()
+
+    async def transform_polars(
+        self, df: pl.LazyFrame, alias: str, store: ContractStore
+    ) -> pl.LazyFrame | pl.Expr:
+        return pl.concat_str(self.columns).hash()
+
+    async def transform_pandas(
+        self, df: pd.DataFrame, store: ContractStore
+    ) -> pd.Series:
+        pl_df = pl.from_pandas(df)
+        res = await self.transform_polars(pl_df.lazy(), "output", store)
+        if isinstance(res, pl.Expr):
+            return pl_df.with_columns(res.alias("output"))["output"].to_pandas()
+        else:
+            return res.collect()["output"].to_pandas()

@@ -26,13 +26,10 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class AnnotatedView(Codable):
+class Contact(Codable):
     name: str
-
-    annotated_view: FeatureLocation
-    annotated_by: Feature | None
-
-    view: CompiledFeatureView
+    email: str | None = field(default=None)
+    slack_member_id: str | None = field(default=None)
 
 
 @dataclass
@@ -60,7 +57,7 @@ class CompiledFeatureView(Codable):
 
     event_triggers: set[EventTrigger] | None = field(default=None)
 
-    contacts: list[str] | None = field(default=None)
+    contacts: list[Contact] | None = field(default=None)
     indexes: list[VectorIndex] = field(default_factory=list)
 
     def __pre_serialize__(self) -> CompiledFeatureView:
@@ -92,7 +89,7 @@ class CompiledFeatureView(Codable):
         if self.contacts is not None:
             assert isinstance(self.contacts, list)
             for contact in self.contacts:
-                assert isinstance(contact, str)
+                assert isinstance(contact, Contact)
         if self.indexes is not None:
             assert isinstance(self.indexes, list)
             for index in self.indexes:

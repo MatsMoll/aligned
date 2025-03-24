@@ -397,9 +397,14 @@ class ContractStore:
         return ContractStore.from_definition(definition)
 
     def execute_sql(self, query: str) -> RetrievalJob:
-        from aligned.sql import request_for_sql, glot_to_polars
+        from aligned.sql import request_for_sql, glot_to_polars, extract_raw_values
 
         requests = request_for_sql(query, self)
+
+        if not requests:
+            raw_frame = extract_raw_values(query)
+            assert raw_frame is not None, f"Unable to extract raw values from {query}"
+            return RetrievalJob.from_polars_df(raw_frame, [])
 
         async def run_query() -> pl.LazyFrame:
             dfs = {}
@@ -604,6 +609,10 @@ class ContractStore:
                 loaded_requests.append(request)
 
         if not loaded_requests:
+            from aligned.local.job import LiteralRetrievalJob
+
+            if isinstance(entities, LiteralRetrievalJob) and not entities.requests:
+                entities.requests = requests.needed_requests
             return entities
 
         new_request = FeatureRequest(

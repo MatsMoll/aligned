@@ -37,7 +37,7 @@ from aligned.schemas.feature import (
     FeatureType,
     StaticFeatureTags,
 )
-from aligned.schemas.feature_view import CompiledFeatureView
+from aligned.schemas.feature_view import CompiledFeatureView, Contact
 from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.model import Model as ModelSchema
 from aligned.schemas.model import FeatureInputVersions as FeatureVersionSchema
@@ -61,7 +61,7 @@ class ModelMetadata:
     features: FeatureInputVersions
     # Will log the feature inputs to a model. Therefore, enabling log and wait etc.
     # feature_logger: WritableBatchSource | None = field(default=None)
-    contacts: list[str] | None = field(default=None)
+    contacts: list[Contact] | None = field(default=None)
     tags: list[str] | None = field(default=None)
     description: str | None = field(default=None)
 
@@ -331,7 +331,7 @@ def model_contract(
     ]
     | FeatureInputVersions,
     name: str | None = None,
-    contacts: list[str] | None = None,
+    contacts: list[Contact] | list[str] | None = None,
     tags: list[str] | None = None,
     description: str | None = None,
     output_source: CodableBatchDataSource | None = None,
@@ -390,10 +390,14 @@ def model_contract(
         if exposed_model:
             used_exposed_at_url = exposed_model.exposed_at_url or exposed_at_url
 
+        conts = [
+            Contact(cont) if isinstance(cont, str) else cont for cont in contacts or []
+        ]
+
         metadata = ModelMetadata(
             used_name,
             features_versions,
-            contacts=contacts,
+            contacts=conts,
             tags=tags,
             description=used_description,
             output_source=output_source,

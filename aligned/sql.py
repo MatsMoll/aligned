@@ -82,6 +82,25 @@ def glot_to_polars(glot_exp: exp.Expression) -> pl.Expr:
     raise NotImplementedError(f"Unable to find pl expr for {glot_exp}")
 
 
+def extract_raw_values(query: str) -> pl.DataFrame | None:
+    glot_exp = parse_one(query)
+    vals = list(glot_exp.find_all(exp.Values))
+
+    if len(vals) != 1:
+        return None
+
+    val = vals[0]
+
+    raw_values = val.find_all(exp.Tuple)
+
+    return pl.DataFrame(
+        {
+            col: [raw.this for raw in raw_val.find_all(exp.Literal)]
+            for col, raw_val in zip(val.named_selects, raw_values)
+        }
+    )
+
+
 def request_for_sql(
     query: str, store: ContractStore
 ) -> list[tuple[RetrievalRequest, exp.Where | None]]:
@@ -152,6 +171,9 @@ def request_for_sql(
 
     for table, columns in table_columns.items():
         all_features.update(f"{table}:{column}" for column in columns)
+
+    if not all_features:
+        return []
 
     feature_request = store.requests_for_features(all_features)
 

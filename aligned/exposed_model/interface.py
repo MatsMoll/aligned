@@ -3,6 +3,7 @@ from __future__ import annotations
 import polars as pl
 from typing import TYPE_CHECKING, Any, AsyncIterable, Callable, Coroutine
 from dataclasses import dataclass
+from aligned.compiler.feature_factory import FeatureReferencable
 from aligned.config_value import ConfigValue, LiteralValue
 from aligned.retrieval_job import RetrievalJob
 from aligned.schemas.codable import Codable
@@ -45,6 +46,7 @@ class PredictorFactory:
             OpenAiExtractModel,
         )
         from aligned.exposed_model.partitioned import PartitionedModel
+        from aligned.exposed_model.multiple import MultipleModels
 
         self.supported_predictors = {}
 
@@ -63,6 +65,8 @@ class PredictorFactory:
             OpenAiEmbeddingPredictor,
             OpenAiPromptModel,
             OpenAiExtractModel,
+            MultipleModels,
+            PolarsExpression,
         ]
         for predictor in types:
             self.supported_predictors[predictor.model_type] = predictor
@@ -160,16 +164,25 @@ class ExposedModel(Codable, SerializableType):
         callable: Callable[
             [pl.DataFrame, ModelFeatureStore], Coroutine[None, None, pl.DataFrame]
         ],
+        features: list[FeatureReferencable] | None = None,
     ) -> "ExposedModel":
         import dill
+
+        refs = [feat.feature_reference() for feat in features or []]
 
         async def function_wrapper(
             values: RetrievalJob, store: ModelFeatureStore
         ) -> pl.DataFrame:
-            features = await store.features_for(values).to_polars()
+            if refs:
+                features = await store.store.features_for(values, refs).to_polars()
+            else:
+                features = await store.features_for(values).to_polars()
+
             return await callable(features, store)
 
-        return DillPredictor(function=dill.dumps(function_wrapper))
+        return DillPredictor(
+            function=dill.dumps(function_wrapper), function_id=callable.__name__
+        )
 
     @staticmethod
     def ollama_generate(
@@ -248,8 +261,9 @@ class StreamablePredictor:
 
 
 @dataclass
-class DillPredictor(ExposedModel):
+class DillPredictor(ExposedModel, VersionedModel):
     function: bytes
+    function_id: str
 
     model_type: str = "dill_predictor"
 
@@ -260,6 +274,9 @@ class DillPredictor(ExposedModel):
     @property
     def as_markdown(self) -> str:
         return "A function stored in a dill file."
+
+    async def model_version(self) -> str:
+        return self.function_id
 
     async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
         default = store.model.features.default_version
@@ -279,6 +296,53 @@ class DillPredictor(ExposedModel):
             return await function(values, store)
         else:
             return function(values, store)
+
+
+@dataclass
+class PolarsExpression(ExposedModel, VersionedModel):
+    expression: str
+    should_filter_nulls: bool = True
+    model_type: str = "polars_expression"
+
+    @property
+    def exposed_at_url(self) -> str | None:
+        return None
+
+    @property
+    def as_markdown(self) -> str:
+        return f"A function stored in a {self.expression}."
+
+    async def model_version(self) -> str:
+        from hashlib import sha256
+
+        return sha256(self.expression.encode()).hexdigest()
+
+    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
+        default = store.model.features.default_version
+        return store.feature_references_for(store.selected_version or default)
+
+    async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
+        return store.request().request_result.entities
+
+    async def run_polars(
+        self, values: RetrievalJob, store: ModelFeatureStore
+    ) -> pl.DataFrame:
+        pred_view = store.model.predictions_view
+        labels = pred_view.labels()
+
+        assert len(labels) == 1, f"Expected only one label got {len(labels)}"
+
+        inputs = await values.to_polars()
+
+        name = next(iter(labels)).name
+
+        preds = inputs.with_columns(
+            pl.Expr.deserialize(self.expression.encode(), format="json").alias(name)
+        )
+        if self.should_filter_nulls:
+            preds = preds.filter(pl.col(name).is_not_null())
+
+        return preds
 
 
 @dataclass
@@ -576,14 +640,15 @@ def openai_completion(
 
 def openai_extraction(
     model: str,
-    extraction_description: str = "Extract the output from the following input features.",
+    extraction_description: str | None = None,
     config: OpenAiConfig | None = None,
 ) -> ExposedModel:
     from aligned.exposed_model.openai import OpenAiExtractModel, OpenAiConfig
 
     return OpenAiExtractModel(
         model=model,
-        extract_task_description=extraction_description,
+        extract_task_description=extraction_description
+        or OpenAiExtractModel.default_extract_message(),
         config=config or OpenAiConfig(),
     )
 
@@ -592,7 +657,7 @@ def ollama_extraction(
     model: str,
     base_url: str | ConfigValue = "http://localhost:11434/v1",
     api_key: str | ConfigValue = "ollama",
-    extraction_description: str = "Extract the output from the following input features.",
+    extraction_description: str | None = None,
 ) -> ExposedModel:
     from aligned.exposed_model.interface import openai_extraction
     from aligned.exposed_model.openai import OpenAiConfig
@@ -644,4 +709,25 @@ def partitioned_on(
         Feature(key, FeatureType.string()),
         partitions=partitions,
         default_partition=default_partition,
+    )
+
+
+def multiple_models(*models: ExposedModel) -> ExposedModel:
+    from aligned.exposed_model.multiple import MultipleModels
+
+    return MultipleModels(list(models))
+
+
+def polars_predictor(
+    callable: Callable[
+        [pl.DataFrame, ModelFeatureStore], Coroutine[None, None, pl.DataFrame]
+    ],
+    features: list[FeatureReferencable] | None = None,
+) -> ExposedModel:
+    return ExposedModel.polars_predictor(callable, features)
+
+
+def polars_expression(expr: pl.Expr, should_filter_nulls: bool = True) -> ExposedModel:
+    return PolarsExpression(
+        expr.meta.serialize(format="json"), should_filter_nulls=should_filter_nulls
     )

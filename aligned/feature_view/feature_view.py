@@ -44,7 +44,7 @@ from aligned.schemas.derivied_feature import (
     AggregatedFeature,
 )
 from aligned.schemas.feature import FeatureLocation, FeatureReference, StaticFeatureTags
-from aligned.schemas.feature_view import CompiledFeatureView
+from aligned.schemas.feature_view import CompiledFeatureView, Contact
 from aligned.compiler.feature_factory import FeatureFactory
 from datetime import datetime
 
@@ -70,7 +70,7 @@ class FeatureViewMetadata:
     application_source: CodableBatchDataSource | None = field(default=None)
     materialized_source: CodableBatchDataSource | None = field(default=None)
     materialize_from: datetime | None = field(default=None)
-    contacts: list[str] | None = field(default=None)
+    contacts: list[Contact] | None = field(default=None)
     tags: list[str] | None = field(default=None)
     acceptable_freshness: timedelta | None = field(default=None)
     unacceptable_freshness: timedelta | None = field(default=None)
@@ -99,8 +99,13 @@ PureLoadFunctions = Union[
 
 
 def resolve_source(
-    source: CodableBatchDataSource | FeatureViewWrapper | PureLoadFunctions,
+    source: CodableBatchDataSource | FeatureViewWrapper | PureLoadFunctions | None,
 ) -> CodableBatchDataSource:
+    if source is None:
+        from aligned.sources.in_mem_source import InMemorySource
+
+        return InMemorySource.from_values({})
+
     if isinstance(source, FeatureViewWrapper):
         from aligned.schemas.feature_view import FeatureViewReferenceSource
 
@@ -130,18 +135,26 @@ def resolve_source(
 
 
 def feature_view(
-    source: CodableBatchDataSource | FeatureViewWrapper | PureLoadFunctions,
+    source: CodableBatchDataSource
+    | FeatureViewWrapper
+    | PureLoadFunctions
+    | None = None,
     name: str | None = None,
     description: str | None = None,
     stream_source: StreamDataSource | None = None,
     application_source: CodableBatchDataSource | None = None,
     materialized_source: CodableBatchDataSource | None = None,
     materialize_from: datetime | None = None,
-    contacts: list[str] | None = None,
+    contacts: list[str] | list[Contact] | None = None,
     tags: list[str] | None = None,
     acceptable_freshness: timedelta | None = None,
     unacceptable_freshness: timedelta | None = None,
 ) -> Callable[[Type[T]], FeatureViewWrapper[T]]:
+    if contacts is not None:
+        contacts = [
+            Contact(name=cont) if isinstance(cont, str) else cont for cont in contacts
+        ]
+
     def decorator(cls: Type[T]) -> FeatureViewWrapper[T]:
         from aligned.sources.renamer import camel_to_snake_case
 
@@ -620,7 +633,7 @@ class FeatureView(ABC):
         stream_source: StreamDataSource | None = None,
         application_source: CodableBatchDataSource | None = None,
         staging_source: CodableBatchDataSource | None = None,
-        contacts: list[str] | None = None,
+        contacts: list[Contact] | None = None,
         tags: list[str] | None = None,
     ) -> FeatureViewMetadata:
         from aligned import HttpStreamSource

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from contextlib import suppress
 from copy import copy
 from datetime import datetime
 
@@ -372,7 +373,7 @@ class CodableBatchDataSource(Codable, SerializableType, BatchDataSource):
 
     @property
     def as_markdown(self) -> str:
-        return str(type(self))
+        return self.type_name
 
     def _serialize(self) -> dict:
         return self.to_dict()
@@ -421,60 +422,226 @@ class UnknownDataSource(CodableBatchDataSource):
 
 
 @dataclass
-class DockerConfig:
+class DockerConfig(Codable):
     image_url: str
     username: ConfigValue | None = field(default=None)
     password: ConfigValue | None = field(default=None)
 
 
 @dataclass
+class FunctionReference(Codable):
+    module_location: str
+    function_name: str
+
+
+def make_async(function: Callable):
+    from inspect import iscoroutinefunction
+
+    if iscoroutinefunction(function):
+        return function
+
+    async def async_func(*args, **kwargs):
+        function(*args, **kwargs)
+
+    return async_func
+
+
+@dataclass
+class CodableFunction(Codable):
+    dill_bytes: bytes | None = None
+    function_ref: FunctionReference | None = None
+
+    @property
+    def as_markdown(self) -> str:
+        if self.function_ref:
+            return f"Function named `{self.function_ref.function_name}` at `{self.function_ref.module_location}`"
+
+        return "Binary encoded method"
+
+    def load_function(self) -> Callable | None:
+        if self.function_ref:
+            with suppress(ImportError, AttributeError):
+                import importlib
+
+                module = importlib.import_module(self.function_ref.module_location)
+                return getattr(module, self.function_ref.function_name)
+
+        if self.dill_bytes:
+            import dill
+
+            return dill.loads(self.dill_bytes)
+
+        return None
+
+    @staticmethod
+    def from_function(function: Callable | None) -> CodableFunction | None:
+        import inspect
+
+        if function is None:
+            return None
+
+        file = inspect.getmodule(function)
+
+        def dill_function():
+            import dill
+
+            return CodableFunction(dill_bytes=dill.dumps(function))
+
+        if ">" in function.__name__ or "<" in function.__name__:
+            return dill_function()
+
+        if file is None:
+            return dill_function()
+
+        if "aligned" in file.__name__:
+            return dill_function()
+
+        return CodableFunction(
+            dill_bytes=None,
+            function_ref=FunctionReference(
+                module_location=file.__name__, function_name=function.__name__
+            ),
+        )
+
+
+@dataclass
 class CustomMethodDataSource(CodableBatchDataSource):
-    all_data_method: bytes
-    all_between_dates_method: bytes
-    features_for_method: bytes
+    all_data_method: CodableFunction | None
+    all_between_dates_method: CodableFunction | None
+    features_for_method: CodableFunction | None
+
+    generic_method: CodableFunction | None
+
     depends_on_sources: set[FeatureLocation] | None = None
     docker_config: DockerConfig | None = None
 
     type_name: str = "custom_method"
 
+    @property
+    def as_markdown(self) -> str:
+        markdown = "### Custom Method Source"
+
+        if self.all_data_method:
+            markdown += f"\n\n**All data**: {self.all_data_method.as_markdown}"
+
+        if self.all_between_dates_method:
+            markdown += (
+                f"\n\n**Between date**: {self.all_between_dates_method.as_markdown}"
+            )
+
+        if self.features_for_method:
+            markdown += f"\n\n**Features for**: {self.features_for_method.as_markdown}"
+
+        if self.generic_method:
+            markdown += f"\n\n**Generic load**: {self.generic_method.as_markdown}"
+
+        if self.docker_config:
+            markdown += f"\n\n**Docker config**: {self.docker_config}"
+
+        return markdown
+
     def job_group_key(self) -> str:
         return "custom_method"
 
     @property
-    def as_markdown(self) -> str:
-        return f"### Custom method\n\n**Docker config**: {self.docker_config}\n\nThis uses dill which can be unsafe in some scenarios."
+    def all_method(
+        self,
+    ) -> Callable[[RetrievalRequest, int | None], Coroutine[None, None, pl.LazyFrame]]:
+        function = None
+        if self.all_data_method:
+            function = self.all_data_method.load_function()
+
+        if function is None and self.generic_method:
+            sub_function = self.generic_method.load_function()
+            assert sub_function
+
+            async def wrapped_function(
+                req: RetrievalRequest, limit: int | None
+            ) -> pl.LazyFrame:
+                return await make_async(sub_function)(req)  # type: ignore
+
+            function = wrapped_function
+
+        return make_async(function or CustomMethodDataSource.default_throw)  # type: ignore
+
+    @property
+    def between_method(
+        self,
+    ) -> Callable[
+        [RetrievalRequest, datetime, datetime], Coroutine[None, None, pl.LazyFrame]
+    ]:
+        function = None
+        if self.all_between_dates_method:
+            function = self.all_between_dates_method.load_function()
+
+        if function is None and self.generic_method:
+            sub_function = self.generic_method.load_function()
+            assert sub_function
+
+            async def wrapped_function(
+                req: RetrievalRequest, start: datetime, end: datetime
+            ) -> pl.LazyFrame:
+                return await make_async(sub_function)(req)  # type: ignore
+
+            function = wrapped_function
+
+        return make_async(function or CustomMethodDataSource.default_throw)  # type: ignore
+
+    @property
+    def for_method(
+        self,
+    ) -> Callable[
+        [RetrievalJob, RetrievalRequest], Coroutine[None, None, pl.LazyFrame]
+    ]:
+        function = None
+        if self.features_for_method:
+            function = self.features_for_method.load_function()
+
+        if function is None and self.generic_method:
+            sub_function = self.generic_method.load_function()
+            assert sub_function
+
+            async def wrapped_function(
+                facts: RetrievalJob, req: RetrievalRequest
+            ) -> pl.LazyFrame:
+                return await make_async(sub_function)(req)  # type: ignore
+
+            function = wrapped_function
+
+        return make_async(function or CustomMethodDataSource.default_throw)  # type: ignore
 
     def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
         from aligned.retrieval_job import CustomLazyPolarsJob
-        import dill
+
+        method = self.all_method
 
         return CustomLazyPolarsJob(
             request=request,
-            method=lambda: dill.loads(self.all_data_method)(request, limit),
+            method=lambda: method(request, limit),
         ).fill_missing_columns()
 
     def all_between_dates(
         self, request: RetrievalRequest, start_date: datetime, end_date: datetime
     ) -> RetrievalJob:
         from aligned.retrieval_job import CustomLazyPolarsJob
-        import dill
+
+        method = self.between_method
 
         return CustomLazyPolarsJob(
             request=request,
-            method=lambda: dill.loads(self.all_between_dates_method)(
-                request, start_date, end_date
-            ),
+            method=lambda: method(request, start_date, end_date),
         ).fill_missing_columns()
 
     def features_for(
         self, facts: RetrievalJob, request: RetrievalRequest
     ) -> RetrievalJob:
         from aligned.retrieval_job import CustomLazyPolarsJob
-        import dill
+
+        method = self.for_method
 
         return CustomLazyPolarsJob(
             request=request,
-            method=lambda: dill.loads(self.features_for_method)(facts, request),
+            method=lambda: method(facts, request),
         ).fill_missing_columns()
 
     @classmethod
@@ -493,17 +660,12 @@ class CustomMethodDataSource(CodableBatchDataSource):
     def from_load(
         method: Callable[[RetrievalRequest], Coroutine[None, None, pl.LazyFrame]],
         depends_on: set[FeatureLocation] | None = None,
+        docker_config: DockerConfig | None = None,
     ) -> "CustomMethodDataSource":
-        async def all(request: RetrievalRequest, limit: int | None) -> pl.LazyFrame:
-            return await method(request)
-
-        async def all_between(
-            request: RetrievalRequest, start_date: datetime, end_date: datetime
-        ) -> pl.LazyFrame:
-            return await method(request)
-
         return CustomMethodDataSource.from_methods(
-            all_data=all, all_between_dates=all_between, depends_on_sources=depends_on
+            generic_load=method,
+            depends_on_sources=depends_on,
+            docker_config=docker_config,
         )
 
     @staticmethod
@@ -520,38 +682,25 @@ class CustomMethodDataSource(CodableBatchDataSource):
             [RetrievalJob, RetrievalRequest], Coroutine[None, None, pl.LazyFrame]
         ]
         | None = None,
+        generic_load: Callable[[RetrievalRequest], Coroutine[None, None, pl.LazyFrame]]
+        | None = None,
         depends_on_sources: set[FeatureLocation] | None = None,
         docker_config: DockerConfig | str | None = None,
     ) -> "CustomMethodDataSource":
-        import dill
-
-        if all_between_dates is None:
-            all_between_dates = CustomMethodDataSource.default_throw  # type: ignore
-        else:
-            if all_data is None:
-                all_data = lambda req, limit: all_between_dates(  # noqa: E731
-                    req, datetime.min, datetime.max
-                )
-
-        if not all_data:
-            all_data = CustomMethodDataSource.default_throw  # type: ignore
-
-        if not features_for:
-            features_for = CustomMethodDataSource.default_throw  # type: ignore
-
         if isinstance(docker_config, str):
             docker_config = DockerConfig(image_url=docker_config)
 
         return CustomMethodDataSource(
-            all_data_method=dill.dumps(all_data),
-            all_between_dates_method=dill.dumps(all_between_dates),
-            features_for_method=dill.dumps(features_for),
+            all_data_method=CodableFunction.from_function(all_data),
+            all_between_dates_method=CodableFunction.from_function(all_between_dates),
+            features_for_method=CodableFunction.from_function(features_for),
+            generic_method=CodableFunction.from_function(generic_load),
             depends_on_sources=depends_on_sources,
             docker_config=docker_config,
         )
 
     @staticmethod
-    def default_throw(**kwargs: Any) -> pl.LazyFrame:
+    def default_throw(*args: Any, **kwargs: Any) -> pl.LazyFrame:
         raise NotImplementedError("No method is defined for this data source.")
 
     def depends_on(self) -> set[FeatureLocation]:
@@ -571,7 +720,7 @@ class FilteredDataSource(CodableBatchDataSource):
             return pl.Expr.deserialize(self.condition, format="binary")
         elif isinstance(self.condition, str):
             try:
-                return pl.Expr.deserialize(self.condition, format="json")
+                return pl.Expr.deserialize(self.condition.encode(), format="json")
             except:  # noqa: E722
                 return pl.col(self.condition)
         elif isinstance(self.condition, (DerivedFeature, Feature)):
@@ -609,7 +758,10 @@ class FilteredDataSource(CodableBatchDataSource):
             request.features.add(source.condition)
             condition = source.condition
         else:
-            condition = pl.Expr.deserialize(source.condition)
+            expr = source.condition
+            if isinstance(expr, str):
+                expr = expr.encode()
+            condition = pl.Expr.deserialize(expr, format="json")
 
         return source.source.features_for(facts, request).filter(condition)
 

@@ -1099,3 +1099,17 @@ class ListDotProduct(TransformationFactory):
         from aligned.schemas.transformation import ListDotProduct
 
         return ListDotProduct(self.left.name, self.right.name)
+
+
+@dataclass
+class HashColumns(TransformationFactory):
+    columns: list[FeatureFactory]
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return self.columns
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import HashColumns
+
+        return HashColumns([col.name for col in self.columns])
