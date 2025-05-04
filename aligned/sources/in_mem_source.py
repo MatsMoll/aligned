@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import uuid
@@ -17,6 +18,41 @@ if TYPE_CHECKING:
     from aligned.schemas.feature_view import CompiledFeatureView
 
 
+@dataclass
+class RetrievalJobSource(
+    BatchDataSource, DataFileReference, WritableFeatureSource, VectorIndex
+):
+    job: RetrievalJob
+
+    def job_group_key(self) -> str:
+        return "job"
+
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        return await self.job.to_lazy_polars()
+
+    @classmethod
+    def multi_source_features_for(  # type: ignore
+        cls: type["RetrievalJobSource"],
+        facts: RetrievalJob,
+        requests: list[tuple["RetrievalJobSource", RetrievalRequest]],
+    ) -> RetrievalJob:
+        from aligned.local.job import FileFactualJob
+
+        sources = {
+            source.job_group_key()
+            for source, _ in requests
+            if isinstance(source, BatchDataSource)
+        }
+        if len(sources) != 1:
+            raise NotImplementedError(
+                f"Type: {cls} have not implemented how to load fact data with multiple sources."
+            )
+
+        source, _ = requests[0]
+
+        return FileFactualJob(source, [request for _, request in requests], facts)
+
+
 class InMemorySource(
     CodableBatchDataSource, DataFileReference, WritableFeatureSource, VectorIndex
 ):
@@ -26,6 +62,15 @@ class InMemorySource(
         self.data = data
         self.job_key = str(uuid.uuid4())
         self._vector_index_name = None
+
+    def to_dict(self, **kwargs) -> dict:  # type: ignore
+        return {"type_name": "in_mem_source"}
+
+    @classmethod
+    def from_dict(  # type: ignore
+        cls, d: dict, **kwargs
+    ) -> "InMemorySource":
+        return InMemorySource.empty()
 
     def vector_index_name(self) -> str | None:
         return self._vector_index_name

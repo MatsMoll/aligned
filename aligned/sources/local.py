@@ -165,6 +165,10 @@ def create_parent_dir(path: str) -> None:
         parent.mkdir(exist_ok=True)
 
 
+def do_dir_exist(path: str) -> bool:
+    return Path(path).is_dir()
+
+
 def do_file_exist(path: str) -> bool:
     return Path(path).is_file()
 
@@ -846,7 +850,7 @@ class DeltaFileSource(
         await self.write_polars(pl.from_pandas(df).lazy())
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
-        if not do_file_exist(self.path):
+        if not do_dir_exist(self.path):
             raise UnableToFindFileException(self.path)
 
         try:
@@ -911,6 +915,12 @@ class DeltaFileSource(
             schema, data_source_code, view_name, "from aligned import FileSource"
         )
 
+    async def overwrite(self, job: RetrievalJob, request: RetrievalRequest) -> None:
+        data = await job.to_lazy_polars()
+        data.select(request.all_returned_columns).collect().write_delta(
+            self.path, mode="overwrite"
+        )
+
     async def insert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         data = await job.to_lazy_polars()
         data.select(request.all_returned_columns).collect().write_delta(
@@ -921,6 +931,7 @@ class DeltaFileSource(
         new_data = await job.to_lazy_polars()
         existing = await self.to_lazy_polars()
 
+        # Should to a merge statement instead
         upsert_on_column(
             list(request.entity_names), new_data, existing
         ).collect().write_delta(self.path, mode="overwrite")

@@ -109,7 +109,7 @@ class FeatureType(Codable):
 
     def struct_fields(self) -> dict[str, FeatureType]:
         if self.name == "struct":
-            raise ValueError("Has no structured subfields.")
+            return {}
 
         raw_content = self.name.removeprefix("struct-")
         content = json.loads(raw_content)

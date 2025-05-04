@@ -569,6 +569,14 @@ class FeatureViewWrapper(Generic[T]):
         request = self.compile().request_all
         return RetrievalJob.from_convertable(data, request)
 
+    def examples(self, data: ConvertableToRetrievalJob) -> RetrievalJob:
+        from aligned.sources.random_source import RandomDataSource
+
+        request = self.compile().request_all
+        return RandomDataSource().features_for(
+            RetrievalJob.from_convertable(data, request), request.needed_requests[0]
+        )
+
     def drop_invalid(
         self, data: ConvertableData, validator: Validator | None = None
     ) -> ConvertableData:
