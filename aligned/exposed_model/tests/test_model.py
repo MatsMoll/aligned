@@ -13,7 +13,10 @@ from aligned import (
 from aligned.feature_store import ContractStore
 from aligned.sources.in_mem_source import InMemorySource
 from aligned.sources.random_source import RandomDataSource
-from aligned.exposed_model.interface import partitioned_on, python_function
+from aligned.exposed_model.interface import (
+    partitioned_on,
+    python_function,
+)
 import polars as pl
 import pandas as pd
 

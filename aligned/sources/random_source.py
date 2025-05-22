@@ -191,7 +191,6 @@ class RandomDataSource(
     seed: int | None
 
     fill_mode: FillMode
-    partial_data: pl.DataFrame
 
     type_name: str = "dummy_data"
 

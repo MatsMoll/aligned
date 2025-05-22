@@ -31,19 +31,20 @@ async def test_custom_transformation_as_lambda(
     assert new_df.sort("bucket").equals(df.sort("bucket").select(new_df.columns))
 
 
+async def custom_function(df: pl.LazyFrame) -> pl.LazyFrame:
+    return (
+        df.with_columns(bucket=pl.col("id").mod(3))
+        .group_by("bucket")
+        .agg(
+            pl.col("radius_mean").sum().alias("sum_radius_mean"),
+        )
+    )
+
+
 @pytest.mark.asyncio
 async def test_custom_transformation_as_function(
     scan_without_datetime: CsvFileSource,
 ) -> None:
-    async def custom_function(df: pl.LazyFrame) -> pl.LazyFrame:
-        return (
-            df.with_columns(bucket=pl.col("id").mod(3))
-            .group_by("bucket")
-            .agg(
-                pl.col("radius_mean").sum().alias("sum_radius_mean"),
-            )
-        )
-
     new_source = scan_without_datetime.transform_with_polars(custom_function)
 
     df = await new_source.all_data(RetrievalRequest.all_data(), limit=None).to_polars()

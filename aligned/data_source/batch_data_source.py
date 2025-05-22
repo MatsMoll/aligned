@@ -511,12 +511,14 @@ class TransformSource(CodableBatchDataSource):
 
     def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
         method = self.generic_method.load_function()
+        assert method
         return self.source.all_data(request, limit).transform_polars(method)  # type: ignore
 
     def all_between_dates(
         self, request: RetrievalRequest, start_date: datetime, end_date: datetime
     ) -> RetrievalJob:
         method = self.generic_method.load_function()
+        assert method
         return self.source.all_between_dates(
             request, start_date, end_date
         ).transform_polars(method)  # type: ignore
@@ -525,7 +527,7 @@ class TransformSource(CodableBatchDataSource):
         self, facts: RetrievalJob, request: RetrievalRequest
     ) -> RetrievalJob:
         method = self.generic_method.load_function()
-
+        assert method
         return self.source.features_for(facts, request).transform_polars(method)  # type: ignore
 
     @classmethod

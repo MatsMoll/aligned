@@ -343,7 +343,7 @@ class CodePredictor(ExposedModel, VersionedModel):
             if inspect.iscoroutinefunction(function):
                 pred = await function(features)
             else:
-                pred = function(features, store)
+                pred = function(features)
 
             assert isinstance(pred, pl.Series)
 
@@ -367,10 +367,23 @@ class CodePredictor(ExposedModel, VersionedModel):
     ) -> CodePredictor:
         import dill
         import inspect
+        from uuid import uuid4
+
+        raw_code = inspect.getsource(function)
+
+        if function.__name__ == "<lambda>":
+            lambda_body = raw_code.split("lambda ")[1]
+            lambda_name = f"a{uuid4()}".replace("-", "_")
+            args, body = lambda_body.split(":")
+
+            new_body = body.rstrip("), \n")
+
+            code = f"def {lambda_name}({args}):\n    return {new_body}"
+
+            return CodePredictor(code, lambda_name)
 
         function_name = dill.source.getname(function)
         assert isinstance(function_name, str), "Need a function name"
-        raw_code = inspect.getsource(function)
 
         code = ""
 
@@ -386,8 +399,7 @@ class CodePredictor(ExposedModel, VersionedModel):
                     code += line[:indents].lstrip() + line[indents:]
                 else:
                     code += line
-
-            if start_signature in line:
+            elif start_signature in line:
                 stripped = line.lstrip()
                 indents = len(line) - len(stripped)
                 stripped = stripped.replace(
@@ -396,6 +408,8 @@ class CodePredictor(ExposedModel, VersionedModel):
                 code += stripped
             else:
                 code += line
+
+        print(code)
 
         return CodePredictor(code, function_name, feature_refs=feature_refs)
 

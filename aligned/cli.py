@@ -332,7 +332,6 @@ def serve_command(
 
     host = host or os.getenv("HOST", "127.0.0.1")
 
-    os.environ["ALADDIN_ENABLE_SERVER"] = "True"
     # Needed in order to find the feature_store_location file
     dir = Path.cwd() if repo_path == "." else Path(repo_path).absolute()
     sys.path.append(str(dir))

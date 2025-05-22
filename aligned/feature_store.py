@@ -391,7 +391,9 @@ class ContractStore:
         return ContractStore.from_definition(definition)
 
     @staticmethod
-    async def from_dir(path: str = ".") -> ContractStore:
+    async def from_dir(
+        path: str = ".", exclude_glob: list[str] | None = None
+    ) -> ContractStore:
         """Reads and generates a feature store based on the given directory's content.
 
         This will read the feature views, services etc in a given repo and generate a feature store.
@@ -403,11 +405,12 @@ class ContractStore:
 
         Args:
             path (str, optional): the directory to read from. Defaults to ".".
+            exclude_glob (list[str], optional): the globs to ignore
 
         Returns:
             FeatureStore: The generated feature store
         """
-        definition = await RepoDefinition.from_path(path)
+        definition = await RepoDefinition.from_path(path, exclude_glob)
         return ContractStore.from_definition(definition)
 
     def execute_sql(self, query: str) -> RetrievalJob:
