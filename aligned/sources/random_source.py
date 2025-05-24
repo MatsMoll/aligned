@@ -203,7 +203,10 @@ class RandomDataSource(
     ):
         self.default_data_size = default_data_size
         self.seed = seed
-        self.partial_data = partial_data or pl.DataFrame()
+        if partial_data is None:
+            self.partial_data = pl.DataFrame()
+        else:
+            self.partial_data = partial_data
         self.fill_mode = fill_mode
 
     def job_group_key(self) -> str:
