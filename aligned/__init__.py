@@ -32,6 +32,7 @@ from aligned.data_source.batch_data_source import CustomMethodDataSource, Docker
 from aligned.feature_store import ContractStore, FeatureStore
 from aligned.feature_view import feature_view, check_schema
 from aligned.schemas.text_vectoriser import EmbeddingModel
+from aligned.sources.in_mem_source import InMemorySource
 from aligned.sources.kafka import KafkaConfig
 from aligned.sources.local import FileSource, Directory, ParquetConfig, CsvConfig
 from aligned.sources.psql import PostgreSQLConfig
@@ -53,6 +54,7 @@ __all__ = [
     "AzureBlobConfig",
     "RedshiftSQLConfig",
     "CustomMethodDataSource",
+    "InMemorySource",
     # Stream Data Source
     "HttpStreamSource",
     # Online Source
