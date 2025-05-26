@@ -7,7 +7,7 @@
   <head>
     
     <title>aligned.model_store.ModelFeatureStore</title>
-    <meta name="generator" content="pydoctor 24.11.2"> 
+    <meta name="generator" content="pydoctor 25.4.0"> 
         
     </meta>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
@@ -172,6 +172,16 @@
 
         
             <div class="itemName"><code><a href="#features_for" class="internal-link" title="aligned.model_store.ModelFeatureStore.features_for">features<wbr></wbr>_for</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#filter_predictions" class="internal-link" title="aligned.model_store.ModelFeatureStore.filter_predictions">filter<wbr></wbr>_predictions</a></code>
             </div>
         
 
@@ -565,7 +575,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">ModelFeatureStore</span>: <a href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L34" class="sourceLink">(source)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">ModelFeatureStore</span>: <a href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L35" class="sourceLink">(source)</a></code></p>
           <p><a href="classIndex.html#aligned.model_store.ModelFeatureStore">View In Hierarchy</a></p>
         </div>
 
@@ -574,14 +584,14 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id133">
+          <table class="children sortable" id="id138">
   
   
   <tr class="method">
     
     <td>Method</td>
     <td><code><a href="#all_predictions" class="internal-link" title="aligned.model_store.ModelFeatureStore.all_predictions">all<wbr></wbr>_predictions</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Method</td>
@@ -596,7 +606,7 @@
     
     <td>Method</td>
     <td><code><a href="#feature_references_for" class="internal-link" title="aligned.model_store.ModelFeatureStore.feature_references_for">feature<wbr></wbr>_references<wbr></wbr>_for</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Method</td>
@@ -604,14 +614,19 @@
     <td>Returns the features for the given entities</td>
   </tr><tr class="method">
     
+    <td>Method</td>
+    <td><code><a href="#filter_predictions" class="internal-link" title="aligned.model_store.ModelFeatureStore.filter_predictions">filter<wbr></wbr>_predictions</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
     <td>Async Method</td>
     <td><code><a href="#freshness" class="internal-link" title="aligned.model_store.ModelFeatureStore.freshness">freshness</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Method</td>
     <td><code><a href="#has_exposed_model" class="internal-link" title="aligned.model_store.ModelFeatureStore.has_exposed_model">has<wbr></wbr>_exposed<wbr></wbr>_model</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Method</td>
@@ -626,12 +641,12 @@
     
     <td>Async Method</td>
     <td><code><a href="#input_freshness" class="internal-link" title="aligned.model_store.ModelFeatureStore.input_freshness">input<wbr></wbr>_freshness</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Method</td>
     <td><code><a href="#input_request" class="internal-link" title="aligned.model_store.ModelFeatureStore.input_request">input<wbr></wbr>_request</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Async Method</td>
@@ -641,47 +656,47 @@
     
     <td>Method</td>
     <td><code><a href="#needed_entities" class="internal-link" title="aligned.model_store.ModelFeatureStore.needed_entities">needed<wbr></wbr>_entities</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Method</td>
     <td><code><a href="#predict_over" class="internal-link" title="aligned.model_store.ModelFeatureStore.predict_over">predict<wbr></wbr>_over</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Async Method</td>
     <td><code><a href="#prediction_freshness" class="internal-link" title="aligned.model_store.ModelFeatureStore.prediction_freshness">prediction<wbr></wbr>_freshness</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Method</td>
     <td><code><a href="#prediction_request" class="internal-link" title="aligned.model_store.ModelFeatureStore.prediction_request">prediction<wbr></wbr>_request</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Method</td>
     <td><code><a href="#predictions_between" class="internal-link" title="aligned.model_store.ModelFeatureStore.predictions_between">predictions<wbr></wbr>_between</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Method</td>
     <td><code><a href="#predictions_for" class="internal-link" title="aligned.model_store.ModelFeatureStore.predictions_for">predictions<wbr></wbr>_for</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Method</td>
     <td><code><a href="#process_features" class="internal-link" title="aligned.model_store.ModelFeatureStore.process_features">process<wbr></wbr>_features</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Method</td>
     <td><code><a href="#raw_string_features" class="internal-link" title="aligned.model_store.ModelFeatureStore.raw_string_features">raw<wbr></wbr>_string<wbr></wbr>_features</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Method</td>
     <td><code><a href="#request" class="internal-link" title="aligned.model_store.ModelFeatureStore.request">request</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Async Method</td>
@@ -696,12 +711,12 @@
     
     <td>Method</td>
     <td><code><a href="#using_source" class="internal-link" title="aligned.model_store.ModelFeatureStore.using_source">using<wbr></wbr>_source</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Method</td>
     <td><code><a href="#using_version" class="internal-link" title="aligned.model_store.ModelFeatureStore.using_version">using<wbr></wbr>_version</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Method</td>
@@ -711,37 +726,37 @@
     
     <td>Class Variable</td>
     <td><code><a href="#model" class="internal-link" title="aligned.model_store.ModelFeatureStore.model">model</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="classvariable">
     
     <td>Class Variable</td>
     <td><code><a href="#model_to_use" class="internal-link" title="aligned.model_store.ModelFeatureStore.model_to_use">model<wbr></wbr>_to<wbr></wbr>_use</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="classvariable">
     
     <td>Class Variable</td>
     <td><code><a href="#selected_version" class="internal-link" title="aligned.model_store.ModelFeatureStore.selected_version">selected<wbr></wbr>_version</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="classvariable">
     
     <td>Class Variable</td>
     <td><code><a href="#store" class="internal-link" title="aligned.model_store.ModelFeatureStore.store">store</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="property">
     
     <td>Property</td>
     <td><code><a href="#dataset_store" class="internal-link" title="aligned.model_store.ModelFeatureStore.dataset_store">dataset<wbr></wbr>_store</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="property">
     
     <td>Property</td>
     <td><code><a href="#location" class="internal-link" title="aligned.model_store.ModelFeatureStore.location">location</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="property">
     
     <td>Property</td>
     <td><code><a href="#source" class="internal-link" title="aligned.model_store.ModelFeatureStore.source">source</a></code></td>
-    <td><span class="undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr>
 </table>
           
@@ -762,8 +777,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">all_predictions</span><span class="function-signature">(self, limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L403">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">all_predictions</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L404">
       
       (source)
     </a>
@@ -789,8 +804,8 @@
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">cached_at</span><span class="function-signature">(self, location: <code>DataFileReference</code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L319">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">cached_at</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">location: <code>DataFileReference</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L320">
       
       (source)
     </a>
@@ -842,8 +857,8 @@ from aligned import FileSource</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">depends_on</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>FeatureLocation]</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L418">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">depends_on</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>FeatureLocation]</code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L422">
       
       (source)
     </a>
@@ -915,8 +930,8 @@ class NewModel:</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">feature_references_for</span><span class="function-signature">(self, version: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>FeatureReference]</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L129">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">feature_references_for</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">version: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>FeatureReference]</code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L130">
       
       (source)
     </a>
@@ -942,8 +957,8 @@ class NewModel:</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">features_for</span><span class="function-signature">(self, entities: <code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a> | <a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, event_timestamp_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L167">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">features_for</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">entities: <code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a> | <a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, </span><span class="rst-sig-param">event_timestamp_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L168">
       
       (source)
     </a>
@@ -984,6 +999,33 @@ store = await FileSource.json_at("features-latest.json").feature_store()</p>
 </div><div class="basemethod">
   
   
+  <a name="aligned.model_store.ModelFeatureStore.filter_predictions">
+    
+  </a>
+  <a name="filter_predictions">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">filter_predictions</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">filter: <code><a href="aligned.retrieval_job.html#FilterRepresentable" class="internal-link" title="aligned.retrieval_job.FilterRepresentable">FilterRepresentable</a></code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L414">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#filter_predictions" title="aligned.model_store.ModelFeatureStore.filter_predictions">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
   <a name="aligned.model_store.ModelFeatureStore.freshness">
     
   </a>
@@ -993,8 +1035,8 @@ store = await FileSource.json_at("features-latest.json").feature_store()</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">async def</span> <span class="py-defname">freshness</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr>FeatureLocation, <wbr></wbr><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>]</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L238">
+    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">freshness</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr>FeatureLocation, <wbr></wbr><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>]</code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L239">
       
       (source)
     </a>
@@ -1020,8 +1062,8 @@ store = await FileSource.json_at("features-latest.json").feature_store()</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">has_exposed_model</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L132">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">has_exposed_model</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L133">
       
       (source)
     </a>
@@ -1047,8 +1089,8 @@ store = await FileSource.json_at("features-latest.json").feature_store()</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">has_one_source_for_input_features</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L53">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">has_one_source_for_input_features</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L54">
       
       (source)
     </a>
@@ -1078,8 +1120,8 @@ E.g. predict over all data in the source.</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">input_features</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>FeatureReference]</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L66">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">input_features</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>FeatureReference]</code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L67">
       
       (source)
     </a>
@@ -1105,8 +1147,8 @@ E.g. predict over all data in the source.</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">async def</span> <span class="py-defname">input_freshness</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr>FeatureLocation, <wbr></wbr><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>]</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L241">
+    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">input_freshness</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr>FeatureLocation, <wbr></wbr><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>]</code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L242">
       
       (source)
     </a>
@@ -1132,8 +1174,8 @@ E.g. predict over all data in the source.</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">input_request</span><span class="function-signature">(self, except_features: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, event_timestamp_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code>FeatureRequest</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L91">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">input_request</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">except_features: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">event_timestamp_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code>FeatureRequest</code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L92">
       
       (source)
     </a>
@@ -1159,8 +1201,8 @@ E.g. predict over all data in the source.</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">async def</span> <span class="py-defname">insert_predictions</span><span class="function-signature">(self, predictions: <code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a> | <a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L500">
+    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">insert_predictions</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">predictions: <code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a> | <a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>):</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L504">
       
       (source)
     </a>
@@ -1209,8 +1251,8 @@ class TaxiEta:</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">needed_entities</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>Feature]</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L126">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">needed_entities</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>Feature]</code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L127">
       
       (source)
     </a>
@@ -1236,8 +1278,8 @@ class TaxiEta:</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">predict_over</span><span class="function-signature">(self, entities: <code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a> | <a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>) -&gt; <code><a href="aligned.retrieval_job.PredictionJob.html" class="internal-link" title="aligned.retrieval_job.PredictionJob">PredictionJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L143">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">predict_over</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">entities: <code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a> | <a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>) -&gt; <code><a href="aligned.retrieval_job.PredictionJob.html" class="internal-link" title="aligned.retrieval_job.PredictionJob">PredictionJob</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L144">
       
       (source)
     </a>
@@ -1263,8 +1305,8 @@ class TaxiEta:</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">async def</span> <span class="py-defname">prediction_freshness</span><span class="function-signature">(self) -&gt; <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L281">
+    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">prediction_freshness</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L282">
       
       (source)
     </a>
@@ -1290,8 +1332,8 @@ class TaxiEta:</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">prediction_request</span><span class="function-signature">(self, exclude_features: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, model_version_as_entity: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code> = <a href="https://docs.python.org/3/library/constants.html#False" class="intersphinx-link">False</a>) -&gt; <code>RetrievalRequest</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L105">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">prediction_request</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">exclude_features: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">model_version_as_entity: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code> = <a href="https://docs.python.org/3/library/constants.html#False" class="intersphinx-link">False</a></span>) -&gt; <code>RetrievalRequest</code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L106">
       
       (source)
     </a>
@@ -1317,8 +1359,8 @@ class TaxiEta:</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">predictions_between</span><span class="function-signature">(self, start_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>, end_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L393">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">predictions_between</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">start_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code>, </span><span class="rst-sig-param">end_date: <code><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime" class="intersphinx-link">datetime</a></code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L394">
       
       (source)
     </a>
@@ -1344,8 +1386,8 @@ class TaxiEta:</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">predictions_for</span><span class="function-signature">(self, entities: <code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a> | <a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, event_timestamp_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, model_version_as_entity: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L379">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">predictions_for</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">entities: <code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a> | <a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, </span><span class="rst-sig-param">event_timestamp_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">model_version_as_entity: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L380">
       
       (source)
     </a>
@@ -1371,8 +1413,8 @@ class TaxiEta:</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">process_features</span><span class="function-signature">(self, input: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a> | <a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a></code>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L363">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">process_features</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">input: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a> | <a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a></code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L364">
       
       (source)
     </a>
@@ -1398,8 +1440,8 @@ class TaxiEta:</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">raw_string_features</span><span class="function-signature">(self, except_features: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L73">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">raw_string_features</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">except_features: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L74">
       
       (source)
     </a>
@@ -1425,8 +1467,8 @@ class TaxiEta:</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">request</span><span class="function-signature">(self, except_features: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, event_timestamp_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code>FeatureRequest</code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L84">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">request</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">except_features: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">event_timestamp_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code>FeatureRequest</code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L85">
       
       (source)
     </a>
@@ -1452,8 +1494,8 @@ class TaxiEta:</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">async def</span> <span class="py-defname">upsert_predictions</span><span class="function-signature">(self, predictions: <code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a> | <a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>)</span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L469">
+    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">upsert_predictions</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">predictions: <code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a> | <a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>):</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L473">
       
       (source)
     </a>
@@ -1502,8 +1544,8 @@ class TaxiEta:</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">using_model</span><span class="function-signature">(self, model_to_use: <code>ExposedModel</code>) -&gt; <code><a href="aligned.model_store.ModelFeatureStore.html" class="internal-link" title="aligned.model_store.ModelFeatureStore">ModelFeatureStore</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L135">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">using_model</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">model_to_use: <code>ExposedModel</code></span>) -&gt; <code><a href="aligned.model_store.ModelFeatureStore.html" class="internal-link" title="aligned.model_store.ModelFeatureStore">ModelFeatureStore</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L136">
       
       (source)
     </a>
@@ -1529,8 +1571,8 @@ class TaxiEta:</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">using_source</span><span class="function-signature">(self, source: <code><a href="aligned.data_source.batch_data_source.BatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource">BatchDataSource</a></code>) -&gt; <code><a href="aligned.model_store.ModelFeatureStore.html" class="internal-link" title="aligned.model_store.ModelFeatureStore">ModelFeatureStore</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L413">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">using_source</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">source: <code><a href="aligned.data_source.batch_data_source.BatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource">BatchDataSource</a></code></span>) -&gt; <code><a href="aligned.model_store.ModelFeatureStore.html" class="internal-link" title="aligned.model_store.ModelFeatureStore">ModelFeatureStore</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L417">
       
       (source)
     </a>
@@ -1556,8 +1598,8 @@ class TaxiEta:</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">using_version</span><span class="function-signature">(self, version: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>) -&gt; <code><a href="aligned.model_store.ModelFeatureStore.html" class="internal-link" title="aligned.model_store.ModelFeatureStore">ModelFeatureStore</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L81">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">using_version</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">version: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>) -&gt; <code><a href="aligned.model_store.ModelFeatureStore.html" class="internal-link" title="aligned.model_store.ModelFeatureStore">ModelFeatureStore</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L82">
       
       (source)
     </a>
@@ -1583,8 +1625,8 @@ class TaxiEta:</p>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span> <span class="py-defname">with_labels</span><span class="function-signature">(self, label_refs: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>FeatureReference] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>) -&gt; <code><a href="aligned.model_store.SupervisedModelFeatureStore.html" class="internal-link" title="aligned.model_store.SupervisedModelFeatureStore">SupervisedModelFeatureStore</a></code></span>:
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L284">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">with_labels</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">label_refs: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>FeatureReference] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.model_store.SupervisedModelFeatureStore.html" class="internal-link" title="aligned.model_store.SupervisedModelFeatureStore">SupervisedModelFeatureStore</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L285">
       
       (source)
     </a>
@@ -1632,7 +1674,7 @@ store = await FileSource.json_at("features-latest.json").feature_store()</p>
   <div class="functionHeader">
     
     <span class="py-defname">model</span>: <code>ModelSchema</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L36">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L37">
       
       (source)
     </a>
@@ -1659,7 +1701,7 @@ store = await FileSource.json_at("features-latest.json").feature_store()</p>
   <div class="functionHeader">
     
     <span class="py-defname">model_to_use</span>: <code>ExposedModel | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L39">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L40">
       
       (source)
     </a>
@@ -1686,7 +1728,7 @@ store = await FileSource.json_at("features-latest.json").feature_store()</p>
   <div class="functionHeader">
     
     <span class="py-defname">selected_version</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L38">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L39">
       
       (source)
     </a>
@@ -1713,7 +1755,7 @@ store = await FileSource.json_at("features-latest.json").feature_store()</p>
   <div class="functionHeader">
     
     <span class="py-defname">store</span>: <code>ContractStore</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L37">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L38">
       
       (source)
     </a>
@@ -1738,9 +1780,9 @@ store = await FileSource.json_at("features-latest.json").feature_store()</p>
     
   </a>
   <div class="functionHeader">
-    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
     <span class="py-defname">dataset_store</span>: <code>DatasetStore | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L45">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L46">
       
       (source)
     </a>
@@ -1765,9 +1807,9 @@ store = await FileSource.json_at("features-latest.json").feature_store()</p>
     
   </a>
   <div class="functionHeader">
-    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
     <span class="py-defname">location</span>: <code>FeatureLocation</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L41">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L42">
       
       (source)
     </a>
@@ -1792,9 +1834,9 @@ store = await FileSource.json_at("features-latest.json").feature_store()</p>
     
   </a>
   <div class="functionHeader">
-    @<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br />
+    <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
     <span class="py-defname">source</span>: <code><a href="aligned.data_source.batch_data_source.BatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource">BatchDataSource</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/0a7dade137e0ad1ed08629501cd1840c0b7af944/aligned/model_store.py#L49">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/2572c6e92fae2dd36b22d725526db64e5071a82b/aligned/model_store.py#L50">
       
       (source)
     </a>
@@ -1821,7 +1863,7 @@ store = await FileSource.json_at("features-latest.json").feature_store()</p>
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    24.11.2 at 2025-03-24 21:44:45.
+    25.4.0 at 2025-05-26 08:03:23.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 
