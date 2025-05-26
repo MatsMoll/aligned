@@ -16,6 +16,7 @@ from aligned.data_source.batch_data_source import (
 )
 from aligned.request.retrieval_request import FeatureRequest, RetrievalRequest
 from aligned.retrieval_job import (
+    FilterRepresentable,
     PredictionJob,
     RetrievalJob,
     SupervisedJob,
@@ -409,6 +410,9 @@ class ModelFeatureStore:
             .inject_store(self.store)
             .select_columns(set(request.all_returned_columns))
         )
+
+    def filter_predictions(self, filter: FilterRepresentable) -> RetrievalJob:
+        return self.all_predictions().filter(filter)
 
     def using_source(self, source: BatchDataSource) -> ModelFeatureStore:
         return ModelFeatureStore(

@@ -50,17 +50,14 @@ class RepoReference:
         return self.repo_paths.get(self.selected)
 
     def feature_server(self, source: FeatureSource) -> FastAPI | FeatureSource:
-        import os
-
-        if os.environ.get('ALADDIN_ENABLE_SERVER', 'False').lower() == 'false':
-            return source
-
         from aligned.server import FastAPIServer
 
         if not (selected_file := self.selected_file):
-            raise ValueError('No selected file to serve features from')
+            raise ValueError("No selected file to serve features from")
 
-        feature_store = asyncio.get_event_loop().run_until_complete(selected_file.feature_store())
+        feature_store = asyncio.get_event_loop().run_until_complete(
+            selected_file.feature_store()
+        )
         return FastAPIServer.app(feature_store)
 
     @staticmethod
@@ -74,18 +71,19 @@ class RepoReference:
             module = import_module(module_path)
             obj = getattr(module, object)
             if isinstance(obj, StorageFileReference):
-                return RepoReference(env_var_name='const', repo_paths={'const': obj})
-            raise ValueError('No reference found')
+                return RepoReference(env_var_name="const", repo_paths={"const": obj})
+            raise ValueError("No reference found")
         except AttributeError:
-            raise ValueError('No reference found')
+            raise ValueError("No reference found")
         except ModuleNotFoundError:
-            raise ValueError('No reference found')
+            raise ValueError("No reference found")
 
 
 class FeatureServer:
     @staticmethod
     def from_reference(
-        reference: StorageFileReference, online_source: FeatureSource | FeatureSourceFactory | None = None
+        reference: StorageFileReference,
+        online_source: FeatureSource | FeatureSourceFactory | None = None,
     ) -> FastAPI | None:
         """Creates a feature server
         This can process and serve features for both models and feature views
@@ -108,14 +106,11 @@ class FeatureServer:
         Returns:
             FastAPI: A FastAPI instance that contains paths for fetching features
         """
-        import os
-
-        if os.environ.get('ALADDIN_ENABLE_SERVER', 'False').lower() == 'false':
-            return None
-
         from aligned.server import FastAPIServer
 
-        feature_store = asyncio.get_event_loop().run_until_complete(reference.feature_store())
+        feature_store = asyncio.get_event_loop().run_until_complete(
+            reference.feature_store()
+        )
         return FastAPIServer.app(feature_store.with_source(online_source))
 
 
@@ -129,7 +124,6 @@ class RepoMetadata(Codable):
 
 @dataclass
 class RepoDefinition(Codable):
-
     metadata: RepoMetadata
 
     feature_views: set[CompiledFeatureView] = field(default_factory=set)
@@ -153,7 +147,7 @@ class RepoDefinition(Codable):
     async def from_reference_at_path(repo_path: str, file_path: str) -> RepoDefinition:
         from aligned.compiler.repo_reader import RepoReader
 
-        dir_path = Path.cwd() if repo_path == '.' else Path(repo_path).absolute()
+        dir_path = Path.cwd() if repo_path == "." else Path(repo_path).absolute()
         absolute_file_path = Path(file_path).absolute()
 
         try:
@@ -162,19 +156,21 @@ class RepoDefinition(Codable):
                 logger.info(f"Loading repo from configuration '{reference.selected}'")
                 return await RepoDefinition.from_file(file)
             else:
-                logger.info('Found no configuration')
+                logger.info("Found no configuration")
         except ValueError as error:
-            logger.error(f'Error when loadin repo: {error}')
+            logger.error(f"Error when loading repo: {error}")
 
-        logger.info('Generating repo definition')
+        logger.info("Generating repo definition")
         return await RepoReader.definition_from_path(dir_path)
 
     @staticmethod
-    async def from_path(path: str) -> RepoDefinition:
+    async def from_path(
+        path: str, exclude_glob: list[str] | None = None
+    ) -> RepoDefinition:
         from aligned.compiler.repo_reader import RepoReader
 
-        dir_path = Path.cwd() if path == '.' else Path(path).absolute()
-        return await RepoReader.definition_from_path(dir_path)
+        dir_path = Path.cwd() if path == "." else Path(path).absolute()
+        return await RepoReader.definition_from_path(dir_path, exclude_glob)
 
     @staticmethod
     async def from_glob(glob: str, root_dir: Path | None = None) -> RepoDefinition:

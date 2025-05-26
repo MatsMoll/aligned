@@ -67,6 +67,7 @@ class PredictorFactory:
             OpenAiExtractModel,
             MultipleModels,
             PolarsExpression,
+            CodePredictor,
         ]
         for predictor in types:
             self.supported_predictors[predictor.model_type] = predictor
@@ -166,23 +167,8 @@ class ExposedModel(Codable, SerializableType):
         ],
         features: list[FeatureReferencable] | None = None,
     ) -> "ExposedModel":
-        import dill
-
         refs = [feat.feature_reference() for feat in features or []]
-
-        async def function_wrapper(
-            values: RetrievalJob, store: ModelFeatureStore
-        ) -> pl.DataFrame:
-            if refs:
-                features = await store.store.features_for(values, refs).to_polars()
-            else:
-                features = await store.features_for(values).to_polars()
-
-            return await callable(features, store)
-
-        return DillPredictor(
-            function=dill.dumps(function_wrapper), function_id=callable.__name__
-        )
+        return CodePredictor.from_function(callable, refs)
 
     @staticmethod
     def ollama_generate(
@@ -264,6 +250,7 @@ class StreamablePredictor:
 class DillPredictor(ExposedModel, VersionedModel):
     function: bytes
     function_id: str
+    feature_refs: list[FeatureReference] | None = None
 
     model_type: str = "dill_predictor"
 
@@ -292,10 +279,139 @@ class DillPredictor(ExposedModel, VersionedModel):
         import inspect
 
         function = dill.loads(self.function)
-        if inspect.iscoroutinefunction(function):
-            return await function(values, store)
+
+        if self.feature_refs:
+            features = await store.store.features_for(
+                values, self.feature_refs
+            ).to_polars()
         else:
-            return function(values, store)
+            features = await store.features_for(values).to_polars()
+
+        if inspect.iscoroutinefunction(function):
+            return await function(features, store)
+        else:
+            return function(features, store)
+
+
+@dataclass
+class CodePredictor(ExposedModel, VersionedModel):
+    code: str
+    function_name: str
+    feature_refs: list[FeatureReference] | None = None
+
+    model_type: str = "code_pred"
+
+    @property
+    def exposed_at_url(self) -> str | None:
+        return None
+
+    @property
+    def as_markdown(self) -> str:
+        return f"Predicts using the following function: \n```python\n{self.code}\n```"
+
+    async def model_version(self) -> str:
+        from hashlib import sha256
+
+        return sha256(self.code.encode()).hexdigest()
+
+    async def needed_features(self, store: ModelFeatureStore) -> list[FeatureReference]:
+        default = store.model.features.default_version
+        return store.feature_references_for(store.selected_version or default)
+
+    async def needed_entities(self, store: ModelFeatureStore) -> set[Feature]:
+        return store.request().request_result.entities
+
+    async def run_polars(
+        self, values: RetrievalJob, store: ModelFeatureStore
+    ) -> pl.DataFrame:
+        import inspect
+
+        if self.function_name not in locals():
+            exec(self.code)
+
+        function = locals()[self.function_name]
+        args = inspect.signature(function).parameters
+
+        if self.feature_refs:
+            features = await store.store.features_for(
+                values, self.feature_refs
+            ).to_polars()
+        else:
+            features = await store.features_for(values).to_polars()
+
+        if len(args) == 1:
+            if inspect.iscoroutinefunction(function):
+                pred = await function(features)
+            else:
+                pred = function(features)
+
+            assert isinstance(pred, pl.Series)
+
+            pred_columns = store.model.predictions_view.labels()
+            if len(pred_columns) != 1:
+                raise ValueError(
+                    f"Expected exactly one prediction column, got {len(pred_columns)} columns."
+                )
+
+            result = features.with_columns(pred.alias(next(iter(pred_columns)).name))
+            return result
+        else:
+            if inspect.iscoroutinefunction(function):
+                return await function(features, store)
+            else:
+                return function(features, store)
+
+    @staticmethod
+    def from_function(
+        function: Callable, feature_refs: list[FeatureReference] | None = None
+    ) -> CodePredictor:
+        import dill
+        import inspect
+        from uuid import uuid4
+
+        raw_code = inspect.getsource(function)
+
+        if function.__name__ == "<lambda>":
+            lambda_body = raw_code.split("lambda ")[1]
+            lambda_name = f"a{uuid4()}".replace("-", "_")
+            args, body = lambda_body.split(":")
+
+            new_body = body.rstrip("), \n")
+
+            code = f"def {lambda_name}({args}):\n    return {new_body}"
+
+            return CodePredictor(code, lambda_name)
+
+        function_name = dill.source.getname(function)
+        assert isinstance(function_name, str), "Need a function name"
+
+        code = ""
+
+        indents: int | None = None
+        start_signature = f"def {function_name}"
+
+        if inspect.iscoroutinefunction(function):
+            start_signature = f"async {start_signature}"
+
+        for line in raw_code.splitlines(keepends=True):
+            if indents:
+                if len(line) > indents:
+                    code += line[:indents].lstrip() + line[indents:]
+                else:
+                    code += line
+            elif start_signature in line:
+                stripped = line.lstrip()
+                indents = len(line) - len(stripped)
+                stripped = stripped.replace(
+                    f"{start_signature}(self,", f"{start_signature}("
+                )
+                code += stripped
+            else:
+                code += line
+
+        print(code)
+
+        return CodePredictor(code, function_name, feature_refs=feature_refs)
 
 
 @dataclass
@@ -332,7 +448,7 @@ class PolarsExpression(ExposedModel, VersionedModel):
 
         assert len(labels) == 1, f"Expected only one label got {len(labels)}"
 
-        inputs = await values.to_polars()
+        inputs = await store.features_for(values).to_polars()
 
         name = next(iter(labels)).name
 
@@ -527,27 +643,8 @@ class DillFunction(ExposedModel, VersionedModel):
             return function(values, store)
 
 
-def python_function(function: Callable[[pl.DataFrame], pl.Series]) -> DillFunction:
-    import dill
-
-    async def function_wrapper(
-        values: RetrievalJob, store: ModelFeatureStore
-    ) -> pl.DataFrame:
-        pred_columns = store.model.predictions_view.labels()
-        if len(pred_columns) != 1:
-            raise ValueError(
-                f"Expected exactly one prediction column, got {len(pred_columns)} columns."
-            )
-
-        feature_request = store.features_for(values)
-        features = await feature_request.to_polars()
-
-        result = features.with_columns(
-            function(features).alias(next(iter(pred_columns)).name)
-        )
-        return result
-
-    return DillFunction(function=dill.dumps(function_wrapper))
+def python_function(function: Callable[[pl.DataFrame], pl.Series]) -> ExposedModel:
+    return CodePredictor.from_function(function)
 
 
 def openai_embedding(

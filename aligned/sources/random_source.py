@@ -3,7 +3,7 @@ from __future__ import annotations
 import polars as pl
 
 import logging
-from typing import Any
+from typing import Any, Literal
 from datetime import timedelta, timezone, datetime
 
 from aligned.data_file import DataFileReference, upsert_on_column
@@ -160,6 +160,9 @@ async def data_for_request(
     return await job.derive_features().to_polars()
 
 
+FillMode = Literal["duplicate", "random_samples"]
+
+
 class RandomDataSource(
     CodableBatchDataSource, DataFileReference, WritableFeatureSource
 ):
@@ -186,24 +189,25 @@ class RandomDataSource(
 
     default_data_size: int
     seed: int | None
-    raw_partial_data: dict[str, list]
-    type_name: str = "dummy_data"
 
-    @property
-    def partial_data(self) -> pl.DataFrame:
-        return pl.DataFrame(self.raw_partial_data)
+    fill_mode: FillMode
+
+    type_name: str = "dummy_data"
 
     def __init__(
         self,
         default_data_size: int = 10_000,
         seed: int | None = None,
         partial_data: pl.DataFrame | None = None,
+        fill_mode: FillMode = "duplicate",
     ):
         self.default_data_size = default_data_size
         self.seed = seed
-        self.raw_partial_data = (
-            partial_data.to_dict(as_series=False) if partial_data is not None else {}
-        )
+        if partial_data is None:
+            self.partial_data = pl.DataFrame()
+        else:
+            self.partial_data = partial_data
+        self.fill_mode = fill_mode
 
     def job_group_key(self) -> str:
         return self.type_name
@@ -212,30 +216,24 @@ class RandomDataSource(
         values = await job.to_polars()
         data = self.partial_data
         if not data.is_empty():
-            self.raw_partial_data = data.vstack(values.select(data.columns)).to_dict(
-                as_series=False
-            )
+            self.partial_data = data.vstack(values.select(data.columns))
         else:
-            self.raw_partial_data = values.to_dict(as_series=False)
+            self.partial_data = values
 
     async def upsert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         values = await job.to_lazy_polars()
 
-        self.raw_partial_data = (
-            upsert_on_column(
-                sorted(request.entity_names),
-                new_data=values,
-                existing_data=self.partial_data.lazy(),
-            )
-            .collect()
-            .to_dict(as_series=False)
-        )
+        self.partial_data = upsert_on_column(
+            sorted(request.entity_names),
+            new_data=values,
+            existing_data=self.partial_data.lazy(),
+        ).collect()
 
     async def overwrite(self, job: RetrievalJob, request: RetrievalRequest) -> None:
-        self.raw_partial_data = (await job.to_polars()).to_dict(as_series=False)
+        self.partial_data = await job.to_polars()
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
-        self.raw_partial_data = df.collect().to_dict(as_series=False)
+        self.partial_data = df.collect()
 
     @classmethod
     def multi_source_features_for(  # type: ignore
@@ -262,7 +260,14 @@ class RandomDataSource(
         ) -> pl.LazyFrame:
             if source.partial_data.is_empty():
                 df = await facts.to_polars()
-                random = (await data_for_request(request, df.height)).lazy()
+                if source.fill_mode == "duplicate":
+                    random_sample = await data_for_request(request, 1)
+                    random = pl.concat(
+                        [random_sample] * df.height, how="vertical"
+                    ).lazy()
+                else:
+                    random = (await data_for_request(request, df.height)).lazy()
+
                 join_columns = set(request.all_returned_columns) - set(df.columns)
                 return df.hstack(random.select(pl.col(join_columns)).collect()).lazy()
 
@@ -272,9 +277,16 @@ class RandomDataSource(
             if not join_columns:
                 return source.partial_data.lazy()
 
-            random = (
-                await data_for_request(request, source.partial_data.height)
-            ).lazy()
+            partial_data = source.partial_data
+
+            if source.fill_mode == "duplicate":
+                random_sample = await data_for_request(request, 1)
+                random = pl.concat(
+                    [random_sample] * partial_data.height, how="vertical"
+                ).lazy()
+            else:
+                random = (await data_for_request(request, partial_data.height)).lazy()
+
             return source.partial_data.hstack(
                 random.select(pl.col(join_columns)).collect()
             ).lazy()

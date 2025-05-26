@@ -96,6 +96,8 @@ class BatchDataSourceFactory:
             ModelSource,
             StackSource,
             LoadedAtSource,
+            TransformSource,
+            # InMemorySource,
         ]
 
         self.supported_data_sources = {
@@ -316,48 +318,15 @@ class BatchDataSource:
         | Callable[[pl.LazyFrame], pl.LazyFrame],
         docker_config: DockerConfig | str | None = None,
     ) -> CodableBatchDataSource:
-        async def all(request: RetrievalRequest, limit: int | None) -> pl.LazyFrame:
-            import inspect
+        codable = CodableFunction.from_function(method)
+        assert codable is not None
 
-            df = await self.all_data(request, limit).to_lazy_polars()
-
-            if inspect.iscoroutinefunction(method):
-                return await method(df)
-            else:
-                return method(df)  # type: ignore
-
-        async def all_between_dates(
-            request: RetrievalRequest, start_date: datetime, end_date: datetime
-        ) -> pl.LazyFrame:
-            import inspect
-
-            df = await self.all_between_dates(
-                request, start_date, end_date
-            ).to_lazy_polars()
-
-            if inspect.iscoroutinefunction(method):
-                return await method(df)
-            else:
-                return method(df)  # type: ignore
-
-        async def features_for(
-            entities: RetrievalJob, request: RetrievalRequest
-        ) -> pl.LazyFrame:
-            import inspect
-
-            df = await self.features_for(entities, request).to_lazy_polars()
-
-            if inspect.iscoroutinefunction(method):
-                return await method(df)
-            else:
-                return method(df)  # type: ignore
-
-        return CustomMethodDataSource.from_methods(
-            all_data=all,
-            all_between_dates=all_between_dates,
-            features_for=features_for,
-            depends_on_sources=self.location_id(),
-            docker_config=docker_config,
+        return TransformSource(
+            self,  # type: ignore
+            codable,
+            docker_config=DockerConfig(docker_config)
+            if isinstance(docker_config, str)
+            else docker_config,
         )
 
 
@@ -380,7 +349,13 @@ class CodableBatchDataSource(Codable, SerializableType, BatchDataSource):
 
     @classmethod
     def _deserialize(cls, value: dict) -> CodableBatchDataSource:
+        from aligned.sources.in_mem_source import InMemorySource
+
         name_type = value.get("type_name", "missing type name in source")
+
+        if name_type == InMemorySource.type_name:
+            return InMemorySource.empty()
+
         if name_type not in BatchDataSourceFactory.shared().supported_data_sources:
             return UnknownDataSource(type_name=name_type, content=value)
 
@@ -397,6 +372,11 @@ class UnknownDataSource(CodableBatchDataSource):
     @property
     def as_markdown(self) -> str:
         return f"Unknown source named {self.type_name} with content {self.content}"
+
+    def job_group_key(self) -> str:
+        raise NotImplementedError(
+            f"Missing implementation for source with content {self.content}"
+        )
 
     def __post_serialize__(self, d: dict[Any, Any]) -> dict[Any, Any]:
         return d["content"]
@@ -505,6 +485,68 @@ class CodableFunction(Codable):
 
 
 @dataclass
+class TransformSource(CodableBatchDataSource):
+    source: CodableBatchDataSource
+    generic_method: CodableFunction
+    docker_config: DockerConfig | None = None
+
+    type_name: str = "transform_source"
+
+    @property
+    def as_markdown(self) -> str:
+        markdown = "### Transform Source"
+
+        if self.generic_method:
+            markdown += f"\n\n**Generic load**: {self.generic_method.as_markdown}"
+
+        if self.docker_config:
+            markdown += f"\n\n**Docker config**: {self.docker_config}"
+
+        return markdown
+
+    def job_group_key(self) -> str:
+        from hashlib import sha256
+
+        return sha256(self.generic_method.as_markdown.encode()).hexdigest()
+
+    def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
+        method = self.generic_method.load_function()
+        assert method
+        return self.source.all_data(request, limit).transform_polars(method)  # type: ignore
+
+    def all_between_dates(
+        self, request: RetrievalRequest, start_date: datetime, end_date: datetime
+    ) -> RetrievalJob:
+        method = self.generic_method.load_function()
+        assert method
+        return self.source.all_between_dates(
+            request, start_date, end_date
+        ).transform_polars(method)  # type: ignore
+
+    def features_for(
+        self, facts: RetrievalJob, request: RetrievalRequest
+    ) -> RetrievalJob:
+        method = self.generic_method.load_function()
+        assert method
+        return self.source.features_for(facts, request).transform_polars(method)  # type: ignore
+
+    @classmethod
+    def multi_source_features_for(
+        cls: type[T], facts: RetrievalJob, requests: list[tuple[T, RetrievalRequest]]
+    ) -> RetrievalJob:
+        if len(requests) != 1:
+            raise NotImplementedError(
+                f"Type: {cls} have not implemented how to load fact data with multiple sources."
+            )
+
+        source, request = requests[0]
+        return source.features_for(facts, request)  # type: ignore
+
+    def depends_on(self) -> set[FeatureLocation]:
+        return self.source.depends_on()
+
+
+@dataclass
 class CustomMethodDataSource(CodableBatchDataSource):
     all_data_method: CodableFunction | None
     all_between_dates_method: CodableFunction | None
@@ -541,7 +583,20 @@ class CustomMethodDataSource(CodableBatchDataSource):
         return markdown
 
     def job_group_key(self) -> str:
-        return "custom_method"
+        from hashlib import sha256
+
+        if self.generic_method:
+            return sha256(self.generic_method.as_markdown.encode()).hexdigest()
+
+        description = ""
+        if self.all_data_method:
+            description += self.all_data_method.as_markdown
+        if self.all_between_dates_method:
+            description += self.all_between_dates_method.as_markdown
+        if self.features_for_method:
+            description += self.features_for_method.as_markdown
+
+        return f"custom_method-{sha256(description.encode()).hexdigest()}"
 
     @property
     def all_method(

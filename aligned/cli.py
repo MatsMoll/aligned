@@ -183,7 +183,7 @@ async def materialize(
     view: str,
     mode: str,
 ):
-    assert mode in ["overwrite", "append", "insert"]
+    assert mode in ["overwrite", "append", "insert", "upsert"]
 
     click.echo(f"Loading contract from: '{contract}'")
     if contract.startswith("http"):
@@ -195,7 +195,13 @@ async def materialize(
     original_source = view_store.view.source
     assert view_store.view.materialized_source, f"No materialized source for {view}"
 
+    write_store = view_store.using_source(view_store.view.materialized_source)
+
     job = view_store.using_source(original_source).all()
+
+    if not any(req.aggregated_features for req in job.retrieval_requests):
+        # Do not store the derived features if possible
+        job = job.without_derived_features()
 
     with suppress(Exception):
         job_description = job.describe()
@@ -203,11 +209,11 @@ async def materialize(
         click.echo(job_description)
 
     if mode == "overwrite":
-        await view_store.using_source(view_store.view.materialized_source).overwrite(
-            job
-        )
+        await write_store.overwrite(job)
+    elif mode == "upsert":
+        await write_store.upsert(job)
     else:
-        await view_store.using_source(view_store.view.materialized_source).insert(job)
+        await write_store.insert(job)
 
 
 @cli.command("check-updates")
@@ -326,7 +332,6 @@ def serve_command(
 
     host = host or os.getenv("HOST", "127.0.0.1")
 
-    os.environ["ALADDIN_ENABLE_SERVER"] = "True"
     # Needed in order to find the feature_store_location file
     dir = Path.cwd() if repo_path == "." else Path(repo_path).absolute()
     sys.path.append(str(dir))

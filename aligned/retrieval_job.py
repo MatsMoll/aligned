@@ -1,5 +1,6 @@
 from __future__ import annotations
 from io import StringIO
+from aligned.compiler.feature_factory import FeatureFactory
 from aligned.config_value import PathResolver
 from aligned.schemas.date_formatter import DateFormatter, TimeUnit
 
@@ -20,6 +21,7 @@ from typing import (
     TypeVar,
     Coroutine,
     Any,
+    Generic,
 )
 
 import polars as pl
@@ -52,6 +54,8 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+ErrorType = TypeVar("ErrorType", bound=Exception)
 
 
 def split(
@@ -674,6 +678,8 @@ ConvertableToRetrievalJob = Union[
     list[dict[str, Any]], dict[str, list], "pd.DataFrame", pl.DataFrame, pl.LazyFrame
 ]
 
+FilterRepresentable = str | pl.Expr | FeatureFactory | DerivedFeature | Feature
+
 
 class RetrievalJob(ABC):
     @property
@@ -724,6 +730,23 @@ class RetrievalJob(ABC):
         if isinstance(self, ModificationJob):
             return self.copy_with(self.job.remove_derived_features())
         return self
+
+    def on_error(
+        self,
+        error_type: type[ErrorType],
+        callback: Callable[[ErrorType], ConvertableToRetrievalJob],
+    ) -> RetrievalJob:
+        """
+        SomeView.query().all().on_error(ValueError, lambda e: pl.DataFrame(...))
+
+        success, error = SomeView.query().all().if_error(ValueError)
+
+        if not error.is_empty():
+            error.write_to_source(...)
+        else:
+            success.write_to_source(...)
+        """
+        return OnErrorJob(self, error_type, callback)  # type: ignore
 
     def log_each_job(
         self, logger_func: Callable[[object], None] | None = None
@@ -811,15 +834,20 @@ class RetrievalJob(ABC):
     def on_load(self, on_load: Callable[[], Coroutine[Any, Any, None]]) -> RetrievalJob:
         return OnLoadJob(self, on_load)
 
-    def filter(
-        self, condition: str | Feature | DerivedFeature | pl.Expr
-    ) -> RetrievalJob:
+    def filter(self, condition: FilterRepresentable) -> RetrievalJob:
         """
         Filters based on a condition referencing either a feature,
         a feature name, or an polars expression to filter on.
         """
         if isinstance(self, ModificationJob):
             return self.copy_with(self.job.filter(condition))
+
+        if isinstance(condition, FeatureFactory):
+            if condition.transformation:
+                condition = condition.compile()
+            else:
+                condition = condition.feature()
+
         return FilteredJob(self, condition)
 
     def chunked(self, size: int) -> DataLoaderJob:
@@ -1214,9 +1242,10 @@ class RetrievalJob(ABC):
         requests = remove_features(loaded_features, request)
         for req in requests:
             feature_names = req.feature_names
-            for feat, dtype in req.polars_schema().items():
-                if feat in feature_names:
-                    schema[feat] = dtype
+            for feat in req.all_returned_features:
+                if not feat.dtype.is_struct or feat.dtype.has_structured_fields:
+                    if feat.name in feature_names:
+                        schema[feat.name] = feat.dtype.polars_type
 
         if isinstance(data, dict):
             df = pl.DataFrame(data, schema_overrides=schema).lazy()
@@ -1388,6 +1417,29 @@ def polars_filter_expressions_from(
                 )
 
     return exprs
+
+
+@dataclass
+class OnErrorJob(Generic[ErrorType], RetrievalJob, ModificationJob):
+    job: RetrievalJob
+    error_type: type[ErrorType]
+    error_handler: Callable[[ErrorType], ConvertableToRetrievalJob]
+
+    def describe(self) -> str:
+        return f"{self.job.describe()} -> Handle error"
+
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        try:
+            return await self.job.to_lazy_polars()
+        except self.error_type as error:
+            other_data = self.error_handler(error)
+            requests = self.job.retrieval_requests
+            return await RetrievalJob.from_convertable(
+                other_data, requests
+            ).to_lazy_polars()
+
+    async def to_pandas(self) -> pd.DataFrame:
+        return (await self.to_lazy_polars()).collect().to_pandas()
 
 
 @dataclass
@@ -1830,7 +1882,7 @@ class JoinJobs(RetrievalJob):
 @dataclass
 class FilteredJob(RetrievalJob, ModificationJob):
     job: RetrievalJob
-    condition: Feature | str | pl.Expr | DerivedFeature
+    condition: FilterRepresentable
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         df = await self.job.to_lazy_polars()
@@ -2099,9 +2151,7 @@ class DerivedFeatureJob(RetrievalJob, ModificationJob):
         job.store = store
         return job
 
-    def filter(
-        self, condition: str | Feature | DerivedFeature | pl.Expr
-    ) -> RetrievalJob:
+    def filter(self, condition: FilterRepresentable) -> RetrievalJob:
         if isinstance(condition, str):
             column_name = condition
         elif isinstance(condition, pl.Expr):
@@ -2203,17 +2253,7 @@ class DerivedFeatureJob(RetrievalJob, ModificationJob):
     def remove_derived_features(self) -> RetrievalJob:
         new_requests = []
         for req in self.job.retrieval_requests:
-            new_requests.append(
-                RetrievalRequest(
-                    req.name,
-                    location=req.location,
-                    features=req.features,
-                    entities=req.entities,
-                    derived_features=set(),
-                    aggregated_features=req.aggregated_features,
-                    event_timestamp_request=req.event_timestamp_request,
-                )
-            )
+            new_requests.append(req.without_derived_features())
         return self.job.without_derived_features().with_request(new_requests)
 
 
@@ -2228,12 +2268,12 @@ class UniqueRowsJob(RetrievalJob, ModificationJob):
         return (await self.to_lazy_polars()).collect().to_pandas()
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
-        data = await self.job.to_lazy_polars()
+        data = await self.job.to_polars()
 
         if self.sort_key:
             data = data.sort(self.sort_key, descending=self.descending)
 
-        return data.unique(self.unique_on, keep="first", maintain_order=True)
+        return data.unique(self.unique_on, keep="first", maintain_order=True).lazy()
 
 
 @dataclass
@@ -2928,6 +2968,15 @@ class SelectColumnsJob(RetrievalJob, ModificationJob):
     def remove_derived_features(self) -> RetrievalJob:
         return self.job.remove_derived_features()
 
+    def without_derived_features(self) -> RetrievalJob:
+        new_includes = set(self.include_features)
+        for req in self.retrieval_requests:
+            new_includes = new_includes - {feat.name for feat in req.derived_features}
+
+        return SelectColumnsJob(
+            include_features=list(new_includes), job=self.job.without_derived_features()
+        )
+
     def ignore_event_timestamp(self) -> RetrievalJob:
         return SelectColumnsJob(
             include_features=list(set(self.include_features) - {"event_timestamp"}),
@@ -2997,6 +3046,11 @@ class CustomLazyPolarsJob(RetrievalJob):
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_polars()).to_pandas()
+
+    def without_derived_features(self) -> RetrievalJob:
+        return CustomLazyPolarsJob(
+            request=self.request.without_derived_features(), method=self.method
+        )
 
 
 @dataclass
@@ -3105,9 +3159,7 @@ class PredictionJob(RetrievalJob):
             logger_func or logger.debug,
         )
 
-    def filter(
-        self, condition: str | Feature | DerivedFeature | pl.Expr
-    ) -> RetrievalJob:
+    def filter(self, condition: FilterRepresentable) -> RetrievalJob:
         return PredictionJob(
             self.job.filter(condition),
             self.model,

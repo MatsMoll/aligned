@@ -1,7 +1,7 @@
 from __future__ import annotations
 from copy import copy
 
-from aligned.compiler.feature_factory import FeatureReferencable
+from aligned.compiler.feature_factory import FeatureFactory, FeatureReferencable
 import polars as pl
 from aligned.config_value import ConfigValue
 
@@ -11,7 +11,7 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Iterable, Union, TypeVar, Callable
+from typing import Iterable, Union, TypeVar, Callable, TYPE_CHECKING
 
 from aligned.compiler.model import ModelContractWrapper
 from aligned.data_file import DataFileReference, upsert_on_column
@@ -46,9 +46,13 @@ from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.model import EventTrigger
 from aligned.schemas.model import Model as ModelSchema
 from aligned.schemas.repo_definition import RepoDefinition, RepoMetadata
+from aligned.sources.in_mem_source import InMemorySource, RetrievalJobSource
 from aligned.sources.local import StorageFileReference
 from aligned.sources.vector_index import VectorIndex
 from aligned.model_store import ModelFeatureStore
+
+if TYPE_CHECKING:
+    from aligned.sources.random_source import FillMode
 
 logger = logging.getLogger(__name__)
 
@@ -252,19 +256,29 @@ class ContractStore:
 
         return None
 
-    def dummy_store(self) -> ContractStore:
+    def dummy_store(self, fill_mode: FillMode = "duplicate") -> ContractStore:
         """
         Creates a new contract store that only generates dummy data
+
+        Args:
+            fill_mode (FillMode): The type of random fill to do for missing values. Defaults to generating one random sample, and duplicating that for all rows.
+
+        Returns:
+            ContractStore: A new store that only contains random sources
         """
         from aligned.sources.random_source import RandomDataSource
 
         sources: dict[FeatureLocation, BatchDataSource] = {}
 
         for view_name in self.feature_views.keys():
-            sources[FeatureLocation.feature_view(view_name)] = RandomDataSource()
+            sources[FeatureLocation.feature_view(view_name)] = RandomDataSource(
+                fill_mode=fill_mode
+            )
 
         for model_name in self.models.keys():
-            sources[FeatureLocation.model(model_name)] = RandomDataSource()
+            sources[FeatureLocation.model(model_name)] = RandomDataSource(
+                fill_mode=fill_mode
+            )
 
         return ContractStore(
             self.feature_views,
@@ -377,7 +391,9 @@ class ContractStore:
         return ContractStore.from_definition(definition)
 
     @staticmethod
-    async def from_dir(path: str = ".") -> ContractStore:
+    async def from_dir(
+        path: str = ".", exclude_glob: list[str] | None = None
+    ) -> ContractStore:
         """Reads and generates a feature store based on the given directory's content.
 
         This will read the feature views, services etc in a given repo and generate a feature store.
@@ -389,11 +405,12 @@ class ContractStore:
 
         Args:
             path (str, optional): the directory to read from. Defaults to ".".
+            exclude_glob (list[str], optional): the globs to ignore
 
         Returns:
             FeatureStore: The generated feature store
         """
-        definition = await RepoDefinition.from_path(path)
+        definition = await RepoDefinition.from_path(path, exclude_glob)
         return ContractStore.from_definition(definition)
 
     def execute_sql(self, query: str) -> RetrievalJob:
@@ -1002,12 +1019,21 @@ class ContractStore:
             function(source, location)
 
     def update_source_for(
-        self, location: ConvertableToLocation, source: BatchDataSource
+        self,
+        location: ConvertableToLocation,
+        source: BatchDataSource | ConvertableToRetrievalJob | RetrievalJob,
     ) -> ContractStore:
         location = convert_to_location(location)
 
         new_source = copy(self.sources)
-        new_source[location] = source
+        if isinstance(source, BatchDataSource):
+            new_source[location] = source
+        elif isinstance(source, pl.DataFrame):
+            new_source[location] = InMemorySource(source)
+        elif isinstance(source, RetrievalJob):
+            new_source[location] = RetrievalJobSource(source)
+        else:
+            new_source[location] = InMemorySource.from_values(source)  # type: ignore
 
         return ContractStore(
             feature_views=self.feature_views, models=self.models, sources=new_source
@@ -1027,10 +1053,16 @@ class ContractStore:
 
     def write_request_for(self, location: FeatureLocation) -> RetrievalRequest:
         if location.location_type == "feature_view":
-            return self.feature_views[location.name].request_all.needed_requests[0]
+            return (
+                self.feature_views[location.name]
+                .request_all.needed_requests[0]
+                .without_derived_features()
+            )
         elif location.location_type == "model":
-            return self.models[location.name].predictions_view.request(
-                "write", model_version_as_entity=True
+            return (
+                self.models[location.name]
+                .predictions_view.request("write", model_version_as_entity=True)
+                .without_derived_features()
             )
         else:
             raise ValueError(f"Unable to write to location: '{location}'.")
@@ -1206,7 +1238,7 @@ class FeatureViewStore:
     def all(self, limit: int | None = None) -> RetrievalJob:
         return self.all_columns(limit)
 
-    def filter(self, filter: pl.Expr | str) -> RetrievalJob:
+    def filter(self, filter: pl.Expr | str | FeatureFactory) -> RetrievalJob:
         return self.all().filter(filter)
 
     def all_columns(self, limit: int | None = None) -> RetrievalJob:

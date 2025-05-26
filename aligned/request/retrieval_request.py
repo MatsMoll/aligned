@@ -266,6 +266,18 @@ class RetrievalRequest(Codable):
             event_timestamp_request=self.event_timestamp_request,
         )
 
+    def without_derived_features(self) -> "RetrievalRequest":
+        assert not self.aggregated_features
+        return RetrievalRequest(
+            name=self.name,
+            location=self.location,
+            entities=self.entities,
+            features=self.features,
+            derived_features=set(),
+            aggregated_features=set(),
+            event_timestamp_request=self.event_timestamp_request,
+        )
+
     def without_event_timestamp(
         self, name_sufix: str | None = None
     ) -> "RetrievalRequest":
@@ -578,6 +590,15 @@ class FeatureRequest(Codable):
         for req in self.needed_requests:
             features.update(req.entities)
         return features
+
+    def without_derived_features(self) -> "FeatureRequest":
+        return FeatureRequest(
+            location=self.location,
+            features_to_include=self.features_to_include,
+            needed_requests=[
+                request.without_derived_features() for request in self.needed_requests
+            ],
+        )
 
     def without_event_timestamp(
         self, name_sufix: str | None = None

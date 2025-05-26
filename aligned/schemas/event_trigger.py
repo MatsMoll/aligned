@@ -1,15 +1,18 @@
 from __future__ import annotations
 import logging
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import polars as pl
 
 from aligned.lazy_imports import pandas as pd
 from aligned.data_source.stream_data_source import StreamDataSource
-from aligned.retrieval_job import RequestResult
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import Feature, FeatureLocation
+
+if TYPE_CHECKING:
+    from aligned.retrieval_job import RequestResult
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +27,7 @@ class EventTrigger(Codable):
         from aligned.data_source.stream_data_source import SinkableDataSource
         from aligned.local.job import LiteralRetrievalJob
         from aligned.feature_store import ContractStore
+        from aligned.retrieval_job import RequestResult
 
         if not isinstance(self.event, SinkableDataSource):
             logger.info(f"Event: {self.event.topic_name} is not sinkable, will return")
@@ -57,6 +61,7 @@ class EventTrigger(Codable):
         from aligned.data_source.stream_data_source import SinkableDataSource
         from aligned.local.job import LiteralRetrievalJob
         from aligned.feature_store import ContractStore
+        from aligned.retrieval_job import RequestResult
 
         if not isinstance(self.event, SinkableDataSource):
             logger.info(f"Event: {self.event.topic_name} is not sinkable, will return")
