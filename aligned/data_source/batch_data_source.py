@@ -43,6 +43,11 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 
+class AsBatchSource:
+    def as_source(self) -> CodableBatchDataSource:
+        raise NotImplementedError(type(self))
+
+
 class BatchDataSourceFactory:
     supported_data_sources: dict[str, type[CodableBatchDataSource]]
 

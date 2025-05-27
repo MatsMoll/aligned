@@ -11,7 +11,7 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Iterable, Union, TypeVar, Callable, TYPE_CHECKING
+from typing import Iterable, Union, TypeVar, Callable, TYPE_CHECKING, overload
 
 from aligned.compiler.model import ModelContractWrapper
 from aligned.data_file import DataFileReference, upsert_on_column
@@ -26,7 +26,12 @@ from aligned.feature_source import (
     FeatureSourceFactory,
     WritableFeatureSource,
 )
-from aligned.feature_view.feature_view import FeatureView, FeatureViewWrapper
+from aligned.feature_view.feature_view import (
+    BatchSourceable,
+    FeatureView,
+    FeatureViewWrapper,
+    resolve_source,
+)
 from aligned.request.retrieval_request import FeatureRequest, RetrievalRequest
 from aligned.retrieval_job import (
     SelectColumnsJob,
@@ -989,15 +994,31 @@ class ContractStore:
         if source:
             self.sources[FeatureLocation.model(model.name)] = source
 
+    @overload
+    def sources_of_type(
+        self, source_type: type[T], function: None = None
+    ) -> list[tuple[T, FeatureLocation]]: ...
+
+    @overload
     def sources_of_type(
         self, source_type: type[T], function: Callable[[T, FeatureLocation], None]
-    ) -> None:
+    ) -> None: ...
+
+    def sources_of_type(
+        self,
+        source_type: type[T],
+        function: Callable[[T, FeatureLocation], None] | None = None,
+    ) -> None | list[tuple[T, FeatureLocation]]:
         """
         Process all sources of a specific type
 
         ```python
         store = await ContractStore.from_dir()
 
+        sources = store.sources_of_type(DatabricksSource)
+        print(sources)
+
+        # Or if you want to operate over the sources
         def update_databricks_source(source: DatabricksSource, loc: FeatureLocation) -> None:
             source.config = DatabricksConfig.serverless()
 
@@ -1012,16 +1033,27 @@ class ContractStore:
             function (Callable[[T, FeatureLocation], None]): The function that process the source
         """
 
+        sources = []
+
         for location, source in self.sources.items():
             if not isinstance(source, source_type):
                 continue
 
-            function(source, location)
+            if function is not None:
+                function(source, location)
+            else:
+                sources.append((source, location))
+
+        if function is None:
+            return sources
 
     def update_source_for(
         self,
         location: ConvertableToLocation,
-        source: BatchDataSource | ConvertableToRetrievalJob | RetrievalJob,
+        source: BatchDataSource
+        | BatchSourceable
+        | ConvertableToRetrievalJob
+        | RetrievalJob,
     ) -> ContractStore:
         location = convert_to_location(location)
 
@@ -1033,7 +1065,10 @@ class ContractStore:
         elif isinstance(source, RetrievalJob):
             new_source[location] = RetrievalJobSource(source)
         else:
-            new_source[location] = InMemorySource.from_values(source)  # type: ignore
+            try:
+                new_source[location] = resolve_source(source)  # type: ignore
+            except ValueError:
+                new_source[location] = InMemorySource.from_values(source)  # type: ignore
 
         return ContractStore(
             feature_views=self.feature_views, models=self.models, sources=new_source
@@ -1198,7 +1233,9 @@ class FeatureViewStore:
     def source(self) -> BatchDataSource:
         return self.store.sources[FeatureLocation.feature_view(self.name)]
 
-    def using_source(self, source: BatchDataSource) -> FeatureViewStore:
+    def using_source(
+        self, source: BatchDataSource | BatchSourceable
+    ) -> FeatureViewStore:
         """
         Sets the source to load features from.
 

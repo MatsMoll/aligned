@@ -41,6 +41,9 @@ class FactualRedisJob(RetrievalJob):
 
         for request in self.requests:
             redis_combine_id = "redis_combine_entity_id"
+
+            needed_features = request.all_required_features
+
             entities = result_df.select(
                 [
                     (
@@ -56,11 +59,11 @@ class FactualRedisJob(RetrievalJob):
             if entities.shape[0] == 0:
                 # Do not connect to redis if there are no entities to fetch
                 result_df = result_df.with_columns(
-                    [pl.lit(None).alias(column.name) for column in request.all_features]
+                    [pl.lit(None).alias(column.name) for column in needed_features]
                 )
                 continue
 
-            features = list({feature.name for feature in request.returned_features})
+            features = list(feature.name for feature in needed_features)
 
             async with redis.pipeline(transaction=False) as pipe:
                 for entity in entities[redis_combine_id]:
@@ -72,7 +75,7 @@ class FactualRedisJob(RetrievalJob):
                 how="horizontal",
             ).select(pl.exclude(redis_combine_id))
 
-            for feature in request.returned_features:
+            for feature in needed_features:
                 if feature.dtype == FeatureType.boolean():
                     reqs = reqs.with_columns(
                         pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean)
@@ -88,7 +91,7 @@ class FactualRedisJob(RetrievalJob):
                         .cast(feature.dtype.polars_type)
                         .alias(feature.name)
                     )
-                elif feature.dtype.is_embedding or feature.dtype.is_array:
+                elif feature.dtype.is_embedding:
                     import numpy as np
 
                     reqs = reqs.with_columns(
@@ -96,18 +99,12 @@ class FactualRedisJob(RetrievalJob):
                             lambda row: np.frombuffer(row)
                         )
                     )
+                elif feature.dtype.is_array:
+                    reqs = reqs.with_columns(pl.col(feature.name).str.json_decode())
                 else:
                     reqs = reqs.with_columns(
                         pl.col(feature.name).cast(feature.dtype.polars_type)
                     )
-                # if feature.dtype == FeatureType.datetime():
-                #     dates = pd.to_datetime(result_series[result_value_mask], unit='s', utc=True)
-                #     result_df.loc[set_mask, feature.name] = dates
-                # elif feature.dtype == FeatureType.embedding():
-                #     result_df.loc[set_mask, feature.name] = (
-                #         result_series[result_value_mask].str.split(',')
-                # .apply(lambda x: [float(i) for i in x])
-                #     )
 
             result_df = result_df.join(reqs, on=list(request.entity_names), how="left")
 

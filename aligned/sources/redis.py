@@ -1,21 +1,23 @@
 from __future__ import annotations
 
 import logging
+import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Union
 
 import polars as pl
 
+from aligned.config_value import ConfigValue, EnvironmentValue, LiteralValue
 from aligned.streams.interface import ReadableStream
 from aligned.lazy_imports import redis
-from aligned.data_source.batch_data_source import ColumnFeatureMappable
-from aligned.data_source.stream_data_source import SinkableDataSource, StreamDataSource
-from aligned.feature_source import (
-    FeatureSource,
-    FeatureSourceFactory,
-    WritableFeatureSource,
+from aligned.data_source.batch_data_source import (
+    CodableBatchDataSource,
+    ColumnFeatureMappable,
+    AsBatchSource,
 )
-from aligned.request.retrieval_request import FeatureRequest, RetrievalRequest
+from aligned.data_source.stream_data_source import SinkableDataSource, StreamDataSource
+from aligned.feature_source import WritableFeatureSource
+from aligned.request.retrieval_request import RetrievalRequest
 from aligned.retrieval_job import RetrievalJob
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import Feature, FeatureType
@@ -38,41 +40,39 @@ redis_manager: dict[str, redis.ConnectionPool] = {}
 
 
 @dataclass
-class RedisConfig(Codable, FeatureSourceFactory):
-    env_var: str
+class RedisConfig(Codable, AsBatchSource):
+    redis_url: ConfigValue
 
     @property
     def url(self) -> str:
-        import os
-
-        return os.environ[self.env_var]
+        return self.redis_url.read()
 
     @staticmethod
     def from_url(url: str) -> RedisConfig:
-        import os
+        return RedisConfig(LiteralValue(url))
 
-        os.environ["REDIS_URL"] = url
-        return RedisConfig(env_var="REDIS_URL")
+    @staticmethod
+    def from_env(
+        environment_key: str = "REDIS_URL",
+        default_url: str | None = "redis://localhost:6379",
+    ) -> RedisConfig:
+        return RedisConfig(EnvironmentValue(environment_key, default_value=default_url))
 
     @staticmethod
     def localhost() -> RedisConfig:
-        import os
+        return RedisConfig.from_env()
 
-        if "REDIS_URL" not in os.environ:
-            os.environ["REDIS_URL"] = "redis://localhost:6379"
-
-        return RedisConfig(env_var="REDIS_URL")
-
-    def feature_source(self) -> FeatureSource:
+    def as_source(self) -> CodableBatchDataSource:
         return RedisSource(self)
 
     def redis(self) -> redis.Redis:
-        if self.env_var not in redis_manager:
-            redis_manager[self.env_var] = redis.ConnectionPool.from_url(
-                self.url, decode_responses=True
+        url = self.url
+        if url not in redis_manager:
+            redis_manager[url] = redis.ConnectionPool.from_url(
+                url, decode_responses=True
             )
 
-        return redis.StrictRedis(connection_pool=redis_manager[self.env_var])
+        return redis.StrictRedis(connection_pool=redis_manager[url])
 
     def stream(self, topic: str) -> RedisStreamSource:
         return RedisStreamSource(topic_name=topic, config=self)
@@ -93,6 +93,9 @@ class RedisConfig(Codable, FeatureSourceFactory):
             index_alogrithm=algorithm or "FLAT",
             embedding_type=embedding_type or "FLOAT32",
         )
+
+
+ValkeyConfig = RedisConfig
 
 
 @dataclass
@@ -171,33 +174,39 @@ class RedisVectorIndex(VectorStorage):
 
 
 @dataclass
-class RedisSource(FeatureSource, WritableFeatureSource):
+class RedisSource(WritableFeatureSource, CodableBatchDataSource):
     config: RedisConfig
     batch_size = 1_000_000
+    type_name: str = "redis_source"
 
-    def all_for(
-        self, request: FeatureRequest, limit: int | None = None
-    ) -> RetrievalJob:
-        raise NotImplementedError()
+    def job_group_key(self) -> str:
+        """
+        A key defining which sources can be grouped together in one request.
+        """
+        return self.type_name
 
-    def features_for(
-        self, facts: RetrievalJob, request: FeatureRequest
+    def needed_configs(self) -> list[ConfigValue]:
+        return [self.config.redis_url]
+
+    @classmethod
+    def multi_source_features_for(  # type: ignore
+        cls: type[RedisSource],
+        facts: RetrievalJob,
+        requests: list[tuple[RedisSource, RetrievalRequest]],
     ) -> RetrievalJob:
         from aligned.redis.job import FactualRedisJob
 
-        needed_requests = [
-            req
-            for req in request.needed_requests
-            if req.location.location_type != "combined_view"
-        ]
-        combined = [
-            req
-            for req in request.needed_requests
-            if req.location.location_type == "combined_view"
-        ]
-        return FactualRedisJob(self.config, needed_requests, facts).combined_features(
-            combined
-        )
+        config = requests[0][0].config
+        requested_features = [req for (_, req) in requests]
+
+        return FactualRedisJob(config, requested_features, facts)
+
+    def features_for(
+        self, facts: RetrievalJob, request: RetrievalRequest
+    ) -> RetrievalJob:
+        from aligned.redis.job import FactualRedisJob
+
+        return FactualRedisJob(self.config, [request], facts)
 
     async def insert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         redis = self.config.redis()
@@ -222,7 +231,10 @@ class RedisSource(FeatureSource, WritableFeatureSource):
 
             features = ["id"]
 
-            for feature in request.returned_features:
+            def encode_list(value: pl.Series) -> str:
+                return json.dumps(value.to_list())
+
+            for feature in request.all_required_features:
                 expr = pl.col(feature.name).cast(pl.Utf8).alias(feature.name)
 
                 if feature.dtype == FeatureType.boolean():
@@ -240,9 +252,13 @@ class RedisSource(FeatureSource, WritableFeatureSource):
                         .cast(pl.Utf8)
                         .alias(feature.name)
                     )
-                elif feature.dtype.is_embedding or feature.dtype.is_array:
+                elif feature.dtype.is_embedding:
                     expr = pl.col(feature.name).map_elements(
                         lambda x: x.to_numpy().tobytes(), return_dtype=pl.Binary()
+                    )
+                elif feature.dtype.is_array:
+                    expr = pl.col(feature.name).map_elements(
+                        encode_list, return_dtype=pl.String()
                     )
 
                 request_data = request_data.with_columns(expr)
@@ -262,6 +278,9 @@ class RedisSource(FeatureSource, WritableFeatureSource):
 
     async def upsert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         await self.insert(job, request)
+
+    async def overwrite(self, job: RetrievalJob, request: RetrievalRequest) -> None:
+        return await self.insert(job, request)
 
 
 @dataclass
