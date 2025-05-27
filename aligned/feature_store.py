@@ -994,9 +994,6 @@ class ContractStore:
         if source:
             self.sources[FeatureLocation.model(model.name)] = source
 
-            pred_view = model.predictions_view.as_view(model.name)
-            self.add_compiled_view(pred_view)
-
     @overload
     def sources_of_type(
         self, source_type: type[T], function: None = None
