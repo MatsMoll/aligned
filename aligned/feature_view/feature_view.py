@@ -28,6 +28,7 @@ from aligned.compiler.feature_factory import (
     Bool,
 )
 from aligned.data_source.batch_data_source import (
+    AsBatchSource,
     CodableBatchDataSource,
     CustomMethodDataSource,
     JoinAsofDataSource,
@@ -99,12 +100,19 @@ PureLoadFunctions = Union[
 
 
 def resolve_source(
-    source: CodableBatchDataSource | FeatureViewWrapper | PureLoadFunctions | None,
+    source: CodableBatchDataSource
+    | AsBatchSource
+    | FeatureViewWrapper
+    | PureLoadFunctions
+    | None,
 ) -> CodableBatchDataSource:
     if source is None:
         from aligned.sources.in_mem_source import InMemorySource
 
         return InMemorySource.from_values({})
+
+    if isinstance(source, AsBatchSource):
+        return source.as_source()
 
     if isinstance(source, FeatureViewWrapper):
         from aligned.schemas.feature_view import FeatureViewReferenceSource
@@ -132,51 +140,6 @@ def resolve_source(
         return CustomMethodDataSource.from_methods(all_data=source)  # type: ignore
 
     raise ValueError(f"Unable to use function with signature {signature} as source.")
-
-
-def feature_view(
-    source: CodableBatchDataSource
-    | FeatureViewWrapper
-    | PureLoadFunctions
-    | None = None,
-    name: str | None = None,
-    description: str | None = None,
-    stream_source: StreamDataSource | None = None,
-    application_source: CodableBatchDataSource | None = None,
-    materialized_source: CodableBatchDataSource | None = None,
-    materialize_from: datetime | None = None,
-    contacts: list[str] | list[Contact] | None = None,
-    tags: list[str] | None = None,
-    acceptable_freshness: timedelta | None = None,
-    unacceptable_freshness: timedelta | None = None,
-) -> Callable[[Type[T]], FeatureViewWrapper[T]]:
-    if contacts is not None:
-        contacts = [
-            Contact(name=cont) if isinstance(cont, str) else cont for cont in contacts
-        ]
-
-    def decorator(cls: Type[T]) -> FeatureViewWrapper[T]:
-        from aligned.sources.renamer import camel_to_snake_case
-
-        used_name = name or camel_to_snake_case(str(cls.__name__))
-        used_description = description or str(cls.__doc__)
-
-        metadata = FeatureViewMetadata(
-            used_name,
-            resolve_source(source),
-            description=used_description,
-            stream_source=stream_source,
-            application_source=application_source,
-            materialized_source=materialized_source,
-            materialize_from=materialize_from,
-            contacts=contacts,
-            tags=tags,
-            acceptable_freshness=acceptable_freshness,
-            unacceptable_freshness=unacceptable_freshness,
-        )
-        return FeatureViewWrapper(metadata, cls())
-
-    return decorator
 
 
 def set_location_for_features_in(view: Any, location: FeatureLocation) -> Any:
@@ -620,6 +583,57 @@ class FeatureViewWrapper(Generic[T]):
             FeatureLocation.feature_view(self.metadata.name),
             renames=renames or {},
         )
+
+
+BatchSourceable = (
+    CodableBatchDataSource | FeatureViewWrapper | PureLoadFunctions | AsBatchSource
+)
+
+
+def feature_view(
+    source: BatchSourceable | None = None,
+    name: str | None = None,
+    description: str | None = None,
+    stream_source: StreamDataSource | None = None,
+    application_source: BatchSourceable | None = None,
+    materialized_source: BatchSourceable | None = None,
+    materialize_from: datetime | None = None,
+    contacts: list[str] | list[Contact] | None = None,
+    tags: list[str] | None = None,
+    acceptable_freshness: timedelta | None = None,
+    unacceptable_freshness: timedelta | None = None,
+) -> Callable[[Type[T]], FeatureViewWrapper[T]]:
+    if contacts is not None:
+        contacts = [
+            Contact(name=cont) if isinstance(cont, str) else cont for cont in contacts
+        ]
+
+    def decorator(cls: Type[T]) -> FeatureViewWrapper[T]:
+        from aligned.sources.renamer import camel_to_snake_case
+
+        used_name = name or camel_to_snake_case(str(cls.__name__))
+        used_description = description or str(cls.__doc__)
+
+        metadata = FeatureViewMetadata(
+            used_name,
+            resolve_source(source),
+            description=used_description,
+            stream_source=stream_source,
+            application_source=None
+            if application_source is None
+            else resolve_source(application_source),
+            materialized_source=None
+            if materialized_source is None
+            else resolve_source(materialized_source),
+            materialize_from=materialize_from,
+            contacts=contacts,
+            tags=tags,
+            acceptable_freshness=acceptable_freshness,
+            unacceptable_freshness=unacceptable_freshness,
+        )
+        return FeatureViewWrapper(metadata, cls())
+
+    return decorator
 
 
 class FeatureView(ABC):

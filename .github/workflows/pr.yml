@@ -10,6 +10,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     services:
+      valkey:
+        image: valkey/valkey:8.1
+        ports:
+          - '127.0.0.1:6379:6379'
+
       postgres:
         image: postgres:14.3-alpine
         env:
@@ -69,6 +74,7 @@ jobs:
           PSQL_DATABASE_TEST: postgresql://postgres:postgres@localhost:5432/postgres
           MLFLOW_TRACKING_URI: http://localhost:8000
           MLFLOW_REGISTRY_URI: http://localhost:8000
+          REDIS_URL: redis://localhost:6379
         run: |
           source .venv/bin/activate
           pytest

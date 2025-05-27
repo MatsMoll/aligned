@@ -36,7 +36,7 @@ from aligned.sources.in_mem_source import InMemorySource
 from aligned.sources.kafka import KafkaConfig
 from aligned.sources.local import FileSource, Directory, ParquetConfig, CsvConfig
 from aligned.sources.psql import PostgreSQLConfig
-from aligned.sources.redis import RedisConfig
+from aligned.sources.redis import RedisConfig, ValkeyConfig
 from aligned.sources.redshift import RedshiftSQLConfig
 from aligned.sources.s3 import AwsS3Config
 from aligned.sources.azure_blob_storage import AzureBlobConfig
@@ -59,6 +59,7 @@ __all__ = [
     "HttpStreamSource",
     # Online Source
     "RedisConfig",
+    "ValkeyConfig",
     # Streaming Sources
     "KafkaConfig",
     # Types
