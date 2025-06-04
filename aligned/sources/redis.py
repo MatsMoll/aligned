@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import timedelta
 import logging
 import json
 from dataclasses import dataclass, field
@@ -8,6 +9,7 @@ from typing import TYPE_CHECKING, Union
 import polars as pl
 
 from aligned.config_value import ConfigValue, EnvironmentValue, LiteralValue
+from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.streams.interface import ReadableStream
 from aligned.lazy_imports import redis
 from aligned.data_source.batch_data_source import (
@@ -177,6 +179,7 @@ class RedisVectorIndex(VectorStorage):
 class RedisSource(WritableFeatureSource, CodableBatchDataSource):
     config: RedisConfig
     batch_size = 1_000_000
+    expire_duration: timedelta | None = None
     type_name: str = "redis_source"
 
     def job_group_key(self) -> str:
@@ -187,6 +190,11 @@ class RedisSource(WritableFeatureSource, CodableBatchDataSource):
 
     def needed_configs(self) -> list[ConfigValue]:
         return [self.config.redis_url]
+
+    def with_view(self, view: CompiledFeatureView) -> RedisSource:
+        if self.expire_duration is None and view.unacceptable_freshness:
+            self.expire_duration = view.unacceptable_freshness
+        return self
 
     @classmethod
     def multi_source_features_for(  # type: ignore
@@ -267,13 +275,18 @@ class RedisSource(WritableFeatureSource, CodableBatchDataSource):
             redis_frame = request_data.select(features).collect()
 
             for record in redis_frame.to_dicts():
+                record_key = record["id"]
                 pipe.hset(
-                    record["id"],
+                    record_key,
                     mapping={key: value for key, value in record.items() if value},
                 )
                 for key, value in record.items():
                     if value is None:
-                        pipe.hdel(record["id"], key)
+                        pipe.hdel(record_key, key)
+
+                if self.expire_duration:
+                    pipe.expire(record_key, time=self.expire_duration)
+
             await pipe.execute()
 
     async def upsert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
