@@ -75,12 +75,20 @@ class FactualRedisJob(RetrievalJob):
                 how="horizontal",
             ).select(pl.exclude(redis_combine_id))
 
+            org_schema = reqs.collect_schema()
+
             for feature in needed_features:
+                if org_schema[feature.name] == pl.Null():
+                    reqs = reqs.with_columns(
+                        pl.col(feature.name).cast(feature.dtype.polars_type)
+                    )
+                    continue
+
                 if feature.dtype == FeatureType.boolean():
                     reqs = reqs.with_columns(
                         pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean)
                     )
-                elif reqs[feature.name].dtype == pl.Utf8 and (
+                elif org_schema[feature.name] == pl.Utf8 and (
                     feature.dtype == FeatureType.int32()
                     or feature.dtype == FeatureType.int64()
                 ):
