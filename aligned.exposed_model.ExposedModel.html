@@ -578,7 +578,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">ExposedModel</span>(Codable, SerializableType): <a href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L101" class="sourceLink">(source)</a></code></p><p>Known subclasses: <code><a href="aligned.exposed_model.interface.ABTestModel.html" class="internal-link">aligned.exposed_model.interface.ABTestModel</a></code>, <code><a href="aligned.exposed_model.interface.CodePredictor.html" class="internal-link">aligned.exposed_model.interface.CodePredictor</a></code>, <code><a href="aligned.exposed_model.interface.DillFunction.html" class="internal-link">aligned.exposed_model.interface.DillFunction</a></code>, <code><a href="aligned.exposed_model.interface.DillPredictor.html" class="internal-link">aligned.exposed_model.interface.DillPredictor</a></code>, <code><a href="aligned.exposed_model.interface.EnitityPredictor.html" class="internal-link">aligned.exposed_model.interface.EnitityPredictor</a></code>, <code><a href="aligned.exposed_model.interface.PolarsExpression.html" class="internal-link">aligned.exposed_model.interface.PolarsExpression</a></code>, <code><a href="aligned.exposed_model.interface.ShadowModel.html" class="internal-link">aligned.exposed_model.interface.ShadowModel</a></code></p><p>Constructors: <code><a href="#in_memory_mlflow" class="internal-link" title="aligned.exposed_model.ExposedModel.in_memory_mlflow">ExposedModel.in_memory_mlflow(model_name, model_alias, reference_tag, mlflow_config)</a></code>, <code><a href="#mlflow_server" class="internal-link" title="aligned.exposed_model.ExposedModel.mlflow_server">ExposedModel.mlflow_server(host, model_alias, model_name, timeout)</a></code>, <code><a href="#ollama_embedding" class="internal-link" title="aligned.exposed_model.ExposedModel.ollama_embedding">ExposedModel.ollama_embedding(endpoint, model, input_features_versions, prompt_template, embedding_name, ...)</a></code>, <code><a href="#ollama_generate" class="internal-link" title="aligned.exposed_model.ExposedModel.ollama_generate">ExposedModel.ollama_generate(endpoint, model, prompt_template, input_features_versions)</a></code>, <code><a href="#polars_predictor" class="internal-link" title="aligned.exposed_model.ExposedModel.polars_predictor">ExposedModel.polars_predictor(callable, features)</a></code>, <code><a href="#_deserialize" class="internal-link" title="aligned.exposed_model.ExposedModel._deserialize">ExposedModel._deserialize(value)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">ExposedModel</span>(Codable, SerializableType): <a href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L101" class="sourceLink">(source)</a></code></p><p>Known subclasses: <code><a href="aligned.exposed_model.interface.ABTestModel.html" class="internal-link">aligned.exposed_model.interface.ABTestModel</a></code>, <code><a href="aligned.exposed_model.interface.CodePredictor.html" class="internal-link">aligned.exposed_model.interface.CodePredictor</a></code>, <code><a href="aligned.exposed_model.interface.DillFunction.html" class="internal-link">aligned.exposed_model.interface.DillFunction</a></code>, <code><a href="aligned.exposed_model.interface.DillPredictor.html" class="internal-link">aligned.exposed_model.interface.DillPredictor</a></code>, <code><a href="aligned.exposed_model.interface.EnitityPredictor.html" class="internal-link">aligned.exposed_model.interface.EnitityPredictor</a></code>, <code><a href="aligned.exposed_model.interface.PolarsExpression.html" class="internal-link">aligned.exposed_model.interface.PolarsExpression</a></code>, <code><a href="aligned.exposed_model.interface.ShadowModel.html" class="internal-link">aligned.exposed_model.interface.ShadowModel</a></code></p><p>Constructors: <code><a href="#in_memory_mlflow" class="internal-link" title="aligned.exposed_model.ExposedModel.in_memory_mlflow">ExposedModel.in_memory_mlflow(model_name, model_alias, reference_tag, mlflow_config)</a></code>, <code><a href="#mlflow_server" class="internal-link" title="aligned.exposed_model.ExposedModel.mlflow_server">ExposedModel.mlflow_server(host, model_alias, model_name, timeout)</a></code>, <code><a href="#ollama_embedding" class="internal-link" title="aligned.exposed_model.ExposedModel.ollama_embedding">ExposedModel.ollama_embedding(endpoint, model, input_features_versions, prompt_template, embedding_name, ...)</a></code>, <code><a href="#ollama_generate" class="internal-link" title="aligned.exposed_model.ExposedModel.ollama_generate">ExposedModel.ollama_generate(endpoint, model, prompt_template, input_features_versions)</a></code>, <code><a href="#polars_predictor" class="internal-link" title="aligned.exposed_model.ExposedModel.polars_predictor">ExposedModel.polars_predictor(callable, features)</a></code>, <code><a href="#_deserialize" class="internal-link" title="aligned.exposed_model.ExposedModel._deserialize">ExposedModel._deserialize(value)</a></code></p>
           <p><a href="classIndex.html#aligned.exposed_model.ExposedModel">View In Hierarchy</a></p>
         </div>
 
@@ -701,7 +701,7 @@
     
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br /></span></div>
     <span class="py-keyword">def</span>&#160;<span class="py-defname">in_memory_mlflow</span><span class="function-signature long-signature">(<span class="rst-sig-param">model_name: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, </span><span class="rst-sig-param">model_alias: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> = <span class="rst-variable-quote">'</span><span class="rst-variable-string">champion</span><span class="rst-variable-quote">'</span>, </span><span class="rst-sig-param">reference_tag: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> = <span class="rst-variable-quote">'</span><span class="rst-variable-string">feature_refs</span><span class="rst-variable-quote">'</span>, </span><span class="rst-sig-param">mlflow_config: <code>MlflowConfig | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.exposed_model.ExposedModel.html" class="internal-link" title="aligned.exposed_model.ExposedModel">ExposedModel</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L209">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L209">
       
       (source)
     </a>
@@ -728,7 +728,7 @@
     
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br /></span></div>
     <span class="py-keyword">def</span>&#160;<span class="py-defname">mlflow_server</span><span class="function-signature long-signature">(<span class="rst-sig-param">host: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, </span><span class="rst-sig-param">model_alias: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> = <span class="rst-variable-quote">'</span><span class="rst-variable-string">champion</span><span class="rst-variable-quote">'</span>, </span><span class="rst-sig-param">model_name: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">timeout: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code> = 30</span>) -&gt; <code><a href="aligned.exposed_model.ExposedModel.html" class="internal-link" title="aligned.exposed_model.ExposedModel">ExposedModel</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L225">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L225">
       
       (source)
     </a>
@@ -755,7 +755,7 @@
     
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br /></span></div>
     <span class="py-keyword">def</span>&#160;<span class="py-defname">ollama_embedding</span><span class="function-signature long-signature">(<span class="rst-sig-param">endpoint: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, </span><span class="rst-sig-param">model: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, </span><span class="rst-sig-param">input_features_versions: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, </span><span class="rst-sig-param">prompt_template: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, </span><span class="rst-sig-param">embedding_name: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">precomputed_prompt_key: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> = <span class="rst-variable-quote">'</span><span class="rst-variable-string">full_prompt</span><span class="rst-variable-quote">'</span></span>) -&gt; <code><a href="aligned.exposed_model.ExposedModel.html" class="internal-link" title="aligned.exposed_model.ExposedModel">ExposedModel</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L189">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L189">
       
       (source)
     </a>
@@ -782,7 +782,7 @@
     
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br /></span></div>
     <span class="py-keyword">def</span>&#160;<span class="py-defname">ollama_generate</span><span class="function-signature long-signature">(<span class="rst-sig-param">endpoint: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, </span><span class="rst-sig-param">model: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, </span><span class="rst-sig-param">prompt_template: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, </span><span class="rst-sig-param">input_features_versions: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>) -&gt; <code><a href="aligned.exposed_model.ExposedModel.html" class="internal-link" title="aligned.exposed_model.ExposedModel">ExposedModel</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L173">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L173">
       
       (source)
     </a>
@@ -809,7 +809,7 @@
     
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br /></span></div>
     <span class="py-keyword">def</span>&#160;<span class="py-defname">polars_predictor</span><span class="function-signature long-signature">(<span class="rst-sig-param">callable: <code>Callable[<wbr></wbr>[<wbr></wbr>pl.DataFrame, <wbr></wbr>ModelFeatureStore], <wbr></wbr>Coroutine[<wbr></wbr><a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, <wbr></wbr><a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, <wbr></wbr>pl.DataFrame]]</code>, </span><span class="rst-sig-param">features: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>FeatureReferencable] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.exposed_model.ExposedModel.html" class="internal-link" title="aligned.exposed_model.ExposedModel">ExposedModel</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L163">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L163">
       
       (source)
     </a>
@@ -836,7 +836,7 @@
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">depends_on</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>FeatureLocation]</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L116">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L116">
       
       (source)
     </a>
@@ -865,7 +865,7 @@ Or something like a vector database that we assume to be up to date.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">needed_configs</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>ConfigValue]</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L112">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L112">
       
       (source)
     </a>
@@ -892,7 +892,7 @@ Or something like a vector database that we assume to be up to date.</p></div>
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">needed_entities</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">store: <code>ModelFeatureStore</code></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>Feature]</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L130">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L130">
       
       (source)
     </a>
@@ -919,7 +919,7 @@ Or something like a vector database that we assume to be up to date.</p></div>
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">needed_features</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">store: <code>ModelFeatureStore</code></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>FeatureReference]</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L127">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L127">
       
       (source)
     </a>
@@ -946,7 +946,7 @@ Or something like a vector database that we assume to be up to date.</p></div>
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">potential_drift_from_model</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">old_model: <code><a href="aligned.exposed_model.ExposedModel.html" class="internal-link" title="aligned.exposed_model.ExposedModel">ExposedModel</a></code></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L138">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L138">
       
       (source)
     </a>
@@ -973,7 +973,7 @@ Or something like a vector database that we assume to be up to date.</p></div>
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">run_polars</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">values: <code>RetrievalJob</code>, </span><span class="rst-sig-param">store: <code>ModelFeatureStore</code></span>) -&gt; <code>pl.DataFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L133">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L133">
       
       (source)
     </a>
@@ -1000,7 +1000,7 @@ Or something like a vector database that we assume to be up to date.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">with_contract</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">model: <code>Model</code></span>) -&gt; <code><a href="aligned.exposed_model.ExposedModel.html" class="internal-link" title="aligned.exposed_model.ExposedModel">ExposedModel</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L124">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L124">
       
       (source)
     </a>
@@ -1027,7 +1027,7 @@ Or something like a vector database that we assume to be up to date.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">with_shadow</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">shadow_model: <code><a href="aligned.exposed_model.ExposedModel.html" class="internal-link" title="aligned.exposed_model.ExposedModel">ExposedModel</a></code></span>) -&gt; <code>ShadowModel</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L147">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L147">
       
       (source)
     </a>
@@ -1053,7 +1053,7 @@ Or something like a vector database that we assume to be up to date.</p></div>
   <div class="functionHeader">
     
     <span class="py-defname">model_type</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L102">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L102">
       
       (source)
     </a>
@@ -1080,7 +1080,7 @@ Or something like a vector database that we assume to be up to date.</p></div>
   <div class="functionHeader">
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
     <span class="py-defname">as_markdown</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L108">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L108">
       
       (source)
     </a>
@@ -1107,7 +1107,7 @@ Or something like a vector database that we assume to be up to date.</p></div>
   <div class="functionHeader">
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
     <span class="py-defname">exposed_at_url</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L104">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L104">
       
       (source)
     </a>
@@ -1135,7 +1135,7 @@ Or something like a vector database that we assume to be up to date.</p></div>
     
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#classmethod" class="intersphinx-link">classmethod</a><br /></span></div>
     <span class="py-keyword">def</span>&#160;<span class="py-defname">_deserialize</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">cls</span>, </span><span class="rst-sig-param">value: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a></code></span>) -&gt; <code><a href="aligned.exposed_model.ExposedModel.html" class="internal-link" title="aligned.exposed_model.ExposedModel">ExposedModel</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L150">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L150">
       
       (source)
     </a>
@@ -1162,7 +1162,7 @@ Or something like a vector database that we assume to be up to date.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">_serialize</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/32eaaa8dab3952185ef2979122f28624e720c475/aligned/exposed_model/interface.py#L141">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/exposed_model/interface.py#L141">
       
       (source)
     </a>
@@ -1188,7 +1188,7 @@ Or something like a vector database that we assume to be up to date.</p></div>
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    25.4.0 at 2025-05-27 14:18:08.
+    25.4.0 at 2025-06-04 09:36:46.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 
