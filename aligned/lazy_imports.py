@@ -136,6 +136,7 @@ _MLFLOW_AVAILABLE = True
 _REDIS_AVAILABLE = True
 _AWS_S3_AVAILABLE = True
 _LANGCHAIN_AVAILABLE = True
+_FAST_API_AVAILABLE = True
 
 if TYPE_CHECKING:
     import pandas
@@ -144,6 +145,7 @@ if TYPE_CHECKING:
     import redis.asyncio as redis
     import aioaws.s3 as s3
     import langchain_core
+    import fastapi
 else:
     pandas, _PANDAS_AVAILABLE = _lazy_import("pandas")
     sentence_transformers, _SENTENCE_TRANSFORMERS = _lazy_import(
@@ -153,3 +155,4 @@ else:
     redis, _REDIS_AVAILABLE = _lazy_import("redis.asyncio")
     s3, _REDIS_AVAILABLE = _lazy_import("aioaws.s3")
     langchain_core, _LANGCHAIN_AVAILABLE = _lazy_import("langchain_core")
+    fastapi, _FAST_API_AVAILABLE = _lazy_import("fastapi")

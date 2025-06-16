@@ -25,6 +25,10 @@ if TYPE_CHECKING:
     from aligned.retrieval_job import RetrievalJob
 
 
+class ViewTags:
+    is_exposed_through_api = "is_exposed_through_api"
+
+
 @dataclass
 class Contact(Codable):
     name: str

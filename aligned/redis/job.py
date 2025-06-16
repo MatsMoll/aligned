@@ -84,7 +84,9 @@ class FactualRedisJob(RetrievalJob):
                     )
                     continue
 
-                if feature.dtype == FeatureType.boolean():
+                if feature.dtype.is_datetime:
+                    reqs = reqs.with_columns(pl.col(feature.name).str.to_datetime())
+                elif feature.dtype == FeatureType.boolean():
                     reqs = reqs.with_columns(
                         pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean)
                     )
