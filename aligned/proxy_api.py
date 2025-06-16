@@ -266,18 +266,43 @@ def add_infer_route(
         return output.to_dict(as_series=False)
 
 
-def router_for_store(store: ContractStore) -> fastapi.APIRouter:
+def router_for_store(
+    store: ContractStore, expose_tag: str | None = None
+) -> fastapi.APIRouter:
+    """
+    Creates a FastAPI router that exposes all contracts for a given tag.
+
+
+    If a contract have a source will it setup.
+
+    `/contracts/{contract-name}/read/entity`
+    `/contracts/{contract-name}/read/entities`
+
+    and if a model contract have an exposed model will it also setup
+
+    `/contracts/{contract-name}/infer/entities`
+
+    Args:
+        store (ContractStore): The contract store to expose.
+        expose_tag (str | None): the tag to expose. Will default to `is_exposed_through_api`.
+
+    Returns:
+        APIRouter: A fastapi router
+    """
     route = fastapi.APIRouter(tags=["Contracts"])
 
     data_to_expose = []
     infer_models = []
 
+    if expose_tag is None:
+        expose_tag = ViewTags.is_exposed_through_api
+
     for view in store.feature_views.values():
-        if view.tags and ViewTags.is_exposed_through_api in view.tags:
+        if view.tags and expose_tag in view.tags:
             data_to_expose.append(FeatureLocation.feature_view(view.name))
 
     for model in store.models.values():
-        if model.tags and ViewTags.is_exposed_through_api in model.tags:
+        if model.tags and expose_tag in model.tags:
             loc = FeatureLocation.model(model.name)
 
             is_exposed = False
