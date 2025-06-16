@@ -1,7 +1,7 @@
 from datetime import timedelta
 import pytest
 import polars as pl
-from aligned import Float32, Int32, List, RedisConfig, String, feature_view
+from aligned import Float32, Int32, List, RedisConfig, String, feature_view, Timestamp
 from aligned.sources.random_source import RandomDataSource
 from aligned.sources.redis import RedisSource
 
@@ -23,6 +23,8 @@ class TestView:
 
     some_list = List(String())
     list_with_numbers = List(Float32())
+
+    timestamp = Timestamp().as_freshness()
 
 
 @pytest.mark.asyncio

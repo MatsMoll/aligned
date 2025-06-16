@@ -253,6 +253,8 @@ class RedisSource(WritableFeatureSource, CodableBatchDataSource):
                         .cast(pl.Utf8)
                         .alias(feature.name)
                     )
+                elif feature.dtype.is_datetime:
+                    expr = pl.col(feature.name).dt.to_string()
                 elif feature.dtype == FeatureType.datetime():
                     expr = (
                         pl.col(feature.name)
