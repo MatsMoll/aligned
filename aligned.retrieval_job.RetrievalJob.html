@@ -1268,7 +1268,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">RetrievalJob</span>(<a href="https://docs.python.org/3/library/abc.html#abc.ABC" class="intersphinx-link">ABC</a>): <a href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L684" class="sourceLink">(source)</a></code></p><p>Known subclasses: <code><a href="aligned.local.job.FileDateJob.html" class="internal-link">aligned.local.job.FileDateJob</a></code>, <code><a href="aligned.local.job.FileFactualJob.html" class="internal-link">aligned.local.job.FileFactualJob</a></code>, <code><a href="aligned.local.job.FileFullJob.html" class="internal-link">aligned.local.job.FileFullJob</a></code>, <code><a href="aligned.local.job.LiteralRetrievalJob.html" class="internal-link">aligned.local.job.LiteralRetrievalJob</a></code>, <code><a href="aligned.psql.jobs.FactPsqlJob.html" class="internal-link">aligned.psql.jobs.FactPsqlJob</a></code>, <code><a href="aligned.psql.jobs.PostgreSqlJob.html" class="internal-link">aligned.psql.jobs.PostgreSqlJob</a></code>, <code><a href="aligned.redis.job.FactualRedisJob.html" class="internal-link">aligned.redis.job.FactualRedisJob</a></code>, <code><a href="aligned.redshift.jobs.FactRedshiftJob.html" class="internal-link">aligned.redshift.jobs.FactRedshiftJob</a></code>, <code><a href="aligned.redshift.sql_job.RedshiftSqlJob.html" class="internal-link">aligned.redshift.sql_job.RedshiftSqlJob</a></code>, <code><a href="aligned.retrieval_job.AggregateJob.html" class="internal-link">aligned.retrieval_job.AggregateJob</a></code>, <code><a href="aligned.retrieval_job.CombineFactualJob.html" class="internal-link">aligned.retrieval_job.CombineFactualJob</a></code>, <code><a href="aligned.retrieval_job.CustomLazyPolarsJob.html" class="internal-link">aligned.retrieval_job.CustomLazyPolarsJob</a></code>, <code><a href="aligned.retrieval_job.CustomPolarsJob.html" class="internal-link">aligned.retrieval_job.CustomPolarsJob</a></code>, <code><a href="aligned.retrieval_job.DerivedFeatureJob.html" class="internal-link">aligned.retrieval_job.DerivedFeatureJob</a></code>, <code><a href="aligned.retrieval_job.DropDuplicateEntities.html" class="internal-link">aligned.retrieval_job.DropDuplicateEntities</a></code>, <code><a href="aligned.retrieval_job.DropInvalidJob.html" class="internal-link">aligned.retrieval_job.DropInvalidJob</a></code>, <code><a href="aligned.retrieval_job.EncodeDatesJob.html" class="internal-link">aligned.retrieval_job.EncodeDatesJob</a></code>, <code><a href="aligned.retrieval_job.EnsureTypesJob.html" class="internal-link">aligned.retrieval_job.EnsureTypesJob</a></code>, <code><a href="aligned.retrieval_job.FileCachedJob.html" class="internal-link">aligned.retrieval_job.FileCachedJob</a></code>, <code><a href="aligned.retrieval_job.FillMissingColumnsJob.html" class="internal-link">aligned.retrieval_job.FillMissingColumnsJob</a></code>, <code><a href="aligned.retrieval_job.FilteredJob.html" class="internal-link">aligned.retrieval_job.FilteredJob</a></code>, <code><a href="aligned.retrieval_job.InMemoryCacheJob.html" class="internal-link">aligned.retrieval_job.InMemoryCacheJob</a></code>, <code><a href="aligned.retrieval_job.InMemorySplitCacheJob.html" class="internal-link">aligned.retrieval_job.InMemorySplitCacheJob</a></code>, <code><a href="aligned.retrieval_job.JoinAsofJob.html" class="internal-link">aligned.retrieval_job.JoinAsofJob</a></code>, <code><a href="aligned.retrieval_job.JoinJobs.html" class="internal-link">aligned.retrieval_job.JoinJobs</a></code>, <code><a href="aligned.retrieval_job.ListenForTriggers.html" class="internal-link">aligned.retrieval_job.ListenForTriggers</a></code>, <code><a href="aligned.retrieval_job.LiteralDictJob.html" class="internal-link">aligned.retrieval_job.LiteralDictJob</a></code>, <code><a href="aligned.retrieval_job.LoadedAtJob.html" class="internal-link">aligned.retrieval_job.LoadedAtJob</a></code>, <code><a href="aligned.retrieval_job.LogJob.html" class="internal-link">aligned.retrieval_job.LogJob</a></code>, <code><a href="aligned.retrieval_job.OnErrorJob.html" class="internal-link">aligned.retrieval_job.OnErrorJob</a></code>, <code><a href="aligned.retrieval_job.OnLoadJob.html" class="internal-link">aligned.retrieval_job.OnLoadJob</a></code>, <code><a href="aligned.retrieval_job.PredictionJob.html" class="internal-link">aligned.retrieval_job.PredictionJob</a></code>, <code><a href="aligned.retrieval_job.RawFileCachedJob.html" class="internal-link">aligned.retrieval_job.RawFileCachedJob</a></code>, <code><a href="aligned.retrieval_job.RenameJob.html" class="internal-link">aligned.retrieval_job.RenameJob</a></code>, <code><a href="aligned.retrieval_job.ReturnInvalidJob.html" class="internal-link">aligned.retrieval_job.ReturnInvalidJob</a></code>, <code><a href="aligned.retrieval_job.SelectColumnsJob.html" class="internal-link">aligned.retrieval_job.SelectColumnsJob</a></code>, <code><a href="aligned.retrieval_job.SqlJob.html" class="internal-link">aligned.retrieval_job.SqlJob</a></code>, <code><a href="aligned.retrieval_job.StackJob.html" class="internal-link">aligned.retrieval_job.StackJob</a></code>, <code><a href="aligned.retrieval_job.StreamAggregationJob.html" class="internal-link">aligned.retrieval_job.StreamAggregationJob</a></code>, <code><a href="aligned.retrieval_job.SubsetJob.html" class="internal-link">aligned.retrieval_job.SubsetJob</a></code>, <code><a href="aligned.retrieval_job.TimeMetricLoggerJob.html" class="internal-link">aligned.retrieval_job.TimeMetricLoggerJob</a></code>, <code><a href="aligned.retrieval_job.UniqueRowsJob.html" class="internal-link">aligned.retrieval_job.UniqueRowsJob</a></code>, <code><a href="aligned.retrieval_job.UnpackEmbedding.html" class="internal-link">aligned.retrieval_job.UnpackEmbedding</a></code>, <code><a href="aligned.retrieval_job.UpdateVectorIndexJob.html" class="internal-link">aligned.retrieval_job.UpdateVectorIndexJob</a></code>, <code><a href="aligned.retrieval_job.ValidateEntitiesJob.html" class="internal-link">aligned.retrieval_job.ValidateEntitiesJob</a></code>, <code><a href="aligned.retrieval_job.WithRequests.html" class="internal-link">aligned.retrieval_job.WithRequests</a></code>, <code><a href="aligned.sources.databricks.UnityCatalogTableAllJob.html" class="internal-link">aligned.sources.databricks.UnityCatalogTableAllJob</a></code></p><p>Constructors: <code><a href="#from_convertable" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_convertable">RetrievalJob.from_convertable(data, request)</a></code>, <code><a href="#from_dict" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_dict">RetrievalJob.from_dict(data, request)</a></code>, <code><a href="#from_lazy_function" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_lazy_function">RetrievalJob.from_lazy_function(callable, request)</a></code>, <code><a href="#from_polars_df" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_polars_df">RetrievalJob.from_polars_df(df, request)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">RetrievalJob</span>(<a href="https://docs.python.org/3/library/abc.html#abc.ABC" class="intersphinx-link">ABC</a>): <a href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L684" class="sourceLink">(source)</a></code></p><p>Known subclasses: <code><a href="aligned.local.job.FileDateJob.html" class="internal-link">aligned.local.job.FileDateJob</a></code>, <code><a href="aligned.local.job.FileFactualJob.html" class="internal-link">aligned.local.job.FileFactualJob</a></code>, <code><a href="aligned.local.job.FileFullJob.html" class="internal-link">aligned.local.job.FileFullJob</a></code>, <code><a href="aligned.local.job.LiteralRetrievalJob.html" class="internal-link">aligned.local.job.LiteralRetrievalJob</a></code>, <code><a href="aligned.psql.jobs.FactPsqlJob.html" class="internal-link">aligned.psql.jobs.FactPsqlJob</a></code>, <code><a href="aligned.psql.jobs.PostgreSqlJob.html" class="internal-link">aligned.psql.jobs.PostgreSqlJob</a></code>, <code><a href="aligned.redis.job.FactualRedisJob.html" class="internal-link">aligned.redis.job.FactualRedisJob</a></code>, <code><a href="aligned.redshift.jobs.FactRedshiftJob.html" class="internal-link">aligned.redshift.jobs.FactRedshiftJob</a></code>, <code><a href="aligned.redshift.sql_job.RedshiftSqlJob.html" class="internal-link">aligned.redshift.sql_job.RedshiftSqlJob</a></code>, <code><a href="aligned.retrieval_job.AggregateJob.html" class="internal-link">aligned.retrieval_job.AggregateJob</a></code>, <code><a href="aligned.retrieval_job.CombineFactualJob.html" class="internal-link">aligned.retrieval_job.CombineFactualJob</a></code>, <code><a href="aligned.retrieval_job.CustomLazyPolarsJob.html" class="internal-link">aligned.retrieval_job.CustomLazyPolarsJob</a></code>, <code><a href="aligned.retrieval_job.CustomPolarsJob.html" class="internal-link">aligned.retrieval_job.CustomPolarsJob</a></code>, <code><a href="aligned.retrieval_job.DerivedFeatureJob.html" class="internal-link">aligned.retrieval_job.DerivedFeatureJob</a></code>, <code><a href="aligned.retrieval_job.DropDuplicateEntities.html" class="internal-link">aligned.retrieval_job.DropDuplicateEntities</a></code>, <code><a href="aligned.retrieval_job.DropInvalidJob.html" class="internal-link">aligned.retrieval_job.DropInvalidJob</a></code>, <code><a href="aligned.retrieval_job.EncodeDatesJob.html" class="internal-link">aligned.retrieval_job.EncodeDatesJob</a></code>, <code><a href="aligned.retrieval_job.EnsureTypesJob.html" class="internal-link">aligned.retrieval_job.EnsureTypesJob</a></code>, <code><a href="aligned.retrieval_job.FileCachedJob.html" class="internal-link">aligned.retrieval_job.FileCachedJob</a></code>, <code><a href="aligned.retrieval_job.FillMissingColumnsJob.html" class="internal-link">aligned.retrieval_job.FillMissingColumnsJob</a></code>, <code><a href="aligned.retrieval_job.FilteredJob.html" class="internal-link">aligned.retrieval_job.FilteredJob</a></code>, <code><a href="aligned.retrieval_job.InMemoryCacheJob.html" class="internal-link">aligned.retrieval_job.InMemoryCacheJob</a></code>, <code><a href="aligned.retrieval_job.InMemorySplitCacheJob.html" class="internal-link">aligned.retrieval_job.InMemorySplitCacheJob</a></code>, <code><a href="aligned.retrieval_job.JoinAsofJob.html" class="internal-link">aligned.retrieval_job.JoinAsofJob</a></code>, <code><a href="aligned.retrieval_job.JoinJobs.html" class="internal-link">aligned.retrieval_job.JoinJobs</a></code>, <code><a href="aligned.retrieval_job.ListenForTriggers.html" class="internal-link">aligned.retrieval_job.ListenForTriggers</a></code>, <code><a href="aligned.retrieval_job.LiteralDictJob.html" class="internal-link">aligned.retrieval_job.LiteralDictJob</a></code>, <code><a href="aligned.retrieval_job.LoadedAtJob.html" class="internal-link">aligned.retrieval_job.LoadedAtJob</a></code>, <code><a href="aligned.retrieval_job.LogJob.html" class="internal-link">aligned.retrieval_job.LogJob</a></code>, <code><a href="aligned.retrieval_job.OnErrorJob.html" class="internal-link">aligned.retrieval_job.OnErrorJob</a></code>, <code><a href="aligned.retrieval_job.OnLoadJob.html" class="internal-link">aligned.retrieval_job.OnLoadJob</a></code>, <code><a href="aligned.retrieval_job.PredictionJob.html" class="internal-link">aligned.retrieval_job.PredictionJob</a></code>, <code><a href="aligned.retrieval_job.RawFileCachedJob.html" class="internal-link">aligned.retrieval_job.RawFileCachedJob</a></code>, <code><a href="aligned.retrieval_job.RenameJob.html" class="internal-link">aligned.retrieval_job.RenameJob</a></code>, <code><a href="aligned.retrieval_job.ReturnInvalidJob.html" class="internal-link">aligned.retrieval_job.ReturnInvalidJob</a></code>, <code><a href="aligned.retrieval_job.SelectColumnsJob.html" class="internal-link">aligned.retrieval_job.SelectColumnsJob</a></code>, <code><a href="aligned.retrieval_job.SqlJob.html" class="internal-link">aligned.retrieval_job.SqlJob</a></code>, <code><a href="aligned.retrieval_job.StackJob.html" class="internal-link">aligned.retrieval_job.StackJob</a></code>, <code><a href="aligned.retrieval_job.StreamAggregationJob.html" class="internal-link">aligned.retrieval_job.StreamAggregationJob</a></code>, <code><a href="aligned.retrieval_job.SubsetJob.html" class="internal-link">aligned.retrieval_job.SubsetJob</a></code>, <code><a href="aligned.retrieval_job.TimeMetricLoggerJob.html" class="internal-link">aligned.retrieval_job.TimeMetricLoggerJob</a></code>, <code><a href="aligned.retrieval_job.UniqueRowsJob.html" class="internal-link">aligned.retrieval_job.UniqueRowsJob</a></code>, <code><a href="aligned.retrieval_job.UnpackEmbedding.html" class="internal-link">aligned.retrieval_job.UnpackEmbedding</a></code>, <code><a href="aligned.retrieval_job.UpdateVectorIndexJob.html" class="internal-link">aligned.retrieval_job.UpdateVectorIndexJob</a></code>, <code><a href="aligned.retrieval_job.ValidateEntitiesJob.html" class="internal-link">aligned.retrieval_job.ValidateEntitiesJob</a></code>, <code><a href="aligned.retrieval_job.WithRequests.html" class="internal-link">aligned.retrieval_job.WithRequests</a></code>, <code><a href="aligned.sources.databricks.UnityCatalogTableAllJob.html" class="internal-link">aligned.sources.databricks.UnityCatalogTableAllJob</a></code></p><p>Constructors: <code><a href="#from_convertable" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_convertable">RetrievalJob.from_convertable(data, request)</a></code>, <code><a href="#from_dict" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_dict">RetrievalJob.from_dict(data, request)</a></code>, <code><a href="#from_lazy_function" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_lazy_function">RetrievalJob.from_lazy_function(callable, request)</a></code>, <code><a href="#from_polars_df" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_polars_df">RetrievalJob.from_polars_df(df, request)</a></code></p>
           <p><a href="classIndex.html#aligned.retrieval_job.RetrievalJob">View In Hierarchy</a></p>
         </div>
 
@@ -1277,7 +1277,7 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id172">
+          <table class="children sortable" id="id173">
   
   
   <tr class="staticmethod">
@@ -1551,7 +1551,7 @@
     
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br /></span></div>
     <span class="py-keyword">def</span>&#160;<span class="py-defname">from_convertable</span><span class="function-signature long-signature">(<span class="rst-sig-param">data: <code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a></code>, </span><span class="rst-sig-param">request: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest] | RetrievalRequest | FeatureRequest</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1167">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1167">
       
       (source)
     </a>
@@ -1578,7 +1578,7 @@
     
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br /></span></div>
     <span class="py-keyword">def</span>&#160;<span class="py-defname">from_dict</span><span class="function-signature long-signature">(<span class="rst-sig-param">data: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>]</code>, </span><span class="rst-sig-param">request: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest] | RetrievalRequest</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1144">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1144">
       
       (source)
     </a>
@@ -1605,7 +1605,7 @@
     
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br /></span></div>
     <span class="py-keyword">def</span>&#160;<span class="py-defname">from_lazy_function</span><span class="function-signature long-signature">(<span class="rst-sig-param">callable: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[], <wbr></wbr><a href="https://docs.python.org/3/library/typing.html#typing.Coroutine" class="intersphinx-link">Coroutine</a>[<wbr></wbr><a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, <wbr></wbr><a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, <wbr></wbr>pl.LazyFrame]]</code>, </span><span class="rst-sig-param">request: <code>RetrievalRequest</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1160">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1160">
       
       (source)
     </a>
@@ -1632,7 +1632,7 @@
     
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br /></span></div>
     <span class="py-keyword">def</span>&#160;<span class="py-defname">from_polars_df</span><span class="function-signature long-signature">(<span class="rst-sig-param">df: <code>pl.DataFrame | pl.LazyFrame</code>, </span><span class="rst-sig-param">request: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest]</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1152">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1152">
       
       (source)
     </a>
@@ -1659,7 +1659,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">aggregate</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">request: <code>RetrievalRequest</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1083">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1083">
       
       (source)
     </a>
@@ -1686,7 +1686,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">cache_raw_data</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">location: <code>DataFileReference | <a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L861">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L861">
       
       (source)
     </a>
@@ -1713,7 +1713,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">cached_at</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">location: <code>DataFileReference | <a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L866">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L866">
       
       (source)
     </a>
@@ -1740,7 +1740,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">chunked</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">size: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code></span>) -&gt; <code><a href="aligned.retrieval_job.DataLoaderJob.html" class="internal-link" title="aligned.retrieval_job.DataLoaderJob">DataLoaderJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L853">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L853">
       
       (source)
     </a>
@@ -1767,7 +1767,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">combined_features</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">requests: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1058">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1058">
       
       (source)
     </a>
@@ -1794,7 +1794,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">derive_features</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">requests: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1048">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1048">
       
       (source)
     </a>
@@ -1821,7 +1821,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">describe</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L719">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L719">
       
       (source)
     </a>
@@ -1848,7 +1848,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">drop_duplicate_entities</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1128">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1128">
       
       (source)
     </a>
@@ -1875,7 +1875,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">drop_invalid</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">validator: <code>Validator | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1011">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1011">
       
       (source)
     </a>
@@ -1934,7 +1934,7 @@ class WhiteWine:</p>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">ensure_types</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">requests: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">date_formatter: <code>DateFormatter | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1063">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1063">
       
       (source)
     </a>
@@ -1961,7 +1961,7 @@ class WhiteWine:</p>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">fill_missing_columns</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1120">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1120">
       
       (source)
     </a>
@@ -1988,7 +1988,7 @@ class WhiteWine:</p>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">filter</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">condition: <code><a href="aligned.retrieval_job.html#FilterRepresentable" class="internal-link" title="aligned.retrieval_job.FilterRepresentable">FilterRepresentable</a></code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L837">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L837">
       
       (source)
     </a>
@@ -2016,7 +2016,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">ignore_event_timestamp</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1131">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1131">
       
       (source)
     </a>
@@ -2043,7 +2043,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">inject_store</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">store: <code>ContractStore</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L714">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L714">
       
       (source)
     </a>
@@ -2070,7 +2070,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">join</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">job: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, </span><span class="rst-sig-param">method: <code><a href="https://docs.python.org/3/library/typing.html#typing.Literal" class="intersphinx-link">Literal</a>[<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">inner</span><span class="rst-variable-quote">'</span>, <wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">left</span><span class="rst-variable-quote">'</span>, <wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">outer</span><span class="rst-variable-quote">'</span>]</code>, </span><span class="rst-sig-param">left_on: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>, </span><span class="rst-sig-param">right_on: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L813">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L813">
       
       (source)
     </a>
@@ -2097,7 +2097,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">join_asof</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">job: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, </span><span class="rst-sig-param">left_event_timestamp: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">right_event_timestamp: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">left_on: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">right_on: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">timestamp_unit: <code>TimeUnit</code> = <span class="rst-variable-quote">'</span><span class="rst-variable-string">us</span><span class="rst-variable-quote">'</span></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L763">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L763">
       
       (source)
     </a>
@@ -2124,7 +2124,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">listen_to_events</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">events: <code><a href="https://docs.python.org/3/library/stdtypes.html#set" class="intersphinx-link">set</a>[<wbr></wbr>EventTrigger]</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1091">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1091">
       
       (source)
     </a>
@@ -2151,7 +2151,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">log_each_job</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">logger_func: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr><a href="https://docs.python.org/3/library/functions.html#object" class="intersphinx-link">object</a>], <wbr></wbr><a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L751">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L751">
       
       (source)
     </a>
@@ -2178,7 +2178,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">monitor_time_used</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">callback: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a>], <wbr></wbr><a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>]</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1045">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1045">
       
       (source)
     </a>
@@ -2205,7 +2205,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">on_error</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">error_type: <code><a href="https://docs.python.org/3/library/functions.html#type" class="intersphinx-link">type</a>[<wbr></wbr><a href="aligned.retrieval_job.html#ErrorType" class="internal-link" title="aligned.retrieval_job.ErrorType">ErrorType</a>]</code>, </span><span class="rst-sig-param">callback: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr><a href="aligned.retrieval_job.html#ErrorType" class="internal-link" title="aligned.retrieval_job.ErrorType">ErrorType</a>], <wbr></wbr><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob">ConvertableToRetrievalJob</a>]</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L734">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L734">
       
       (source)
     </a>
@@ -2240,7 +2240,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">on_load</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">on_load: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[], <wbr></wbr><a href="https://docs.python.org/3/library/typing.html#typing.Coroutine" class="intersphinx-link">Coroutine</a>[<wbr></wbr><a href="https://docs.python.org/3/library/typing.html#typing.Any" class="intersphinx-link">Any</a>, <wbr></wbr><a href="https://docs.python.org/3/library/typing.html#typing.Any" class="intersphinx-link">Any</a>, <wbr></wbr><a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>]]</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L834">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L834">
       
       (source)
     </a>
@@ -2267,7 +2267,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">polars_method</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">polars_method: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr>pl.LazyFrame], <wbr></wbr>pl.LazyFrame]</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1139">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1139">
       
       (source)
     </a>
@@ -2294,7 +2294,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">remove_derived_features</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L726">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L726">
       
       (source)
     </a>
@@ -2321,7 +2321,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">rename</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">mappings: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1123">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1123">
       
       (source)
     </a>
@@ -2348,7 +2348,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">return_invalid</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">should_return_validation: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L798">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L798">
       
       (source)
     </a>
@@ -2375,7 +2375,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">select</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">include_features: <code><a href="https://docs.python.org/3/library/typing.html#typing.Collection" class="intersphinx-link">Collection</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1077">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1077">
       
       (source)
     </a>
@@ -2402,7 +2402,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">select_columns</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">include_features: <code><a href="https://docs.python.org/3/library/typing.html#typing.Collection" class="intersphinx-link">Collection</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1080">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1080">
       
       (source)
     </a>
@@ -2429,7 +2429,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">split</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">splitter: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr>pl.DataFrame], <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr>pl.DataFrame, <wbr></wbr>pl.DataFrame]]</code>, </span><span class="rst-sig-param">dataset_sizes: <code><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a>, <wbr></wbr><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a>]</code></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a>, <wbr></wbr><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a>]</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L805">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L805">
       
       (source)
     </a>
@@ -2456,7 +2456,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/abc.html#abc.abstractmethod" class="intersphinx-link">abstractmethod</a><br /></span></div>
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">to_lazy_polars</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code>pl.LazyFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L707">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L707">
       
       (source)
     </a>
@@ -2483,7 +2483,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/abc.html#abc.abstractmethod" class="intersphinx-link">abstractmethod</a><br /></span></div>
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">to_pandas</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code>pd.DataFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L703">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L703">
       
       (source)
     </a>
@@ -2510,7 +2510,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">to_polars</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code>pl.DataFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L711">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L711">
       
       (source)
     </a>
@@ -2537,7 +2537,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">train_test</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">train_size: <code><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a></code>, </span><span class="rst-sig-param">target_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, </span><span class="rst-sig-param">splitter_factory: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr><a href="aligned.retrieval_job.SplitConfig.html" class="internal-link" title="aligned.retrieval_job.SplitConfig">SplitConfig</a>], <wbr></wbr><a href="aligned.retrieval_job.html#SplitterCallable" class="internal-link" title="aligned.retrieval_job.SplitterCallable">SplitterCallable</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.retrieval_job.TrainTestJob.html" class="internal-link" title="aligned.retrieval_job.TrainTestJob">TrainTestJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L876">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L876">
       
       (source)
     </a>
@@ -2564,7 +2564,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">train_test_validate</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">train_size: <code><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a></code>, </span><span class="rst-sig-param">validate_size: <code><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a></code>, </span><span class="rst-sig-param">target_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, </span><span class="rst-sig-param">splitter_factory: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr><a href="aligned.retrieval_job.SplitConfig.html" class="internal-link" title="aligned.retrieval_job.SplitConfig">SplitConfig</a>], <wbr></wbr><a href="aligned.retrieval_job.html#SplitterCallable" class="internal-link" title="aligned.retrieval_job.SplitterCallable">SplitterCallable</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">should_filter_out_null_targets: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code> = <a href="https://docs.python.org/3/library/constants.html#True" class="intersphinx-link">True</a></span>) -&gt; <code><a href="aligned.retrieval_job.TrainTestValidateJob.html" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob">TrainTestValidateJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L927">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L927">
       
       (source)
     </a>
@@ -2591,7 +2591,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">transform_polars</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">polars_method: <code><a href="aligned.retrieval_job.html#CustomPolarsTransform" class="internal-link" title="aligned.retrieval_job.CustomPolarsTransform">CustomPolarsTransform</a></code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1136">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1136">
       
       (source)
     </a>
@@ -2618,7 +2618,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">unique_entities</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1107">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1107">
       
       (source)
     </a>
@@ -2645,7 +2645,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">unique_on</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">unique_on: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>, </span><span class="rst-sig-param">sort_key: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">descending: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code> = <a href="https://docs.python.org/3/library/constants.html#True" class="intersphinx-link">True</a></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1100">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1100">
       
       (source)
     </a>
@@ -2672,7 +2672,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">unpack_embeddings</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L758">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L758">
       
       (source)
     </a>
@@ -2699,7 +2699,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">update_vector_index</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">indexes: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>VectorIndex]</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1094">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1094">
       
       (source)
     </a>
@@ -2726,7 +2726,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">validate_entites</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1097">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1097">
       
       (source)
     </a>
@@ -2753,7 +2753,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">with_request</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">requests: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest]</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1088">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1088">
       
       (source)
     </a>
@@ -2780,7 +2780,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">with_subfeatures</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L856">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L856">
       
       (source)
     </a>
@@ -2807,7 +2807,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">without_derived_features</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L729">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L729">
       
       (source)
     </a>
@@ -2834,7 +2834,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">write_to_source</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">source: <code><a href="aligned.feature_source.WritableFeatureSource.html" class="internal-link" title="aligned.feature_source.WritableFeatureSource">WritableFeatureSource</a> | DataFileReference</code></span>):</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L1265">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1265">
       
       (source)
     </a>
@@ -2875,7 +2875,7 @@ redis_cluster = RedisConfig.localhost()</p>
   <div class="functionHeader">
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
     <span class="py-defname">loaded_columns</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L685">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L685">
       
       (source)
     </a>
@@ -2902,7 +2902,7 @@ redis_cluster = RedisConfig.localhost()</p>
   <div class="functionHeader">
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
     <span class="py-defname">request_result</span>: <code>RequestResult</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L691">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L691">
       
       (source)
     </a>
@@ -2929,7 +2929,7 @@ redis_cluster = RedisConfig.localhost()</p>
   <div class="functionHeader">
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
     <span class="py-defname">retrieval_requests</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest]</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/333a5548a56c14db7350f6f745fd89d6991b1cf6/aligned/retrieval_job.py#L697">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L697">
       
       (source)
     </a>
@@ -2956,7 +2956,7 @@ redis_cluster = RedisConfig.localhost()</p>
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    25.4.0 at 2025-06-04 09:36:46.
+    25.4.0 at 2025-06-16 08:41:00.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 
