@@ -202,7 +202,6 @@ def add_infer_route(
     ), f"Model '{location.name}' needs to have an exposed model to infer."
 
     route_name = location.name.replace("_", "-")
-    should_save = model.model.predictions_view.source is not None
 
     view_request = model.model.predictions_view.as_view(location.name).retrieval_request
     entities = view_request.entities
@@ -259,10 +258,6 @@ def add_infer_route(
     )
     async def infer(entities: dict[str, list[Any]]) -> dict[str, list[Any]]:
         output = await model.predict_over(entities).to_polars()
-
-        if should_save:
-            await model.insert_predictions(output)
-
         return output.to_dict(as_series=False)
 
 
