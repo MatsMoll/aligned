@@ -169,7 +169,11 @@ async def data_for_request(
     else:
         raw_data = random_features
 
-    return raw_data
+    return (
+        await RetrievalJob.from_convertable(raw_data, request)
+        .derive_features()
+        .to_polars()
+    )
 
 
 FillMode = Literal["duplicate", "random_samples"]

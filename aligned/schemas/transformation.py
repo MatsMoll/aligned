@@ -225,6 +225,7 @@ class SupportedTransformations:
             ToNumerical,
             HashColumns,
             ReplaceStrings,
+            MultiTransformation,
             IsIn,
             And,
             Or,
@@ -2939,6 +2940,40 @@ class HashColumns(Transformation):
         self, df: pl.LazyFrame, alias: str, store: ContractStore
     ) -> pl.LazyFrame | pl.Expr:
         return pl.concat_str(self.columns).hash()
+
+    async def transform_pandas(
+        self, df: pd.DataFrame, store: ContractStore
+    ) -> pd.Series:
+        pl_df = pl.from_pandas(df)
+        res = await self.transform_polars(pl_df.lazy(), "output", store)
+        if isinstance(res, pl.Expr):
+            return pl_df.with_columns(res.alias("output"))["output"].to_pandas()
+        else:
+            return res.collect()["output"].to_pandas()
+
+
+@dataclass
+class MultiTransformation(Transformation):
+    transformations: list[tuple[Transformation, str | None]]
+    name = "multi"
+
+    async def transform_polars(
+        self, df: pl.LazyFrame, alias: str, store: ContractStore
+    ) -> pl.LazyFrame | pl.Expr:
+        exclude_cols = []
+
+        for tran, sub_alias in self.transformations:
+            output = await tran.transform_polars(df, sub_alias or alias, store)
+
+            if sub_alias:
+                exclude_cols.append(sub_alias)
+
+            if isinstance(output, pl.Expr):
+                df = df.with_columns(output.alias(sub_alias or alias))
+            else:
+                df = output
+
+        return df.select(pl.exclude(exclude_cols))
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore

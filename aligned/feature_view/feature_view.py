@@ -703,9 +703,6 @@ class FeatureView(ABC):
     ) -> CompiledFeatureView:
         from aligned.compiler.feature_factory import FeatureFactory
 
-        # Used to deterministicly init names for hidden features
-        hidden_features = 0
-
         var_names = [
             name for name in feature_view.__dir__() if not name.startswith("_")
         ]
@@ -772,6 +769,7 @@ class FeatureView(ABC):
                 feature_deps = [
                     (feat.depth(), feat) for feat in feature.feature_dependencies()
                 ]
+                hidden_features: list[FeatureFactory] = []
 
                 # Sorting by key so the "core" features are first
                 # And then making it possible for other features to reference them
@@ -800,8 +798,8 @@ class FeatureView(ABC):
                         continue
 
                     if not feature_dep._name:
-                        feature_dep._name = str(hidden_features)
-                        hidden_features += 1
+                        hidden_features.append(feature_dep)
+                        continue
 
                     if isinstance(
                         feature_dep.transformation, AggregationTransformationFactory
@@ -819,8 +817,40 @@ class FeatureView(ABC):
                 if isinstance(feature.transformation, AggregationTransformationFactory):
                     aggregations.append(feature)
                 else:
+                    transformations = []
+                    deps: set[FeatureReference] = set()
+
+                    if hidden_features:
+                        for index, feat in enumerate(hidden_features):
+                            sub_name = str(index)
+                            feat._name = sub_name
+                            comp = feat.compile()
+                            transformations.append((comp.transformation, sub_name))
+                            deps.update(comp.depending_on)
+
+                    compiled_der = feature.compile()
+
+                    if hidden_features:
+                        for feat in hidden_features:
+                            # Clean up the name so they are not detected as actual features
+                            feat._name = None
+
+                    if transformations:
+                        from aligned.schemas.transformation import MultiTransformation
+
+                        transformations.append((compiled_der.transformation, None))
+                        compiled_der.transformation = MultiTransformation(
+                            transformations
+                        )
+                        compiled_der.depending_on = {
+                            dep
+                            for dep in deps
+                            # Aka only non hidden features
+                            if not dep.name.isdigit()
+                        }
+
                     view.derived_features.add(
-                        feature.compile()
+                        compiled_der
                     )  # Should decide on which payload to send
 
             elif isinstance(feature, EventTimestamp):
