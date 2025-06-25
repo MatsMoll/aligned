@@ -30,7 +30,7 @@ from aligned.compiler.model import model_contract, FeatureInputVersions
 from aligned.data_source.stream_data_source import HttpStreamSource
 from aligned.data_source.batch_data_source import CustomMethodDataSource, DockerConfig
 from aligned.feature_store import ContractStore, FeatureStore
-from aligned.feature_view import feature_view, check_schema
+from aligned.feature_view import feature_view, check_schema, data_contract
 from aligned.schemas.text_vectoriser import EmbeddingModel
 from aligned.sources.in_mem_source import InMemorySource
 from aligned.sources.kafka import KafkaConfig
@@ -47,6 +47,7 @@ __all__ = [
     "ContractStore",
     "FeatureStore",
     "feature_view",
+    "data_contract",
     # Batch Data sources
     "PostgreSQLConfig",
     "FileSource",

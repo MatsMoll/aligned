@@ -636,6 +636,9 @@ def feature_view(
     return decorator
 
 
+data_contract = feature_view
+
+
 class FeatureView(ABC):
     """
     A collection of features, and a way to combine them.

@@ -844,7 +844,10 @@ class RetrievalJob(ABC):
 
         if isinstance(condition, FeatureFactory):
             if condition.transformation:
-                condition = condition.compile()
+                if condition._name is None:
+                    condition._name = "0"
+
+                condition = condition.compile_derived_feature()
             else:
                 condition = condition.feature()
 
@@ -1901,10 +1904,12 @@ class FilteredJob(RetrievalJob, ModificationJob):
             expr = await self.condition.transformation.transform_polars(
                 df, self.condition.name, store
             )
-            if isinstance(expr, pl.Expr):
+            if not self.condition.name.isdigit():
+                col = pl.col(self.condition.name)
+            elif isinstance(expr, pl.Expr):
                 col = expr
             else:
-                col = pl.col(self.condition.name)
+                return expr.filter(pl.col(self.condition.name))
         elif isinstance(self.condition, Feature):
             col = pl.col(self.condition.name)
         else:

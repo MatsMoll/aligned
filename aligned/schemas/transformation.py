@@ -2973,6 +2973,9 @@ class MultiTransformation(Transformation):
             else:
                 df = output
 
+        if alias in exclude_cols:
+            exclude_cols.remove(alias)
+
         return df.select(pl.exclude(exclude_cols))
 
     async def transform_pandas(

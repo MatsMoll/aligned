@@ -831,6 +831,54 @@ class ContractStore:
             model_version_as_entity=model_version_as_entity,
         )
 
+    @overload
+    def contract(self, view: FeatureViewWrapper) -> FeatureViewStore: ...
+
+    @overload
+    def contract(self, view: ModelContractWrapper) -> ModelFeatureStore: ...
+
+    def contract(
+        self, view: str | FeatureViewWrapper | ModelContractWrapper
+    ) -> FeatureViewStore | ModelFeatureStore:
+        """
+        Selects a contract based on a name or wrapper.
+
+        From here can you query the feature view for features.
+
+        ```python
+        @data_contract(...)
+        class SomeData:
+            ...
+
+        data = await store.contract(SomeData).all().to_polars()
+
+        # Or by name
+        data = await store.contract('some_data').all().to_polars()
+
+
+        @model_contract(...)
+        class SomeModel:
+            ...
+
+        data = await store.contract(SomeModel).all_predictions().to_polars()
+        ```
+
+        Args:
+            view (str): The name of the feature view
+
+        Returns:
+            FeatureViewStore: The selected feature view ready for querying
+        """
+        if isinstance(view, FeatureViewWrapper):
+            return self.feature_view(view)
+        elif isinstance(view, ModelContractWrapper):
+            return self.model(view)
+        else:
+            if view in self.feature_views:
+                return self.feature_view(view)
+            else:
+                return self.model(view)
+
     def feature_view(self, view: str | FeatureViewWrapper) -> FeatureViewStore:
         """
         Selects a feature view based on a name.

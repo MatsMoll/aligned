@@ -521,6 +521,60 @@ class FeatureFactory(FeatureReferencable):
             loads_feature=self._loads_feature,
         )
 
+    def compile_derived_feature(self) -> DerivedFeature:
+        if not self.transformation:
+            raise ValueError(
+                f"Trying to create a derived feature with no transformation, {self.name}"
+            )
+
+        feature_deps = [(feat.depth(), feat) for feat in self.feature_dependencies()]
+        hidden_features: list[FeatureFactory] = []
+
+        # Sorting by key so the "core" features are first
+        # And then making it possible for other features to reference them
+        def sort_key(x: tuple[int, FeatureFactory]) -> int:
+            return x[0]
+
+        for _, feature_dep in sorted(feature_deps, key=sort_key):
+            if not feature_dep._location:
+                feature_dep._location = FeatureLocation.feature_view("temp")
+
+            if not feature_dep._name:
+                hidden_features.append(feature_dep)
+                continue
+
+        transformations = []
+        deps: set[FeatureReference] = set()
+
+        if hidden_features:
+            for index, feat in enumerate(hidden_features):
+                sub_name = str(index)
+                feat._name = sub_name
+                comp = feat.compile()
+                transformations.append((comp.transformation, sub_name))
+                deps.update(comp.depending_on)
+
+        compiled_der = self.compile()
+
+        if hidden_features:
+            for feat in hidden_features:
+                # Clean up the name so they are not detected as actual features
+                feat._name = None
+
+        if transformations:
+            from aligned.schemas.transformation import MultiTransformation
+
+            transformations.append((compiled_der.transformation, None))
+            compiled_der.transformation = MultiTransformation(transformations)
+            compiled_der.depending_on = {
+                dep
+                for dep in deps
+                # Aka only non hidden features
+                if not dep.name.isdigit()
+            }
+
+        return compiled_der
+
     def depth(self) -> int:
         if not self.transformation:
             return 0
