@@ -20,12 +20,27 @@ from aligned.schemas.transformation import (
     LiteralValue,
     EmbeddingModel,
     BinaryOperators,
+    Expression,
 )
 
 if TYPE_CHECKING:
     from aligned.feature_store import ContractStore
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class IsNullFactory(TransformationFactory):
+    value: FeatureFactory
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.value]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import IsNull
+
+        return IsNull(Expression.from_value(self.value))
 
 
 @dataclass
@@ -39,7 +54,7 @@ class NotNullFactory(TransformationFactory):
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import NotNull
 
-        return NotNull(self.value.name)
+        return NotNull(Expression.from_value(self.value))
 
 
 @dataclass
@@ -155,7 +170,9 @@ class Split(TransformationFactory):
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import Split as SplitTransformation
 
-        return SplitTransformation(self.from_feature.name, self.pattern)
+        return SplitTransformation(
+            Expression.from_value(self.from_feature), self.pattern
+        )
 
 
 @dataclass
@@ -383,7 +400,7 @@ class RoundFactory(TransformationFactory):
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import Round
 
-        return Round(self.feature.name)
+        return Round(Expression.from_value(self.feature))
 
 
 @dataclass
@@ -397,7 +414,7 @@ class AbsoluteFactory(TransformationFactory):
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import Absolute
 
-        return Absolute(self.feature.name)
+        return Absolute(Expression.from_value(self.feature))
 
 
 @dataclass
@@ -785,7 +802,7 @@ class ClipFactory(TransformationFactory):
         from aligned.schemas.transformation import Clip
 
         return Clip(
-            self.feature.name,
+            Expression.from_value(self.feature),
             LiteralValue.from_value(self.lower_bound),
             LiteralValue.from_value(self.upper_bound),
         )

@@ -95,4 +95,6 @@ async def test_filter_with_factory() -> None:
         .to_polars()
     )
 
+    schema.x_value.is_not_null
+
     assert df.height == 1

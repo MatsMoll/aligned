@@ -83,6 +83,23 @@ class PolarsExprTransformation:
         raise NotImplementedError(type(self))
 
 
+class InnerTransformation(PolarsExprTransformation):
+    inner: Expression
+
+    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
+        raise NotImplementedError(type(self))
+
+    def polars_expr(self) -> pl.Expr | None:
+        inner_exp = self.inner.to_polars()
+        if inner_exp is not None:
+            return self.polars_expr_from(inner_exp)
+        else:
+            return None
+
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
+        raise NotImplementedError(type(self))
+
+
 class Transformation(Codable, SerializableType):
     name: str
     dtype: FeatureType
@@ -90,6 +107,18 @@ class Transformation(Codable, SerializableType):
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
+        if isinstance(self, InnerTransformation):
+            if self.inner.column:
+                return self.pandas_tran(df[self.inner.column])  # type: ignore
+            if self.inner.transformation:
+                inner = await self.inner.transformation.transform_pandas(df, store)
+                return self.pandas_tran(inner)
+
+            raise ValueError(
+                f"Unable to transform literal value with inner transformation. {type(self)}. "
+                "Consider precomputing the value."
+            )
+
         raise NotImplementedError(type(self))
 
     async def transform_polars(
@@ -99,6 +128,19 @@ class Transformation(Codable, SerializableType):
             exp = self.polars_expr()
             if exp is not None:
                 return exp
+
+        if isinstance(self, InnerTransformation):
+            assert self.inner.transformation is not None
+            output_key = "_aligned_out"
+            inner = await self.inner.transformation.transform_polars(
+                df, output_key, store
+            )
+            if isinstance(inner, pl.Expr):
+                return self.polars_expr_from(inner)
+            else:
+                return df.with_columns(
+                    self.polars_expr_from(pl.col(output_key))
+                ).select(pl.exclude(output_key))
 
         raise NotImplementedError(type(self))
 
@@ -289,6 +331,19 @@ class Expression(Codable):
         ):
             return self.transformation.polars_expr()
         return None
+
+    @staticmethod
+    def from_value(value: Any) -> Expression:
+        from aligned.compiler.feature_factory import FeatureFactory
+
+        if isinstance(value, FeatureFactory):
+            if value._name is not None:
+                return Expression(column=value.name)
+
+            assert value.transformation is not None
+            return Expression(transformation=value.transformation.compile())
+
+        return Expression(literal=LiteralValue.from_value(value))
 
 
 BinaryOperators = Literal[
@@ -675,24 +730,43 @@ class PolarsLambdaTransformation(Transformation):
 
 
 @dataclass
-class NotNull(Transformation, PolarsExprTransformation):
-    key: str
-
-    name: str = "not_null"
+class IsNull(Transformation, InnerTransformation):
+    inner: Expression
+    name: str = "is_null"
     dtype: FeatureType = FeatureType.boolean()
 
-    def polars_expr(self) -> pl.Expr:
-        return pl.col(self.key).is_not_null()
+    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
+        return inner.is_null()
 
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return df[self.key].notnull()  # type: ignore
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
+        return column.isnull()
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
-            NotNull("x"),
+            IsNull(Expression(column="x")),
+            input={"x": ["Hello", None, None, "test", None]},
+            output=[False, True, True, False, True],
+        )
+
+
+@dataclass
+class NotNull(Transformation, InnerTransformation):
+    inner: Expression
+
+    name: str = "not_null"
+    dtype: FeatureType = FeatureType.boolean()
+
+    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
+        return inner.is_not_null()
+
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
+        return column.notnull()  # type: ignore
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            NotNull(Expression(column="x")),
             input={"x": ["Hello", None, None, "test", None]},
             output=[True, False, False, True, False],
         )
@@ -1339,52 +1413,48 @@ class Ceil(Transformation, PolarsExprTransformation):
 
 
 @dataclass
-class Round(Transformation, PolarsExprTransformation):
-    key: str
+class Round(Transformation, InnerTransformation):
+    inner: Expression
     dtype: FeatureType = FeatureType.int64()
 
     name: str = "round"
 
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
         from numpy import round
 
-        return round(df[self.key])  # type: ignore
+        return round(column)  # type: ignore
 
-    def polars_expr(self) -> pl.Expr:
-        return pl.col(self.key).round(0)
+    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
+        return inner.round(0)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
-            Round("x"),
+            Round(Expression(column="x")),
             input={"x": [1.3, 1.9, None]},
             output=[1, 2, None],
         )
 
 
 @dataclass
-class Absolute(Transformation, PolarsExprTransformation):
-    key: str
+class Absolute(Transformation, InnerTransformation):
+    inner: Expression
     dtype: FeatureType = FeatureType.floating_point()
 
     name: str = "abs"
 
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
         from numpy import abs
 
-        return abs(df[self.key])  # type: ignore
+        return abs(column)  # type: ignore
 
-    def polars_expr(self) -> pl.Expr:
-        return pl.col(self.key).abs()
+    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
+        return inner.abs()
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
-            Absolute("x"),
+            Absolute(Expression(column="x")),
             input={"x": [-13, 19, None]},
             output=[13, 19, None],
         )
@@ -1871,39 +1941,27 @@ class PercentileAggregation(
 
 
 @dataclass
-class Clip(
-    Transformation, PsqlTransformation, RedshiftTransformation, PolarsExprTransformation
-):
-    key: str
+class Clip(Transformation, InnerTransformation):
+    inner: Expression
     lower: LiteralValue
     upper: LiteralValue
 
     name = "clip"
     dtype = FeatureType.floating_point()
 
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return df[self.key].clip(
-            lower=self.lower.python_value, upper=self.upper.python_value
-        )  # type: ignore
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
+        return column.clip(lower=self.lower.python_value, upper=self.upper.python_value)  # type: ignore
 
-    def polars_expr(self) -> pl.Expr:
-        return pl.col(self.key).clip(
+    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
+        return inner.clip(
             lower_bound=self.lower.python_value, upper_bound=self.upper.python_value
-        )
-
-    def as_psql(self) -> str:
-        return (
-            f"CASE WHEN {self.key} < {self.lower} THEN {self.lower} WHEN "
-            f"{self.key} > {self.upper} THEN {self.upper} ELSE {self.key} END"
         )
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
             transformation=Clip(
-                key="a",
+                inner=Expression(column="a"),
                 lower=LiteralValue.from_value(0),
                 upper=LiteralValue.from_value(1),
             ),
@@ -2118,19 +2176,17 @@ class JsonPath(Transformation, PolarsExprTransformation):
 
 
 @dataclass
-class Split(Transformation, PolarsExprTransformation):
-    key: str
+class Split(Transformation, InnerTransformation):
+    inner: Expression
     separator: str
     name = "split"
     dtype: FeatureType = FeatureType.array(FeatureType.string())
 
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return df[self.key].str.split(self.separator)
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
+        return column.str.split(self.separator)
 
-    def polars_expr(self) -> pl.Expr:
-        return pl.col(self.key).str.split(self.separator)
+    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
+        return inner.str.split(self.separator)
 
 
 @dataclass

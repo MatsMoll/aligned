@@ -681,6 +681,13 @@ class FeatureFactory(FeatureReferencable):
         else:
             raise ValueError(f"Unable to add constraint {constraint}.")
 
+    def is_null(self) -> Bool:
+        from aligned.compiler.transformation_factory import NotNullFactory
+
+        instance = Bool()
+        instance.transformation = NotNullFactory(self)
+        return instance
+
     def is_not_null(self) -> Bool:
         from aligned.compiler.transformation_factory import NotNullFactory
 
