@@ -843,12 +843,7 @@ class RetrievalJob(ABC):
             return self.copy_with(self.job.filter(condition))
 
         if isinstance(condition, FeatureFactory):
-            if condition.transformation:
-                if condition._name is None:
-                    condition._name = "0"
-
-                condition = condition.compile_derived_feature()
-            else:
+            if not condition.transformation:
                 condition = condition.feature()
 
         return FilteredJob(self, condition)
@@ -1890,6 +1885,22 @@ class FilteredJob(RetrievalJob, ModificationJob):
     async def to_lazy_polars(self) -> pl.LazyFrame:
         df = await self.job.to_lazy_polars()
 
+        if isinstance(self.condition, FeatureFactory):
+            if self.condition.transformation:
+                from aligned.feature_store import ContractStore
+
+                transformation = self.condition.transformation.compile()
+
+                store = ContractStore.empty()
+                out = await transformation.transform_polars(df, "filter_col", store)
+
+                if isinstance(out, pl.Expr):
+                    return df.filter(out)
+                else:
+                    return df.filter(pl.col("filter_col")).select(
+                        pl.exclude("filter_col")
+                    )
+
         if isinstance(self.condition, str):
             try:
                 col = pl.Expr.deserialize(StringIO(self.condition))
@@ -2161,6 +2172,8 @@ class DerivedFeatureJob(RetrievalJob, ModificationJob):
             column_name = condition
         elif isinstance(condition, pl.Expr):
             column_name = condition.meta.output_name(raise_if_undetermined=False)
+        elif isinstance(condition, FeatureFactory) and condition._name is None:
+            column_name = None
         else:
             column_name = condition.name
 
@@ -2239,6 +2252,11 @@ class DerivedFeatureJob(RetrievalJob, ModificationJob):
                         df[feature.depending_on_names],  # type: ignore
                         self.store or ContractStore.empty(),
                     )
+
+            inter_features = request.intermediate_columns
+            if inter_features:
+                df = df.drop(columns=inter_features)
+
         return df
 
     async def to_pandas(self) -> pd.DataFrame:

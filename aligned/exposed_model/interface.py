@@ -409,8 +409,6 @@ class CodePredictor(ExposedModel, VersionedModel):
             else:
                 code += line
 
-        print(code)
-
         return CodePredictor(code, function_name, feature_refs=feature_refs)
 
 

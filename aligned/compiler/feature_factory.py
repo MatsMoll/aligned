@@ -37,7 +37,7 @@ from aligned.schemas.target import ClassificationTarget as ClassificationTargetS
 from aligned.schemas.target import ClassTargetProbability
 from aligned.schemas.target import RegressionTarget as RegressionTargetSchemas
 from aligned.schemas.target import RecommendationTarget as RecommendationTargetSchemas
-from aligned.schemas.transformation import EmbeddingModel, Transformation
+from aligned.schemas.transformation import EmbeddingModel, Expression, Transformation
 from aligned.schemas.vector_storage import VectorStorage
 
 if TYPE_CHECKING:
@@ -407,7 +407,7 @@ class FeatureFactory(FeatureReferencable):
     The feature_dependencies is the features graph for the given feature.
 
     aka
-                            x <- standard scaler <- age: Float
+                            x <- log <- age: Float
     x_and_y_is_equal <-
                             y: Float
     """
@@ -466,6 +466,12 @@ class FeatureFactory(FeatureReferencable):
             default_value=self._default_value,
         )
 
+    def to_expression(self) -> Expression:
+        if not self.transformation:
+            return Expression(column=self.name)
+
+        return Expression(transformation=self.transformation.compile())
+
     def as_regression_label(self) -> RegressionLabel:
         """
         Tells Aligned that this feature is a regression target in a model_contract.
@@ -520,60 +526,6 @@ class FeatureFactory(FeatureReferencable):
             constraints=self.constraints,
             loads_feature=self._loads_feature,
         )
-
-    def compile_derived_feature(self) -> DerivedFeature:
-        if not self.transformation:
-            raise ValueError(
-                f"Trying to create a derived feature with no transformation, {self.name}"
-            )
-
-        feature_deps = [(feat.depth(), feat) for feat in self.feature_dependencies()]
-        hidden_features: list[FeatureFactory] = []
-
-        # Sorting by key so the "core" features are first
-        # And then making it possible for other features to reference them
-        def sort_key(x: tuple[int, FeatureFactory]) -> int:
-            return x[0]
-
-        for _, feature_dep in sorted(feature_deps, key=sort_key):
-            if not feature_dep._location:
-                feature_dep._location = FeatureLocation.feature_view("temp")
-
-            if not feature_dep._name:
-                hidden_features.append(feature_dep)
-                continue
-
-        transformations = []
-        deps: set[FeatureReference] = set()
-
-        if hidden_features:
-            for index, feat in enumerate(hidden_features):
-                sub_name = str(index)
-                feat._name = sub_name
-                comp = feat.compile()
-                transformations.append((comp.transformation, sub_name))
-                deps.update(comp.depending_on)
-
-        compiled_der = self.compile()
-
-        if hidden_features:
-            for feat in hidden_features:
-                # Clean up the name so they are not detected as actual features
-                feat._name = None
-
-        if transformations:
-            from aligned.schemas.transformation import MultiTransformation
-
-            transformations.append((compiled_der.transformation, None))
-            compiled_der.transformation = MultiTransformation(transformations)
-            compiled_der.depending_on = {
-                dep
-                for dep in deps
-                # Aka only non hidden features
-                if not dep.name.isdigit()
-            }
-
-        return compiled_der
 
     def depth(self) -> int:
         if not self.transformation:
@@ -780,20 +732,20 @@ class CouldBeEntityFeature:
 class EquatableFeature(FeatureFactory):
     # Comparable operators
     def __eq__(self, right: FeatureFactory | Any) -> Bool:  # type: ignore[override]
-        from aligned.compiler.transformation_factory import EqualsFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         instance = Bool()
-        instance.transformation = EqualsFactory(self, right)
+        instance.transformation = BinaryFactory(self, right, "eq")
         return instance
 
     def equals(self, right: object) -> Bool:
         return self == right
 
     def __ne__(self, right: FeatureFactory | Any) -> Bool:  # type: ignore[override]
-        from aligned.compiler.transformation_factory import NotEqualsFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         instance = Bool()
-        instance.transformation = NotEqualsFactory(right, self)
+        instance.transformation = BinaryFactory(right, self, "neq")
         return instance
 
     def not_equals(self, right: object) -> Bool:
@@ -809,31 +761,31 @@ class EquatableFeature(FeatureFactory):
 
 class ComparableFeature(EquatableFeature):
     def __lt__(self, right: float) -> Bool:
-        from aligned.compiler.transformation_factory import LowerThenFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         instance = Bool()
-        instance.transformation = LowerThenFactory(right, self)
+        instance.transformation = BinaryFactory(self, right, "lt")
         return instance
 
     def __le__(self, right: float) -> Bool:
-        from aligned.compiler.transformation_factory import LowerThenOrEqualFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         instance = Bool()
-        instance.transformation = LowerThenOrEqualFactory(right, self)
+        instance.transformation = BinaryFactory(self, right, "lte")
         return instance
 
     def __gt__(self, right: object) -> Bool:
-        from aligned.compiler.transformation_factory import GreaterThenFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         instance = Bool()
-        instance.transformation = GreaterThenFactory(self, right)
+        instance.transformation = BinaryFactory(self, right, "gt")
         return instance
 
     def __ge__(self, right: object) -> Bool:
-        from aligned.compiler.transformation_factory import GreaterThenOrEqualFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         instance = Bool()
-        instance.transformation = GreaterThenOrEqualFactory(right, self)
+        instance.transformation = BinaryFactory(self, right, "gte")
         return instance
 
     def lower_bound(self: T, value: float) -> T:
@@ -848,7 +800,7 @@ class ComparableFeature(EquatableFeature):
 class ArithmeticFeature(ComparableFeature):
     def __sub__(self, other: FeatureFactory | Any) -> Float32:
         from aligned.compiler.transformation_factory import (
-            DifferanceBetweenFactory,
+            BinaryFactory,
             TimeDifferanceFactory,
         )
 
@@ -856,41 +808,35 @@ class ArithmeticFeature(ComparableFeature):
         if self.dtype == FeatureType.datetime():
             feature.transformation = TimeDifferanceFactory(self, other)
         else:
-            feature.transformation = DifferanceBetweenFactory(self, other)
+            feature.transformation = BinaryFactory(self, other, "sub")
         return feature
 
     def __radd__(self, other: FeatureFactory | Any) -> Float32:
-        from aligned.compiler.transformation_factory import AdditionBetweenFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Float32()
-        feature.transformation = AdditionBetweenFactory(self, other)
+        feature.transformation = BinaryFactory(other, self, "add")
         return feature
 
     def __add__(self, other: FeatureFactory | Any) -> Float32:
-        from aligned.compiler.transformation_factory import AdditionBetweenFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Float32()
-        feature.transformation = AdditionBetweenFactory(self, other)
+        feature.transformation = BinaryFactory(self, other, "add")
         return feature
 
     def __truediv__(self, other: FeatureFactory | Any) -> Float32:
-        from aligned.compiler.transformation_factory import RatioFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Float32()
-        if isinstance(other, FeatureFactory):
-            feature.transformation = RatioFactory(self, other)
-        else:
-            feature.transformation = RatioFactory(self, LiteralValue.from_value(other))
+        feature.transformation = BinaryFactory(self, other, "div")
         return feature
 
     def __floordiv__(self, other: FeatureFactory | Any) -> Float32:
-        from aligned.compiler.transformation_factory import RatioFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Float32()
-        if isinstance(other, FeatureFactory):
-            feature.transformation = RatioFactory(self, other)
-        else:
-            feature.transformation = RatioFactory(self, LiteralValue.from_value(other))
+        feature.transformation = BinaryFactory(self, other, "div")
         return feature
 
     def __abs__(self) -> Int64:
@@ -901,34 +847,24 @@ class ArithmeticFeature(ComparableFeature):
         return feature
 
     def __mul__(self, other: FeatureFactory | Any) -> Float32:
-        from aligned.compiler.transformation_factory import MultiplyFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Float32()
-        if isinstance(other, FeatureFactory):
-            feature.transformation = MultiplyFactory(self, other)
-        else:
-            feature.transformation = MultiplyFactory(
-                self, LiteralValue.from_value(other)
-            )
+        feature.transformation = BinaryFactory(self, other, "mul")
         return feature
 
     def __rmul__(self, other: FeatureFactory | Any) -> Float32:
-        from aligned.compiler.transformation_factory import MultiplyFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Float32()
-        if isinstance(other, FeatureFactory):
-            feature.transformation = MultiplyFactory(self, other)
-        else:
-            feature.transformation = MultiplyFactory(
-                self, LiteralValue.from_value(other)
-            )
+        feature.transformation = BinaryFactory(other, self, "mul")
         return feature
 
     def __pow__(self, other: FeatureFactory | Any) -> Float32:
-        from aligned.compiler.transformation_factory import PowerFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Float32()
-        feature.transformation = PowerFactory(self, other)
+        feature.transformation = BinaryFactory(self, other, "pow")
         return feature
 
     def log1p(self) -> Float32:
@@ -1009,20 +945,20 @@ class InvertableFeature(FeatureFactory):
 
 class LogicalOperatableFeature(InvertableFeature):
     def __and__(self, other: Bool) -> Bool:
-        from aligned.compiler.transformation_factory import AndFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Bool()
-        feature.transformation = AndFactory(self, other)
+        feature.transformation = BinaryFactory(self, other, "and")
         return feature
 
     def logical_and(self, other: Bool) -> Bool:
         return self & other
 
     def __or__(self, other: Bool) -> Bool:
-        from aligned.compiler.transformation_factory import OrFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Bool()
-        feature.transformation = OrFactory(self, other)
+        feature.transformation = BinaryFactory(self, other, "or")
         return feature
 
     def logical_or(self, other: Bool) -> Bool:

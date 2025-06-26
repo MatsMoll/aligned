@@ -5,7 +5,7 @@ import asyncio
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import numpy as np
 import polars as pl
@@ -229,6 +229,7 @@ class SupportedTransformations:
             IsIn,
             And,
             Or,
+            BinaryTransformation,
             Inverse,
             Ordinal,
             FillNaValues,
@@ -281,6 +282,177 @@ class SupportedTransformations:
             return cls._shared
         cls._shared = SupportedTransformations()
         return cls._shared
+
+
+@dataclass
+class Expression(Codable):
+    column: str | None = field(default=None)
+    transformation: Transformation | None = field(default=None)
+    literal: LiteralValue | None = field(default=None)
+
+    def to_polars(self) -> pl.Expr | None:
+        if self.column:
+            return pl.col(self.column)
+        if self.literal:
+            return pl.lit(self.literal.python_value)
+
+
+BinaryOperators = Literal[
+    "add",
+    "sub",
+    "eq",
+    "neq",
+    "gt",
+    "gte",
+    "lt",
+    "lte",
+    "mul",
+    "div",
+    "or",
+    "and",
+    "pow",
+    "mod",
+]
+
+
+@dataclass
+class BinaryTransformation(Transformation):
+    left: Expression
+    right: Expression
+
+    operator: BinaryOperators
+    dtype: FeatureType = FeatureType.string()
+    name: str = "binary"
+
+    def polars_expr(self, left: pl.Expr, right: pl.Expr) -> pl.Expr:
+        if self.operator == "add":
+            return left + right
+        elif self.operator == "sub":
+            return left - right
+        elif self.operator == "eq":
+            return left == right
+        elif self.operator == "neq":
+            return left != right
+        elif self.operator == "gt":
+            return left > right
+        elif self.operator == "gte":
+            return left >= right
+        elif self.operator == "lt":
+            return left < right
+        elif self.operator == "lte":
+            return left <= right
+        elif self.operator == "mul":
+            return left * right
+        elif self.operator == "div":
+            return left / right
+        elif self.operator == "or":
+            return left | right
+        elif self.operator == "and":
+            return left & right
+        elif self.operator == "pow":
+            return left.pow(right)
+        elif self.operator == "mod":
+            return left.mod(right)
+
+        raise ValueError(f"Unable to compute {self.operator}")
+
+    def pandas_op(self, left: pd.Series, right: pd.Series) -> pd.Series:
+        if self.operator == "add":
+            return left + right
+        elif self.operator == "sub":
+            return left - right
+        elif self.operator == "eq":
+            return left == right
+        elif self.operator == "neq":
+            return left != right
+        elif self.operator == "gt":
+            return left > right
+        elif self.operator == "gte":
+            return left >= right
+        elif self.operator == "lt":
+            return left < right
+        elif self.operator == "lte":
+            return left <= right
+        elif self.operator == "mul":
+            return left * right
+        elif self.operator == "div":
+            return left / right
+        elif self.operator == "or":
+            return left | right
+        elif self.operator == "and":
+            return left & right
+        elif self.operator == "pow":
+            return left.pow(right)
+        elif self.operator == "mod":
+            return left.mod(right)
+
+        raise ValueError(f"Unable to compute {self.operator}")
+
+    async def transform_polars(
+        self, df: pl.LazyFrame, alias: str, store: ContractStore
+    ) -> pl.LazyFrame | pl.Expr:
+        is_pure_expr = True
+
+        left_exp = self.left.to_polars()
+        right_exp = self.right.to_polars()
+
+        left_col = "_aligned_left"
+        right_col = "_aligned_right"
+
+        if left_exp is None and self.left.transformation:
+            out = await self.left.transformation.transform_polars(df, left_col, store)
+            if isinstance(out, pl.Expr):
+                left_exp = out
+            else:
+                df = out
+                left_exp = pl.col(left_col)
+                is_pure_expr = False
+
+        if right_exp is None and self.right.transformation:
+            out = await self.right.transformation.transform_polars(df, right_col, store)
+            if isinstance(out, pl.Expr):
+                right_exp = out
+            else:
+                df = out
+                right_exp = pl.col(right_col)
+                is_pure_expr = False
+
+        assert left_exp is not None
+        assert right_exp is not None
+
+        new_exp = self.polars_expr(left_exp, right_exp)
+
+        if is_pure_expr:
+            return new_exp
+        else:
+            return df.with_columns(new_exp).select(pl.exclude([left_col, right_col]))
+
+    async def transform_pandas(
+        self, df: pd.DataFrame, store: ContractStore
+    ) -> pd.Series:
+        left_series = None
+        right_series = None
+
+        if self.left.column:
+            left_series = df[self.left.column]
+        elif self.left.literal:
+            left_series = self.left.literal.python_value
+        else:
+            assert self.left.transformation
+            left_series = await self.left.transformation.transform_pandas(df, store)
+
+        if self.right.column:
+            right_series = df[self.right.column]
+        elif self.right.literal:
+            right_series = self.right.literal.python_value
+        else:
+            assert self.right.transformation
+            right_series = await self.right.transformation.transform_pandas(df, store)
+
+        assert left_series is not None
+        assert right_series is not None
+
+        return self.pandas_op(left_series, right_series)  # type: ignore
 
 
 @dataclass

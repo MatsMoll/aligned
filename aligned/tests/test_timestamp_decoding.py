@@ -107,5 +107,4 @@ async def test_iso_timestamp() -> None:
             }
         ).to_polars()
 
-        print(df)
         assert df.select(data.columns).equals(data.filter(pl.col("id").is_in([1, 2])))

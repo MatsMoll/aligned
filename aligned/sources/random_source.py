@@ -283,7 +283,6 @@ class RandomDataSource(
                         await data_for_request(request, df.height, values=df)
                     ).lazy()
 
-                print(random.collect())
                 return random
 
             join_columns = set(request.all_returned_columns) - set(

@@ -82,8 +82,9 @@ async def test_filter_with_factory() -> None:
         x_value = Int16()
         partition_value = String()
 
-    schema = TestData()
+        other = x_value + 20
 
+    schema = TestData()
     df = await TestData.query().filter(schema.partition_value == "a").to_polars()
 
     assert df.height == 3
@@ -94,4 +95,4 @@ async def test_filter_with_factory() -> None:
         .to_polars()
     )
 
-    assert df.height == 2
+    assert df.height == 1
