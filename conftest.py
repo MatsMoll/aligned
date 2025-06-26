@@ -69,7 +69,7 @@ def retrieval_job(retrieval_request_without_derived: RetrievalRequest) -> Retrie
 @pytest.fixture
 def retrieval_request_with_derived() -> RetrievalRequest:
     from aligned.schemas.feature import EventTimestamp as TimestampFeature
-    from aligned.schemas.transformation import Addition
+    from aligned.schemas.transformation import BinaryTransformation, Expression
 
     return RetrievalRequest(
         name="test_with_ts",
@@ -93,7 +93,11 @@ def retrieval_request_with_derived() -> RetrievalRequest:
                         location=FeatureLocation.feature_view("test_with_ts"),
                     ),
                 },
-                transformation=Addition(front="c", behind="d"),
+                transformation=BinaryTransformation(
+                    left=Expression(column="c"),
+                    right=Expression(column="d"),
+                    operator="add",
+                ),
                 depth=1,
             )
         },
@@ -135,7 +139,7 @@ def retrieval_job_with_timestamp(
 
 @pytest.fixture
 def combined_retrieval_request() -> RetrievalRequest:
-    from aligned.schemas.transformation import Addition
+    from aligned.schemas.transformation import BinaryTransformation, Expression
 
     return RetrievalRequest(
         name="combined",
@@ -155,7 +159,11 @@ def combined_retrieval_request() -> RetrievalRequest:
                         name="a", location=FeatureLocation.feature_view("test")
                     ),
                 },
-                transformation=Addition(front="c+d", behind="a"),
+                transformation=BinaryTransformation(
+                    left=Expression(column="c+d"),
+                    right=Expression(column="a"),
+                    operator="add",
+                ),
                 depth=2,
             )
         },
