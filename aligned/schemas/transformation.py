@@ -194,31 +194,14 @@ class SupportedTransformations:
         self.types = {}
 
         for tran_type in [
-            Equals,
-            EqualsLiteral,
-            NotEquals,
-            NotEqualsLiteral,
             NotNull,
             PandasLambdaTransformation,
             PandasFunctionTransformation,
             PolarsLambdaTransformation,
             PolarsExpression,
-            Ratio,
             StructField,
-            DivideDenumeratorValue,
             Contains,
-            GreaterThen,
-            GreaterThenValue,
-            GreaterThenOrEqual,
-            LowerThen,
-            LowerThenOrEqual,
             DateComponent,
-            Subtraction,
-            SubtractionValue,
-            Multiply,
-            MultiplyValue,
-            Addition,
-            AdditionValue,
             TimeDifference,
             Logarithm,
             LogarithmOnePluss,
@@ -227,8 +210,6 @@ class SupportedTransformations:
             ReplaceStrings,
             MultiTransformation,
             IsIn,
-            And,
-            Or,
             BinaryTransformation,
             Inverse,
             Ordinal,
@@ -244,8 +225,6 @@ class SupportedTransformations:
             LoadImageUrl,
             LoadImageUrlBytes,
             GrayscaleImage,
-            Power,
-            PowerFeature,
             PresignedAwsUrl,
             AppendConstString,
             AppendStrings,
@@ -382,7 +361,7 @@ class BinaryTransformation(Transformation):
         elif self.operator == "and":
             return left & right
         elif self.operator == "pow":
-            return left.pow(right)
+            return left**right
         elif self.operator == "mod":
             return left.mod(right)
 
