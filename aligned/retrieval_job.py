@@ -1327,22 +1327,19 @@ def polars_filter_expressions_from(
 
     optional_constraint = Optional()
 
-    exprs: list[tuple[pl.Expr, str]] = []
+    all_exprs: list[tuple[pl.Expr, str]] = []
 
     for feature in features:
         if not feature.constraints:
-            exprs.append(
+            all_exprs.append(
                 (pl.col(feature.name).is_not_null(), f"Required {feature.name}")
             )
             continue
 
-        if optional_constraint not in feature.constraints:
-            exprs.append(
-                (pl.col(feature.name).is_not_null(), f"Required {feature.name}")
-            )
-            continue
+        exprs: list = []
 
         for constraint in feature.constraints:
+            print(feature.name, constraint)
             if isinstance(constraint, LowerBound):
                 exprs.append(
                     (
@@ -1414,7 +1411,18 @@ def polars_filter_expressions_from(
                     )
                 )
 
-    return exprs
+        if optional_constraint not in feature.constraints:
+            exprs.append(
+                (pl.col(feature.name).is_not_null(), f"Required {feature.name}")
+            )
+        else:
+            exprs = [
+                (pl.col(feature.name).is_null() | exp, desc) for exp, desc in exprs
+            ]
+
+        all_exprs.extend(exprs)
+
+    return all_exprs
 
 
 @dataclass

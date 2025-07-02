@@ -11,7 +11,7 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Iterable, Union, TypeVar, Callable, TYPE_CHECKING, overload
+from typing import Any, Iterable, Union, TypeVar, Callable, TYPE_CHECKING, overload
 
 from aligned.compiler.model import ModelContractWrapper
 from aligned.data_file import DataFileReference, upsert_on_column
@@ -55,6 +55,7 @@ from aligned.sources.in_mem_source import InMemorySource, RetrievalJobSource
 from aligned.sources.local import StorageFileReference
 from aligned.sources.vector_index import VectorIndex
 from aligned.model_store import ModelFeatureStore
+from aligned.validation.interface import PolarsValidator, Validator
 
 if TYPE_CHECKING:
     from aligned.sources.random_source import FillMode
@@ -1325,6 +1326,62 @@ class FeatureViewStore:
 
     def filter(self, filter: pl.Expr | str | FeatureFactory) -> RetrievalJob:
         return self.all().filter(filter)
+
+    @overload
+    def drop_invalid(
+        self, values: pl.LazyFrame, validator: Validator | None = None
+    ) -> pl.LazyFrame: ...
+
+    @overload
+    def drop_invalid(
+        self, values: pl.DataFrame, validator: Validator | None = None
+    ) -> pl.DataFrame: ...
+
+    @overload
+    def drop_invalid(
+        self, values: pd.DataFrame, validator: Validator | None = None
+    ) -> pd.DataFrame: ...
+
+    @overload
+    def drop_invalid(
+        self, values: dict[str, list], validator: Validator | None = None
+    ) -> dict[str, list]: ...
+
+    @overload
+    def drop_invalid(
+        self, values: list[dict[str, Any]], validator: Validator | None = None
+    ) -> list[dict[str, Any]]: ...
+
+    def drop_invalid(
+        self, values: ConvertableToRetrievalJob, validator: Validator | None = None
+    ) -> ConvertableToRetrievalJob:
+        from aligned.retrieval_job import DropInvalidJob
+
+        if validator is None:
+            validator = PolarsValidator()
+
+        features = list(DropInvalidJob.features_to_validate([self.request]))
+
+        if isinstance(values, pl.LazyFrame):
+            return validator.validate_polars(features, values)
+        elif isinstance(values, pl.DataFrame):
+            df = values.lazy()
+            return validator.validate_polars(features, df).collect()
+        elif isinstance(values, dict):
+            df = pl.DataFrame(values).lazy()
+            return (
+                validator.validate_polars(features, df)
+                .collect()
+                .to_dict(as_series=False)
+            )
+        elif isinstance(values, list):
+            df = pl.DataFrame(values).lazy()
+            return validator.validate_polars(features, df).collect().to_dicts()
+        elif isinstance(values, pd.DataFrame):
+            df = pl.from_pandas(values).lazy()
+            return validator.validate_polars(features, df).collect().to_pandas()
+        else:
+            raise ValueError(f"Unable to convert {type(values)}")
 
     def all_columns(self, limit: int | None = None) -> RetrievalJob:
         request = self.view.request_all

@@ -1,11 +1,13 @@
 # Aligned
 
-A data managment tool for ML applications.
+A data management tool with additional features tailured for ML applications.
 
-Similar to how DBT is a data managment tool for business analytics, will Aligned manage ML projects.
+Similar to how DBT is a data management tool for business analytics, will Aligned manage ML projects.
+
+This is done by defining data contracts and model contracts.
 
 Aligned does this through two things.
-1. A light weight data managment system. Making it possible to query a data lake and databases.
+1. A light weight data management system. Making it possible to query a data lake and databases.
 2. Tooling to define a `model_contract`. Clearing up common unanswerd questions through code.
 
 Therefore, aligned can also be seen as a way to implement interfaces or the [strategy pattern](https://en.wikipedia.org/wiki/Strategy_pattern) into data applications.
@@ -14,7 +16,7 @@ Furthermore, Aligned collect data lineage between models, basic feature transfor
 
 ## Examples
 
-Bellow are some examples of how Aligned can be used.
+Below are some examples of how Aligned can be used.
 
 ### Aligned UI
 
@@ -44,7 +46,7 @@ Check out the [Aligned Docs](https://www.aligned.codes), but keep in mind that t
 
 ### Available Features
 
-Bellow are some of the features Aligned offers:
+Below are some of the features Aligned offers:
 
 - [Data Catalog](https://aligned-managed-web.vercel.app/)
 - [Data Lineage](https://aligned-managed-web.vercel.app/)
@@ -57,7 +59,7 @@ Bellow are some of the features Aligned offers:
 
 All from the simple API of defining
 - [Data Sources](#data-sources)
-- [Feature Views](#feature-views)
+- [Data Contracts](#data-contracts)
 - [Models](#describe-models)
 
 As a result, loading model features is as easy as:
@@ -74,7 +76,7 @@ Aligned is still in active development, so changes are likely.
 Aligned introduces a new concept called the "model contract", which tries to answer the following questions.
 
 - What is predicted?
-- What is assosiated with a prediction? - A user id?
+- What is associated with a prediction? - A user id?
 - Where do we store predictions?
 - Do a model depend on other models?
 - Is the model exposed through an API?
@@ -84,7 +86,7 @@ Aligned introduces a new concept called the "model contract", which tries to ans
 - Who owns the model?
 - Where do we store data sets?
 
-All this is described through a `model_contract`, as shown bellow.
+All this is described through a `model_contract`, as shown below.
 
 ```python
 @model_contract(
@@ -104,7 +106,7 @@ class EtaTaxi:
 
 ## Data Sources
 
-Alinged makes handling data sources easy, as you do not have to think about how it is done.
+Aligned makes handling data sources easy, as you do not have to think about how it is done.
 
 Furthermore, Aligned makes it easy to switch parts of the business logic to a local setup for debugging purposes.
 
@@ -145,15 +147,15 @@ custom_strtime_formatter = DateFormatter.string_format("%Y/%m/%d %H:%M:%S")
 FileSource.csv_at("my/file.csv", date_formatter=unix_formatter)
 ```
 
-## Feature Views
+## Data Contracts
 
-Aligned also makes it possible to define data and features through `feature_view`s.
+Aligned also makes it possible to define data and features through `data_contract`s.
 Then get code completion and typesafety by referencing them in other features.
 
 This makes the features light weight, data source independent, and flexible.
 
 ```python
-@feature_view(
+@data_contract(
     name="passenger",
     description="Some features from the titanic dataset",
     source=FileSource.csv_at("titanic.csv"),
@@ -178,6 +180,14 @@ class TitanicPassenger:
 
     # Creates two one hot encoded values
     is_male, is_female = sex.one_hot_encode(['male', 'female'])
+```
+
+#### Load data
+
+To load the data use the following code.
+
+```python
+df = await TitanicPassenger.query().all().to_polars()
 ```
 
 ### Exposed models
@@ -225,11 +235,11 @@ Some of the existing implementations are:
 - Send entities to generic endpoint
 
 ## Data Freshness
-Making sure a source contains fresh data is a crucial part to create propper ML applications.
+Making sure a source contains fresh data is a crucial part to create proper ML applications.
 Therefore, Aligned provides an easy way to check how fresh a source is.
 
 ```python
-@feature_view(
+@data_contract(
     name="departures",
     description="Features related to the departure of a taxi ride",
     source=taxi_db.table("departures"),
@@ -256,11 +266,11 @@ if freshness < datetime.now() - timedelta(days=2):
 ```
 
 ## Data quality
-Alinged will make sure all the different features gets formatted as the correct datatype.
-In addition will aligned also make sure that the returend features aligne with defined constraints.
+Aligned will make sure all the different features gets formatted as the correct datatype.
+In addition will aligned also make sure that the returned features align with defined constraints.
 
 ```python
-@feature_view(...)
+@data_contract(...)
 class TitanicPassenger:
     ...
     age = (
@@ -271,7 +281,7 @@ class TitanicPassenger:
     sibsp = Int32().lower_bound(0).is_optional()
 ```
 
-Then since our feature view have a `is_optional` and a `lower_bound`, will the `.validate(...)` command filter out the entites that do not follow that behavior.
+Then since our data contract have a `is_optional` and a `lower_bound`, will the `.validate(...)` command filter out the entities that do not follow that behavior.
 
 ```python
 df = await store.model("titanic_model").features_for({
@@ -281,11 +291,11 @@ df = await store.model("titanic_model").features_for({
 
 ## Contract Store
 
-Aligned collects all the feature views and model contracts in a contract store. You can generate this in a few different ways, and each method serves some different use-cases.
+Aligned collects all the data contracts and model contracts in a contract store. You can generate this in a few different ways, and each method serves some different use-cases.
 
 For experimentational use-cases will the `await ContractStore.from_dir(".")` probably make the most sense. However, this will scan the full directory which can lead to slow startup times.
 
-Therefore, it is also possible to manually add the different feature views and contracts with the following.
+Therefore, it is also possible to manually add the different data contracts and contracts with the following.
 
 ```python
 store = ContractStore.empty()
@@ -293,7 +303,7 @@ store.add(MyView)
 store.add(MyModel)
 ```
 
-This makes it possible to define different contracts per project, or team. As a result, you can also combine differnet stores with.
+This makes it possible to define different contracts per project, or team. As a result, you can also combine different stores with.
 
 ```python
 forecasting_store = await ContractStore.from_dir("path/for/forecasting")

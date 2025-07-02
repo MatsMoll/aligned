@@ -17,6 +17,7 @@ from typing import (
     Type,
     Callable,
     Union,
+    overload,
 )
 from uuid import uuid4
 
@@ -540,12 +541,37 @@ class FeatureViewWrapper(Generic[T]):
             RetrievalJob.from_convertable(data, request), request.needed_requests[0]
         )
 
+    @overload
     def drop_invalid(
-        self, data: ConvertableData, validator: Validator | None = None
-    ) -> ConvertableData:
+        self, values: pl.LazyFrame, validator: Validator | None = None
+    ) -> pl.LazyFrame: ...
+
+    @overload
+    def drop_invalid(
+        self, values: pl.DataFrame, validator: Validator | None = None
+    ) -> pl.DataFrame: ...
+
+    @overload
+    def drop_invalid(
+        self, values: pd.DataFrame, validator: Validator | None = None
+    ) -> pd.DataFrame: ...
+
+    @overload
+    def drop_invalid(
+        self, values: dict[str, list], validator: Validator | None = None
+    ) -> dict[str, list]: ...
+
+    @overload
+    def drop_invalid(
+        self, values: list[dict[str, Any]], validator: Validator | None = None
+    ) -> list[dict[str, Any]]: ...
+
+    def drop_invalid(
+        self, values: ConvertableToRetrievalJob, validator: Validator | None = None
+    ) -> ConvertableToRetrievalJob:
         from aligned.retrieval_job import DropInvalidJob
 
-        if not validator:
+        if validator is None:
             from aligned.validation.interface import PolarsValidator
 
             validator = PolarsValidator()
@@ -556,22 +582,26 @@ class FeatureViewWrapper(Generic[T]):
             )
         )
 
-        if isinstance(data, dict):
-            validate_data = pl.DataFrame(data, strict=False)
+        if isinstance(values, pl.LazyFrame):
+            return validator.validate_polars(features, values)
+        elif isinstance(values, pl.DataFrame):
+            df = values.lazy()
+            return validator.validate_polars(features, df).collect()
+        elif isinstance(values, dict):
+            df = pl.DataFrame(values).lazy()
+            return (
+                validator.validate_polars(features, df)
+                .collect()
+                .to_dict(as_series=False)
+            )
+        elif isinstance(values, list):
+            df = pl.DataFrame(values).lazy()
+            return validator.validate_polars(features, df).collect().to_dicts()
+        elif isinstance(values, pd.DataFrame):
+            df = pl.from_pandas(values).lazy()
+            return validator.validate_polars(features, df).collect().to_pandas()
         else:
-            validate_data = data
-
-        if isinstance(validate_data, pl.DataFrame):
-            validated = validator.validate_polars(
-                features, validate_data.lazy()
-            ).collect()
-            if isinstance(data, dict):
-                return validated.to_dict(as_series=False)
-            return validated  # type: ignore
-        elif isinstance(validate_data, pd.DataFrame):
-            return validator.validate_pandas(features, validate_data)
-        else:
-            raise ValueError(f"Invalid data type: {type(data)}")
+            raise ValueError(f"Unable to convert {type(values)}")
 
     def as_source(
         self, renames: dict[str, str] | None = None
