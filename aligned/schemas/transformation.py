@@ -2349,6 +2349,7 @@ class HashColumns(Transformation, PolarsExprTransformation):
 class MultiTransformation(Transformation):
     transformations: list[tuple[Transformation, str | None]]
     name = "multi"
+    dtype = FeatureType.string()
 
     async def transform_polars(
         self, df: pl.LazyFrame, alias: str, store: ContractStore
