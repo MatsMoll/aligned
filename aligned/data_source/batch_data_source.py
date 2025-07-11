@@ -379,9 +379,7 @@ class UnknownDataSource(CodableBatchDataSource):
         return f"Unknown source named {self.type_name} with content {self.content}"
 
     def job_group_key(self) -> str:
-        raise NotImplementedError(
-            f"Missing implementation for source with content {self.content}"
-        )
+        return str(hash(self.content))
 
     def __post_serialize__(self, d: dict[Any, Any]) -> dict[Any, Any]:
         return d["content"]
