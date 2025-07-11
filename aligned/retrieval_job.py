@@ -834,6 +834,11 @@ class RetrievalJob(ABC):
     def on_load(self, on_load: Callable[[], Coroutine[Any, Any, None]]) -> RetrievalJob:
         return OnLoadJob(self, on_load)
 
+    def limit(self, limit: int) -> RetrievalJob:
+        if isinstance(self, ModificationJob):
+            return self.copy_with(self.job.limit(limit))
+        return LimitJob(self, limit)
+
     def filter(self, condition: FilterRepresentable) -> RetrievalJob:
         """
         Filters based on a condition referencing either a feature,
@@ -1118,7 +1123,7 @@ class RetrievalJob(ABC):
     def fill_missing_columns(self) -> RetrievalJob:
         return FillMissingColumnsJob(self)
 
-    def rename(self, mappings: dict[str, str]) -> RetrievalJob:
+    def rename(self, mappings: dict[str, str] | Callable[[str], str]) -> RetrievalJob:
         if not mappings:
             return self
         return RenameJob(self, mappings)
@@ -1232,7 +1237,7 @@ class RetrievalJob(ABC):
             assert isinstance(data[0], dict)
             loaded_features.update(data[0].keys())
         elif isinstance(data, (pl.DataFrame, pl.LazyFrame)):
-            loaded_features.update(data.columns)
+            loaded_features.update(data.collect_schema().names())
         elif isinstance(data, pd.DataFrame):
             loaded_features.update(data.columns)
 
@@ -1657,7 +1662,7 @@ class AggregateJob(RetrievalJob, ModificationJob):
 
         core_frame = await self.job.to_lazy_polars()
 
-        existing_cols = set(core_frame.columns)
+        existing_cols = set(core_frame.collect_schema().names())
         agg_features = {agg.name for agg in self.agg_request.aggregated_features}
         missing_features = agg_features - existing_cols
 
@@ -1960,9 +1965,26 @@ class FilteredJob(RetrievalJob, ModificationJob):
 
 
 @dataclass
+class LimitJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
+    _limit: int
+
+    def describe(self) -> str:
+        return f"{self.job.describe}\n    -> Top {self._limit} rows"
+
+    async def to_pandas(self) -> pd.DataFrame:
+        df = await self.job.to_pandas()
+        return df.head(self._limit)
+
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        df = await self.job.to_lazy_polars()
+        return df.limit(self._limit)
+
+
+@dataclass
 class RenameJob(RetrievalJob, ModificationJob):
     job: RetrievalJob
-    mappings: dict[str, str]
+    mappings: dict[str, str] | Callable[[str], str]
 
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.job.to_pandas()
@@ -2093,7 +2115,7 @@ class LogJob(RetrievalJob, ModificationJob):
             self.logger(f"Failed in job: {type(self.job).__name__} - {job_name}")
             raise error
         self.logger(f"Results from {type(self.job).__name__} - {job_name}")
-        self.logger(df.columns)
+        self.logger(df.collect_schema().names())
         self.logger(df)
         self.logger(df.head(10).collect())
         return df
@@ -2356,6 +2378,8 @@ class FillMissingColumnsJob(RetrievalJob, ModificationJob):
         data = await self.job.to_lazy_polars()
         optional_constraint = Optional()
 
+        data_names = data.collect_schema().names()
+
         for request in self.retrieval_requests:
             missing_columns = [
                 feature
@@ -2364,7 +2388,7 @@ class FillMissingColumnsJob(RetrievalJob, ModificationJob):
                 and (
                     optional_constraint in feature.constraints or feature.default_value
                 )
-                and feature.name not in data.columns
+                and feature.name not in data_names
             ]
 
             if missing_columns:
@@ -2752,13 +2776,13 @@ class EnsureTypesJob(RetrievalJob, ModificationJob):
                         pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean)
                     )
                 elif feature.dtype.is_array:
-                    dtype = df.select(feature.name).dtypes[0]
+                    dtype = org_schema[feature.name]
                     if dtype == pl.Utf8:
                         df = df.with_columns(
                             pl.col(feature.name).str.json_decode(pl.List(pl.Utf8))
                         )
                 elif feature.dtype.is_embedding:
-                    dtype = df.select(feature.name).dtypes[0]
+                    dtype = org_schema[feature.name]
                     if dtype == pl.Utf8:
                         df = df.with_columns(
                             pl.col(feature.name).str.json_decode(pl.List(pl.Float64))

@@ -42,9 +42,16 @@ def load_envs(path: Path) -> None:
         click.echo(f"No env file found at {path}")
 
 
-def setup_logger():
+def setup_logger(level: str | None = None):
     from importlib.util import find_spec
     from logging.config import dictConfig
+
+    log_level = "INFO"
+    if level is not None:
+        if level.lower() == "debug":
+            log_level = "DEBUG"
+        elif level.lower() == "error":
+            log_level = "ERROR"
 
     handler = "console"
     log_format = "%(levelname)s:\t\b%(asctime)s %(name)s:%(lineno)d %(message)s"
@@ -68,7 +75,7 @@ def setup_logger():
         },
         "loggers": {
             # project
-            "": {"handlers": [handler], "level": "INFO", "propagate": True},
+            "": {"handlers": [handler], "level": log_level, "propagate": True},
         },
     }
 
@@ -130,15 +137,16 @@ def cli() -> None:
 @click.option(
     "--ignore-file", default=".alignedignore", help="The files Aligned should ignore"
 )
+@click.option("--log-level", default="info", help="The logging level")
 async def compile(
-    repo_path: str, reference_file: str, env_file: str, ignore_file: str
+    repo_path: str, reference_file: str, env_file: str, ignore_file: str, log_level: str
 ) -> None:
     """
     Create or update a feature store deployment
     """
     from aligned import FileSource
 
-    setup_logger()
+    setup_logger(log_level)
 
     dir = Path.cwd() if repo_path == "." else Path(repo_path).absolute()
     ignore_path = dir / ignore_file

@@ -383,7 +383,7 @@ Meaning each feature is on the following format `(feature_view|model):<contract 
         if model_version_column:
             mv = self.get_model_version(store.model.name)
 
-        job = store.features_for(values)
+        job = store.input_features_for(values)
         df = await job.to_polars()
 
         features = job.request_result.feature_columns

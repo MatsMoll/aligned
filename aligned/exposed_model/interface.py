@@ -285,7 +285,7 @@ class DillPredictor(ExposedModel, VersionedModel):
                 values, self.feature_refs
             ).to_polars()
         else:
-            features = await store.features_for(values).to_polars()
+            features = await store.input_features_for(values).to_polars()
 
         if inspect.iscoroutinefunction(function):
             return await function(features, store)
@@ -337,7 +337,7 @@ class CodePredictor(ExposedModel, VersionedModel):
                 values, self.feature_refs
             ).to_polars()
         else:
-            features = await store.features_for(values).to_polars()
+            features = await store.input_features_for(values).to_polars()
 
         if len(args) == 1:
             if inspect.iscoroutinefunction(function):
@@ -446,7 +446,7 @@ class PolarsExpression(ExposedModel, VersionedModel):
 
         assert len(labels) == 1, f"Expected only one label got {len(labels)}"
 
-        inputs = await store.features_for(values).to_polars()
+        inputs = await store.input_features_for(values).to_polars()
 
         name = next(iter(labels)).name
 

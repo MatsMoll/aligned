@@ -562,7 +562,7 @@ class PolarsTransformationFactory(TransformationFactory):
 
         if isinstance(self.method, pl.Expr):
             return PolarsExpression(
-                self.method.meta.write_json(), dtype=self.dtype.dtype
+                self.method.meta.serialize(format="json"), dtype=self.dtype.dtype
             )
         else:
             function_name = dill.source.getname(self.method)

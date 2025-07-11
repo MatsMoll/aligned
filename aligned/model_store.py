@@ -165,18 +165,18 @@ class ModelFeatureStore:
             output_requests=returned_request,
         )
 
-    def features_for(
+    def input_features_for(
         self,
         entities: ConvertableToRetrievalJob | RetrievalJob,
         event_timestamp_column: str | None = None,
     ) -> RetrievalJob:
-        """Returns the features for the given entities
+        """Returns the features to pass into a model
 
         ```python
-        store = await FileSource.json_at("features-latest.json").feature_store()
+        store = await FileSource.json_at("contracts.json").feature_store()
 
         df = store.model("titanic")\\
-            .features_for({"passenger_id": [1, 2, 3]})\\
+            .input_features_for({"passenger_id": [1, 2, 3]})\\
             .to_polars()
 
         print(df.collect())
@@ -377,16 +377,55 @@ class ModelFeatureStore:
             .select_columns(request.features_to_include)
         )
 
+    def features_for(
+        self,
+        entities: ConvertableToRetrievalJob | RetrievalJob,
+        event_timestamp_column: str | None = None,
+        model_version_as_entity: bool | None = None,
+    ) -> RetrievalJob:
+        """Returns the features the model has produced.
+
+        ```python
+        store = await FileSource.json_at("contracts.json").feature_store()
+
+        df = store.model("titanic")\\
+            .features_for({"passenger_id": [1, 2, 3]})\\
+            .to_polars()
+
+        print(df.collect())
+        >>> ┌──────────────┬──────────────┐
+        >>> │ passenger_id ┆ will_survive │
+        >>> │ ---          ┆ ---          │
+        >>> │ i32          ┆ bool         │
+        >>> ╞══════════════╪══════════════╡
+        >>> │ 1            ┆ true         │
+        >>> │ 2            ┆ true         │
+        >>> │ 3            ┆ false        │
+        >>> └──────────────┴──────────────┘
+        ```
+
+        Args:
+            entities (dict[str, list] | RetrievalJob): The entities to fetch features for
+
+        Returns:
+            RetrievalJob: A retrieval job that can be used to fetch the features
+        """
+        location_id = self.location.identifier
+        return self.store.features_for(
+            entities,
+            features=[f"{location_id}:*"],
+            event_timestamp_column=event_timestamp_column,
+            model_version_as_entity=model_version_as_entity,
+        )
+
     def predictions_for(
         self,
         entities: ConvertableToRetrievalJob | RetrievalJob,
         event_timestamp_column: str | None = None,
         model_version_as_entity: bool | None = None,
     ) -> RetrievalJob:
-        location_id = self.location.identifier
-        return self.store.features_for(
+        return self.features_for(
             entities,
-            features=[f"{location_id}:*"],
             event_timestamp_column=event_timestamp_column,
             model_version_as_entity=model_version_as_entity,
         )
@@ -425,13 +464,13 @@ class ModelFeatureStore:
 
         Examples:
             ```python
-            @feature_view(name="passenger", ...)
+            @data_contract(name="passenger", ...)
             class Passenger:
                 passenger_id = Int32().as_entity()
 
                 age = Float()
 
-            @feature_view(name="location", ...)
+            @data_contract(name="location", ...)
             class Location:
                 location_id = String().as_entity()
 
@@ -470,17 +509,71 @@ class ModelFeatureStore:
                 locs.add(ref.location)
         return locs
 
-    async def upsert_predictions(
-        self, predictions: ConvertableToRetrievalJob | RetrievalJob
-    ) -> None:
+    async def overwrite(self, output: ConvertableToRetrievalJob | RetrievalJob) -> None:
         """
-        Upserts data to a source defined as a prediction source
+        Overwrites data to a source defined as a output source
 
         ```python
         @model_contract(
             name="taxi_eta",
             features=[...]
-            predictions_source=FileSource.parquet_at("predictions.parquet")
+            output_source=FileSource.parquet_at("predictions.parquet")
+        )
+        class TaxiEta:
+            trip_id = Int32().as_entity()
+
+            duration = Int32()
+
+        ...
+
+        store = FeatureStore.from_dir(".")
+
+        await store.model("taxi_eta").overwrite({
+            "trip_id": [1, 2, 3, ...],
+            "duration": [20, 33, 42, ...]
+        })
+        ```
+        """
+        await self.store.overwrite(FeatureLocation.model(self.model.name), output)
+
+    async def upsert(self, output: ConvertableToRetrievalJob | RetrievalJob) -> None:
+        """
+        Upserts data to a source defined as a output source
+
+        ```python
+        @model_contract(
+            name="taxi_eta",
+            features=[...]
+            output_source=FileSource.parquet_at("predictions.parquet")
+        )
+        class TaxiEta:
+            trip_id = Int32().as_entity()
+
+            duration = Int32()
+
+        ...
+
+        store = FeatureStore.from_dir(".")
+
+        await store.model("taxi_eta").upsert({
+            "trip_id": [1, 2, 3, ...],
+            "duration": [20, 33, 42, ...]
+        })
+        ```
+        """
+        await self.store.upsert_into(FeatureLocation.model(self.model.name), output)
+
+    async def upsert_predictions(
+        self, predictions: ConvertableToRetrievalJob | RetrievalJob
+    ) -> None:
+        """
+        Upserts data to a source defined as a output source
+
+        ```python
+        @model_contract(
+            name="taxi_eta",
+            features=[...]
+            output_source=FileSource.parquet_at("predictions.parquet")
         )
         class TaxiEta:
             trip_id = Int32().as_entity()
@@ -497,21 +590,46 @@ class ModelFeatureStore:
         })
         ```
         """
-        await self.store.upsert_into(
-            FeatureLocation.model(self.model.name), predictions
-        )
+        await self.upsert(predictions)
 
-    async def insert_predictions(
-        self, predictions: ConvertableToRetrievalJob | RetrievalJob
-    ) -> None:
+    async def insert(self, output: ConvertableToRetrievalJob | RetrievalJob) -> None:
         """
-        Writes data to a source defined as a prediction source
+        Writes data to a source defined as a output source
 
         ```python
         @model_contract(
             name="taxi_eta",
             features=[...]
-            predictions_source=FileSource.parquet_at("predictions.parquet")
+            output_source=FileSource.parquet_at("predictions.parquet")
+        )
+        class TaxiEta:
+            trip_id = Int32().as_entity()
+
+            duration = Int32()
+
+        ...
+
+        store = FeatureStore.from_dir(".")
+
+        await store.model("taxi_eta").insert({
+            "trip_id": [1, 2, 3, ...],
+            "duration": [20, 33, 42, ...]
+        })
+        ```
+        """
+        await self.store.insert_into(FeatureLocation.model(self.model.name), output)
+
+    async def insert_predictions(
+        self, predictions: ConvertableToRetrievalJob | RetrievalJob
+    ) -> None:
+        """
+        Writes data to a source defined as a output source
+
+        ```python
+        @model_contract(
+            name="taxi_eta",
+            features=[...]
+            output_source=FileSource.parquet_at("predictions.parquet")
         )
         class TaxiEta:
             trip_id = Int32().as_entity()
@@ -528,9 +646,7 @@ class ModelFeatureStore:
         })
         ```
         """
-        await self.store.insert_into(
-            FeatureLocation.model(self.model.name), predictions
-        )
+        await self.insert(predictions)
 
 
 @dataclass

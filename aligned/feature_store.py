@@ -11,7 +11,16 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Iterable, Union, TypeVar, Callable, TYPE_CHECKING, overload
+from typing import (
+    Any,
+    Iterable,
+    Protocol,
+    Union,
+    TypeVar,
+    Callable,
+    TYPE_CHECKING,
+    overload,
+)
 
 from aligned.compiler.model import ModelContractWrapper
 from aligned.data_file import DataFileReference, upsert_on_column
@@ -34,6 +43,7 @@ from aligned.feature_view.feature_view import (
 )
 from aligned.request.retrieval_request import FeatureRequest, RetrievalRequest
 from aligned.retrieval_job import (
+    FilterRepresentable,
     SelectColumnsJob,
     RetrievalJob,
     StreamAggregationJob,
@@ -65,6 +75,20 @@ logger = logging.getLogger(__name__)
 
 FeatureSourceable = Union[FeatureSource, FeatureSourceFactory, None]
 T = TypeVar("T")
+
+
+class DataStore(Protocol):
+    def features_for(
+        self,
+        entities: ConvertableToRetrievalJob | RetrievalJob,
+        features: list[str] | list[FeatureReference] | list[FeatureReferencable],
+        event_timestamp_column: str | None = None,
+        model_version_as_entity: bool | None = None,
+    ) -> RetrievalJob: ...
+
+    def filter(self, filter: FilterRepresentable) -> RetrievalJob: ...
+
+    def all(self, limit: int | None = None) -> RetrievalJob: ...
 
 
 @dataclass
@@ -838,9 +862,12 @@ class ContractStore:
     @overload
     def contract(self, view: ModelContractWrapper) -> ModelFeatureStore: ...
 
+    @overload
+    def contract(self, view: str) -> DataStore: ...
+
     def contract(
         self, view: str | FeatureViewWrapper | ModelContractWrapper
-    ) -> FeatureViewStore | ModelFeatureStore:
+    ) -> FeatureViewStore | ModelFeatureStore | DataStore:
         """
         Selects a contract based on a name or wrapper.
 

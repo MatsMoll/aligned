@@ -40,7 +40,7 @@ async def test_random_derived_feature() -> None:
 
     query = Features.query()
 
-    random_values = await query.all(limit=10).to_polars()
+    random_values = await query.all().limit(10).to_polars()
     assert random_values.height == 10
 
     with_inject = await query.features_for(

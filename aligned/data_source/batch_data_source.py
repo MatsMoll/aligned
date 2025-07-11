@@ -28,7 +28,7 @@ from aligned.schemas.feature import (
 )
 from aligned.request.retrieval_request import RequestResult, RetrievalRequest
 from aligned.compiler.feature_factory import FeatureFactory
-from polars.type_aliases import TimeUnit
+from polars._typing import TimeUnit
 import polars as pl
 
 import logging

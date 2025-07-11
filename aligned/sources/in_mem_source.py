@@ -147,6 +147,7 @@ class InMemorySource(
                             lambda candidate: cosine_similarity(
                                 item[embedding.name], candidate
                             ),
+                            return_dtype=pl.Float64(),
                         )
                         .alias(distance_key)
                     )

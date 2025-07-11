@@ -78,7 +78,7 @@ And use the prompt template:
         if missing_cols:
             entities = await (
                 store.using_version(self.input_features_versions)
-                .features_for(values)
+                .input_features_for(values)
                 .to_polars()
             )
 
@@ -341,7 +341,7 @@ This will use the model: `{self.model_name}` to generate the embeddings."""
             if missing_cols:
                 entities = (
                     await store.using_version(self.input_features_versions)
-                    .features_for(values)
+                    .input_features_for(values)
                     .with_subfeatures()
                     .to_polars()
                 )

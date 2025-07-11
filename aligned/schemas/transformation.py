@@ -53,7 +53,7 @@ class TransformationTestDefinition:
                 return values.cast(pl.Boolean)
             else:
                 return values
-        except pl.InvalidOperationError:
+        except pl.exceptions.InvalidOperationError:
             return pl.Series(self.output, dtype=self.transformation.dtype.polars_type)
 
 
@@ -182,7 +182,9 @@ class Transformation(Codable, SerializableType):
                 )
             output = output_df.select(pl.col(alias)).collect().to_series()
 
-            missing_columns = set(test.input_polars.columns) - set(output_df.columns)
+            missing_columns = set(test.input_polars.columns) - set(
+                output_df.collect_schema().names()
+            )
             assert missing_columns == set(), f"Missing columns: {missing_columns}"
 
             expected = test.output_polars
@@ -2216,7 +2218,7 @@ class LoadFeature(Transformation):
 
         if self.explode_key:
             group_keys = ["row_nr"]
-            entity_df = df.with_row_count("row_nr").explode(self.explode_key)
+            entity_df = df.with_row_index("row_nr").explode(self.explode_key)
         else:
             entity_df = df
 

@@ -339,13 +339,15 @@ class CsvFileSource(
             )
 
         if self.mapping_keys:
-            columns = self.feature_identifier_for(data.columns)
-            data = data.rename(dict(zip(data.columns, columns)))
+            names = data.collect_schema().names()
+            columns = self.feature_identifier_for(names)
+            data = data.rename(dict(zip(names, columns)))
 
         try:
             existing_df = await self.to_lazy_polars()
             write_df = pl.concat(
-                [data, existing_df.select(data.columns)], how="vertical_relaxed"
+                [data, existing_df.select(data.collect_schema().names())],
+                how="vertical_relaxed",
             )
         except UnableToFindFileException:
             write_df = data
@@ -939,11 +941,12 @@ class DeltaFileSource(
 
 @dataclass
 class StorageFileSource(StorageFileReference, Codable):
-    path: str
+    path: PathResolver
 
     @property
     def storage(self) -> Storage:
-        if self.path.startswith("http"):
+        path = self.path.as_posix()
+        if path.startswith("http"):
             return HttpStorage()
         else:
             return FileStorage()
@@ -952,10 +955,10 @@ class StorageFileSource(StorageFileReference, Codable):
         return hash(self.path)
 
     async def read(self) -> bytes:
-        return await self.storage.read(self.path)
+        return await self.storage.read(self.path.as_posix())
 
     async def write(self, content: bytes | bytearray) -> None:
-        await self.storage.write(self.path, content)
+        await self.storage.write(self.path.as_posix(), content)
 
 
 @dataclass
@@ -1019,7 +1022,7 @@ class FileDirectory(Codable, Directory):
         return PlaceholderValue("schema_version_placeholder")
 
     def json_at(self, path: str) -> StorageFileSource:
-        return StorageFileSource(path=path)
+        return StorageFileSource(path=self.path.append(path))
 
     def csv_at(
         self,
@@ -1107,7 +1110,7 @@ class FileSource:
 
     @staticmethod
     def json_at(path: str) -> StorageFileSource:
-        return StorageFileSource(path=path)
+        return StorageFileSource(path=PathResolver.from_value(path))
 
     @staticmethod
     def csv_at(
