@@ -62,6 +62,11 @@ class BatchDataSourceFactory:
         )
         from aligned.schemas.feature_view import FeatureViewReferenceSource
         from aligned.schemas.model import ModelSource
+        from aligned.sources.databricks import (
+            UCTableSource,
+            UCFeatureTableSource,
+            UCSqlSource,
+        )
 
         from aligned.sources.psql import PostgreSQLDataSource
         from aligned.sources.redshift import RedshiftSQLDataSource
@@ -76,6 +81,9 @@ class BatchDataSourceFactory:
 
         source_types = [
             PostgreSQLDataSource,
+            UCTableSource,
+            UCFeatureTableSource,
+            UCSqlSource,
             # File Sources
             CsvFileSource,
             DeltaFileSource,
@@ -379,7 +387,9 @@ class UnknownDataSource(CodableBatchDataSource):
         return f"Unknown source named {self.type_name} with content {self.content}"
 
     def job_group_key(self) -> str:
-        return str(hash(self.content))
+        from uuid import uuid4
+
+        return str(uuid4())
 
     def __post_serialize__(self, d: dict[Any, Any]) -> dict[Any, Any]:
         return d["content"]

@@ -13,11 +13,12 @@ from aligned.data_source.batch_data_source import (
     RequestResult,
 )
 from aligned.feature_source import WritableFeatureSource
-from aligned.retrieval_job import RetrievalJob, RetrievalRequest
+from aligned.retrieval_job import FilterRepresentable, RetrievalJob, RetrievalRequest
 from aligned.schemas.constraints import MaxLength, MinLength
-from aligned.schemas.feature import Constraint, Feature
+from aligned.schemas.feature import Constraint, Feature, FeatureLocation
 from aligned.sources.local import FileFactualJob
 from aligned.config_value import EnvironmentValue, LiteralValue, ConfigValue
+from aligned.lazy_imports import databricks_fe
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -370,6 +371,22 @@ class UCSqlSource(CodableBatchDataSource, DatabricksSource):
 
     type_name = "uc_sql"
 
+    def depends_on(self) -> set[FeatureLocation]:
+        from sqlglot import parse_one, exp
+
+        tree = parse_one(self.query, read="spark")
+
+        ctes = tree.find_all(exp.CTE)
+        tables = tree.find_all(exp.Table)
+
+        cte_names = {cte.alias_or_name for cte in ctes}
+
+        return {
+            FeatureLocation.feature_view(table.name)
+            for table in tables
+            if table.name not in cte_names
+        }
+
     def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
         client = self.config.connection()
 
@@ -444,9 +461,7 @@ class UCFeatureTableSource(
         return "uc_feature_table"
 
     def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
-        from databricks.feature_engineering import FeatureEngineeringClient
-
-        client = FeatureEngineeringClient()
+        client = databricks_fe.FeatureEngineeringClient()
 
         async def load() -> pl.LazyFrame:
             spark_df = client.read_table(name=self.table.identifier())
@@ -472,11 +487,6 @@ class UCFeatureTableSource(
         facts: RetrievalJob,
         requests: list[tuple[UCFeatureTableSource, RetrievalRequest]],
     ) -> RetrievalJob:
-        from databricks.feature_engineering import (
-            FeatureEngineeringClient,
-            FeatureLookup,
-        )
-
         keys = {
             source.job_group_key()
             for source, _ in requests
@@ -487,14 +497,14 @@ class UCFeatureTableSource(
                 f"Type: {cls} have not implemented how to load fact data with multiple sources."
             )
 
-        client = FeatureEngineeringClient()
+        client = databricks_fe.FeatureEngineeringClient()
 
         result_request: RetrievalRequest | None = None
         lookups = []
 
         for source, request in requests:
             lookups.append(
-                FeatureLookup(
+                databricks_fe.FeatureLookup(
                     source.table.identifier(),
                     lookup_key=list(request.entity_names),
                     feature_names=request.feature_names,
@@ -570,9 +580,7 @@ class UCFeatureTableSource(
         raise NotImplementedError(type(self))
 
     async def overwrite(self, job: RetrievalJob, request: RetrievalRequest) -> None:
-        from databricks.feature_engineering import FeatureEngineeringClient
-
-        client = FeatureEngineeringClient()
+        client = databricks_fe.FeatureEngineeringClient()
 
         conn = self.config.connection()
         df = conn.createDataFrame(await job.unique_entities().to_pandas())
@@ -592,7 +600,8 @@ def features_to_read(request: RetrievalRequest, schema: StructType) -> list[str]
 
     for feat in request.all_returned_features:
         if feat.name in stored_fields:
-            columns.append(feat.name)
+            if feat.name not in columns:
+                columns.append(feat.name)
         elif not feat.default_value:
             raise ValueError(
                 f"Missing column '{feat.name}'. Either add it to the table {request.location}, or add a default value"
@@ -666,7 +675,7 @@ class UnityCatalogTableAllJob(RetrievalJob):
     config: DatabricksConnectionConfig
     table: UnityCatalogTableConfig
     request: RetrievalRequest
-    limit: int | None
+    _limit: int | None
     where: str | None = field(default=None)
 
     @property
@@ -677,7 +686,7 @@ class UnityCatalogTableAllJob(RetrievalJob):
     def retrieval_requests(self) -> list[RetrievalRequest]:
         return [self.request]
 
-    def filter(self, condition: str | Feature | pl.Expr) -> RetrievalJob:
+    def filter(self, condition: FilterRepresentable) -> RetrievalJob:
         if isinstance(condition, Feature):
             self.where = condition.name
         elif isinstance(condition, str):
@@ -696,8 +705,8 @@ class UnityCatalogTableAllJob(RetrievalJob):
         if self.where:
             spark_df = spark_df.filter(self.where)
 
-        if self.limit:
-            spark_df = spark_df.limit(self.limit)
+        if self._limit:
+            spark_df = spark_df.limit(self._limit)
 
         return spark_df.toPandas()
 

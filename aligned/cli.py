@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 import sys
-from contextlib import suppress
+from contextlib import asynccontextmanager, suppress
 from functools import wraps
 from pathlib import Path
 from typing import Any
@@ -115,6 +115,53 @@ async def store_from_reference(
 @click.group()
 def cli() -> None:
     pass
+
+
+@cli.command("proxy-server")
+@coro
+@click.option("--contracts", default="contract_store.json")
+@click.option("--host", "-h", default="127.0.0.1")
+@click.option("--port", "-p", default=8070)
+@click.option("--n-workers", default=1)
+@click.option("--expose-tag")
+@click.option("--log-level", default="info")
+async def start_proxy_server(
+    contracts: str,
+    host: str,
+    port: int,
+    n_workers: int,
+    log_level: str,
+    expose_tag: str | None,
+) -> None:
+    from fastapi import FastAPI
+    import uvicorn
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        import logging
+        from aligned.proxy_api import router_for_store
+
+        logging.basicConfig(level=logging.INFO)
+
+        logger = logging.getLogger(__name__)
+
+        logger.info(f"Loading contract from: '{contracts}'")
+
+        if contracts.startswith("http"):
+            store = await AlignedCloudSource(contracts).as_contract_store()
+        else:
+            store = await store_from_reference(contracts)
+
+        router_for_store(store, expose_tag=expose_tag, app=app)
+        yield
+
+    app = FastAPI(lifespan=lifespan)
+
+    config = uvicorn.Config(
+        app, host=host, port=port, workers=n_workers, log_level=log_level
+    )
+    server = uvicorn.Server(config)
+    await server.serve()
 
 
 @cli.command("compile")
