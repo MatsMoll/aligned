@@ -1,4 +1,6 @@
 from __future__ import annotations
+import logging
+import asyncio
 
 import polars as pl
 import json
@@ -12,6 +14,8 @@ from aligned.exposed_model.interface import ExposedModel
 from aligned.lazy_imports import mlflow
 
 from aligned.schemas.feature import Feature, FeatureReference
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from aligned.feature_store import ModelFeatureStore
@@ -114,9 +118,6 @@ def references_from_metadata(
     """
     Decodes the feature references in stored in a metadata key.
 
-    ```python
-    mlflow.
-    ```
     """
 
     if reference_key not in metadata:
@@ -181,8 +182,8 @@ class MlflowConfig:
 
 
 def in_memory_mlflow(
-    model_name: str,
-    model_alias: str = "champion",
+    model_name: str | ConfigValue,
+    model_alias: str | ConfigValue = "champion",
     reference_tag: str = "feature_refs",
     mlflow_config: MlflowConfig | None = None,
 ) -> ExposedModel:
@@ -191,8 +192,8 @@ def in_memory_mlflow(
     This will also run in memory, and not require that `mlflow` is installed.
     """
     return InMemMLFlowAlias(
-        model_name=model_name,
-        model_alias=model_alias,
+        model_name=ConfigValue.from_value(model_name),
+        model_alias=ConfigValue.from_value(model_alias),
         reference_tag=reference_tag,
         mlflow_config=mlflow_config or MlflowConfig(),
     )
@@ -220,8 +221,8 @@ def mlflow_server(
 
 @dataclass
 class InMemMLFlowAlias(ExposedModel):
-    model_name: str
-    model_alias: str
+    model_name: ConfigValue
+    model_alias: ConfigValue
 
     mlflow_config: MlflowConfig
 
@@ -238,12 +239,19 @@ class InMemMLFlowAlias(ExposedModel):
         return f"""Using the latest MLFlow model: `{self.model_name}`."""
 
     def needed_configs(self) -> list[ConfigValue]:
-        return self.mlflow_config.configs()
+        vals = self.mlflow_config.configs()
+        if isinstance(self.model_name, EnvironmentValue):
+            vals.append(self.model_name)
+        if isinstance(self.model_alias, EnvironmentValue):
+            vals.append(self.model_alias)
+        return vals
 
     def get_model_version(self, client: mlflow.MlflowClient | None = None):
         if client is None:
             client = self.mlflow_config.client()
-        return client.get_model_version_by_alias(self.model_name, self.model_alias)
+        return client.get_model_version_by_alias(
+            self.model_name.read(), self.model_alias.read()
+        )
 
     def feature_refs(
         self,
@@ -258,7 +266,10 @@ class InMemMLFlowAlias(ExposedModel):
             if refs is not None:
                 return refs
 
-        version = client.get_model_version_by_alias(self.model_name, self.model_alias)
+        logger.info("Loading model version to find feature refs.")
+        version = client.get_model_version_by_alias(
+            self.model_name.read(), self.model_alias.read()
+        )
         refs = references_from_metadata(version.tags, self.reference_tag)
         if refs:
             return refs
@@ -285,18 +296,27 @@ class InMemMLFlowAlias(ExposedModel):
         model_version_column = store.model.predictions_view.model_version_column
         mv = None
 
+        logger.info(
+            "Using mlflow client to fetch model version and feature references."
+        )
         with self.mlflow_config as client:
             if model_version_column:
-                mv = self.get_model_version(client)
+                mv = await asyncio.to_thread(self.get_model_version, client)
 
             model_uri = f"models:/{self.model_name}@{self.model_alias}"
-            model = mlflow.pyfunc.load_model(model_uri)
-            feature_refs = self.feature_refs(client, store, model)
+            model = await asyncio.to_thread(mlflow.pyfunc.load_model, model_uri)
+            feature_refs = await asyncio.to_thread(
+                self.feature_refs, client, store, model
+            )
 
+        logger.info("Loading input features.")
         job = store.store.features_for(values, feature_refs)
         if self.drop_invalid_rows:
+            logger.info("Dropping invalid rows")
             job = job.drop_invalid()
         df = await job.to_polars()
+
+        logger.info("Loaded polars data frame")
 
         features = job.request_result.feature_columns
         try:
@@ -307,6 +327,7 @@ class InMemMLFlowAlias(ExposedModel):
                 predictions = pd.Series(predictions)
             predictions = pl.from_pandas(predictions, include_index=False)
 
+        logger.info("Prediction was produced, will add additional metadata.")
         if pred_at:
             df = df.with_columns(
                 pl.lit(datetime.now(timezone.utc)).alias(pred_at.name),
@@ -402,7 +423,8 @@ Meaning each feature is on the following format `(feature_view|model):<contract 
         mv = None
 
         if model_version_column:
-            mv = self.get_model_version(store.model.name)
+            logger.info("Fetching model version through mlflow client.")
+            mv = await asyncio.to_thread(self.get_model_version, store.model.name)
 
         job = store.input_features_for(values)
         df = await job.to_polars()

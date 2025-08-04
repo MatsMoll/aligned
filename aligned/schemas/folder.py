@@ -211,7 +211,7 @@ class JsonDatasetStore(DatasetStore):
         try:
             data = await self.source.read()
             return GroupedDatasetList.from_json(data)
-        except FileNotFoundError:
+        except Exception:
             return GroupedDatasetList(
                 raw_data=[],
                 train_test=[],

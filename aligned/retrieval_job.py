@@ -2665,15 +2665,13 @@ class FileCachedJob(RetrievalJob, ModificationJob):
         return df
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
+        from polars.exceptions import ComputeError
+
         try:
             logger.debug("Trying to read cache file")
             df = await self.location.to_lazy_polars()
-        except UnableToFindFileException:
-            logger.debug("Unable to load file, so fetching from source")
-            df = await self.job.to_lazy_polars()
-            logger.debug("Writing result to cache")
-            await self.location.write_polars(df)
-        except FileNotFoundError:
+            _ = df.collect_schema()  # trigger a load
+        except (UnableToFindFileException, ComputeError, FileNotFoundError):
             logger.debug("Unable to load file, so fetching from source")
             df = await self.job.to_lazy_polars()
             logger.debug("Writing result to cache")

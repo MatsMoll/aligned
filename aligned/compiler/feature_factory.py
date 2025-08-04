@@ -494,15 +494,43 @@ class FeatureFactory(FeatureReferencable):
         return RecommendationTarget(self)
 
     def is_nominal(self: T) -> T:
+        """
+        A feature that is of a nominal type.
+
+        Definition: Categories with no inherent order.
+
+        Examples: Gender, color, religion.
+        """
         return self.with_tag(StaticFeatureTags.is_nominal)
 
     def is_ordinal(self: T) -> T:
+        """
+        A feature that is of the ordinal type.
+
+        Definition: Categories with a meaningful order, but differences between them are not necessarily equal.
+
+        Examples: Rankings (1st, 2nd, 3rd), satisfaction levels (poor, fair, good, excellent).
+        """
         return self.with_tag(StaticFeatureTags.is_ordinal)
 
     def is_interval(self: T) -> T:
+        """
+        A feature that is of the interval type.
+
+        Definition: Numeric data with equal intervals, but no true zero point.
+
+        Examples: Temperature in Celsius or Fahrenheit, IQ scores.
+        """
         return self.with_tag(StaticFeatureTags.is_interval)
 
     def is_ratio(self: T) -> T:
+        """
+        A feature that is of the ratio type.
+
+        Definition: Numeric data with equal intervals and a true zero.
+
+        Examples: Height, weight, age, income, Kelvin temperature.
+        """
         return self.with_tag(StaticFeatureTags.is_ratio)
 
     def as_annotated_by(self: T) -> T:

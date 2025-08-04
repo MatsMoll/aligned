@@ -632,7 +632,7 @@ Path: *{self.path}*
     async def write_polars(self, df: pl.LazyFrame) -> None:
         url = f"az://{self.path}"
         creds = self.config.read_creds()
-        df.collect().to_pandas().to_parquet(url, storage_options=creds)
+        df.collect().write_parquet(url, storage_options=creds)
 
     @classmethod
     def multi_source_features_for(  # type: ignore
