@@ -541,6 +541,12 @@ class FeatureViewWrapper(Generic[T]):
             RetrievalJob.from_convertable(data, request), request.needed_requests[0]
         )
 
+    def n_examples(self, n: int) -> RetrievalJob:
+        from aligned.sources.random_source import RandomDataSource
+
+        request = self.compile().request_all
+        return RandomDataSource(default_data_size=n).all(request.request_result, n)
+
     @overload
     def drop_invalid(
         self, values: pl.LazyFrame, validator: Validator | None = None

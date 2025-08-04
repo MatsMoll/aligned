@@ -493,6 +493,18 @@ class FeatureFactory(FeatureReferencable):
     def as_recommendation_target(self) -> RecommendationTarget:
         return RecommendationTarget(self)
 
+    def is_nominal(self: T) -> T:
+        return self.with_tag(StaticFeatureTags.is_nominal)
+
+    def is_ordinal(self: T) -> T:
+        return self.with_tag(StaticFeatureTags.is_ordinal)
+
+    def is_interval(self: T) -> T:
+        return self.with_tag(StaticFeatureTags.is_interval)
+
+    def is_ratio(self: T) -> T:
+        return self.with_tag(StaticFeatureTags.is_ratio)
+
     def as_annotated_by(self: T) -> T:
         return self.with_tag(StaticFeatureTags.is_annotated_by)
 

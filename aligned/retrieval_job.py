@@ -2779,7 +2779,9 @@ class EnsureTypesJob(RetrievalJob, ModificationJob):
                     dtype = org_schema[feature.name]
                     if dtype == pl.Utf8:
                         df = df.with_columns(
-                            pl.col(feature.name).str.json_decode(pl.List(pl.Utf8))
+                            pl.col(feature.name).str.json_decode(
+                                feature.dtype.polars_type
+                            )
                         )
                 elif feature.dtype.is_embedding:
                     dtype = org_schema[feature.name]

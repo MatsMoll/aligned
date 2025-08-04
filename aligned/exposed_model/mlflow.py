@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import polars as pl
+import json
 from typing import TYPE_CHECKING, Any, Iterable
 from dataclasses import dataclass, field
 from aligned.config_value import ConfigValue, EnvironmentValue, LiteralValue
@@ -20,13 +21,15 @@ try:
     from mlflow.models import ModelSignature
     from mlflow.types.schema import Schema, ColSpec, TensorSpec
 
-    def mlflow_spec(feature: Feature) -> ColSpec | TensorSpec | str:
+    def mlflow_spec(
+        feature: Feature, is_multiple_columns: bool
+    ) -> ColSpec | TensorSpec | list[ColSpec] | str:
         dtype = feature.dtype
 
-        if dtype.name == "float":
-            return ColSpec("float", name=feature.name)
-        elif dtype.name == "double":
+        if dtype.name in ["double", "float64"]:
             return ColSpec("double", name=feature.name)
+        elif dtype.name.startswith("float"):
+            return ColSpec("float", name=feature.name)
         elif dtype.name == "string":
             return ColSpec("string", name=feature.name)
         elif dtype.is_numeric:
@@ -34,13 +37,20 @@ try:
         elif dtype.is_datetime:
             return ColSpec("datetime", name=feature.name)
         elif dtype.is_embedding:
-            import numpy as np
+            if is_multiple_columns:
+                return [
+                    ColSpec("float", name=f"{feature.name}_{n}")
+                    for n in range(0, feature.dtype.embedding_size() or 1536)
+                ]
+            else:
+                import numpy as np
 
-            return TensorSpec(
-                type=np.dtype(np.float32),
-                shape=(-1, dtype.embedding_size()),
-                name=feature.name,
-            )
+                return TensorSpec(
+                    type=np.dtype(np.float32),
+                    shape=(-1, dtype.embedding_size()),
+                    name=feature.name,
+                )
+
         return dtype.name
 
     def signature_for_features(
@@ -48,11 +58,17 @@ try:
     ) -> ModelSignature:
         output_schema: Schema | None = None
         if outputs:
-            output_schema = Schema([mlflow_spec(label) for label in outputs])  # type: ignore
+            output_schema = Schema([mlflow_spec(label, False) for label in outputs])  # type: ignore
+
+        input_list = list(inputs)
 
         all_features = []
-        for feature in inputs:
-            all_features.append(mlflow_spec(feature))
+        for feature in sorted(input_list, key=lambda feat: feat.name):
+            spec = mlflow_spec(feature, len(input_list) != 1)
+            if isinstance(spec, list):
+                all_features.extend(spec)
+            else:
+                all_features.append(spec)
 
         return ModelSignature(inputs=Schema(all_features), outputs=output_schema)
 
@@ -107,7 +123,11 @@ def references_from_metadata(
         return None
 
     refs = metadata[reference_key]
-    assert isinstance(refs, list), f"Expected a list got '{type(refs)}'"
+    if isinstance(refs, str):
+        refs = json.loads(refs)
+
+    if not isinstance(refs, list):
+        return None
 
     decoded_refs = [FeatureReference.from_string(ref) for ref in refs]
     return [ref for ref in decoded_refs if ref is not None]
@@ -261,7 +281,7 @@ class InMemMLFlowAlias(ExposedModel):
         from mlflow.exceptions import MlflowException
 
         pred_label = list(store.model.predictions_view.labels())[0]
-        pred_at = store.model.predictions_view.event_timestamp
+        pred_at = store.model.predictions_view.freshness_feature
         model_version_column = store.model.predictions_view.model_version_column
         mv = None
 
@@ -278,7 +298,7 @@ class InMemMLFlowAlias(ExposedModel):
             job = job.drop_invalid()
         df = await job.to_polars()
 
-        features = [feat.name for feat in feature_refs]
+        features = job.request_result.feature_columns
         try:
             predictions = model.predict(df[features])
         except MlflowException:
@@ -293,8 +313,9 @@ class InMemMLFlowAlias(ExposedModel):
             )
 
         if mv and model_version_column:
+            model_uri = f"models:/{self.model_name}/{mv.version}"
             df = df.with_columns(
-                pl.lit(mv.version).alias(model_version_column.name),
+                pl.lit(model_uri).alias(model_version_column.name),
             )
 
         return df.with_columns(

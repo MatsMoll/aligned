@@ -773,8 +773,16 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
 
         async def load() -> pl.LazyFrame:
             df = spark.read.table(source.table.identifier())
-            df = df.select(features_to_read(request, df.schema))
-            return pl.from_pandas(df.toPandas()).lazy()
+            features = features_to_read(request, df.schema)
+            df = df.select(features)
+            return pl.from_pandas(
+                df.toPandas(),
+                schema_overrides={
+                    feat.name: feat.dtype.polars_type
+                    for feat in request.all_features
+                    if feat.name in features
+                },
+            ).lazy()
 
         return FileFactualJob(
             source=RetrievalJob.from_lazy_function(load, request),

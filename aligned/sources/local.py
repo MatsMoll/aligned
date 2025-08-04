@@ -27,6 +27,7 @@ from aligned.schemas.feature import FeatureType, Feature
 from aligned.storage import Storage
 from aligned.feature_source import WritableFeatureSource
 from aligned.schemas.date_formatter import DateFormatter
+from aligned.sources.azure_blob_config import AzureBlobConfig
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -62,6 +63,9 @@ class StorageFileReference(AsRepoDefinition):
 
     The bytes can contain anything, potentially a FeatureStore definition
     """
+
+    def posix_path(self) -> str:
+        raise NotImplementedError(type(self))
 
     async def read(self) -> bytes:
         raise NotImplementedError(type(self))
@@ -942,9 +946,16 @@ class DeltaFileSource(
 @dataclass
 class StorageFileSource(StorageFileReference, Codable):
     path: PathResolver
+    azure_config: AzureBlobConfig | None = field(default=None)
+
+    def posix_path(self) -> str:
+        return self.path.as_posix()
 
     @property
     def storage(self) -> Storage:
+        if self.azure_config:
+            return self.azure_config.storage
+
         path = self.path.as_posix()
         if path.startswith("http"):
             return HttpStorage()
