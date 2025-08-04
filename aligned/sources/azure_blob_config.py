@@ -140,6 +140,7 @@ You can choose between two ways of authenticating with Azure Blob Storage.
         date_formatter: DateFormatter | None = None,
     ) -> AzureBlobParquetDataSource:
         from aligned.sources.azure_blob_storage import AzureBlobParquetDataSource
+        from aligned.sources.local import ParquetConfig
 
         return AzureBlobParquetDataSource(
             self,
@@ -160,6 +161,7 @@ You can choose between two ways of authenticating with Azure Blob Storage.
         from aligned.sources.azure_blob_storage import (
             AzureBlobPartitionedParquetDataSource,
         )
+        from aligned.sources.local import ParquetConfig
 
         return AzureBlobPartitionedParquetDataSource(
             self,
@@ -178,6 +180,7 @@ You can choose between two ways of authenticating with Azure Blob Storage.
         date_formatter: DateFormatter | None = None,
     ) -> AzureBlobCsvDataSource:
         from aligned.sources.azure_blob_storage import AzureBlobCsvDataSource
+        from aligned.sources.local import CsvConfig
 
         return AzureBlobCsvDataSource(
             self,
