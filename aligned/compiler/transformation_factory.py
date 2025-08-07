@@ -88,6 +88,21 @@ class ArrayAtIndexFactory(TransformationFactory):
 
 
 @dataclass
+class ArrayContainsAnyFactory(TransformationFactory):
+    values: LiteralValue
+    in_feature: FeatureFactory
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.in_feature]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import ArrayContainsAny
+
+        return ArrayContainsAny(self.in_feature.name, self.values)
+
+
+@dataclass
 class ArrayContainsFactory(TransformationFactory):
     value: LiteralValue
     in_feature: FeatureFactory

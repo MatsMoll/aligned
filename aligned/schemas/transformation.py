@@ -297,6 +297,7 @@ class SupportedTransformations:
             JsonPath,
             Clip,
             ArrayContains,
+            ArrayContainsAny,
             ArrayAtIndex,
             OllamaEmbedding,
             PolarsMapRowTransformation,
@@ -1091,6 +1092,51 @@ class ArrayAtIndex(Transformation, PolarsExprTransformation):
             ArrayContains("x", LiteralValue.from_value("test")),
             input={"x": [["Hello", "test"], ["nah"], ["test", "espania", None]]},
             output=[True, False, True],
+        )
+
+
+@dataclass
+class ArrayContainsAny(Transformation, PolarsExprTransformation):
+    """Checks if an array contains a value
+
+    some_array = List(String())
+    contains_char = some_array.contains_any(["a", "b"])
+    """
+
+    key: str
+    values: LiteralValue
+
+    name: str = "array_contains_any"
+    dtype: FeatureType = FeatureType.boolean()
+
+    def __init__(self, key: str, value: Any | LiteralValue) -> None:
+        self.key = key
+        if isinstance(value, LiteralValue):
+            self.value = value
+        else:
+            self.value = LiteralValue.from_value(value)
+
+    async def transform_pandas(
+        self, df: pd.DataFrame, store: ContractStore
+    ) -> pd.Series:
+        vals = self.value.python_value
+        return (
+            pl.Series(df[self.key])
+            .list.eval(pl.element().is_in(vals))
+            .list.any()
+            .to_pandas()
+        )
+
+    def polars_expr(self) -> pl.Expr:
+        vals = self.value.python_value
+        return pl.col(self.key).list.eval(pl.element().is_in(vals)).list.any()
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            ArrayContainsAny("x", LiteralValue.from_value(["test", "nah"])),
+            input={"x": [["Hello", "test"], ["nah"], ["espania", None]]},
+            output=[True, True, False],
         )
 
 

@@ -1676,6 +1676,18 @@ class List(FeatureFactory, Generic[GenericFeature]):
         self._add_constraint(MinLength(value))
         return self
 
+    def contains_any(self, values: list) -> Bool:
+        """
+        If the list contains any of the features in another list
+        """
+        from aligned.compiler.transformation_factory import ArrayContainsAnyFactory
+
+        feature = Bool()
+        feature.transformation = ArrayContainsAnyFactory(
+            LiteralValue.from_value(values), self
+        )
+        return feature
+
     def contains(self, value: Any) -> Bool:
         from aligned.compiler.transformation_factory import ArrayContainsFactory
 
