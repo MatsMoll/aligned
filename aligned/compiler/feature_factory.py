@@ -1091,6 +1091,9 @@ class Bool(EquatableFeature, LogicalOperatableFeature, CanBeClassificationLabel)
     def is_shadow_model_flag(self: Bool) -> Bool:
         return self.with_tag(StaticFeatureTags.is_shadow_model)
 
+    def aggregate(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
+
 
 class Float(ArithmeticFeature, DecimalOperations):
     def copy_type(self) -> Float32:
@@ -1951,7 +1954,7 @@ class CategoricalAggregation:
 
 @dataclass
 class ArithmeticAggregation:
-    feature: ArithmeticFeature
+    feature: FeatureFactory
     time_window: timedelta | None = None
     every_interval: timedelta | None = None
     offset_interval: timedelta | None = None
