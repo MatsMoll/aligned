@@ -303,7 +303,7 @@ class InMemMLFlowAlias(ExposedModel):
             if model_version_column:
                 mv = await asyncio.to_thread(self.get_model_version, client)
 
-            model_uri = f"models:/{self.model_name}@{self.model_alias}"
+            model_uri = f"models:/{self.model_name.read()}@{self.model_alias.read()}"
             model = await asyncio.to_thread(mlflow.pyfunc.load_model, model_uri)
             feature_refs = await asyncio.to_thread(
                 self.feature_refs, client, store, model
@@ -334,7 +334,7 @@ class InMemMLFlowAlias(ExposedModel):
             )
 
         if mv and model_version_column:
-            model_uri = f"models:/{self.model_name}/{mv.version}"
+            model_uri = f"models:/{self.model_name.read()}/{mv.version}"
             df = df.with_columns(
                 pl.lit(model_uri).alias(model_version_column.name),
             )

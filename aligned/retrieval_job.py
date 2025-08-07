@@ -37,6 +37,7 @@ from aligned.request.retrieval_request import (
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureType
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.vector_storage import VectorIndex
+from aligned.sources.renamer import Renamer
 from aligned.split_strategy import SupervisedDataSet
 from aligned.validation.interface import Validator, PolarsValidator
 
@@ -1123,7 +1124,9 @@ class RetrievalJob(ABC):
     def fill_missing_columns(self) -> RetrievalJob:
         return FillMissingColumnsJob(self)
 
-    def rename(self, mappings: dict[str, str] | Callable[[str], str]) -> RetrievalJob:
+    def rename(
+        self, mappings: dict[str, str] | Callable[[str], str] | Renamer | None
+    ) -> RetrievalJob:
         if not mappings:
             return self
         return RenameJob(self, mappings)
@@ -1984,15 +1987,21 @@ class LimitJob(RetrievalJob, ModificationJob):
 @dataclass
 class RenameJob(RetrievalJob, ModificationJob):
     job: RetrievalJob
-    mappings: dict[str, str] | Callable[[str], str]
+    mappings: dict[str, str] | Callable[[str], str] | Renamer
 
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.job.to_pandas()
-        return df.rename(self.mappings)
+        if isinstance(self.mappings, Renamer):
+            return self.mappings.rename_pandas(df)
+        else:
+            return df.rename(columns=self.mappings)
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         df = await self.job.to_lazy_polars()
-        return df.rename(self.mappings)
+        if isinstance(self.mappings, Renamer):
+            return self.mappings.rename_polars(df)
+        else:
+            return df.rename(self.mappings)
 
 
 @dataclass
