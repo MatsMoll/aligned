@@ -621,7 +621,7 @@ def features_to_read(
         db_name = invers_renamer.rename(feat.name)
 
         if db_name in stored_fields:
-            if feat.name not in columns:
+            if db_name not in columns:
                 columns.append(db_name)
         elif feat.name in derived_features:
             continue
