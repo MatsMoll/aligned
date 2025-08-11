@@ -472,6 +472,10 @@ class FeatureFactory(FeatureReferencable):
 
         return Expression(transformation=self.transformation.compile())
 
+    def cast(self, to_dtype: T) -> T:
+        to_dtype.transformation = self.transformation
+        return to_dtype
+
     def as_regression_label(self) -> RegressionLabel:
         """
         Tells Aligned that this feature is a regression target in a model_contract.
@@ -843,6 +847,11 @@ class ComparableFeature(EquatableFeature):
         self._add_constraint(UpperBoundInclusive(value))  # type: ignore[attr-defined]
         return self
 
+    def bounded_between(self: T, lower: float, upper: float) -> T:
+        self._add_constraint(LowerBoundInclusive(lower))  # type: ignore[attr-defined]
+        self._add_constraint(UpperBoundInclusive(upper))  # type: ignore[attr-defined]
+        return self
+
 
 class ArithmeticFeature(ComparableFeature):
     def __sub__(self, other: FeatureFactory | Any) -> Float32:
@@ -1092,6 +1101,9 @@ class Bool(EquatableFeature, LogicalOperatableFeature, CanBeClassificationLabel)
         return self.with_tag(StaticFeatureTags.is_shadow_model)
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1106,6 +1118,9 @@ class Float(ArithmeticFeature, DecimalOperations):
         return FeatureType.float32()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1120,6 +1135,9 @@ class Float32(ArithmeticFeature, DecimalOperations):
         return FeatureType.float32()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1134,6 +1152,9 @@ class Float64(ArithmeticFeature, DecimalOperations):
         return FeatureType.float64()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1154,6 +1175,9 @@ class UInt8(
         return FeatureType.uint8()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1174,6 +1198,9 @@ class UInt16(
         return FeatureType.uint16()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1194,6 +1221,9 @@ class UInt32(
         return FeatureType.uint32()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1214,6 +1244,9 @@ class UInt64(
         return FeatureType.uint64()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1234,6 +1267,9 @@ class Int8(
         return FeatureType.int8()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1254,6 +1290,9 @@ class Int16(
         return FeatureType.int16()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1274,6 +1313,9 @@ class Int32(
         return FeatureType.int32()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1294,6 +1336,9 @@ class Int64(
         return FeatureType.int64()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1307,8 +1352,11 @@ class UUID(FeatureFactory, CouldBeEntityFeature):
     def dtype(self) -> FeatureType:
         return FeatureType.uuid()
 
-    def aggregate(self) -> CategoricalAggregation:
-        return CategoricalAggregation(self)
+    def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
 
 
 class UniqueValidateable(FeatureFactory):
@@ -1360,6 +1408,9 @@ class String(
         return FeatureType.string()
 
     def aggregate(self) -> StringAggregation:
+        return self.agg()
+
+    def agg(self) -> StringAggregation:
         return StringAggregation(self)
 
     def ollama_embedding(
@@ -1529,6 +1580,9 @@ class ModelVersion(FeatureFactory):
         self._dtype = dtype
 
     def aggregate(self) -> CategoricalAggregation:
+        return self.agg()
+
+    def agg(self) -> CategoricalAggregation:
         return CategoricalAggregation(self)
 
 

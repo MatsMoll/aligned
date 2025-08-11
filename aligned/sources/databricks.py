@@ -622,7 +622,7 @@ def features_to_read(
 
         if db_name in stored_fields:
             if feat.name not in columns:
-                columns.append(feat.name)
+                columns.append(db_name)
         elif feat.name in derived_features:
             continue
         elif not feat.default_value:
@@ -729,6 +729,10 @@ class UnityCatalogTableAllJob(RetrievalJob):
         if self.request.features_to_include:
             cols = features_to_read(self.request, spark_df.schema, self.renamer)
             spark_df = spark_df.select(cols)
+
+            if self.renamer and cols:
+                renames = {col: self.renamer.rename(col) for col in cols}
+                spark_df = spark_df.withColumnsRenamed(renames)
 
         if self.where:
             spark_df = spark_df.filter(self.where)
