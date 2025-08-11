@@ -1,5 +1,6 @@
 import polars as pl
 import json
+from aligned.config_value import EnvironmentValue
 from aligned.data_source.batch_data_source import (
     CodableBatchDataSource,
     UnknownDataSource,
@@ -64,3 +65,9 @@ def test_decode_unknown_source():
 
     dict_vals = source.to_dict()
     assert len(dict_vals) == len(content)
+
+
+def test_empty_env_var():
+    env_var = EnvironmentValue("SOME_RANDOM_ENV_VALUE", default_value="")
+    val = env_var.read()
+    assert val == ""
