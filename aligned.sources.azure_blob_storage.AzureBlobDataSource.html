@@ -221,6 +221,16 @@
             </div>
         
 
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.local.StorageFileReference.html#posix_path" class="internal-link" title="aligned.sources.local.StorageFileReference.posix_path">posix<wbr></wbr>_path</a></code>
+            </div>
+        
+
     </li>
 </ul> 
 
@@ -373,44 +383,11 @@
             </div>
         
 
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.sources.azure_blob_storage.AzurePath.html" class="internal-link" title="aligned.sources.azure_blob_storage.AzurePath"><wbr></wbr>Azure<wbr></wbr>Path</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.sources.azure_blob_storage.BlobStorage.html" class="internal-link" title="aligned.sources.azure_blob_storage.BlobStorage"><wbr></wbr>Blob<wbr></wbr>Storage</a></code>
-            </div>
-        
-
     </li>
 </ul>
 
-        <div class="childrenKindTitle">Functions</div>
-        <ul>
-    
-    <li class="">
         
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.sources.azure_blob_storage.html#azure_container_blob" class="internal-link" title="aligned.sources.azure_blob_storage.azure_container_blob">azure<wbr></wbr>_container<wbr></wbr>_blob</a></code>
-            </div>
-        
-
-    </li>
-</ul> 
+         
 
         
          
@@ -464,7 +441,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">AzureBlobDataSource</span>(<a href="aligned.sources.local.StorageFileReference.html" class="internal-link" title="aligned.sources.local.StorageFileReference">StorageFileReference</a>, <a href="aligned.data_source.batch_data_source.ColumnFeatureMappable.html" class="internal-link" title="aligned.data_source.batch_data_source.ColumnFeatureMappable">ColumnFeatureMappable</a>): <a href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/sources/azure_blob_storage.py#L363" class="sourceLink">(source)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">AzureBlobDataSource</span>(<a href="aligned.sources.local.StorageFileReference.html" class="internal-link" title="aligned.sources.local.StorageFileReference">StorageFileReference</a>, Codable, <a href="aligned.data_source.batch_data_source.ColumnFeatureMappable.html" class="internal-link" title="aligned.data_source.batch_data_source.ColumnFeatureMappable">ColumnFeatureMappable</a>): <a href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/sources/azure_blob_storage.py#L152" class="sourceLink">(source)</a></code></p>
           <p><a href="classIndex.html#aligned.sources.azure_blob_storage.AzureBlobDataSource">View In Hierarchy</a></p>
         </div>
 
@@ -473,7 +450,7 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id298">
+          <table class="children sortable" id="id303">
   
   
   <tr class="method">
@@ -517,7 +494,7 @@
             <p class="inheritedFrom">
               Inherited from <code><a href="aligned.sources.local.StorageFileReference.html" class="internal-link" title="aligned.sources.local.StorageFileReference">StorageFileReference</a></code>:
             </p>
-            <table class="children sortable" id="id299">
+            <table class="children sortable" id="id304">
   
   
   <tr class="basemethod">
@@ -525,13 +502,18 @@
     <td>Async Method</td>
     <td><code><a href="aligned.sources.local.StorageFileReference.html#as_repo_definition" class="internal-link" title="aligned.sources.local.StorageFileReference.as_repo_definition">as<wbr></wbr>_repo<wbr></wbr>_definition</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.sources.local.StorageFileReference.html#posix_path" class="internal-link" title="aligned.sources.local.StorageFileReference.posix_path">posix<wbr></wbr>_path</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr>
 </table>
             
             <p class="inheritedFrom">
               Inherited from <code><a href="aligned.sources.local.AsRepoDefinition.html" class="internal-link" title="aligned.sources.local.AsRepoDefinition">AsRepoDefinition</a></code> (via <code><a href="aligned.sources.local.StorageFileReference.html" class="internal-link" title="aligned.sources.local.StorageFileReference">StorageFileReference</a></code>):
             </p>
-            <table class="children sortable" id="id300">
+            <table class="children sortable" id="id305">
   
   
   <tr class="basemethod">
@@ -550,7 +532,7 @@
             <p class="inheritedFrom">
               Inherited from <code><a href="aligned.data_source.batch_data_source.ColumnFeatureMappable.html" class="internal-link" title="aligned.data_source.batch_data_source.ColumnFeatureMappable">ColumnFeatureMappable</a></code> (via <code><a href="aligned.sources.local.StorageFileReference.html" class="internal-link" title="aligned.sources.local.StorageFileReference">StorageFileReference</a></code>, <code><a href="aligned.sources.local.AsRepoDefinition.html" class="internal-link" title="aligned.sources.local.AsRepoDefinition">AsRepoDefinition</a></code>):
             </p>
-            <table class="children sortable" id="id301">
+            <table class="children sortable" id="id306">
   
   
   <tr class="basemethod">
@@ -594,7 +576,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">job_group_key</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/sources/azure_blob_storage.py#L370">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/sources/azure_blob_storage.py#L159">
       
       (source)
     </a>
@@ -621,7 +603,7 @@
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">read</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#bytes" class="intersphinx-link">bytes</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/sources/azure_blob_storage.py#L377">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/sources/azure_blob_storage.py#L166">
       
       (source)
     </a>
@@ -648,7 +630,7 @@
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">write</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">content: <code><a href="https://docs.python.org/3/library/stdtypes.html#bytes" class="intersphinx-link">bytes</a></code></span>):</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/sources/azure_blob_storage.py#L380">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/sources/azure_blob_storage.py#L169">
       
       (source)
     </a>
@@ -673,8 +655,8 @@
   </a>
   <div class="functionHeader">
     
-    <span class="py-defname">config</span>: <code><a href="aligned.AzureBlobConfig.html" class="internal-link" title="aligned.AzureBlobConfig">AzureBlobConfig</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/sources/azure_blob_storage.py#L365">
+    <span class="py-defname">config</span>: <code>AzureBlobConfig</code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/sources/azure_blob_storage.py#L154">
       
       (source)
     </a>
@@ -701,7 +683,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">path</span>: <code><a href="aligned.config_value.PathResolver.html" class="internal-link" title="aligned.config_value.PathResolver">PathResolver</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/sources/azure_blob_storage.py#L366">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/sources/azure_blob_storage.py#L155">
       
       (source)
     </a>
@@ -728,7 +710,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">type_name</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/sources/azure_blob_storage.py#L368">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/sources/azure_blob_storage.py#L157">
       
       (source)
     </a>
@@ -755,7 +737,7 @@
   <div class="functionHeader">
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
     <span class="py-defname">storage</span>: <code><a href="aligned.storage.Storage.html" class="internal-link" title="aligned.storage.Storage">Storage</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/sources/azure_blob_storage.py#L373">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/sources/azure_blob_storage.py#L162">
       
       (source)
     </a>
@@ -782,7 +764,7 @@
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    25.4.0 at 2025-06-16 08:41:00.
+    25.4.0 at 2025-08-12 11:06:47.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

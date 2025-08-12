@@ -6,7 +6,7 @@
 
   <head>
     
-    <title>aligned.sources.renamer.NoopRenamer</title>
+    <title>aligned.sources.azure_blob_config.BlobStorage</title>
     <meta name="generator" content="pydoctor 25.4.0"> 
         
     </meta>
@@ -110,7 +110,7 @@
 
       <div class="thingTitle">
         <span>Class</span>
-        <code class="thisobject"><a href="aligned.sources.renamer.NoopRenamer.html" class="internal-link" title="This class"><wbr></wbr>Noop<wbr></wbr>Renamer</a></code> 
+        <code class="thisobject"><a href="aligned.sources.azure_blob_config.BlobStorage.html" class="internal-link" title="This class"><wbr></wbr>Blob<wbr></wbr>Storage</a></code> 
       </div>
       
       <div>
@@ -131,7 +131,7 @@
         
 
         
-            <div class="itemName"><code><a href="#rename_pandas" class="internal-link" title="aligned.sources.renamer.NoopRenamer.rename_pandas">rename<wbr></wbr>_pandas</a></code>
+            <div class="itemName"><code><a href="#read" class="internal-link" title="aligned.sources.azure_blob_config.BlobStorage.read">read</a></code>
             </div>
         
 
@@ -141,7 +141,7 @@
         
 
         
-            <div class="itemName"><code><a href="#rename_polars" class="internal-link" title="aligned.sources.renamer.NoopRenamer.rename_polars">rename<wbr></wbr>_polars</a></code>
+            <div class="itemName"><code><a href="#write" class="internal-link" title="aligned.sources.azure_blob_config.BlobStorage.write">write</a></code>
             </div>
         
 
@@ -151,8 +151,21 @@
         
          
 
+        <div class="childrenKindTitle">Attributes</div>
+        <ul>
+    
+    <li class="">
         
-         
+        
+        
+
+        
+            <div class="itemName"><code><a href="#config" class="internal-link" title="aligned.sources.azure_blob_config.BlobStorage.config">config</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
 
         
          
@@ -162,7 +175,7 @@
 
       <div class="thingTitle">
         <span>Module</span>
-        <code><a href="aligned.sources.renamer.html" class="internal-link" title="The parent of this class">renamer</a></code> 
+        <code><a href="aligned.sources.azure_blob_config.html" class="internal-link" title="The parent of this class">azure<wbr></wbr>_blob<wbr></wbr>_config</a></code> 
       </div>
       
       <div>
@@ -180,7 +193,7 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.sources.renamer.CamelToSnakeCase.html" class="internal-link" title="aligned.sources.renamer.CamelToSnakeCase"><wbr></wbr>Camel<wbr></wbr>To<wbr></wbr>Snake<wbr></wbr>Case</a></code>
+            <div class="itemName"><code><a href="aligned.sources.azure_blob_config.AzurePath.html" class="internal-link" title="aligned.sources.azure_blob_config.AzurePath"><wbr></wbr>Azure<wbr></wbr>Path</a></code>
             </div>
         
 
@@ -190,27 +203,7 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.sources.renamer.NoopRenamer.html" class="internal-link" title="aligned.sources.renamer.NoopRenamer"><wbr></wbr>Noop<wbr></wbr>Renamer</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.sources.renamer.Renamer.html" class="internal-link" title="aligned.sources.renamer.Renamer"><wbr></wbr>Renamer</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.sources.renamer.SnakeToPascalCase.html" class="internal-link" title="aligned.sources.renamer.SnakeToPascalCase"><wbr></wbr>Snake<wbr></wbr>To<wbr></wbr>Pascal<wbr></wbr>Case</a></code>
+            <div class="itemName"><code><a href="aligned.sources.azure_blob_config.BlobStorage.html" class="internal-link" title="aligned.sources.azure_blob_config.BlobStorage"><wbr></wbr>Blob<wbr></wbr>Storage</a></code>
             </div>
         
 
@@ -226,17 +219,7 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.sources.renamer.html#camel_to_snake_case" class="internal-link" title="aligned.sources.renamer.camel_to_snake_case">camel<wbr></wbr>_to<wbr></wbr>_snake<wbr></wbr>_case</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.sources.renamer.html#snake_to_pascal" class="internal-link" title="aligned.sources.renamer.snake_to_pascal">snake<wbr></wbr>_to<wbr></wbr>_pascal</a></code>
+            <div class="itemName"><code><a href="aligned.sources.azure_blob_config.html#azure_container_blob" class="internal-link" title="aligned.sources.azure_blob_config.azure_container_blob">azure<wbr></wbr>_container<wbr></wbr>_blob</a></code>
             </div>
         
 
@@ -271,7 +254,7 @@
         
 
         <div class="page-header">
-          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.sources.html" class="internal-link" title="aligned.sources">sources</a></code><wbr></wbr>.<code><a href="aligned.sources.renamer.html" class="internal-link" title="aligned.sources.renamer">renamer</a></code><wbr></wbr>.<code><a href="aligned.sources.renamer.NoopRenamer.html" class="internal-link" title="aligned.sources.renamer.NoopRenamer">NoopRenamer</a></code></code></h1>
+          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.sources.html" class="internal-link" title="aligned.sources">sources</a></code><wbr></wbr>.<code><a href="aligned.sources.azure_blob_config.html" class="internal-link" title="aligned.sources.azure_blob_config">azure_blob_config</a></code><wbr></wbr>.<code><a href="aligned.sources.azure_blob_config.BlobStorage.html" class="internal-link" title="aligned.sources.azure_blob_config.BlobStorage">BlobStorage</a></code></code></h1>
           <div id="showPrivate">
             <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
           </div>
@@ -282,8 +265,8 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">NoopRenamer</span>(<a href="aligned.sources.renamer.Renamer.html" class="internal-link" title="aligned.sources.renamer.Renamer">Renamer</a>): <a href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/sources/renamer.py#L15" class="sourceLink">(source)</a></code></p>
-          <p><a href="classIndex.html#aligned.sources.renamer.NoopRenamer">View In Hierarchy</a></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">BlobStorage</span>(<a href="aligned.storage.Storage.html" class="internal-link" title="aligned.storage.Storage">Storage</a>): <a href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/sources/azure_blob_config.py#L46" class="sourceLink">(source)</a></code></p>
+          <p><a href="classIndex.html#aligned.sources.azure_blob_config.BlobStorage">View In Hierarchy</a></p>
         </div>
 
         <div class="moduleDocstring">
@@ -291,18 +274,23 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id414">
+          <table class="children sortable" id="id299">
   
   
   <tr class="method">
     
-    <td>Method</td>
-    <td><code><a href="#rename_pandas" class="internal-link" title="aligned.sources.renamer.NoopRenamer.rename_pandas">rename<wbr></wbr>_pandas</a></code></td>
+    <td>Async Method</td>
+    <td><code><a href="#read" class="internal-link" title="aligned.sources.azure_blob_config.BlobStorage.read">read</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
-    <td>Method</td>
-    <td><code><a href="#rename_polars" class="internal-link" title="aligned.sources.renamer.NoopRenamer.rename_polars">rename<wbr></wbr>_polars</a></code></td>
+    <td>Async Method</td>
+    <td><code><a href="#write" class="internal-link" title="aligned.sources.azure_blob_config.BlobStorage.write">write</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#config" class="internal-link" title="aligned.sources.azure_blob_config.BlobStorage.config">config</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr>
 </table>
@@ -315,56 +303,83 @@
           <div class="basemethod">
   
   
-  <a name="aligned.sources.renamer.NoopRenamer.rename_pandas">
+  <a name="aligned.sources.azure_blob_config.BlobStorage.read">
     
   </a>
-  <a name="rename_pandas">
+  <a name="read">
     
   </a>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span>&#160;<span class="py-defname">rename_pandas</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">df: <code>pd.DataFrame</code></span>) -&gt; <code>pd.DataFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/sources/renamer.py#L19">
+    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">read</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">path: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#bytes" class="intersphinx-link">bytes</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/sources/azure_blob_config.py#L50">
       
       (source)
     </a>
-    <a class="headerLink" href="#rename_pandas" title="aligned.sources.renamer.NoopRenamer.rename_pandas">
+    <a class="headerLink" href="#read" title="aligned.sources.azure_blob_config.BlobStorage.read">
       
       
       ¶
     </a>
   </div>
   <div class="docstring functionBody">
-    <div class="interfaceinfo">overrides <code><a href="aligned.sources.renamer.Renamer.html#rename_pandas" class="internal-link">aligned.sources.renamer.Renamer.rename_pandas</a></code></div>
+    <div class="interfaceinfo">overrides <code><a href="aligned.storage.Storage.html#read" class="internal-link">aligned.storage.Storage.read</a></code></div>
     <div><p class="undocumented">Undocumented</p></div>
   </div>
 </div><div class="basemethod">
   
   
-  <a name="aligned.sources.renamer.NoopRenamer.rename_polars">
+  <a name="aligned.sources.azure_blob_config.BlobStorage.write">
     
   </a>
-  <a name="rename_polars">
+  <a name="write">
     
   </a>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">def</span>&#160;<span class="py-defname">rename_polars</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">df: <code>pl.LazyFrame</code></span>) -&gt; <code>pl.LazyFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/sources/renamer.py#L16">
+    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">write</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">path: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>, </span><span class="rst-sig-param">content: <code><a href="https://docs.python.org/3/library/stdtypes.html#bytes" class="intersphinx-link">bytes</a> | <a href="https://docs.python.org/3/library/stdtypes.html#bytearray" class="intersphinx-link">bytearray</a></code></span>):</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/sources/azure_blob_config.py#L60">
       
       (source)
     </a>
-    <a class="headerLink" href="#rename_polars" title="aligned.sources.renamer.NoopRenamer.rename_polars">
+    <a class="headerLink" href="#write" title="aligned.sources.azure_blob_config.BlobStorage.write">
       
       
       ¶
     </a>
   </div>
   <div class="docstring functionBody">
-    <div class="interfaceinfo">overrides <code><a href="aligned.sources.renamer.Renamer.html#rename_polars" class="internal-link">aligned.sources.renamer.Renamer.rename_polars</a></code></div>
+    <div class="interfaceinfo">overrides <code><a href="aligned.storage.Storage.html#write" class="internal-link">aligned.storage.Storage.write</a></code></div>
     <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.sources.azure_blob_config.BlobStorage.config">
+    
+  </a>
+  <a name="config">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">config</span>: <code><a href="aligned.AzureBlobConfig.html" class="internal-link" title="aligned.AzureBlobConfig">AzureBlobConfig</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/sources/azure_blob_config.py#L48">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#config" title="aligned.sources.azure_blob_config.BlobStorage.config">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
   </div>
 </div>
         </div>
@@ -378,7 +393,7 @@
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    25.4.0 at 2025-06-16 08:41:00.
+    25.4.0 at 2025-08-12 11:06:47.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

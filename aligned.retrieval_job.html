@@ -298,6 +298,16 @@
         
 
         
+            <div class="itemName"><code><a href="aligned.retrieval_job.LimitJob.html" class="internal-link" title="aligned.retrieval_job.LimitJob"><wbr></wbr>Limit<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
             <div class="itemName"><code><a href="aligned.retrieval_job.ListenForTriggers.html" class="internal-link" title="aligned.retrieval_job.ListenForTriggers"><wbr></wbr>Listen<wbr></wbr>For<wbr></wbr>Triggers</a></code>
             </div>
         
@@ -1188,7 +1198,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <a href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py" class="sourceLink">(source)</a>
+          <a href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py" class="sourceLink">(source)</a>
           <p></p>
         </div>
 
@@ -1197,7 +1207,7 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id169">
+          <table class="children sortable" id="id170">
   
   
   <tr class="class">
@@ -1288,6 +1298,11 @@
   </tr><tr class="class">
     
     <td>Class</td>
+    <td><code><a href="aligned.retrieval_job.LimitJob.html" class="internal-link" title="aligned.retrieval_job.LimitJob"><wbr></wbr>Limit<wbr></wbr>Job</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
+  </tr><tr class="class">
+    
+    <td>Class</td>
     <td><code><a href="aligned.retrieval_job.ListenForTriggers.html" class="internal-link" title="aligned.retrieval_job.ListenForTriggers"><wbr></wbr>Listen<wbr></wbr>For<wbr></wbr>Triggers</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="class">
@@ -1339,7 +1354,7 @@
     
     <td>Class</td>
     <td><code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob"><wbr></wbr>Retrieval<wbr></wbr>Job</a></code></td>
-    <td><span class="rst-undocumented">No class docstring; 0/3 property, 4/43 methods, 0/4 static method documented</span></td>
+    <td><span class="rst-undocumented">No class docstring; 0/3 property, 4/44 methods, 0/4 static method documented</span></td>
   </tr><tr class="class">
     
     <td>Class</td>
@@ -1501,7 +1516,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">fraction_from_job</span><span class="function-signature">(<span class="rst-sig-param">job: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code></span>) -&gt; <code><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L129">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py#L130">
       
       (source)
     </a>
@@ -1528,7 +1543,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">polars_filter_expressions_from</span><span class="function-signature">(<span class="rst-sig-param">features: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>Feature]</code></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr>pl.Expr, <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]]</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1313">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py#L1326">
       
       (source)
     </a>
@@ -1555,7 +1570,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">split</span><span class="function-signature long-signature">(<span class="rst-sig-param">data: <code>pd.DataFrame</code>, </span><span class="rst-sig-param">start_ratio: <code><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a></code>, </span><span class="rst-sig-param">end_ratio: <code><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a></code>, </span><span class="rst-sig-param">event_timestamp_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code>pd.Index</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L61">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py#L62">
       
       (source)
     </a>
@@ -1582,7 +1597,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">subset_polars</span><span class="function-signature long-signature">(<span class="rst-sig-param">data: <code>pl.DataFrame</code>, </span><span class="rst-sig-param">start_ratio: <code><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a></code>, </span><span class="rst-sig-param">end_ratio: <code><a href="https://docs.python.org/3/library/functions.html#float" class="intersphinx-link">float</a></code>, </span><span class="rst-sig-param">event_timestamp_column: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">strategies_on: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code>pl.DataFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L85">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py#L86">
       
       (source)
     </a>
@@ -1608,7 +1623,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">ErrorType</span> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L58">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py#L59">
       
       (source)
     </a>
@@ -1636,7 +1651,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">JobType</span> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1302">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py#L1315">
       
       (source)
     </a>
@@ -1663,7 +1678,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">ConvertableToRetrievalJob</span> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L677">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py#L678">
       
       (source)
     </a>
@@ -1690,7 +1705,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">SplitterCallable</span> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L423">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py#L424">
       
       (source)
     </a>
@@ -1717,7 +1732,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">CustomPolarsTransform</span> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L1485">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py#L1506">
       
       (source)
     </a>
@@ -1744,7 +1759,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">FilterRepresentable</span> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L681">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py#L682">
       
       (source)
     </a>
@@ -1771,7 +1786,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">logger</span> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/f948e1dd462c92497b41fb01e3808c9f87f46ab2/aligned/retrieval_job.py#L56">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py#L57">
       
       (source)
     </a>
@@ -1798,7 +1813,7 @@
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    25.4.0 at 2025-06-16 08:41:00.
+    25.4.0 at 2025-08-12 11:06:47.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

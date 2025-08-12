@@ -6,7 +6,7 @@
 
   <head>
     
-    <title>aligned.local.job.FileFactualJob</title>
+    <title>aligned.retrieval_job.LimitJob</title>
     <meta name="generator" content="pydoctor 25.4.0"> 
         
     </meta>
@@ -110,7 +110,7 @@
 
       <div class="thingTitle">
         <span>Class</span>
-        <code class="thisobject"><a href="aligned.local.job.FileFactualJob.html" class="internal-link" title="This class"><wbr></wbr>File<wbr></wbr>Factual<wbr></wbr>Job</a></code> 
+        <code class="thisobject"><a href="aligned.retrieval_job.LimitJob.html" class="internal-link" title="This class"><wbr></wbr>Limit<wbr></wbr>Job</a></code> 
       </div>
       
       <div>
@@ -131,7 +131,7 @@
         
 
         
-            <div class="itemName"><code><a href="#describe" class="internal-link" title="aligned.local.job.FileFactualJob.describe">describe</a></code>
+            <div class="itemName"><code><a href="#describe" class="internal-link" title="aligned.retrieval_job.LimitJob.describe">describe</a></code>
             </div>
         
 
@@ -141,7 +141,7 @@
         
 
         
-            <div class="itemName"><code><a href="#file_transformations" class="internal-link" title="aligned.local.job.FileFactualJob.file_transformations">file<wbr></wbr>_transformations</a></code>
+            <div class="itemName"><code><a href="#to_lazy_polars" class="internal-link" title="aligned.retrieval_job.LimitJob.to_lazy_polars">to<wbr></wbr>_lazy<wbr></wbr>_polars</a></code>
             </div>
         
 
@@ -151,27 +151,7 @@
         
 
         
-            <div class="itemName"><code><a href="#log_each_job" class="internal-link" title="aligned.local.job.FileFactualJob.log_each_job">log<wbr></wbr>_each<wbr></wbr>_job</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="#to_lazy_polars" class="internal-link" title="aligned.local.job.FileFactualJob.to_lazy_polars">to<wbr></wbr>_lazy<wbr></wbr>_polars</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="#to_pandas" class="internal-link" title="aligned.local.job.FileFactualJob.to_pandas">to<wbr></wbr>_pandas</a></code>
+            <div class="itemName"><code><a href="#to_pandas" class="internal-link" title="aligned.retrieval_job.LimitJob.to_pandas">to<wbr></wbr>_pandas</a></code>
             </div>
         
 
@@ -218,6 +198,16 @@
 
         
             <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#from_polars_df" class="internal-link" title="aligned.retrieval_job.RetrievalJob.from_polars_df">from<wbr></wbr>_polars<wbr></wbr>_df</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.ModificationJob.html#copy_with" class="internal-link" title="aligned.retrieval_job.ModificationJob.copy_with">copy<wbr></wbr>_with</a></code>
             </div>
         
 
@@ -388,6 +378,16 @@
 
         
             <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#listen_to_events" class="internal-link" title="aligned.retrieval_job.RetrievalJob.listen_to_events">listen<wbr></wbr>_to<wbr></wbr>_events</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#log_each_job" class="internal-link" title="aligned.retrieval_job.RetrievalJob.log_each_job">log<wbr></wbr>_each<wbr></wbr>_job</a></code>
             </div>
         
 
@@ -633,57 +633,17 @@
         
 
         
-            <div class="itemName"><code><a href="#date_formatter" class="internal-link" title="aligned.local.job.FileFactualJob.date_formatter">date<wbr></wbr>_formatter</a></code>
+            <div class="itemName"><code><a href="#job" class="internal-link" title="aligned.retrieval_job.LimitJob.job">job</a></code>
             </div>
         
 
-    </li><li class="">
+    </li><li class="private">
         
         
         
 
         
-            <div class="itemName"><code><a href="#facts" class="internal-link" title="aligned.local.job.FileFactualJob.facts">facts</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="#requests" class="internal-link" title="aligned.local.job.FileFactualJob.requests">requests</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="#source" class="internal-link" title="aligned.local.job.FileFactualJob.source">source</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="#request_result" class="internal-link" title="aligned.local.job.FileFactualJob.request_result">request<wbr></wbr>_result</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="#retrieval_requests" class="internal-link" title="aligned.local.job.FileFactualJob.retrieval_requests">retrieval<wbr></wbr>_requests</a></code>
+            <div class="itemName"><code><a href="#_limit" class="internal-link" title="aligned.retrieval_job.LimitJob._limit">_limit</a></code>
             </div>
         
 
@@ -703,6 +663,26 @@
             </div>
         
 
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#request_result" class="internal-link" title="aligned.retrieval_job.RetrievalJob.request_result">request<wbr></wbr>_result</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#retrieval_requests" class="internal-link" title="aligned.retrieval_job.RetrievalJob.retrieval_requests">retrieval<wbr></wbr>_requests</a></code>
+            </div>
+        
+
     </li>
 </ul> 
         
@@ -711,7 +691,7 @@
 
       <div class="thingTitle">
         <span>Module</span>
-        <code><a href="aligned.local.job.html" class="internal-link" title="The parent of this class">job</a></code> 
+        <code><a href="aligned.retrieval_job.html" class="internal-link" title="The parent of this class">retrieval<wbr></wbr>_job</a></code> 
       </div>
       
       <div>
@@ -729,7 +709,167 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.local.job.FileDateJob.html" class="internal-link" title="aligned.local.job.FileDateJob"><wbr></wbr>File<wbr></wbr>Date<wbr></wbr>Job</a></code>
+            <div class="itemName"><code><a href="aligned.retrieval_job.AggregateJob.html" class="internal-link" title="aligned.retrieval_job.AggregateJob"><wbr></wbr>Aggregate<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.CombineFactualJob.html" class="internal-link" title="aligned.retrieval_job.CombineFactualJob"><wbr></wbr>Combine<wbr></wbr>Factual<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.CustomLazyPolarsJob.html" class="internal-link" title="aligned.retrieval_job.CustomLazyPolarsJob"><wbr></wbr>Custom<wbr></wbr>Lazy<wbr></wbr>Polars<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.CustomPolarsJob.html" class="internal-link" title="aligned.retrieval_job.CustomPolarsJob"><wbr></wbr>Custom<wbr></wbr>Polars<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.DataLoaderJob.html" class="internal-link" title="aligned.retrieval_job.DataLoaderJob"><wbr></wbr>Data<wbr></wbr>Loader<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.DerivedFeatureJob.html" class="internal-link" title="aligned.retrieval_job.DerivedFeatureJob"><wbr></wbr>Derived<wbr></wbr>Feature<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.DropDuplicateEntities.html" class="internal-link" title="aligned.retrieval_job.DropDuplicateEntities"><wbr></wbr>Drop<wbr></wbr>Duplicate<wbr></wbr>Entities</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.DropInvalidJob.html" class="internal-link" title="aligned.retrieval_job.DropInvalidJob"><wbr></wbr>Drop<wbr></wbr>Invalid<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.EncodeDatesJob.html" class="internal-link" title="aligned.retrieval_job.EncodeDatesJob"><wbr></wbr>Encode<wbr></wbr>Dates<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.EnsureTypesJob.html" class="internal-link" title="aligned.retrieval_job.EnsureTypesJob"><wbr></wbr>Ensure<wbr></wbr>Types<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.FileCachedJob.html" class="internal-link" title="aligned.retrieval_job.FileCachedJob"><wbr></wbr>File<wbr></wbr>Cached<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.FillMissingColumnsJob.html" class="internal-link" title="aligned.retrieval_job.FillMissingColumnsJob"><wbr></wbr>Fill<wbr></wbr>Missing<wbr></wbr>Columns<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.FilteredJob.html" class="internal-link" title="aligned.retrieval_job.FilteredJob"><wbr></wbr>Filtered<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.InMemoryCacheJob.html" class="internal-link" title="aligned.retrieval_job.InMemoryCacheJob"><wbr></wbr>In<wbr></wbr>Memory<wbr></wbr>Cache<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.InMemorySplitCacheJob.html" class="internal-link" title="aligned.retrieval_job.InMemorySplitCacheJob"><wbr></wbr>In<wbr></wbr>Memory<wbr></wbr>Split<wbr></wbr>Cache<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.JoinAsofJob.html" class="internal-link" title="aligned.retrieval_job.JoinAsofJob"><wbr></wbr>Join<wbr></wbr>Asof<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.JoinJobs.html" class="internal-link" title="aligned.retrieval_job.JoinJobs"><wbr></wbr>Join<wbr></wbr>Jobs</a></code>
             </div>
         
 
@@ -739,7 +879,7 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.local.job.FileFactualJob.html" class="internal-link" title="aligned.local.job.FileFactualJob"><wbr></wbr>File<wbr></wbr>Factual<wbr></wbr>Job</a></code>
+            <div class="itemName"><code><a href="aligned.retrieval_job.LimitJob.html" class="internal-link" title="aligned.retrieval_job.LimitJob"><wbr></wbr>Limit<wbr></wbr>Job</a></code>
             </div>
         
 
@@ -749,7 +889,7 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.local.job.FileFullJob.html" class="internal-link" title="aligned.local.job.FileFullJob"><wbr></wbr>File<wbr></wbr>Full<wbr></wbr>Job</a></code>
+            <div class="itemName"><code><a href="aligned.retrieval_job.ListenForTriggers.html" class="internal-link" title="aligned.retrieval_job.ListenForTriggers"><wbr></wbr>Listen<wbr></wbr>For<wbr></wbr>Triggers</a></code>
             </div>
         
 
@@ -759,7 +899,267 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.local.job.LiteralRetrievalJob.html" class="internal-link" title="aligned.local.job.LiteralRetrievalJob"><wbr></wbr>Literal<wbr></wbr>Retrieval<wbr></wbr>Job</a></code>
+            <div class="itemName"><code><a href="aligned.retrieval_job.LiteralDictJob.html" class="internal-link" title="aligned.retrieval_job.LiteralDictJob"><wbr></wbr>Literal<wbr></wbr>Dict<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.LoadedAtJob.html" class="internal-link" title="aligned.retrieval_job.LoadedAtJob"><wbr></wbr>Loaded<wbr></wbr>At<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.LogJob.html" class="internal-link" title="aligned.retrieval_job.LogJob"><wbr></wbr>Log<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.ModificationJob.html" class="internal-link" title="aligned.retrieval_job.ModificationJob"><wbr></wbr>Modification<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.OnErrorJob.html" class="internal-link" title="aligned.retrieval_job.OnErrorJob"><wbr></wbr>On<wbr></wbr>Error<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.OnLoadJob.html" class="internal-link" title="aligned.retrieval_job.OnLoadJob"><wbr></wbr>On<wbr></wbr>Load<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.PredictionJob.html" class="internal-link" title="aligned.retrieval_job.PredictionJob"><wbr></wbr>Prediction<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RawFileCachedJob.html" class="internal-link" title="aligned.retrieval_job.RawFileCachedJob"><wbr></wbr>Raw<wbr></wbr>File<wbr></wbr>Cached<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RenameJob.html" class="internal-link" title="aligned.retrieval_job.RenameJob"><wbr></wbr>Rename<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob"><wbr></wbr>Retrieval<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.ReturnInvalidJob.html" class="internal-link" title="aligned.retrieval_job.ReturnInvalidJob"><wbr></wbr>Return<wbr></wbr>Invalid<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.SelectColumnsJob.html" class="internal-link" title="aligned.retrieval_job.SelectColumnsJob"><wbr></wbr>Select<wbr></wbr>Columns<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.SplitConfig.html" class="internal-link" title="aligned.retrieval_job.SplitConfig"><wbr></wbr>Split<wbr></wbr>Config</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.SqlJob.html" class="internal-link" title="aligned.retrieval_job.SqlJob"><wbr></wbr>Sql<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.StackJob.html" class="internal-link" title="aligned.retrieval_job.StackJob"><wbr></wbr>Stack<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.StackSourceColumn.html" class="internal-link" title="aligned.retrieval_job.StackSourceColumn"><wbr></wbr>Stack<wbr></wbr>Source<wbr></wbr>Column</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.StreamAggregationJob.html" class="internal-link" title="aligned.retrieval_job.StreamAggregationJob"><wbr></wbr>Stream<wbr></wbr>Aggregation<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.SubsetJob.html" class="internal-link" title="aligned.retrieval_job.SubsetJob"><wbr></wbr>Subset<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.SupervisedJob.html" class="internal-link" title="aligned.retrieval_job.SupervisedJob"><wbr></wbr>Supervised<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.TimeMetricLoggerJob.html" class="internal-link" title="aligned.retrieval_job.TimeMetricLoggerJob"><wbr></wbr>Time<wbr></wbr>Metric<wbr></wbr>Logger<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.TrainTestJob.html" class="internal-link" title="aligned.retrieval_job.TrainTestJob"><wbr></wbr>Train<wbr></wbr>Test<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.TrainTestValidateJob.html" class="internal-link" title="aligned.retrieval_job.TrainTestValidateJob"><wbr></wbr>Train<wbr></wbr>Test<wbr></wbr>Validate<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.UniqueRowsJob.html" class="internal-link" title="aligned.retrieval_job.UniqueRowsJob"><wbr></wbr>Unique<wbr></wbr>Rows<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.UnpackEmbedding.html" class="internal-link" title="aligned.retrieval_job.UnpackEmbedding"><wbr></wbr>Unpack<wbr></wbr>Embedding</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.UpdateVectorIndexJob.html" class="internal-link" title="aligned.retrieval_job.UpdateVectorIndexJob"><wbr></wbr>Update<wbr></wbr>Vector<wbr></wbr>Index<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.ValidateEntitiesJob.html" class="internal-link" title="aligned.retrieval_job.ValidateEntitiesJob"><wbr></wbr>Validate<wbr></wbr>Entities<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.WithRequests.html" class="internal-link" title="aligned.retrieval_job.WithRequests"><wbr></wbr>With<wbr></wbr>Requests</a></code>
             </div>
         
 
@@ -775,7 +1175,7 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.local.job.html#aggregate" class="internal-link" title="aligned.local.job.aggregate">aggregate</a></code>
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#fraction_from_job" class="internal-link" title="aligned.retrieval_job.fraction_from_job">fraction<wbr></wbr>_from<wbr></wbr>_job</a></code>
             </div>
         
 
@@ -785,7 +1185,7 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.local.job.html#aggregate_over" class="internal-link" title="aligned.local.job.aggregate_over">aggregate<wbr></wbr>_over</a></code>
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#polars_filter_expressions_from" class="internal-link" title="aligned.retrieval_job.polars_filter_expressions_from">polars<wbr></wbr>_filter<wbr></wbr>_expressions<wbr></wbr>_from</a></code>
             </div>
         
 
@@ -795,7 +1195,17 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.local.job.html#decode_timestamps" class="internal-link" title="aligned.local.job.decode_timestamps">decode<wbr></wbr>_timestamps</a></code>
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#split" class="internal-link" title="aligned.retrieval_job.split">split</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#subset_polars" class="internal-link" title="aligned.retrieval_job.subset_polars">subset<wbr></wbr>_polars</a></code>
             </div>
         
 
@@ -814,7 +1224,67 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.local.job.html#logger" class="internal-link" title="aligned.local.job.logger">logger</a></code>
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#ErrorType" class="internal-link" title="aligned.retrieval_job.ErrorType"><wbr></wbr>Error<wbr></wbr>Type</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#JobType" class="internal-link" title="aligned.retrieval_job.JobType"><wbr></wbr>Job<wbr></wbr>Type</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#ConvertableToRetrievalJob" class="internal-link" title="aligned.retrieval_job.ConvertableToRetrievalJob"><wbr></wbr>Convertable<wbr></wbr>To<wbr></wbr>Retrieval<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#SplitterCallable" class="internal-link" title="aligned.retrieval_job.SplitterCallable"><wbr></wbr>Splitter<wbr></wbr>Callable</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#CustomPolarsTransform" class="internal-link" title="aligned.retrieval_job.CustomPolarsTransform"><wbr></wbr>Custom<wbr></wbr>Polars<wbr></wbr>Transform</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#FilterRepresentable" class="internal-link" title="aligned.retrieval_job.FilterRepresentable"><wbr></wbr>Filter<wbr></wbr>Representable</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.retrieval_job.html#logger" class="internal-link" title="aligned.retrieval_job.logger">logger</a></code>
             </div>
         
 
@@ -843,7 +1313,7 @@
         
 
         <div class="page-header">
-          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.local.html" class="internal-link" title="aligned.local">local</a></code><wbr></wbr>.<code><a href="aligned.local.job.html" class="internal-link" title="aligned.local.job">job</a></code><wbr></wbr>.<code><a href="aligned.local.job.FileFactualJob.html" class="internal-link" title="aligned.local.job.FileFactualJob">FileFactualJob</a></code></code></h1>
+          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.retrieval_job.html" class="internal-link" title="aligned.retrieval_job">retrieval_job</a></code><wbr></wbr>.<code><a href="aligned.retrieval_job.LimitJob.html" class="internal-link" title="aligned.retrieval_job.LimitJob">LimitJob</a></code></code></h1>
           <div id="showPrivate">
             <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
           </div>
@@ -854,8 +1324,8 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">FileFactualJob</span>(<a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a>): <a href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/local/job.py#L393" class="sourceLink">(source)</a></code></p>
-          <p><a href="classIndex.html#aligned.local.job.FileFactualJob">View In Hierarchy</a></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">LimitJob</span>(<a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a>, <a href="aligned.retrieval_job.ModificationJob.html" class="internal-link" title="aligned.retrieval_job.ModificationJob">ModificationJob</a>): <a href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py#L1977" class="sourceLink">(source)</a></code></p>
+          <p><a href="classIndex.html#aligned.retrieval_job.LimitJob">View In Hierarchy</a></p>
         </div>
 
         <div class="moduleDocstring">
@@ -863,63 +1333,33 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id137">
+          <table class="children sortable" id="id214">
   
   
   <tr class="method">
     
     <td>Method</td>
-    <td><code><a href="#describe" class="internal-link" title="aligned.local.job.FileFactualJob.describe">describe</a></code></td>
+    <td><code><a href="#describe" class="internal-link" title="aligned.retrieval_job.LimitJob.describe">describe</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Async Method</td>
-    <td><code><a href="#file_transformations" class="internal-link" title="aligned.local.job.FileFactualJob.file_transformations">file<wbr></wbr>_transformations</a></code></td>
-    <td>Selects only the wanted subset from the loaded source</td>
-  </tr><tr class="method">
-    
-    <td>Method</td>
-    <td><code><a href="#log_each_job" class="internal-link" title="aligned.local.job.FileFactualJob.log_each_job">log<wbr></wbr>_each<wbr></wbr>_job</a></code></td>
+    <td><code><a href="#to_lazy_polars" class="internal-link" title="aligned.retrieval_job.LimitJob.to_lazy_polars">to<wbr></wbr>_lazy<wbr></wbr>_polars</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Async Method</td>
-    <td><code><a href="#to_lazy_polars" class="internal-link" title="aligned.local.job.FileFactualJob.to_lazy_polars">to<wbr></wbr>_lazy<wbr></wbr>_polars</a></code></td>
+    <td><code><a href="#to_pandas" class="internal-link" title="aligned.retrieval_job.LimitJob.to_pandas">to<wbr></wbr>_pandas</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="method">
+  </tr><tr class="instancevariable">
     
-    <td>Async Method</td>
-    <td><code><a href="#to_pandas" class="internal-link" title="aligned.local.job.FileFactualJob.to_pandas">to<wbr></wbr>_pandas</a></code></td>
+    <td>Instance Variable</td>
+    <td><code><a href="#job" class="internal-link" title="aligned.retrieval_job.LimitJob.job">job</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="classvariable">
-    
-    <td>Class Variable</td>
-    <td><code><a href="#date_formatter" class="internal-link" title="aligned.local.job.FileFactualJob.date_formatter">date<wbr></wbr>_formatter</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="classvariable">
+  </tr><tr class="classvariable private">
     
     <td>Class Variable</td>
-    <td><code><a href="#facts" class="internal-link" title="aligned.local.job.FileFactualJob.facts">facts</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="classvariable">
-    
-    <td>Class Variable</td>
-    <td><code><a href="#requests" class="internal-link" title="aligned.local.job.FileFactualJob.requests">requests</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="classvariable">
-    
-    <td>Class Variable</td>
-    <td><code><a href="#source" class="internal-link" title="aligned.local.job.FileFactualJob.source">source</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="property">
-    
-    <td>Property</td>
-    <td><code><a href="#request_result" class="internal-link" title="aligned.local.job.FileFactualJob.request_result">request<wbr></wbr>_result</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="property">
-    
-    <td>Property</td>
-    <td><code><a href="#retrieval_requests" class="internal-link" title="aligned.local.job.FileFactualJob.retrieval_requests">retrieval<wbr></wbr>_requests</a></code></td>
+    <td><code><a href="#_limit" class="internal-link" title="aligned.retrieval_job.LimitJob._limit">_limit</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr>
 </table>
@@ -927,7 +1367,7 @@
             <p class="inheritedFrom">
               Inherited from <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:
             </p>
-            <table class="children sortable" id="id138">
+            <table class="children sortable" id="id215">
   
   
   <tr class="basestaticmethod">
@@ -1034,6 +1474,11 @@
     
     <td>Method</td>
     <td><code><a href="aligned.retrieval_job.RetrievalJob.html#listen_to_events" class="internal-link" title="aligned.retrieval_job.RetrievalJob.listen_to_events">listen<wbr></wbr>_to<wbr></wbr>_events</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
+  </tr><tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#log_each_job" class="internal-link" title="aligned.retrieval_job.RetrievalJob.log_each_job">log<wbr></wbr>_each<wbr></wbr>_job</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="basemethod">
     
@@ -1155,6 +1600,30 @@
     <td>Property</td>
     <td><code><a href="aligned.retrieval_job.RetrievalJob.html#loaded_columns" class="internal-link" title="aligned.retrieval_job.RetrievalJob.loaded_columns">loaded<wbr></wbr>_columns</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
+  </tr><tr class="baseproperty">
+    
+    <td>Property</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#request_result" class="internal-link" title="aligned.retrieval_job.RetrievalJob.request_result">request<wbr></wbr>_result</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
+  </tr><tr class="baseproperty">
+    
+    <td>Property</td>
+    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#retrieval_requests" class="internal-link" title="aligned.retrieval_job.RetrievalJob.retrieval_requests">retrieval<wbr></wbr>_requests</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
+  </tr>
+</table>
+            
+            <p class="inheritedFrom">
+              Inherited from <code><a href="aligned.retrieval_job.ModificationJob.html" class="internal-link" title="aligned.retrieval_job.ModificationJob">ModificationJob</a></code> (via <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>):
+            </p>
+            <table class="children sortable" id="id216">
+  
+  
+  <tr class="basemethod">
+    
+    <td>Method</td>
+    <td><code><a href="aligned.retrieval_job.ModificationJob.html#copy_with" class="internal-link" title="aligned.retrieval_job.ModificationJob.copy_with">copy<wbr></wbr>_with</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr>
 </table>
             
@@ -1166,7 +1635,7 @@
           <div class="basemethod">
   
   
-  <a name="aligned.local.job.FileFactualJob.describe">
+  <a name="aligned.retrieval_job.LimitJob.describe">
     
   </a>
   <a name="describe">
@@ -1176,11 +1645,11 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">describe</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/local/job.py#L408">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py#L1982">
       
       (source)
     </a>
-    <a class="headerLink" href="#describe" title="aligned.local.job.FileFactualJob.describe">
+    <a class="headerLink" href="#describe" title="aligned.retrieval_job.LimitJob.describe">
       
       
       ¶
@@ -1193,71 +1662,7 @@
 </div><div class="basemethod">
   
   
-  <a name="aligned.local.job.FileFactualJob.file_transformations">
-    
-  </a>
-  <a name="file_transformations">
-    
-  </a>
-  <div class="functionHeader">
-    
-    
-    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">file_transformations</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">df: <code>pl.LazyFrame</code></span>) -&gt; <code>pl.LazyFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/local/job.py#L411">
-      
-      (source)
-    </a>
-    <a class="headerLink" href="#file_transformations" title="aligned.local.job.FileFactualJob.file_transformations">
-      
-      
-      ¶
-    </a>
-  </div>
-  <div class="docstring functionBody">
-    
-    <div><p>Selects only the wanted subset from the loaded source</p>
-<p><tt class="rst-docutils rst-literal">`python
-await self.file_transformations(await <span class="pre">self.source.to_polars())</span>
-`</tt></p>
-<dl class="rst-docutils">
-<dt>Args:</dt>
-<dd>df (pl.LazyFrame): The loaded file source which contains all features</dd>
-<dt>Returns:</dt>
-<dd>pl.LazyFrame: The subset of the source which is needed for the request</dd>
-</dl>
-</div>
-  </div>
-</div><div class="basemethod">
-  
-  
-  <a name="aligned.local.job.FileFactualJob.log_each_job">
-    
-  </a>
-  <a name="log_each_job">
-    
-  </a>
-  <div class="functionHeader">
-    
-    
-    <span class="py-keyword">def</span>&#160;<span class="py-defname">log_each_job</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">logger_func: <code><a href="https://docs.python.org/3/library/typing.html#typing.Callable" class="intersphinx-link">Callable</a>[<wbr></wbr>[<wbr></wbr><a href="https://docs.python.org/3/library/functions.html#object" class="intersphinx-link">object</a>], <wbr></wbr><a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/local/job.py#L622">
-      
-      (source)
-    </a>
-    <a class="headerLink" href="#log_each_job" title="aligned.local.job.FileFactualJob.log_each_job">
-      
-      
-      ¶
-    </a>
-  </div>
-  <div class="docstring functionBody">
-    <div class="interfaceinfo">overrides <code><a href="aligned.retrieval_job.RetrievalJob.html#log_each_job" class="internal-link">aligned.retrieval_job.RetrievalJob.log_each_job</a></code></div>
-    <div><p class="undocumented">Undocumented</p></div>
-  </div>
-</div><div class="basemethod">
-  
-  
-  <a name="aligned.local.job.FileFactualJob.to_lazy_polars">
+  <a name="aligned.retrieval_job.LimitJob.to_lazy_polars">
     
   </a>
   <a name="to_lazy_polars">
@@ -1267,11 +1672,11 @@ await self.file_transformations(await <span class="pre">self.source.to_polars())
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">to_lazy_polars</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code>pl.LazyFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/local/job.py#L601">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py#L1989">
       
       (source)
     </a>
-    <a class="headerLink" href="#to_lazy_polars" title="aligned.local.job.FileFactualJob.to_lazy_polars">
+    <a class="headerLink" href="#to_lazy_polars" title="aligned.retrieval_job.LimitJob.to_lazy_polars">
       
       
       ¶
@@ -1284,7 +1689,7 @@ await self.file_transformations(await <span class="pre">self.source.to_polars())
 </div><div class="basemethod">
   
   
-  <a name="aligned.local.job.FileFactualJob.to_pandas">
+  <a name="aligned.retrieval_job.LimitJob.to_pandas">
     
   </a>
   <a name="to_pandas">
@@ -1294,11 +1699,11 @@ await self.file_transformations(await <span class="pre">self.source.to_polars())
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">to_pandas</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code>pd.DataFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/local/job.py#L598">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py#L1985">
       
       (source)
     </a>
-    <a class="headerLink" href="#to_pandas" title="aligned.local.job.FileFactualJob.to_pandas">
+    <a class="headerLink" href="#to_pandas" title="aligned.retrieval_job.LimitJob.to_pandas">
       
       
       ¶
@@ -1308,50 +1713,50 @@ await self.file_transformations(await <span class="pre">self.source.to_polars())
     <div class="interfaceinfo">overrides <code><a href="aligned.retrieval_job.RetrievalJob.html#to_pandas" class="internal-link">aligned.retrieval_job.RetrievalJob.to_pandas</a></code></div>
     <div><p class="undocumented">Undocumented</p></div>
   </div>
-</div><div class="baseclassvariable">
+</div><div class="baseinstancevariable">
   
   
-  <a name="aligned.local.job.FileFactualJob.date_formatter">
+  <a name="aligned.retrieval_job.LimitJob.job">
     
   </a>
-  <a name="date_formatter">
+  <a name="job">
     
   </a>
   <div class="functionHeader">
     
-    <span class="py-defname">date_formatter</span>: <code>DateFormatter</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/local/job.py#L398">
+    <span class="py-defname">job</span>: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py#L1979">
       
       (source)
     </a>
-    <a class="headerLink" href="#date_formatter" title="aligned.local.job.FileFactualJob.date_formatter">
+    <a class="headerLink" href="#job" title="aligned.retrieval_job.LimitJob.job">
       
       
       ¶
     </a>
   </div>
   <div class="functionBody">
-    
+    <div class="interfaceinfo">overrides <code><a href="aligned.retrieval_job.ModificationJob.html#job" class="internal-link">aligned.retrieval_job.ModificationJob.job</a></code></div>
     <div><p class="undocumented">Undocumented</p></div>
     
   </div>
-</div><div class="baseclassvariable">
+</div><div class="baseclassvariable private">
   
   
-  <a name="aligned.local.job.FileFactualJob.facts">
+  <a name="aligned.retrieval_job.LimitJob._limit">
     
   </a>
-  <a name="facts">
+  <a name="_limit">
     
   </a>
   <div class="functionHeader">
     
-    <span class="py-defname">facts</span>: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/local/job.py#L397">
+    <span class="py-defname">_limit</span>: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/retrieval_job.py#L1980">
       
       (source)
     </a>
-    <a class="headerLink" href="#facts" title="aligned.local.job.FileFactualJob.facts">
+    <a class="headerLink" href="#_limit" title="aligned.retrieval_job.LimitJob._limit">
       
       
       ¶
@@ -1359,114 +1764,6 @@ await self.file_transformations(await <span class="pre">self.source.to_polars())
   </div>
   <div class="functionBody">
     
-    <div><p class="undocumented">Undocumented</p></div>
-    
-  </div>
-</div><div class="baseclassvariable">
-  
-  
-  <a name="aligned.local.job.FileFactualJob.requests">
-    
-  </a>
-  <a name="requests">
-    
-  </a>
-  <div class="functionHeader">
-    
-    <span class="py-defname">requests</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest]</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/local/job.py#L396">
-      
-      (source)
-    </a>
-    <a class="headerLink" href="#requests" title="aligned.local.job.FileFactualJob.requests">
-      
-      
-      ¶
-    </a>
-  </div>
-  <div class="functionBody">
-    
-    <div><p class="undocumented">Undocumented</p></div>
-    
-  </div>
-</div><div class="baseclassvariable">
-  
-  
-  <a name="aligned.local.job.FileFactualJob.source">
-    
-  </a>
-  <a name="source">
-    
-  </a>
-  <div class="functionHeader">
-    
-    <span class="py-defname">source</span>: <code><a href="aligned.data_file.DataFileReference.html" class="internal-link" title="aligned.data_file.DataFileReference">DataFileReference</a> | <a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/local/job.py#L395">
-      
-      (source)
-    </a>
-    <a class="headerLink" href="#source" title="aligned.local.job.FileFactualJob.source">
-      
-      
-      ¶
-    </a>
-  </div>
-  <div class="functionBody">
-    
-    <div><p class="undocumented">Undocumented</p></div>
-    
-  </div>
-</div><div class="baseproperty">
-  
-  
-  <a name="aligned.local.job.FileFactualJob.request_result">
-    
-  </a>
-  <a name="request_result">
-    
-  </a>
-  <div class="functionHeader">
-    <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
-    <span class="py-defname">request_result</span>: <code>RequestResult</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/local/job.py#L400">
-      
-      (source)
-    </a>
-    <a class="headerLink" href="#request_result" title="aligned.local.job.FileFactualJob.request_result">
-      
-      
-      ¶
-    </a>
-  </div>
-  <div class="functionBody">
-    <div class="interfaceinfo">overrides <code><a href="aligned.retrieval_job.RetrievalJob.html#request_result" class="internal-link">aligned.retrieval_job.RetrievalJob.request_result</a></code></div>
-    <div><p class="undocumented">Undocumented</p></div>
-    
-  </div>
-</div><div class="baseproperty">
-  
-  
-  <a name="aligned.local.job.FileFactualJob.retrieval_requests">
-    
-  </a>
-  <a name="retrieval_requests">
-    
-  </a>
-  <div class="functionHeader">
-    <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
-    <span class="py-defname">retrieval_requests</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest]</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/e86d24b6fbf6231a9ec4fca094a667b8a34e9e17/aligned/local/job.py#L404">
-      
-      (source)
-    </a>
-    <a class="headerLink" href="#retrieval_requests" title="aligned.local.job.FileFactualJob.retrieval_requests">
-      
-      
-      ¶
-    </a>
-  </div>
-  <div class="functionBody">
-    <div class="interfaceinfo">overrides <code><a href="aligned.retrieval_job.RetrievalJob.html#retrieval_requests" class="internal-link">aligned.retrieval_job.RetrievalJob.retrieval_requests</a></code></div>
     <div><p class="undocumented">Undocumented</p></div>
     
   </div>
