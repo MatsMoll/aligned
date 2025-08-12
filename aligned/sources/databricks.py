@@ -774,7 +774,6 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
     type_name = "uc_table"
 
     def job_group_key(self) -> str:
-        # One fetch job per table
         return f"uc_table-{self.table.identifier()}"
 
     def overwrite_schema(self, should_overwrite_schema: bool = True) -> UCTableSource:
@@ -782,6 +781,7 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
             config=self.config,
             table=self.table,
             should_overwrite_schema=should_overwrite_schema,
+            renamer=self.renamer,
         )
 
     def with_renames(self, renames: dict[str, str] | Renamer | None) -> UCTableSource:
@@ -819,23 +819,9 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
             )
 
         source, request = requests[0]
-        spark = source.config.connection()
-
-        async def load() -> pl.LazyFrame:
-            df = spark.read.table(source.table.identifier())
-            features = features_to_read(request, df.schema, source.renamer)
-            df = df.select(features)
-            return pl.from_pandas(
-                df.toPandas(),
-                schema_overrides={
-                    feat.name: feat.dtype.polars_type
-                    for feat in request.all_features
-                    if feat.name in features
-                },
-            ).lazy()
 
         return FileFactualJob(
-            source=RetrievalJob.from_lazy_function(load, request),
+            source=source.all_data(request, limit=None),
             date_formatter=DateFormatter.noop(),
             requests=[request],
             facts=facts,
