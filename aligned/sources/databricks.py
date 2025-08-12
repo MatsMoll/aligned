@@ -623,7 +623,6 @@ def features_to_read(
         db_name = invers_renamer.rename(feat.name)
 
         if db_name in stored_fields:
-            logger.debug(f"Selecting '{db_name}' as '{feat.name}'")
             if db_name not in columns:
                 columns.append(db_name)
         elif feat.name in derived_features:
@@ -737,6 +736,8 @@ class UnityCatalogTableAllJob(RetrievalJob):
                 renames = {col: self.renamer.rename(col) for col in cols}
                 logger.debug(f"Renaming with map {renames}")
                 spark_df = spark_df.withColumnsRenamed(renames)
+            else:
+                logger.debug(f"Selecting '{cols}'")
 
         if self.where:
             spark_df = spark_df.filter(self.where)
