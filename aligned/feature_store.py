@@ -1344,7 +1344,7 @@ class FeatureViewStore:
         return self.select(features_in_models)
 
     def select_columns(
-        self, columns: list[str], limit: int | None = None
+        self, columns: Iterable[str | FeatureFactory], limit: int | None = None
     ) -> RetrievalJob:
         return self.select(set(columns)).all(limit)
 
@@ -1476,10 +1476,13 @@ class FeatureViewStore:
             event_timestamp_column=event_timestamp_column,
         )
 
-    def select(self, features: Iterable[str]) -> FeatureViewStore:
+    def select(self, features: Iterable[str | FeatureFactory]) -> FeatureViewStore:
         logger.info(f"Selecting features {features}")
         return FeatureViewStore(
-            self.store, self.view, self.event_triggers, set(features)
+            self.store,
+            self.view,
+            self.event_triggers,
+            {feat if isinstance(feat, str) else feat.name for feat in features},
         )
 
     async def upsert(self, values: RetrievalJob | ConvertableToRetrievalJob) -> None:

@@ -1078,10 +1078,17 @@ class RetrievalJob(ABC):
             date_formatter=date_formatter or DateFormatter.iso_8601(),
         )
 
-    def select(self, include_features: Collection[str]) -> RetrievalJob:
-        return SelectColumnsJob(list(include_features), self)
+    def select(
+        self, include_features: Collection[str | FeatureFactory]
+    ) -> RetrievalJob:
+        return SelectColumnsJob(
+            [feat if isinstance(feat, str) else feat.name for feat in include_features],
+            self,
+        )
 
-    def select_columns(self, include_features: Collection[str]) -> RetrievalJob:
+    def select_columns(
+        self, include_features: Collection[str | FeatureFactory]
+    ) -> RetrievalJob:
         return self.select(include_features)
 
     def aggregate(self, request: RetrievalRequest) -> RetrievalJob:
