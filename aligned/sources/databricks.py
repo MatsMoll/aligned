@@ -637,7 +637,9 @@ def features_to_read(
         )
 
     if request.event_timestamp:
-        columns.append(request.event_timestamp.name)
+        db_name = invers_renamer.rename(request.event_timestamp.name)
+        if db_name not in columns:
+            columns.append(request.event_timestamp.name)
 
     return columns
 
