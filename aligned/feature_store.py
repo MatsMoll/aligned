@@ -11,7 +11,16 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Iterable, Union, TypeVar, Callable, TYPE_CHECKING, overload
+from typing import (
+    Any,
+    Iterable,
+    Protocol,
+    Union,
+    TypeVar,
+    Callable,
+    TYPE_CHECKING,
+    overload,
+)
 
 from aligned.compiler.model import ModelContractWrapper
 from aligned.data_file import DataFileReference, upsert_on_column
@@ -34,6 +43,7 @@ from aligned.feature_view.feature_view import (
 )
 from aligned.request.retrieval_request import FeatureRequest, RetrievalRequest
 from aligned.retrieval_job import (
+    FilterRepresentable,
     SelectColumnsJob,
     RetrievalJob,
     StreamAggregationJob,
@@ -55,6 +65,7 @@ from aligned.sources.in_mem_source import InMemorySource, RetrievalJobSource
 from aligned.sources.local import StorageFileReference
 from aligned.sources.vector_index import VectorIndex
 from aligned.model_store import ModelFeatureStore
+from aligned.validation.interface import PolarsValidator, Validator
 
 if TYPE_CHECKING:
     from aligned.sources.random_source import FillMode
@@ -64,6 +75,20 @@ logger = logging.getLogger(__name__)
 
 FeatureSourceable = Union[FeatureSource, FeatureSourceFactory, None]
 T = TypeVar("T")
+
+
+class DataStore(Protocol):
+    def features_for(
+        self,
+        entities: ConvertableToRetrievalJob | RetrievalJob,
+        features: list[str] | list[FeatureReference] | list[FeatureReferencable],
+        event_timestamp_column: str | None = None,
+        model_version_as_entity: bool | None = None,
+    ) -> RetrievalJob: ...
+
+    def filter(self, filter: FilterRepresentable) -> RetrievalJob: ...
+
+    def all(self, limit: int | None = None) -> RetrievalJob: ...
 
 
 @dataclass
@@ -831,6 +856,57 @@ class ContractStore:
             model_version_as_entity=model_version_as_entity,
         )
 
+    @overload
+    def contract(self, view: FeatureViewWrapper) -> FeatureViewStore: ...
+
+    @overload
+    def contract(self, view: ModelContractWrapper) -> ModelFeatureStore: ...
+
+    @overload
+    def contract(self, view: str) -> DataStore: ...
+
+    def contract(
+        self, view: str | FeatureViewWrapper | ModelContractWrapper
+    ) -> FeatureViewStore | ModelFeatureStore | DataStore:
+        """
+        Selects a contract based on a name or wrapper.
+
+        From here can you query the feature view for features.
+
+        ```python
+        @data_contract(...)
+        class SomeData:
+            ...
+
+        data = await store.contract(SomeData).all().to_polars()
+
+        # Or by name
+        data = await store.contract('some_data').all().to_polars()
+
+
+        @model_contract(...)
+        class SomeModel:
+            ...
+
+        data = await store.contract(SomeModel).all_predictions().to_polars()
+        ```
+
+        Args:
+            view (str): The name of the feature view
+
+        Returns:
+            FeatureViewStore: The selected feature view ready for querying
+        """
+        if isinstance(view, FeatureViewWrapper):
+            return self.feature_view(view)
+        elif isinstance(view, ModelContractWrapper):
+            return self.model(view)
+        else:
+            if view in self.feature_views:
+                return self.feature_view(view)
+            else:
+                return self.model(view)
+
     def feature_view(self, view: str | FeatureViewWrapper) -> FeatureViewStore:
         """
         Selects a feature view based on a name.
@@ -1268,7 +1344,7 @@ class FeatureViewStore:
         return self.select(features_in_models)
 
     def select_columns(
-        self, columns: list[str], limit: int | None = None
+        self, columns: Iterable[str | FeatureFactory], limit: int | None = None
     ) -> RetrievalJob:
         return self.select(set(columns)).all(limit)
 
@@ -1277,6 +1353,62 @@ class FeatureViewStore:
 
     def filter(self, filter: pl.Expr | str | FeatureFactory) -> RetrievalJob:
         return self.all().filter(filter)
+
+    @overload
+    def drop_invalid(
+        self, values: pl.LazyFrame, validator: Validator | None = None
+    ) -> pl.LazyFrame: ...
+
+    @overload
+    def drop_invalid(
+        self, values: pl.DataFrame, validator: Validator | None = None
+    ) -> pl.DataFrame: ...
+
+    @overload
+    def drop_invalid(
+        self, values: pd.DataFrame, validator: Validator | None = None
+    ) -> pd.DataFrame: ...
+
+    @overload
+    def drop_invalid(
+        self, values: dict[str, list], validator: Validator | None = None
+    ) -> dict[str, list]: ...
+
+    @overload
+    def drop_invalid(
+        self, values: list[dict[str, Any]], validator: Validator | None = None
+    ) -> list[dict[str, Any]]: ...
+
+    def drop_invalid(
+        self, values: ConvertableToRetrievalJob, validator: Validator | None = None
+    ) -> ConvertableToRetrievalJob:
+        from aligned.retrieval_job import DropInvalidJob
+
+        if validator is None:
+            validator = PolarsValidator()
+
+        features = list(DropInvalidJob.features_to_validate([self.request]))
+
+        if isinstance(values, pl.LazyFrame):
+            return validator.validate_polars(features, values)
+        elif isinstance(values, pl.DataFrame):
+            df = values.lazy()
+            return validator.validate_polars(features, df).collect()
+        elif isinstance(values, dict):
+            df = pl.DataFrame(values).lazy()
+            return (
+                validator.validate_polars(features, df)
+                .collect()
+                .to_dict(as_series=False)
+            )
+        elif isinstance(values, list):
+            df = pl.DataFrame(values).lazy()
+            return validator.validate_polars(features, df).collect().to_dicts()
+        elif isinstance(values, pd.DataFrame):
+            df = pl.from_pandas(values).lazy()
+            return validator.validate_polars(features, df).collect().to_pandas()
+        else:
+            raise ValueError(f"Unable to convert {type(values)}")
 
     def all_columns(self, limit: int | None = None) -> RetrievalJob:
         request = self.view.request_all
@@ -1344,10 +1476,13 @@ class FeatureViewStore:
             event_timestamp_column=event_timestamp_column,
         )
 
-    def select(self, features: Iterable[str]) -> FeatureViewStore:
+    def select(self, features: Iterable[str | FeatureFactory]) -> FeatureViewStore:
         logger.info(f"Selecting features {features}")
         return FeatureViewStore(
-            self.store, self.view, self.event_triggers, set(features)
+            self.store,
+            self.view,
+            self.event_triggers,
+            {feat if isinstance(feat, str) else feat.name for feat in features},
         )
 
     async def upsert(self, values: RetrievalJob | ConvertableToRetrievalJob) -> None:

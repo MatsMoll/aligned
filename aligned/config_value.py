@@ -77,7 +77,7 @@ class EnvironmentValue(ConfigValue, Codable):
     def read(self) -> str:
         import os
 
-        if self.default_value and self.env not in os.environ:
+        if self.default_value is not None and self.env not in os.environ:
             return self.default_value
 
         try:

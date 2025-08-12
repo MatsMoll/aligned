@@ -13,11 +13,13 @@ from aligned.data_source.batch_data_source import (
     RequestResult,
 )
 from aligned.feature_source import WritableFeatureSource
-from aligned.retrieval_job import RetrievalJob, RetrievalRequest
+from aligned.retrieval_job import FilterRepresentable, RetrievalJob, RetrievalRequest
 from aligned.schemas.constraints import MaxLength, MinLength
-from aligned.schemas.feature import Constraint, Feature
+from aligned.schemas.feature import Constraint, Feature, FeatureLocation
 from aligned.sources.local import FileFactualJob
 from aligned.config_value import EnvironmentValue, LiteralValue, ConfigValue
+from aligned.lazy_imports import databricks_fe
+from aligned.sources.renamer import Renamer
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -370,6 +372,30 @@ class UCSqlSource(CodableBatchDataSource, DatabricksSource):
 
     type_name = "uc_sql"
 
+    @property
+    def as_markdown(self) -> str:
+        return f"""Running SQL query in Databricks {self.config}
+```sql
+{self.query}
+```
+"""
+
+    def depends_on(self) -> set[FeatureLocation]:
+        from sqlglot import parse_one, exp
+
+        tree = parse_one(self.query, read="spark")
+
+        ctes = tree.find_all(exp.CTE)
+        tables = tree.find_all(exp.Table)
+
+        cte_names = {cte.alias_or_name for cte in ctes}
+
+        return {
+            FeatureLocation.feature_view(table.name)
+            for table in tables
+            if table.name not in cte_names
+        }
+
     def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
         client = self.config.connection()
 
@@ -444,9 +470,7 @@ class UCFeatureTableSource(
         return "uc_feature_table"
 
     def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
-        from databricks.feature_engineering import FeatureEngineeringClient
-
-        client = FeatureEngineeringClient()
+        client = databricks_fe.FeatureEngineeringClient()
 
         async def load() -> pl.LazyFrame:
             spark_df = client.read_table(name=self.table.identifier())
@@ -472,11 +496,6 @@ class UCFeatureTableSource(
         facts: RetrievalJob,
         requests: list[tuple[UCFeatureTableSource, RetrievalRequest]],
     ) -> RetrievalJob:
-        from databricks.feature_engineering import (
-            FeatureEngineeringClient,
-            FeatureLookup,
-        )
-
         keys = {
             source.job_group_key()
             for source, _ in requests
@@ -487,14 +506,14 @@ class UCFeatureTableSource(
                 f"Type: {cls} have not implemented how to load fact data with multiple sources."
             )
 
-        client = FeatureEngineeringClient()
+        client = databricks_fe.FeatureEngineeringClient()
 
         result_request: RetrievalRequest | None = None
         lookups = []
 
         for source, request in requests:
             lookups.append(
-                FeatureLookup(
+                databricks_fe.FeatureLookup(
                     source.table.identifier(),
                     lookup_key=list(request.entity_names),
                     feature_names=request.feature_names,
@@ -570,9 +589,7 @@ class UCFeatureTableSource(
         raise NotImplementedError(type(self))
 
     async def overwrite(self, job: RetrievalJob, request: RetrievalRequest) -> None:
-        from databricks.feature_engineering import FeatureEngineeringClient
-
-        client = FeatureEngineeringClient()
+        client = databricks_fe.FeatureEngineeringClient()
 
         conn = self.config.connection()
         df = conn.createDataFrame(await job.unique_entities().to_pandas())
@@ -585,22 +602,44 @@ class UCFeatureTableSource(
         return UCFeatureTableSource(config, self.table)
 
 
-def features_to_read(request: RetrievalRequest, schema: StructType) -> list[str]:
+def features_to_read(
+    request: RetrievalRequest, schema: StructType, renamer: Renamer | None = None
+) -> list[str]:
     stored_fields = schema.fieldNames()
+
+    logger.debug(f"Stored columns in the source: {stored_fields}")
 
     columns = list(request.entity_names)
 
+    if not renamer:
+        renamer = Renamer.noop()
+
+    invers_renamer = renamer.inverse()
+    derived_features = [feat.name for feat in request.derived_features]
+
+    missing_features = []
+
     for feat in request.all_returned_features:
-        if feat.name in stored_fields:
-            columns.append(feat.name)
+        db_name = invers_renamer.rename(feat.name)
+
+        if db_name in stored_fields:
+            if db_name not in columns:
+                columns.append(db_name)
+        elif feat.name in derived_features:
+            continue
         elif not feat.default_value:
-            raise ValueError(
-                f"Missing column '{feat.name}'. Either add it to the table {request.location}, or add a default value"
-                f"Available schema is {schema}"
-            )
+            missing_features.append(feat.name)
+
+    if missing_features:
+        raise ValueError(
+            f"Missing column(s) {missing_features}. Either add it to the table {request.location}, or add a default value"
+            f"Available schema is {schema}"
+        )
 
     if request.event_timestamp:
-        columns.append(request.event_timestamp.name)
+        db_name = invers_renamer.rename(request.event_timestamp.name)
+        if db_name not in columns:
+            columns.append(request.event_timestamp.name)
 
     return columns
 
@@ -666,8 +705,9 @@ class UnityCatalogTableAllJob(RetrievalJob):
     config: DatabricksConnectionConfig
     table: UnityCatalogTableConfig
     request: RetrievalRequest
-    limit: int | None
+    _limit: int | None
     where: str | None = field(default=None)
+    renamer: Renamer | None = field(default=None)
 
     @property
     def request_result(self) -> RequestResult:
@@ -677,7 +717,7 @@ class UnityCatalogTableAllJob(RetrievalJob):
     def retrieval_requests(self) -> list[RetrievalRequest]:
         return [self.request]
 
-    def filter(self, condition: str | Feature | pl.Expr) -> RetrievalJob:
+    def filter(self, condition: FilterRepresentable) -> RetrievalJob:
         if isinstance(condition, Feature):
             self.where = condition.name
         elif isinstance(condition, str):
@@ -691,13 +731,21 @@ class UnityCatalogTableAllJob(RetrievalJob):
         spark_df = con.read.table(self.table.identifier())
 
         if self.request.features_to_include:
-            spark_df = spark_df.select(features_to_read(self.request, spark_df.schema))
+            cols = features_to_read(self.request, spark_df.schema, self.renamer)
+            spark_df = spark_df.select(cols)
+
+            if self.renamer and cols:
+                renames = {col: self.renamer.rename(col) for col in cols}
+                logger.debug(f"Renaming with map {renames}")
+                spark_df = spark_df.withColumnsRenamed(renames)
+            else:
+                logger.debug(f"Selecting '{cols}'")
 
         if self.where:
             spark_df = spark_df.filter(self.where)
 
-        if self.limit:
-            spark_df = spark_df.limit(self.limit)
+        if self._limit:
+            spark_df = spark_df.limit(self._limit)
 
         return spark_df.toPandas()
 
@@ -721,11 +769,11 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
     config: DatabricksConnectionConfig
     table: UnityCatalogTableConfig
     should_overwrite_schema: bool = False
+    renamer: Renamer | None = None
 
     type_name = "uc_table"
 
     def job_group_key(self) -> str:
-        # One fetch job per table
         return f"uc_table-{self.table.identifier()}"
 
     def overwrite_schema(self, should_overwrite_schema: bool = True) -> UCTableSource:
@@ -733,10 +781,21 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
             config=self.config,
             table=self.table,
             should_overwrite_schema=should_overwrite_schema,
+            renamer=self.renamer,
+        )
+
+    def with_renames(self, renames: dict[str, str] | Renamer | None) -> UCTableSource:
+        if isinstance(renames, dict):
+            renames = Renamer.noop(renames)
+
+        return UCTableSource(
+            self.config, self.table, self.should_overwrite_schema, renames
         )
 
     def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
-        return UnityCatalogTableAllJob(self.config, self.table, request, limit)
+        return UnityCatalogTableAllJob(
+            self.config, self.table, request, limit, renamer=self.renamer
+        )
 
     def all_between_dates(
         self,
@@ -760,15 +819,9 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
             )
 
         source, request = requests[0]
-        spark = source.config.connection()
-
-        async def load() -> pl.LazyFrame:
-            df = spark.read.table(source.table.identifier())
-            df = df.select(features_to_read(request, df.schema))
-            return pl.from_pandas(df.toPandas()).lazy()
 
         return FileFactualJob(
-            source=RetrievalJob.from_lazy_function(load, request),
+            source=source.all_data(request, limit=None),
             date_formatter=DateFormatter.noop(),
             requests=[request],
             facts=facts,

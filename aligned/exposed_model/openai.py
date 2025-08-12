@@ -479,7 +479,7 @@ By sending a request to a the model '{self.model}' using the config {self.config
 
     async def model_version(self) -> str:
         if len(self.feature_refs) == 1:
-            return self.model
+            return f"{self.model}-{self.feature_refs[0].identifier}"
         else:
             return f"{self.model}-{self.prompt_template_hash()}"
 
@@ -535,6 +535,11 @@ By sending a request to a the model '{self.model}' using the config {self.config
         expected_cols = {feat.name for feat in self.feature_refs}
         missing_cols = expected_cols - set(values.loaded_columns)
 
+        pred_view = store.model.predictions_view
+
+        pred_at = pred_view.freshness_feature
+        model_version_feat = pred_view.model_version_column
+
         job = store.store.features_for(values, features=self.feature_refs)
 
         if missing_cols:
@@ -542,6 +547,11 @@ By sending a request to a the model '{self.model}' using the config {self.config
             df = await job.to_polars()
         else:
             df = await values.to_polars()
+
+        if model_version_feat:
+            df = df.with_columns(
+                pl.lit(await self.model_version()).alias(model_version_feat.name)
+            )
 
         messages: list[dict[str, Any]] = []
 
@@ -619,16 +629,30 @@ By sending a request to a the model '{self.model}' using the config {self.config
             description: str | None = None,
             constraints: Iterable[Constraint] | None = None,
         ) -> dict:
+            if dtype.name == FeatureType.boolean().name:
+                ret = {"type": "boolean"}
+                if description:
+                    ret["description"] = description
+                return ret
+
             if dtype.is_numeric:
-                return {"type": "number", "description": description}
+                ret = {"type": "number"}
+                if description:
+                    ret["description"] = description
+                return ret
 
             if dtype.is_array:
                 sub_type = dtype.array_subtype() or FeatureType.string()
-                return {
+
+                ret = {
                     "type": "array",
-                    "description": description,
                     "items": schema_for_dtype(sub_type),
                 }
+
+                if description:
+                    ret["description"] = description
+
+                return ret
 
             if dtype.is_struct:
                 fields = dtype.struct_fields()
@@ -640,7 +664,10 @@ By sending a request to a the model '{self.model}' using the config {self.config
                     },
                 }
 
-            ret = {"type": dtype.name, "description": description}
+            ret: dict[str, Any] = {"type": dtype.name}
+            if description:
+                ret["description"] = description
+
             if constraints:
                 for constraint in constraints:
                     if isinstance(constraint, InDomain):
@@ -652,40 +679,46 @@ By sending a request to a the model '{self.model}' using the config {self.config
 
         for index, message in enumerate(messages):
             try:
+                response_format = {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "response",
+                        "description": "The response",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                feat.name: schema_for_dtype(
+                                    feat.dtype, feat.description, feat.constraints
+                                )
+                                for feat in self.extract_features
+                            },
+                            "required": [
+                                feat.name
+                                for feat in self.extract_features
+                                if feat.constraints is None
+                                or Optional() not in feat.constraints
+                            ],
+                            "additionalProperties": False,
+                        },
+                        "strict": True,
+                    },
+                }
+                logger.info(response_format)
+
                 res = await client.chat.completions.create(
                     model=self.model,
                     messages=[message],  # type: ignore
-                    response_format={
-                        "type": "json_schema",
-                        "json_schema": {
-                            "name": "response",
-                            "description": "The response",
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    feat.name: schema_for_dtype(
-                                        feat.dtype, feat.description, feat.constraints
-                                    )
-                                    for feat in self.extract_features
-                                },
-                                "required": [
-                                    feat.name
-                                    for feat in self.extract_features
-                                    if feat.constraints is None
-                                    or Optional() not in feat.constraints
-                                ],
-                                "additionalProperties": False,
-                            },
-                            "strict": True,
-                        },
-                    },
+                    response_format=response_format,  # type: ignore
                 )
                 content = res.choices[0].message.content
                 if content is None:
                     continue
 
                 decoded = json.loads(content)
-                decoded[self.output_name] = res.choices[0].message.content
+                decoded[self.output_name] = content
+                if pred_at:
+                    decoded[pred_at.name] = datetime.now(timezone.utc)
+
                 responses.append(decoded)
 
                 logger.info(f"Prompted {index + 1} out of {text_length} prompts.")

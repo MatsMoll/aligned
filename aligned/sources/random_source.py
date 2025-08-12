@@ -138,10 +138,11 @@ def random_values_for(
 
 
 async def data_for_request(
-    request: RetrievalRequest, size: int, seed: int | None = None
+    request: RetrievalRequest,
+    size: int,
+    seed: int | None = None,
+    values: pl.DataFrame | None = None,
 ) -> pl.DataFrame:
-    from aligned.retrieval_job import RetrievalJob
-
     needed_features = request.features.union(request.entities)
     if request.event_timestamp:
         needed_features.add(request.event_timestamp.as_feature())
@@ -154,10 +155,25 @@ async def data_for_request(
         logger.info(f"Generating data for {feature.name}")
         exprs[feature.name] = random_values_for(feature, size, seed)
 
-    job = RetrievalJob.from_polars_df(
-        pl.DataFrame(exprs, schema=schema), request=[request]
+    random_features = pl.DataFrame(exprs, schema=schema)
+
+    if values is not None:
+        join_columns = list(set(schema.keys()) - set(values.columns))
+
+        if size == 1:
+            random_features = pl.concat(
+                [random_features] * values.height, how="vertical"
+            )
+
+        raw_data = values.hstack(random_features.select(pl.col(join_columns)))
+    else:
+        raw_data = random_features
+
+    return (
+        await RetrievalJob.from_convertable(raw_data, request)
+        .derive_features()
+        .to_polars()
     )
-    return await job.derive_features().to_polars()
 
 
 FillMode = Literal["duplicate", "random_samples"]
@@ -261,15 +277,13 @@ class RandomDataSource(
             if source.partial_data.is_empty():
                 df = await facts.to_polars()
                 if source.fill_mode == "duplicate":
-                    random_sample = await data_for_request(request, 1)
-                    random = pl.concat(
-                        [random_sample] * df.height, how="vertical"
-                    ).lazy()
+                    random = (await data_for_request(request, 1, values=df)).lazy()
                 else:
-                    random = (await data_for_request(request, df.height)).lazy()
+                    random = (
+                        await data_for_request(request, df.height, values=df)
+                    ).lazy()
 
-                join_columns = set(request.all_returned_columns) - set(df.columns)
-                return df.hstack(random.select(pl.col(join_columns)).collect()).lazy()
+                return random
 
             join_columns = set(request.all_returned_columns) - set(
                 source.partial_data.columns
@@ -278,18 +292,14 @@ class RandomDataSource(
                 return source.partial_data.lazy()
 
             partial_data = source.partial_data
-
             if source.fill_mode == "duplicate":
-                random_sample = await data_for_request(request, 1)
-                random = pl.concat(
-                    [random_sample] * partial_data.height, how="vertical"
-                ).lazy()
+                return (await data_for_request(request, 1, values=partial_data)).lazy()
             else:
-                random = (await data_for_request(request, partial_data.height)).lazy()
-
-            return source.partial_data.hstack(
-                random.select(pl.col(join_columns)).collect()
-            ).lazy()
+                return (
+                    await data_for_request(
+                        request, partial_data.height, values=partial_data
+                    )
+                ).lazy()
 
         request = RetrievalRequest.unsafe_combine([request for _, request in requests])
         return FileFactualJob(

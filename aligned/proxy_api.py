@@ -1,14 +1,13 @@
 import logging
 from collections.abc import Iterable
 from time import monotonic
-from typing import Any
+from typing import Any, overload
 
 from aligned import ContractStore, FeatureLocation
 from aligned.schemas.constraints import InDomain
 from aligned.schemas.feature import Constraint, FeatureType
 
 from aligned.lazy_imports import fastapi
-from aligned.schemas.feature_view import ViewTags
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,9 @@ def schema_for_dtype(
 
 
 def add_read_data_route(
-    app: fastapi.APIRouter, location: FeatureLocation, store: ContractStore
+    app: fastapi.APIRouter | fastapi.FastAPI,
+    location: FeatureLocation,
+    store: ContractStore,
 ) -> None:
     if location.location_type == "model":
         model_store = store.model(location.name)
@@ -145,6 +146,7 @@ def add_read_data_route(
     @app.post(
         f"/contracts/{route_name}/read/entities",
         openapi_extra=fetch_entities_api_schema,
+        tags=[location.name],
     )
     async def read_entities(entities: dict[str, list[Any]]) -> list[dict[str, Any]]:
         start_time = monotonic()
@@ -167,6 +169,7 @@ def add_read_data_route(
     @app.post(
         f"/contracts/{route_name}/read/entity",
         openapi_extra=fetch_entity_api_schema,
+        tags=[location.name],
     )
     async def read_entity(entity: dict[str, Any]) -> dict:
         first_key = next(iter(entity.keys()))
@@ -192,7 +195,9 @@ def add_read_data_route(
 
 
 def add_infer_route(
-    route: fastapi.APIRouter, location: FeatureLocation, store: ContractStore
+    route: fastapi.APIRouter | fastapi.FastAPI,
+    location: FeatureLocation,
+    store: ContractStore,
 ) -> None:
     assert location.location_type == "model"
     model = store.model(location.name)
@@ -202,7 +207,6 @@ def add_infer_route(
     ), f"Model '{location.name}' needs to have an exposed model to infer."
 
     route_name = location.name.replace("_", "-")
-    should_save = model.model.predictions_view.source is not None
 
     view_request = model.model.predictions_view.as_view(location.name).retrieval_request
     entities = view_request.entities
@@ -256,19 +260,30 @@ def add_infer_route(
     @route.post(
         f"/contracts/{route_name}/infer/entities",
         openapi_extra=entities_api_schema,
+        tags=[route_name],
     )
     async def infer(entities: dict[str, list[Any]]) -> dict[str, list[Any]]:
         output = await model.predict_over(entities).to_polars()
-
-        if should_save:
-            await model.insert_predictions(output)
-
         return output.to_dict(as_series=False)
 
 
+@overload
 def router_for_store(
-    store: ContractStore, expose_tag: str | None = None
-) -> fastapi.APIRouter:
+    store: ContractStore, expose_tag: str | None
+) -> fastapi.APIRouter: ...
+
+
+@overload
+def router_for_store(
+    store: ContractStore, expose_tag: str | None, app: fastapi.FastAPI | None
+) -> None: ...
+
+
+def router_for_store(
+    store: ContractStore,
+    expose_tag: str | None = None,
+    app: fastapi.FastAPI | None = None,
+) -> fastapi.APIRouter | None:
     """
     Creates a FastAPI router that exposes all contracts for a given tag.
 
@@ -289,20 +304,27 @@ def router_for_store(
     Returns:
         APIRouter: A fastapi router
     """
-    route = fastapi.APIRouter(tags=["Contracts"])
+    route = app or fastapi.APIRouter(tags=["Contracts"])
 
     data_to_expose = []
     infer_models = []
 
-    if expose_tag is None:
-        expose_tag = ViewTags.is_exposed_through_api
-
     for view in store.feature_views.values():
-        if view.tags and expose_tag in view.tags:
+        if expose_tag:
+            if view.tags and expose_tag in view.tags:
+                data_to_expose.append(FeatureLocation.feature_view(view.name))
+        else:
             data_to_expose.append(FeatureLocation.feature_view(view.name))
 
     for model in store.models.values():
-        if model.tags and expose_tag in model.tags:
+        should_add = False
+        if expose_tag:
+            if model.tags and expose_tag in model.tags:
+                should_add = True
+        else:
+            should_add = True
+
+        if should_add:
             loc = FeatureLocation.model(model.name)
 
             is_exposed = False
@@ -326,4 +348,5 @@ def router_for_store(
     for model_loc in infer_models:
         add_infer_route(route, model_loc, store)
 
-    return route
+    if app is None:
+        return route  # type: ignore

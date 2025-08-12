@@ -37,7 +37,7 @@ from aligned.schemas.target import ClassificationTarget as ClassificationTargetS
 from aligned.schemas.target import ClassTargetProbability
 from aligned.schemas.target import RegressionTarget as RegressionTargetSchemas
 from aligned.schemas.target import RecommendationTarget as RecommendationTargetSchemas
-from aligned.schemas.transformation import EmbeddingModel, Transformation
+from aligned.schemas.transformation import EmbeddingModel, Expression, Transformation
 from aligned.schemas.vector_storage import VectorStorage
 
 if TYPE_CHECKING:
@@ -407,7 +407,7 @@ class FeatureFactory(FeatureReferencable):
     The feature_dependencies is the features graph for the given feature.
 
     aka
-                            x <- standard scaler <- age: Float
+                            x <- log <- age: Float
     x_and_y_is_equal <-
                             y: Float
     """
@@ -466,6 +466,16 @@ class FeatureFactory(FeatureReferencable):
             default_value=self._default_value,
         )
 
+    def to_expression(self) -> Expression:
+        if not self.transformation:
+            return Expression(column=self.name)
+
+        return Expression(transformation=self.transformation.compile())
+
+    def cast(self, to_dtype: T) -> T:
+        to_dtype.transformation = self.transformation
+        return to_dtype
+
     def as_regression_label(self) -> RegressionLabel:
         """
         Tells Aligned that this feature is a regression target in a model_contract.
@@ -486,6 +496,46 @@ class FeatureFactory(FeatureReferencable):
 
     def as_recommendation_target(self) -> RecommendationTarget:
         return RecommendationTarget(self)
+
+    def is_nominal(self: T) -> T:
+        """
+        A feature that is of a nominal type.
+
+        Definition: Categories with no inherent order.
+
+        Examples: Gender, color, religion.
+        """
+        return self.with_tag(StaticFeatureTags.is_nominal)
+
+    def is_ordinal(self: T) -> T:
+        """
+        A feature that is of the ordinal type.
+
+        Definition: Categories with a meaningful order, but differences between them are not necessarily equal.
+
+        Examples: Rankings (1st, 2nd, 3rd), satisfaction levels (poor, fair, good, excellent).
+        """
+        return self.with_tag(StaticFeatureTags.is_ordinal)
+
+    def is_interval(self: T) -> T:
+        """
+        A feature that is of the interval type.
+
+        Definition: Numeric data with equal intervals, but no true zero point.
+
+        Examples: Temperature in Celsius or Fahrenheit, IQ scores.
+        """
+        return self.with_tag(StaticFeatureTags.is_interval)
+
+    def is_ratio(self: T) -> T:
+        """
+        A feature that is of the ratio type.
+
+        Definition: Numeric data with equal intervals and a true zero.
+
+        Examples: Height, weight, age, income, Kelvin temperature.
+        """
+        return self.with_tag(StaticFeatureTags.is_ratio)
 
     def as_annotated_by(self: T) -> T:
         return self.with_tag(StaticFeatureTags.is_annotated_by)
@@ -675,6 +725,13 @@ class FeatureFactory(FeatureReferencable):
         else:
             raise ValueError(f"Unable to add constraint {constraint}.")
 
+    def is_null(self) -> Bool:
+        from aligned.compiler.transformation_factory import NotNullFactory
+
+        instance = Bool()
+        instance.transformation = NotNullFactory(self)
+        return instance
+
     def is_not_null(self) -> Bool:
         from aligned.compiler.transformation_factory import NotNullFactory
 
@@ -726,20 +783,20 @@ class CouldBeEntityFeature:
 class EquatableFeature(FeatureFactory):
     # Comparable operators
     def __eq__(self, right: FeatureFactory | Any) -> Bool:  # type: ignore[override]
-        from aligned.compiler.transformation_factory import EqualsFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         instance = Bool()
-        instance.transformation = EqualsFactory(self, right)
+        instance.transformation = BinaryFactory(self, right, "eq")
         return instance
 
     def equals(self, right: object) -> Bool:
         return self == right
 
     def __ne__(self, right: FeatureFactory | Any) -> Bool:  # type: ignore[override]
-        from aligned.compiler.transformation_factory import NotEqualsFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         instance = Bool()
-        instance.transformation = NotEqualsFactory(right, self)
+        instance.transformation = BinaryFactory(right, self, "neq")
         return instance
 
     def not_equals(self, right: object) -> Bool:
@@ -755,31 +812,31 @@ class EquatableFeature(FeatureFactory):
 
 class ComparableFeature(EquatableFeature):
     def __lt__(self, right: float) -> Bool:
-        from aligned.compiler.transformation_factory import LowerThenFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         instance = Bool()
-        instance.transformation = LowerThenFactory(right, self)
+        instance.transformation = BinaryFactory(self, right, "lt")
         return instance
 
     def __le__(self, right: float) -> Bool:
-        from aligned.compiler.transformation_factory import LowerThenOrEqualFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         instance = Bool()
-        instance.transformation = LowerThenOrEqualFactory(right, self)
+        instance.transformation = BinaryFactory(self, right, "lte")
         return instance
 
     def __gt__(self, right: object) -> Bool:
-        from aligned.compiler.transformation_factory import GreaterThenFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         instance = Bool()
-        instance.transformation = GreaterThenFactory(self, right)
+        instance.transformation = BinaryFactory(self, right, "gt")
         return instance
 
     def __ge__(self, right: object) -> Bool:
-        from aligned.compiler.transformation_factory import GreaterThenOrEqualFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         instance = Bool()
-        instance.transformation = GreaterThenOrEqualFactory(right, self)
+        instance.transformation = BinaryFactory(self, right, "gte")
         return instance
 
     def lower_bound(self: T, value: float) -> T:
@@ -790,11 +847,16 @@ class ComparableFeature(EquatableFeature):
         self._add_constraint(UpperBoundInclusive(value))  # type: ignore[attr-defined]
         return self
 
+    def bounded_between(self: T, lower: float, upper: float) -> T:
+        self._add_constraint(LowerBoundInclusive(lower))  # type: ignore[attr-defined]
+        self._add_constraint(UpperBoundInclusive(upper))  # type: ignore[attr-defined]
+        return self
+
 
 class ArithmeticFeature(ComparableFeature):
     def __sub__(self, other: FeatureFactory | Any) -> Float32:
         from aligned.compiler.transformation_factory import (
-            DifferanceBetweenFactory,
+            BinaryFactory,
             TimeDifferanceFactory,
         )
 
@@ -802,41 +864,35 @@ class ArithmeticFeature(ComparableFeature):
         if self.dtype == FeatureType.datetime():
             feature.transformation = TimeDifferanceFactory(self, other)
         else:
-            feature.transformation = DifferanceBetweenFactory(self, other)
+            feature.transformation = BinaryFactory(self, other, "sub")
         return feature
 
     def __radd__(self, other: FeatureFactory | Any) -> Float32:
-        from aligned.compiler.transformation_factory import AdditionBetweenFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Float32()
-        feature.transformation = AdditionBetweenFactory(self, other)
+        feature.transformation = BinaryFactory(other, self, "add")
         return feature
 
     def __add__(self, other: FeatureFactory | Any) -> Float32:
-        from aligned.compiler.transformation_factory import AdditionBetweenFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Float32()
-        feature.transformation = AdditionBetweenFactory(self, other)
+        feature.transformation = BinaryFactory(self, other, "add")
         return feature
 
     def __truediv__(self, other: FeatureFactory | Any) -> Float32:
-        from aligned.compiler.transformation_factory import RatioFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Float32()
-        if isinstance(other, FeatureFactory):
-            feature.transformation = RatioFactory(self, other)
-        else:
-            feature.transformation = RatioFactory(self, LiteralValue.from_value(other))
+        feature.transformation = BinaryFactory(self, other, "div")
         return feature
 
     def __floordiv__(self, other: FeatureFactory | Any) -> Float32:
-        from aligned.compiler.transformation_factory import RatioFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Float32()
-        if isinstance(other, FeatureFactory):
-            feature.transformation = RatioFactory(self, other)
-        else:
-            feature.transformation = RatioFactory(self, LiteralValue.from_value(other))
+        feature.transformation = BinaryFactory(self, other, "div")
         return feature
 
     def __abs__(self) -> Int64:
@@ -847,34 +903,24 @@ class ArithmeticFeature(ComparableFeature):
         return feature
 
     def __mul__(self, other: FeatureFactory | Any) -> Float32:
-        from aligned.compiler.transformation_factory import MultiplyFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Float32()
-        if isinstance(other, FeatureFactory):
-            feature.transformation = MultiplyFactory(self, other)
-        else:
-            feature.transformation = MultiplyFactory(
-                self, LiteralValue.from_value(other)
-            )
+        feature.transformation = BinaryFactory(self, other, "mul")
         return feature
 
     def __rmul__(self, other: FeatureFactory | Any) -> Float32:
-        from aligned.compiler.transformation_factory import MultiplyFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Float32()
-        if isinstance(other, FeatureFactory):
-            feature.transformation = MultiplyFactory(self, other)
-        else:
-            feature.transformation = MultiplyFactory(
-                self, LiteralValue.from_value(other)
-            )
+        feature.transformation = BinaryFactory(other, self, "mul")
         return feature
 
     def __pow__(self, other: FeatureFactory | Any) -> Float32:
-        from aligned.compiler.transformation_factory import PowerFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Float32()
-        feature.transformation = PowerFactory(self, other)
+        feature.transformation = BinaryFactory(self, other, "pow")
         return feature
 
     def log1p(self) -> Float32:
@@ -955,20 +1001,20 @@ class InvertableFeature(FeatureFactory):
 
 class LogicalOperatableFeature(InvertableFeature):
     def __and__(self, other: Bool) -> Bool:
-        from aligned.compiler.transformation_factory import AndFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Bool()
-        feature.transformation = AndFactory(self, other)
+        feature.transformation = BinaryFactory(self, other, "and")
         return feature
 
     def logical_and(self, other: Bool) -> Bool:
         return self & other
 
     def __or__(self, other: Bool) -> Bool:
-        from aligned.compiler.transformation_factory import OrFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Bool()
-        feature.transformation = OrFactory(self, other)
+        feature.transformation = BinaryFactory(self, other, "or")
         return feature
 
     def logical_or(self, other: Bool) -> Bool:
@@ -1054,6 +1100,12 @@ class Bool(EquatableFeature, LogicalOperatableFeature, CanBeClassificationLabel)
     def is_shadow_model_flag(self: Bool) -> Bool:
         return self.with_tag(StaticFeatureTags.is_shadow_model)
 
+    def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
+
 
 class Float(ArithmeticFeature, DecimalOperations):
     def copy_type(self) -> Float32:
@@ -1066,6 +1118,9 @@ class Float(ArithmeticFeature, DecimalOperations):
         return FeatureType.float32()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1080,6 +1135,9 @@ class Float32(ArithmeticFeature, DecimalOperations):
         return FeatureType.float32()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1094,6 +1152,9 @@ class Float64(ArithmeticFeature, DecimalOperations):
         return FeatureType.float64()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1114,6 +1175,9 @@ class UInt8(
         return FeatureType.uint8()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1134,6 +1198,9 @@ class UInt16(
         return FeatureType.uint16()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1154,6 +1221,9 @@ class UInt32(
         return FeatureType.uint32()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1174,6 +1244,9 @@ class UInt64(
         return FeatureType.uint64()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1194,6 +1267,9 @@ class Int8(
         return FeatureType.int8()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1214,6 +1290,9 @@ class Int16(
         return FeatureType.int16()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1234,6 +1313,9 @@ class Int32(
         return FeatureType.int32()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1254,6 +1336,9 @@ class Int64(
         return FeatureType.int64()
 
     def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
         return ArithmeticAggregation(self)
 
 
@@ -1267,8 +1352,11 @@ class UUID(FeatureFactory, CouldBeEntityFeature):
     def dtype(self) -> FeatureType:
         return FeatureType.uuid()
 
-    def aggregate(self) -> CategoricalAggregation:
-        return CategoricalAggregation(self)
+    def aggregate(self) -> ArithmeticAggregation:
+        return self.agg()
+
+    def agg(self) -> ArithmeticAggregation:
+        return ArithmeticAggregation(self)
 
 
 class UniqueValidateable(FeatureFactory):
@@ -1320,6 +1408,9 @@ class String(
         return FeatureType.string()
 
     def aggregate(self) -> StringAggregation:
+        return self.agg()
+
+    def agg(self) -> StringAggregation:
         return StringAggregation(self)
 
     def ollama_embedding(
@@ -1489,6 +1580,9 @@ class ModelVersion(FeatureFactory):
         self._dtype = dtype
 
     def aggregate(self) -> CategoricalAggregation:
+        return self.agg()
+
+    def agg(self) -> CategoricalAggregation:
         return CategoricalAggregation(self)
 
 
@@ -1638,6 +1732,18 @@ class List(FeatureFactory, Generic[GenericFeature]):
     def min_length(self, value: int) -> List:
         self._add_constraint(MinLength(value))
         return self
+
+    def contains_any(self, values: list) -> Bool:
+        """
+        If the list contains any of the features in another list
+        """
+        from aligned.compiler.transformation_factory import ArrayContainsAnyFactory
+
+        feature = Bool()
+        feature.transformation = ArrayContainsAnyFactory(
+            LiteralValue.from_value(values), self
+        )
+        return feature
 
     def contains(self, value: Any) -> Bool:
         from aligned.compiler.transformation_factory import ArrayContainsFactory
@@ -1902,7 +2008,7 @@ class CategoricalAggregation:
 
 @dataclass
 class ArithmeticAggregation:
-    feature: ArithmeticFeature
+    feature: FeatureFactory
     time_window: timedelta | None = None
     every_interval: timedelta | None = None
     offset_interval: timedelta | None = None

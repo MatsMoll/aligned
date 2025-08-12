@@ -105,7 +105,7 @@ class PredictModelSource(BatchDataSource):
                 full_schema = full_features.collect_schema()
                 return (
                     full_features.collect()
-                    .vstack(preds.select(full_features.columns).cast(full_schema))  # type: ignore
+                    .vstack(preds.select(full_schema.names()).cast(full_schema))  # type: ignore
                     .lazy()
                 )
 

@@ -7,7 +7,6 @@ from aligned.sources.local import FileSource
 
 @pytest.mark.asyncio
 async def test_train_test_set(titanic_feature_store: ContractStore) -> None:
-
     dataset_size = 100
     train_fraction = 0.7
 
@@ -15,9 +14,9 @@ async def test_train_test_set(titanic_feature_store: ContractStore) -> None:
     test_size = int(round(dataset_size * (1 - train_fraction)))
 
     datasets = (
-        titanic_feature_store.feature_view('titanic')
+        titanic_feature_store.feature_view("titanic")
         .all(limit=dataset_size)
-        .train_test(train_fraction, target_column='survived')
+        .train_test(train_fraction, target_column="survived")
     )
     train = await datasets.train.to_pandas()
     test = await datasets.test.to_pandas()
@@ -25,16 +24,15 @@ async def test_train_test_set(titanic_feature_store: ContractStore) -> None:
     assert train.data.shape[0] == train_size
     assert test.data.shape[0] == test_size
 
-    assert 'passenger_id' in train.data.columns
-    assert 'survived' in train.data.columns
+    assert "passenger_id" in train.data.columns
+    assert "survived" in train.data.columns
 
-    assert 'passenger_id' not in train.input.columns
-    assert 'survived' not in train.input.columns
+    assert "passenger_id" not in train.input.columns
+    assert "survived" not in train.input.columns
 
 
 @pytest.mark.asyncio
 async def test_train_test_validate_set(titanic_feature_store: ContractStore) -> None:
-
     dataset_size = 100
     train_fraction = 0.6
     validation_fraction = 0.2
@@ -44,9 +42,11 @@ async def test_train_test_validate_set(titanic_feature_store: ContractStore) -> 
     validate_size = int(round(dataset_size * validation_fraction))
 
     datasets = (
-        titanic_feature_store.feature_view('titanic')
+        titanic_feature_store.feature_view("titanic")
         .all(limit=dataset_size)
-        .train_test_validate(train_fraction, validation_fraction, target_column='survived')
+        .train_test_validate(
+            train_fraction, validation_fraction, target_column="survived"
+        )
     )
     train = await datasets.train.to_pandas()
     test = await datasets.test.to_pandas()
@@ -56,15 +56,17 @@ async def test_train_test_validate_set(titanic_feature_store: ContractStore) -> 
     assert test.data.shape[0] == test_size
     assert validate.data.shape[0] == validate_size
 
-    assert 'passenger_id' in train.data.columns
-    assert 'survived' in train.data.columns
+    assert "passenger_id" in train.data.columns
+    assert "survived" in train.data.columns
 
-    assert 'passenger_id' not in train.input.columns
-    assert 'survived' not in train.input.columns
+    assert "passenger_id" not in train.input.columns
+    assert "survived" not in train.input.columns
 
 
 @pytest.mark.asyncio
-async def test_train_test_validate_set_new(titanic_feature_store: ContractStore) -> None:
+async def test_train_test_validate_set_new(
+    titanic_feature_store: ContractStore,
+) -> None:
     from pathlib import Path
     from aligned.schemas.folder import JsonDatasetStore
 
@@ -76,13 +78,13 @@ async def test_train_test_validate_set_new(titanic_feature_store: ContractStore)
     test_size = int(round(dataset_size * (1 - train_fraction - validation_fraction)))
     validate_size = int(round(dataset_size * validation_fraction))
 
-    dataset_store = FileSource.json_at('test_data/temp/titanic-sets.json')
-    train_source = FileSource.csv_at('test_data/temp/titanic-train.csv')
-    test_source = FileSource.csv_at('test_data/temp/titanic-test.csv')
-    validate_source = FileSource.csv_at('test_data/temp/titanic-validate.csv')
+    dataset_store = FileSource.json_at("test_data/temp/titanic-sets.json")
+    train_source = FileSource.csv_at("test_data/temp/titanic-train.csv")
+    test_source = FileSource.csv_at("test_data/temp/titanic-test.csv")
+    validate_source = FileSource.csv_at("test_data/temp/titanic-validate.csv")
 
     delete_files = [
-        dataset_store.path,
+        dataset_store.path.as_posix(),
         train_source.path.as_posix(),
         test_source.path.as_posix(),
         validate_source.path.as_posix(),
@@ -94,13 +96,15 @@ async def test_train_test_validate_set_new(titanic_feature_store: ContractStore)
             path.unlink()
 
     dataset = await (
-        titanic_feature_store.feature_view('titanic')
+        titanic_feature_store.feature_view("titanic")
         .all(limit=dataset_size)
-        .train_test_validate(train_fraction, validation_fraction, target_column='survived')
+        .train_test_validate(
+            train_fraction, validation_fraction, target_column="survived"
+        )
         .store_dataset(
             dataset_store,
             metadata=DatasetMetadata(
-                id='titanic_test',
+                id="titanic_test",
             ),
             train_source=train_source,
             test_source=test_source,
@@ -126,8 +130,8 @@ async def test_train_test_validate_set_new(titanic_feature_store: ContractStore)
 
     assert train_dataset.train_size_fraction == train_fraction
 
-    assert 'passenger_id' in train.data.columns
-    assert 'survived' in train.data.columns
+    assert "passenger_id" in train.data.columns
+    assert "survived" in train.data.columns
 
-    assert 'passenger_id' not in train.input.columns
-    assert 'survived' not in train.input.columns
+    assert "passenger_id" not in train.input.columns
+    assert "survived" not in train.input.columns

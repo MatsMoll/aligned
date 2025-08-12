@@ -37,6 +37,7 @@ from aligned.request.retrieval_request import (
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureType
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.vector_storage import VectorIndex
+from aligned.sources.renamer import Renamer
 from aligned.split_strategy import SupervisedDataSet
 from aligned.validation.interface import Validator, PolarsValidator
 
@@ -834,6 +835,11 @@ class RetrievalJob(ABC):
     def on_load(self, on_load: Callable[[], Coroutine[Any, Any, None]]) -> RetrievalJob:
         return OnLoadJob(self, on_load)
 
+    def limit(self, limit: int) -> RetrievalJob:
+        if isinstance(self, ModificationJob):
+            return self.copy_with(self.job.limit(limit))
+        return LimitJob(self, limit)
+
     def filter(self, condition: FilterRepresentable) -> RetrievalJob:
         """
         Filters based on a condition referencing either a feature,
@@ -843,9 +849,7 @@ class RetrievalJob(ABC):
             return self.copy_with(self.job.filter(condition))
 
         if isinstance(condition, FeatureFactory):
-            if condition.transformation:
-                condition = condition.compile()
-            else:
+            if not condition.transformation:
                 condition = condition.feature()
 
         return FilteredJob(self, condition)
@@ -1074,10 +1078,17 @@ class RetrievalJob(ABC):
             date_formatter=date_formatter or DateFormatter.iso_8601(),
         )
 
-    def select(self, include_features: Collection[str]) -> RetrievalJob:
-        return SelectColumnsJob(list(include_features), self)
+    def select(
+        self, include_features: Collection[str | FeatureFactory]
+    ) -> RetrievalJob:
+        return SelectColumnsJob(
+            [feat if isinstance(feat, str) else feat.name for feat in include_features],
+            self,
+        )
 
-    def select_columns(self, include_features: Collection[str]) -> RetrievalJob:
+    def select_columns(
+        self, include_features: Collection[str | FeatureFactory]
+    ) -> RetrievalJob:
         return self.select(include_features)
 
     def aggregate(self, request: RetrievalRequest) -> RetrievalJob:
@@ -1120,7 +1131,9 @@ class RetrievalJob(ABC):
     def fill_missing_columns(self) -> RetrievalJob:
         return FillMissingColumnsJob(self)
 
-    def rename(self, mappings: dict[str, str]) -> RetrievalJob:
+    def rename(
+        self, mappings: dict[str, str] | Callable[[str], str] | Renamer | None
+    ) -> RetrievalJob:
         if not mappings:
             return self
         return RenameJob(self, mappings)
@@ -1234,7 +1247,7 @@ class RetrievalJob(ABC):
             assert isinstance(data[0], dict)
             loaded_features.update(data[0].keys())
         elif isinstance(data, (pl.DataFrame, pl.LazyFrame)):
-            loaded_features.update(data.columns)
+            loaded_features.update(data.collect_schema().names())
         elif isinstance(data, pd.DataFrame):
             loaded_features.update(data.columns)
 
@@ -1329,22 +1342,19 @@ def polars_filter_expressions_from(
 
     optional_constraint = Optional()
 
-    exprs: list[tuple[pl.Expr, str]] = []
+    all_exprs: list[tuple[pl.Expr, str]] = []
 
     for feature in features:
         if not feature.constraints:
-            exprs.append(
+            all_exprs.append(
                 (pl.col(feature.name).is_not_null(), f"Required {feature.name}")
             )
             continue
 
-        if optional_constraint not in feature.constraints:
-            exprs.append(
-                (pl.col(feature.name).is_not_null(), f"Required {feature.name}")
-            )
-            continue
+        exprs: list = []
 
         for constraint in feature.constraints:
+            print(feature.name, constraint)
             if isinstance(constraint, LowerBound):
                 exprs.append(
                     (
@@ -1416,7 +1426,18 @@ def polars_filter_expressions_from(
                     )
                 )
 
-    return exprs
+        if optional_constraint not in feature.constraints:
+            exprs.append(
+                (pl.col(feature.name).is_not_null(), f"Required {feature.name}")
+            )
+        else:
+            exprs = [
+                (pl.col(feature.name).is_null() | exp, desc) for exp, desc in exprs
+            ]
+
+        all_exprs.extend(exprs)
+
+    return all_exprs
 
 
 @dataclass
@@ -1651,7 +1672,7 @@ class AggregateJob(RetrievalJob, ModificationJob):
 
         core_frame = await self.job.to_lazy_polars()
 
-        existing_cols = set(core_frame.columns)
+        existing_cols = set(core_frame.collect_schema().names())
         agg_features = {agg.name for agg in self.agg_request.aggregated_features}
         missing_features = agg_features - existing_cols
 
@@ -1887,6 +1908,22 @@ class FilteredJob(RetrievalJob, ModificationJob):
     async def to_lazy_polars(self) -> pl.LazyFrame:
         df = await self.job.to_lazy_polars()
 
+        if isinstance(self.condition, FeatureFactory):
+            if self.condition.transformation:
+                from aligned.feature_store import ContractStore
+
+                transformation = self.condition.transformation.compile()
+
+                store = ContractStore.empty()
+                out = await transformation.transform_polars(df, "filter_col", store)
+
+                if isinstance(out, pl.Expr):
+                    return df.filter(out)
+                else:
+                    return df.filter(pl.col("filter_col")).select(
+                        pl.exclude("filter_col")
+                    )
+
         if isinstance(self.condition, str):
             try:
                 col = pl.Expr.deserialize(StringIO(self.condition))
@@ -1901,10 +1938,12 @@ class FilteredJob(RetrievalJob, ModificationJob):
             expr = await self.condition.transformation.transform_polars(
                 df, self.condition.name, store
             )
-            if isinstance(expr, pl.Expr):
+            if not self.condition.name.isdigit():
+                col = pl.col(self.condition.name)
+            elif isinstance(expr, pl.Expr):
                 col = expr
             else:
-                col = pl.col(self.condition.name)
+                return expr.filter(pl.col(self.condition.name))
         elif isinstance(self.condition, Feature):
             col = pl.col(self.condition.name)
         else:
@@ -1936,17 +1975,40 @@ class FilteredJob(RetrievalJob, ModificationJob):
 
 
 @dataclass
-class RenameJob(RetrievalJob, ModificationJob):
+class LimitJob(RetrievalJob, ModificationJob):
     job: RetrievalJob
-    mappings: dict[str, str]
+    _limit: int
+
+    def describe(self) -> str:
+        return f"{self.job.describe}\n    -> Top {self._limit} rows"
 
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.job.to_pandas()
-        return df.rename(self.mappings)
+        return df.head(self._limit)
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         df = await self.job.to_lazy_polars()
-        return df.rename(self.mappings)
+        return df.limit(self._limit)
+
+
+@dataclass
+class RenameJob(RetrievalJob, ModificationJob):
+    job: RetrievalJob
+    mappings: dict[str, str] | Callable[[str], str] | Renamer
+
+    async def to_pandas(self) -> pd.DataFrame:
+        df = await self.job.to_pandas()
+        if isinstance(self.mappings, Renamer):
+            return self.mappings.rename_pandas(df)
+        else:
+            return df.rename(columns=self.mappings)
+
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        df = await self.job.to_lazy_polars()
+        if isinstance(self.mappings, Renamer):
+            return self.mappings.rename_polars(df)
+        else:
+            return df.rename(self.mappings)
 
 
 @dataclass
@@ -2069,7 +2131,7 @@ class LogJob(RetrievalJob, ModificationJob):
             self.logger(f"Failed in job: {type(self.job).__name__} - {job_name}")
             raise error
         self.logger(f"Results from {type(self.job).__name__} - {job_name}")
-        self.logger(df.columns)
+        self.logger(df.collect_schema().names())
         self.logger(df)
         self.logger(df.head(10).collect())
         return df
@@ -2156,6 +2218,8 @@ class DerivedFeatureJob(RetrievalJob, ModificationJob):
             column_name = condition
         elif isinstance(condition, pl.Expr):
             column_name = condition.meta.output_name(raise_if_undetermined=False)
+        elif isinstance(condition, FeatureFactory) and condition._name is None:
+            column_name = None
         else:
             column_name = condition.name
 
@@ -2234,6 +2298,11 @@ class DerivedFeatureJob(RetrievalJob, ModificationJob):
                         df[feature.depending_on_names],  # type: ignore
                         self.store or ContractStore.empty(),
                     )
+
+            inter_features = request.intermediate_columns
+            if inter_features:
+                df = df.drop(columns=inter_features)
+
         return df
 
     async def to_pandas(self) -> pd.DataFrame:
@@ -2325,6 +2394,8 @@ class FillMissingColumnsJob(RetrievalJob, ModificationJob):
         data = await self.job.to_lazy_polars()
         optional_constraint = Optional()
 
+        data_names = data.collect_schema().names()
+
         for request in self.retrieval_requests:
             missing_columns = [
                 feature
@@ -2333,7 +2404,7 @@ class FillMissingColumnsJob(RetrievalJob, ModificationJob):
                 and (
                     optional_constraint in feature.constraints or feature.default_value
                 )
-                and feature.name not in data.columns
+                and feature.name not in data_names
             ]
 
             if missing_columns:
@@ -2610,15 +2681,13 @@ class FileCachedJob(RetrievalJob, ModificationJob):
         return df
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
+        from polars.exceptions import ComputeError
+
         try:
             logger.debug("Trying to read cache file")
             df = await self.location.to_lazy_polars()
-        except UnableToFindFileException:
-            logger.debug("Unable to load file, so fetching from source")
-            df = await self.job.to_lazy_polars()
-            logger.debug("Writing result to cache")
-            await self.location.write_polars(df)
-        except FileNotFoundError:
+            _ = df.collect_schema()  # trigger a load
+        except (UnableToFindFileException, ComputeError, FileNotFoundError):
             logger.debug("Unable to load file, so fetching from source")
             df = await self.job.to_lazy_polars()
             logger.debug("Writing result to cache")
@@ -2721,13 +2790,15 @@ class EnsureTypesJob(RetrievalJob, ModificationJob):
                         pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean)
                     )
                 elif feature.dtype.is_array:
-                    dtype = df.select(feature.name).dtypes[0]
+                    dtype = org_schema[feature.name]
                     if dtype == pl.Utf8:
                         df = df.with_columns(
-                            pl.col(feature.name).str.json_decode(pl.List(pl.Utf8))
+                            pl.col(feature.name).str.json_decode(
+                                feature.dtype.polars_type
+                            )
                         )
                 elif feature.dtype.is_embedding:
-                    dtype = df.select(feature.name).dtypes[0]
+                    dtype = org_schema[feature.name]
                     if dtype == pl.Utf8:
                         df = df.with_columns(
                             pl.col(feature.name).str.json_decode(pl.List(pl.Float64))

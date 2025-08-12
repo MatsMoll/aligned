@@ -5,7 +5,7 @@ import asyncio
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import numpy as np
 import polars as pl
@@ -53,7 +53,7 @@ class TransformationTestDefinition:
                 return values.cast(pl.Boolean)
             else:
                 return values
-        except pl.InvalidOperationError:
+        except pl.exceptions.InvalidOperationError:
             return pl.Series(self.output, dtype=self.transformation.dtype.polars_type)
 
 
@@ -78,6 +78,28 @@ class RedshiftTransformation:
         raise NotImplementedError()
 
 
+class PolarsExprTransformation:
+    def polars_expr(self) -> pl.Expr | None:
+        raise NotImplementedError(type(self))
+
+
+class InnerTransformation(PolarsExprTransformation):
+    inner: Expression
+
+    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
+        raise NotImplementedError(type(self))
+
+    def polars_expr(self) -> pl.Expr | None:
+        inner_exp = self.inner.to_polars()
+        if inner_exp is not None:
+            return self.polars_expr_from(inner_exp)
+        else:
+            return None
+
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
+        raise NotImplementedError(type(self))
+
+
 class Transformation(Codable, SerializableType):
     name: str
     dtype: FeatureType
@@ -85,11 +107,41 @@ class Transformation(Codable, SerializableType):
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
+        if isinstance(self, InnerTransformation):
+            if self.inner.column:
+                return self.pandas_tran(df[self.inner.column])  # type: ignore
+            if self.inner.transformation:
+                inner = await self.inner.transformation.transform_pandas(df, store)
+                return self.pandas_tran(inner)
+
+            raise ValueError(
+                f"Unable to transform literal value with inner transformation. {type(self)}. "
+                "Consider precomputing the value."
+            )
+
         raise NotImplementedError(type(self))
 
     async def transform_polars(
         self, df: pl.LazyFrame, alias: str, store: ContractStore
     ) -> pl.LazyFrame | pl.Expr | pl.Expr:
+        if isinstance(self, PolarsExprTransformation):
+            exp = self.polars_expr()
+            if exp is not None:
+                return exp
+
+        if isinstance(self, InnerTransformation):
+            assert self.inner.transformation is not None
+            output_key = "_aligned_out"
+            inner = await self.inner.transformation.transform_polars(
+                df, output_key, store
+            )
+            if isinstance(inner, pl.Expr):
+                return self.polars_expr_from(inner)
+            else:
+                return df.with_columns(
+                    self.polars_expr_from(pl.col(output_key))
+                ).select(pl.exclude(output_key))
+
         raise NotImplementedError(type(self))
 
     def _serialize(self) -> dict:
@@ -130,7 +182,9 @@ class Transformation(Codable, SerializableType):
                 )
             output = output_df.select(pl.col(alias)).collect().to_series()
 
-            missing_columns = set(test.input_polars.columns) - set(output_df.columns)
+            missing_columns = set(test.input_polars.columns) - set(
+                output_df.collect_schema().names()
+            )
             assert missing_columns == set(), f"Missing columns: {missing_columns}"
 
             expected = test.output_polars
@@ -194,40 +248,23 @@ class SupportedTransformations:
         self.types = {}
 
         for tran_type in [
-            Equals,
-            EqualsLiteral,
-            NotEquals,
-            NotEqualsLiteral,
             NotNull,
             PandasLambdaTransformation,
             PandasFunctionTransformation,
             PolarsLambdaTransformation,
             PolarsExpression,
-            Ratio,
             StructField,
-            DivideDenumeratorValue,
             Contains,
-            GreaterThen,
-            GreaterThenValue,
-            GreaterThenOrEqual,
-            LowerThen,
-            LowerThenOrEqual,
             DateComponent,
-            Subtraction,
-            SubtractionValue,
-            Multiply,
-            MultiplyValue,
-            Addition,
-            AdditionValue,
             TimeDifference,
             Logarithm,
             LogarithmOnePluss,
             ToNumerical,
             HashColumns,
             ReplaceStrings,
+            MultiTransformation,
             IsIn,
-            And,
-            Or,
+            BinaryTransformation,
             Inverse,
             Ordinal,
             FillNaValues,
@@ -242,8 +279,6 @@ class SupportedTransformations:
             LoadImageUrl,
             LoadImageUrlBytes,
             GrayscaleImage,
-            Power,
-            PowerFeature,
             PresignedAwsUrl,
             AppendConstString,
             AppendStrings,
@@ -262,6 +297,7 @@ class SupportedTransformations:
             JsonPath,
             Clip,
             ArrayContains,
+            ArrayContainsAny,
             ArrayAtIndex,
             OllamaEmbedding,
             PolarsMapRowTransformation,
@@ -280,6 +316,200 @@ class SupportedTransformations:
             return cls._shared
         cls._shared = SupportedTransformations()
         return cls._shared
+
+
+@dataclass
+class Expression(Codable):
+    column: str | None = field(default=None)
+    transformation: Transformation | None = field(default=None)
+    literal: LiteralValue | None = field(default=None)
+
+    def to_polars(self) -> pl.Expr | None:
+        if self.column:
+            return pl.col(self.column)
+        if self.literal:
+            return pl.lit(self.literal.python_value)
+        if self.transformation and isinstance(
+            self.transformation, PolarsExprTransformation
+        ):
+            return self.transformation.polars_expr()
+        return None
+
+    @staticmethod
+    def from_value(value: Any) -> Expression:
+        from aligned.compiler.feature_factory import FeatureFactory
+
+        if isinstance(value, FeatureFactory):
+            if value._name is not None:
+                return Expression(column=value.name)
+
+            assert value.transformation is not None
+            return Expression(transformation=value.transformation.compile())
+
+        return Expression(literal=LiteralValue.from_value(value))
+
+
+BinaryOperators = Literal[
+    "add",
+    "sub",
+    "eq",
+    "neq",
+    "gt",
+    "gte",
+    "lt",
+    "lte",
+    "mul",
+    "div",
+    "or",
+    "and",
+    "pow",
+    "mod",
+]
+
+
+@dataclass
+class BinaryTransformation(Transformation, PolarsExprTransformation):
+    left: Expression
+    right: Expression
+
+    operator: BinaryOperators
+    dtype: FeatureType = FeatureType.string()
+    name: str = "binary"
+
+    def polars_expr(self) -> pl.Expr | None:
+        left_exp = self.left.to_polars()
+        right_exp = self.right.to_polars()
+
+        if left_exp is not None and right_exp is not None:
+            return self._polars_expr(left_exp, right_exp)
+
+        return None
+
+    def _polars_expr(self, left: pl.Expr, right: pl.Expr) -> pl.Expr:
+        if self.operator == "add":
+            return left + right
+        elif self.operator == "sub":
+            return left - right
+        elif self.operator == "eq":
+            return left == right
+        elif self.operator == "neq":
+            return left != right
+        elif self.operator == "gt":
+            return left > right
+        elif self.operator == "gte":
+            return left >= right
+        elif self.operator == "lt":
+            return left < right
+        elif self.operator == "lte":
+            return left <= right
+        elif self.operator == "mul":
+            return left * right
+        elif self.operator == "div":
+            return left / right
+        elif self.operator == "or":
+            return left | right
+        elif self.operator == "and":
+            return left & right
+        elif self.operator == "pow":
+            return left.pow(right)
+        elif self.operator == "mod":
+            return left.mod(right)
+
+        raise ValueError(f"Unable to compute {self.operator}")
+
+    def pandas_op(self, left: pd.Series, right: pd.Series) -> pd.Series:
+        if self.operator == "add":
+            return left + right
+        elif self.operator == "sub":
+            return left - right
+        elif self.operator == "eq":
+            return left == right
+        elif self.operator == "neq":
+            return left != right
+        elif self.operator == "gt":
+            return left > right
+        elif self.operator == "gte":
+            return left >= right
+        elif self.operator == "lt":
+            return left < right
+        elif self.operator == "lte":
+            return left <= right
+        elif self.operator == "mul":
+            return left * right
+        elif self.operator == "div":
+            return left / right
+        elif self.operator == "or":
+            return left | right
+        elif self.operator == "and":
+            return left & right
+        elif self.operator == "pow":
+            return left**right
+        elif self.operator == "mod":
+            return left.mod(right)
+
+        raise ValueError(f"Unable to compute {self.operator}")
+
+    async def transform_polars(
+        self, df: pl.LazyFrame, alias: str, store: ContractStore
+    ) -> pl.LazyFrame | pl.Expr:
+        exp = self.polars_expr()
+        if exp is not None:
+            return exp
+
+        left_exp = self.left.to_polars()
+        right_exp = self.right.to_polars()
+
+        left_col = "_aligned_left"
+        right_col = "_aligned_right"
+
+        if left_exp is None and self.left.transformation:
+            out = await self.left.transformation.transform_polars(df, left_col, store)
+            if isinstance(out, pl.Expr):
+                left_exp = out
+            else:
+                df = out
+                left_exp = pl.col(left_col)
+
+        if right_exp is None and self.right.transformation:
+            out = await self.right.transformation.transform_polars(df, right_col, store)
+            if isinstance(out, pl.Expr):
+                right_exp = out
+            else:
+                df = out
+                right_exp = pl.col(right_col)
+
+        assert left_exp is not None
+        assert right_exp is not None
+
+        new_exp = self._polars_expr(left_exp, right_exp)
+        return df.with_columns(new_exp).select(pl.exclude([left_col, right_col]))
+
+    async def transform_pandas(
+        self, df: pd.DataFrame, store: ContractStore
+    ) -> pd.Series:
+        left_series = None
+        right_series = None
+
+        if self.left.column:
+            left_series = df[self.left.column]
+        elif self.left.literal:
+            left_series = self.left.literal.python_value
+        else:
+            assert self.left.transformation
+            left_series = await self.left.transformation.transform_pandas(df, store)
+
+        if self.right.column:
+            right_series = df[self.right.column]
+        elif self.right.literal:
+            right_series = self.right.literal.python_value
+        else:
+            assert self.right.transformation
+            right_series = await self.right.transformation.transform_pandas(df, store)
+
+        assert left_series is not None
+        assert right_series is not None
+
+        return self.pandas_op(left_series, right_series)  # type: ignore
 
 
 @dataclass
@@ -453,10 +683,13 @@ class PolarsFunctionTransformation(Transformation):
 
 
 @dataclass
-class PolarsExpression(Transformation):
+class PolarsExpression(Transformation, PolarsExprTransformation):
     polars_expression: str
     dtype: FeatureType
     name: str = "polars_expression"
+
+    def polars_expr(self) -> pl.Expr:
+        return pl.Expr.deserialize(self.polars_expression.encode(), format="json")
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -468,11 +701,6 @@ class PolarsExpression(Transformation):
             )
         )
         return pl_df["polars_tran_column"].to_pandas()
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.Expr.deserialize(self.polars_expression.encode(), format="json")
 
 
 @dataclass
@@ -505,182 +733,50 @@ class PolarsLambdaTransformation(Transformation):
 
 
 @dataclass
-class NotNull(Transformation):
-    key: str
-
-    name: str = "not_null"
+class IsNull(Transformation, InnerTransformation):
+    inner: Expression
+    name: str = "is_null"
     dtype: FeatureType = FeatureType.boolean()
 
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return df[self.key].notnull()  # type: ignore
+    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
+        return inner.is_null()
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return df.with_columns(pl.col(self.key).is_not_null().alias(alias))
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
+        return column.isnull()
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
-            NotNull("x"),
+            IsNull(Expression(column="x")),
+            input={"x": ["Hello", None, None, "test", None]},
+            output=[False, True, True, False, True],
+        )
+
+
+@dataclass
+class NotNull(Transformation, InnerTransformation):
+    inner: Expression
+
+    name: str = "not_null"
+    dtype: FeatureType = FeatureType.boolean()
+
+    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
+        return inner.is_not_null()
+
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
+        return column.notnull()  # type: ignore
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            NotNull(Expression(column="x")),
             input={"x": ["Hello", None, None, "test", None]},
             output=[True, False, False, True, False],
         )
 
 
 @dataclass
-class Equals(Transformation):
-    key: str
-    other_key: str
-
-    name: str = "equals_feature"
-    dtype: FeatureType = FeatureType.boolean()
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return df[self.key] == df[self.other_key]
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key) == pl.col(self.other_key)
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            Equals("x", "y"),
-            input={
-                "x": ["Hello", "Test", "nah", "test", "Test"],
-                "y": ["hello", "Test", "other", "no", "Test"],
-            },
-            output=[False, True, False, False, True],
-        )
-
-
-@dataclass
-class EqualsLiteral(Transformation):
-    key: str
-    value: LiteralValue
-
-    name: str = "equals"
-    dtype: FeatureType = FeatureType.boolean()
-
-    def __init__(self, key: str, value: LiteralValue) -> None:
-        self.key = key
-        self.value = value
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return df[self.key] == self.value.python_value
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key) == self.value.python_value
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            EqualsLiteral("x", LiteralValue.from_value("Test")),
-            input={"x": ["Hello", "Test", "nah", "test", "Test"]},
-            output=[False, True, False, False, True],
-        )
-
-
-@dataclass
-class And(Transformation):
-    first_key: str
-    second_key: str
-
-    name: str = "and"
-    dtype: FeatureType = FeatureType.boolean()
-
-    def __init__(self, first_key: str, second_key: str) -> None:
-        self.first_key = first_key
-        self.second_key = second_key
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(df[self.first_key].isnull() | df[self.second_key].isnull()),
-            transformation=lambda dfv: dfv[self.first_key] & dfv[self.second_key],
-        )
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return df.with_columns(
-            (
-                pl.when(
-                    pl.col(self.first_key).is_not_null()
-                    & pl.col(self.second_key).is_not_null()
-                )
-                .then(pl.col(self.first_key) & pl.col(self.second_key))
-                .otherwise(pl.lit(None))
-            ).alias(alias)
-        )
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            And("x", "y"),
-            input={
-                "x": [False, True, True, False, None],
-                "y": [True, False, True, False, False],
-            },
-            output=[False, False, True, False, None],
-        )
-
-
-@dataclass
-class Or(Transformation):
-    first_key: str
-    second_key: str
-
-    name: str = "or"
-    dtype: FeatureType = FeatureType.boolean()
-
-    def __init__(self, first_key: str, second_key: str) -> None:
-        self.first_key = first_key
-        self.second_key = second_key
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return df.with_columns(
-            (pl.col(self.first_key) | pl.col(self.second_key)).alias(alias)
-        )
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        df[self.first_key].__invert__
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(df[self.first_key].isnull() | df[self.second_key].isnull()),
-            transformation=lambda dfv: dfv[self.first_key] | dfv[self.second_key],
-        )
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            Or("x", "y"),
-            input={
-                "x": [False, True, True, False, None],
-                "y": [True, False, True, False, False],
-            },
-            output=[True, True, True, False, None],
-        )
-
-
-@dataclass
-class Inverse(Transformation):
+class Inverse(Transformation, PolarsExprTransformation):
     key: str
 
     name: str = "inverse"
@@ -688,6 +784,9 @@ class Inverse(Transformation):
 
     def __init__(self, key: str) -> None:
         self.key = key
+
+    def polars_expr(self) -> pl.Expr:
+        return ~pl.col(self.key)
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -698,513 +797,12 @@ class Inverse(Transformation):
             transformation=lambda dfv: ~dfv[self.key].astype("bool"),  # type: ignore
         )
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return df.with_columns((~pl.col(self.key)).alias(alias))
-
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
             Inverse("x"),
             input={"x": [False, True, True, False, None]},
             output=[True, False, False, True, None],
-        )
-
-
-@dataclass
-class NotEquals(Transformation):
-    key: str
-    other_key: str
-
-    name: str = "not-equals-feature"
-    dtype: FeatureType = FeatureType.boolean()
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return df[self.key] != df[self.other_key]
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key) != pl.col(self.other_key)
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            NotEquals("x", "y"),
-            input={
-                "x": ["Hello", "Test", "nah", "test", "Test"],
-                "y": ["hello", "Test", "other", "no", "Test"],
-            },
-            output=[True, False, True, True, False],
-        )
-
-
-@dataclass
-class NotEqualsLiteral(Transformation):
-    key: str
-    value: LiteralValue
-
-    name: str = "not-equals"
-    dtype: FeatureType = FeatureType.boolean()
-
-    def __init__(self, key: str, value: Any) -> None:
-        self.key = key
-        if isinstance(value, LiteralValue):
-            self.value = value
-        else:
-            self.value = LiteralValue.from_value(value)
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return df[self.key] != self.value.python_value
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key) != self.value.python_value
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            NotEqualsLiteral("x", LiteralValue.from_value("Test")),
-            input={"x": ["Hello", "Test", "nah", "test", "Test"]},
-            output=[True, False, True, True, False],
-        )
-
-
-@dataclass
-class GreaterThenValue(Transformation):
-    key: str
-    value: float
-
-    name: str = "gt"
-    dtype: FeatureType = FeatureType.boolean()
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return df[self.key] > self.value
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key) > self.value
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            GreaterThenValue(key="x", value=2),
-            input={"x": [1, 2, 3]},
-            output=[False, False, True],
-        )
-
-
-@dataclass
-class GreaterThen(Transformation):
-    left_key: str
-    right_key: str
-
-    name: str = field(default="gtf")
-    dtype: FeatureType = field(default=FeatureType.boolean())
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return df[self.left_key] > df[self.right_key]
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.left_key) > pl.col(self.right_key)
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
-
-        return TransformationTestDefinition(
-            GreaterThen(left_key="x", right_key="y"),
-            input={"x": [1, 2, 3, 5], "y": [3, 2, 1, nan]},
-            output=[False, False, True, False],
-        )
-
-
-@dataclass
-class GreaterThenOrEqual(Transformation):
-    key: str
-    value: float
-
-    name: str = "gte"
-    dtype: FeatureType = FeatureType.boolean()
-
-    def __init__(self, key: str, value: float) -> None:
-        self.key = key
-        self.value = value
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(df[self.key].isna() | df[self.key].isnull()),
-            transformation=lambda dfv: dfv[self.key] >= self.value,
-        )
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return df.with_columns((pl.col(self.key) >= self.value).alias(alias))
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            GreaterThenOrEqual(key="x", value=2),
-            input={"x": [1, 2, 3, None]},
-            output=[False, True, True, None],
-        )
-
-
-@dataclass
-class LowerThenCol(Transformation):
-    key: str
-    right_col: str
-
-    name: str = "lt"
-    dtype: FeatureType = FeatureType.boolean()
-
-    def __init__(self, key: str, right_col: str) -> None:
-        self.key = key
-        self.right_col = right_col
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(df[self.key].isna() | df[self.key].isnull()),
-            transformation=lambda dfv: dfv[self.key] < dfv[self.right_col],
-        )
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return df.with_columns((pl.col(self.key) < pl.col(self.right_col)).alias(alias))
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            LowerThen(key="x", value=2),
-            input={"x": [1, 2, 3, None]},
-            output=[True, False, False, None],
-        )
-
-
-@dataclass
-class LowerThenOrEqualCol(Transformation):
-    key: str
-    right_col: str
-
-    name: str = "lte"
-    dtype: FeatureType = FeatureType.boolean()
-
-    def __init__(self, key: str, right_col: str) -> None:
-        self.key = key
-        self.right_col = right_col
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key) <= pl.col(self.right_col)
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(df[self.key].isna() | df[self.key].isnull()),
-            transformation=lambda dfv: dfv[self.key] <= dfv[self.right_col],
-        )
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            LowerThenOrEqual(key="x", value=2),
-            input={"x": [1, 2, 3, None]},
-            output=[True, True, False, None],
-        )
-
-
-@dataclass
-class LowerThen(Transformation):
-    key: str
-    value: float
-
-    name: str = "lt"
-    dtype: FeatureType = FeatureType.boolean()
-
-    def __init__(self, key: str, value: float) -> None:
-        self.key = key
-        self.value = value
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(df[self.key].isna() | df[self.key].isnull()),
-            transformation=lambda dfv: dfv[self.key] < self.value,
-        )
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return df.with_columns((pl.col(self.key) < self.value).alias(alias))
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            LowerThen(key="x", value=2),
-            input={"x": [1, 2, 3, None]},
-            output=[True, False, False, None],
-        )
-
-
-@dataclass
-class LowerThenOrEqual(Transformation):
-    key: str
-    value: float
-
-    name: str = "lte"
-    dtype: FeatureType = FeatureType.boolean()
-
-    def __init__(self, key: str, value: float) -> None:
-        self.key = key
-        self.value = value
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key) <= self.value
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(df[self.key].isna() | df[self.key].isnull()),
-            transformation=lambda dfv: dfv[self.key] <= self.value,
-        )
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            LowerThenOrEqual(key="x", value=2),
-            input={"x": [1, 2, 3, None]},
-            output=[True, True, False, None],
-        )
-
-
-@dataclass
-class SubtractionValue(Transformation, PsqlTransformation, RedshiftTransformation):
-    front: str
-    behind: LiteralValue
-
-    name: str = "sub_val"
-    dtype: FeatureType = FeatureType.floating_point()
-
-    def __init__(self, front: str, behind: LiteralValue) -> None:
-        self.front = front
-        self.behind = behind
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.front) - pl.lit(self.behind.python_value)
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(df[self.front].isna()),  # type: ignore
-            transformation=lambda dfv: dfv[self.front] - self.behind.python_value,
-        )
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
-
-        return TransformationTestDefinition(
-            SubtractionValue(front="x", behind=LiteralValue.from_value(1)),
-            input={"x": [1, 2, 0, None, 1]},
-            output=[0, 1, -1, nan, 0],
-        )
-
-    def as_psql(self) -> str:
-        return f"{self.front} - {self.behind.python_value}"
-
-
-@dataclass
-class Subtraction(Transformation, PsqlTransformation, RedshiftTransformation):
-    front: str
-    behind: str
-
-    name: str = "sub"
-    dtype: FeatureType = FeatureType.floating_point()
-
-    def __init__(self, front: str, behind: str) -> None:
-        self.front = front
-        self.behind = behind
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.front) - pl.col(self.behind)
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(df[self.front].isna() | df[self.behind].isna()),
-            transformation=lambda dfv: dfv[self.front] - dfv[self.behind],
-        )
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
-
-        return TransformationTestDefinition(
-            Subtraction(front="x", behind="y"),
-            input={"x": [1, 2, 0, None, 1], "y": [1, 0, 2, 1, None]},
-            output=[0, 2, -2, nan, nan],
-        )
-
-    def as_psql(self) -> str:
-        return f"{self.front} - {self.behind}"
-
-
-@dataclass
-class AdditionValue(Transformation):
-    feature: str
-    value: LiteralValue
-
-    name: str = "add_value"
-    dtype: FeatureType = FeatureType.floating_point()
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return df[self.feature] + self.value.python_value
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.feature) + pl.lit(self.value.python_value)
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
-
-        return TransformationTestDefinition(
-            AdditionValue(feature="x", value=LiteralValue.from_value(2)),
-            input={"x": [1, 2, 0, None, 1], "y": [1, 0, 2, 1, None]},
-            output=[3, 4, 2, nan, 3],
-        )
-
-
-@dataclass
-class Multiply(Transformation, PsqlTransformation, RedshiftTransformation):
-    front: str
-    behind: str
-
-    name: str = "mul"
-    dtype: FeatureType = FeatureType.floating_point()
-
-    def __init__(self, front: str, behind: str) -> None:
-        self.front = front
-        self.behind = behind
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return df[self.front] * df[self.behind]
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.front) * pl.col(self.behind)
-
-    def as_psql(self) -> str:
-        return f"{self.front} * {self.behind}"
-
-
-@dataclass
-class MultiplyValue(Transformation, PsqlTransformation, RedshiftTransformation):
-    key: str
-    value: LiteralValue
-
-    name: str = "mul_val"
-    dtype: FeatureType = FeatureType.floating_point()
-
-    def __init__(self, key: str, value: LiteralValue) -> None:
-        self.key = key
-        self.value = value
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key) * pl.lit(self.value.python_value)
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return df[self.key] * self.value.python_value
-
-    def as_psql(self) -> str:
-        return f"{self.key} * '{self.value.python_value}'"
-
-
-@dataclass
-class Addition(Transformation, PsqlTransformation, RedshiftTransformation):
-    front: str
-    behind: str
-
-    name: str = "add"
-    dtype: FeatureType = FeatureType.floating_point()
-
-    def __init__(self, front: str, behind: str) -> None:
-        self.front = front
-        self.behind = behind
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(df[self.front].isna() | df[self.behind].isna()),
-            transformation=lambda dfv: dfv[self.front] + dfv[self.behind],
-        )
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.front) + pl.col(self.behind)
-
-    def as_psql(self) -> str:
-        return f"{self.front} + {self.behind}"
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
-
-        return TransformationTestDefinition(
-            Addition(front="x", behind="y"),
-            input={"x": [1, 2, 0, None, 1], "y": [1, 0, 2, 1, None]},
-            output=[2, 2, 2, nan, nan],
         )
 
 
@@ -1269,7 +867,7 @@ class TimeDifference(Transformation, PsqlTransformation, RedshiftTransformation)
 
 
 @dataclass
-class Logarithm(Transformation):
+class Logarithm(Transformation, PolarsExprTransformation):
     key: str
 
     name: str = "log"
@@ -1278,6 +876,13 @@ class Logarithm(Transformation):
     def __init__(self, key: str) -> None:
         self.key = key
 
+    def polars_expr(self) -> pl.Expr:
+        return (
+            pl.when(pl.col(self.key) > 0)
+            .then(pl.col(self.key).log())
+            .otherwise(pl.lit(None))
+        )
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -1285,17 +890,6 @@ class Logarithm(Transformation):
             df,
             is_valid_mask=~(df[self.key].isna() | (df[self.key] <= 0)),
             transformation=lambda dfv: np.log(dfv[self.key]),  # type: ignore
-        )
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return df.with_columns(
-            (
-                pl.when(pl.col(self.key) > 0)
-                .then(pl.col(self.key).log())
-                .otherwise(pl.lit(None))
-            ).alias(alias)
         )
 
     @staticmethod
@@ -1310,7 +904,7 @@ class Logarithm(Transformation):
 
 
 @dataclass
-class LogarithmOnePluss(Transformation):
+class LogarithmOnePluss(Transformation, PolarsExprTransformation):
     key: str
 
     name: str = "log1p"
@@ -1319,6 +913,13 @@ class LogarithmOnePluss(Transformation):
     def __init__(self, key: str) -> None:
         self.key = key
 
+    def polars_expr(self) -> pl.Expr:
+        return (
+            pl.when(pl.col(self.key) > -1)
+            .then((pl.col(self.key) + 1).log())
+            .otherwise(pl.lit(None))
+        )
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -1326,17 +927,6 @@ class LogarithmOnePluss(Transformation):
             df,
             is_valid_mask=~(df[self.key].isna() | (df[self.key] <= -1)),
             transformation=lambda dfv: np.log1p(dfv[self.key]),  # type: ignore
-        )
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return df.with_columns(
-            (
-                pl.when(pl.col(self.key) > -1)
-                .then((pl.col(self.key) + 1).log())
-                .otherwise(pl.lit(None))
-            ).alias(alias)
         )
 
     @staticmethod
@@ -1351,7 +941,7 @@ class LogarithmOnePluss(Transformation):
 
 
 @dataclass
-class ToNumerical(Transformation):
+class ToNumerical(Transformation, PolarsExprTransformation):
     key: str
 
     name: str = "to-num"
@@ -1367,9 +957,7 @@ class ToNumerical(Transformation):
 
         return to_numeric(df[self.key], errors="coerce")  # type: ignore
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
+    def polars_expr(self) -> pl.Expr:
         return pl.col(self.key).cast(pl.Float64)
 
     @staticmethod
@@ -1382,7 +970,7 @@ class ToNumerical(Transformation):
 
 
 @dataclass
-class DateComponent(Transformation):
+class DateComponent(Transformation, PolarsExprTransformation):
     key: str
     component: str
 
@@ -1402,9 +990,7 @@ class DateComponent(Transformation):
             transformation=lambda dfv: getattr(dfv[self.key].dt, self.component),  # type: ignore
         )
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
+    def polars_expr(self) -> pl.Expr:
         col = pl.col(self.key).cast(pl.Datetime).dt
         match self.component:
             case "day":
@@ -1479,7 +1065,7 @@ class DateComponent(Transformation):
 
 
 @dataclass
-class ArrayAtIndex(Transformation):
+class ArrayAtIndex(Transformation, PolarsExprTransformation):
     """Checks if an array contains a value
 
     some_array = List(String())
@@ -1497,10 +1083,8 @@ class ArrayAtIndex(Transformation):
     ) -> pd.Series:
         return pl.Series(df[self.key]).list.get(self.index).to_pandas()
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key).list.get(self.index).alias(alias)
+    def polars_expr(self) -> pl.Expr:
+        return pl.col(self.key).list.get(self.index)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -1512,7 +1096,52 @@ class ArrayAtIndex(Transformation):
 
 
 @dataclass
-class ArrayContains(Transformation):
+class ArrayContainsAny(Transformation, PolarsExprTransformation):
+    """Checks if an array contains a value
+
+    some_array = List(String())
+    contains_char = some_array.contains_any(["a", "b"])
+    """
+
+    key: str
+    values: LiteralValue
+
+    name: str = "array_contains_any"
+    dtype: FeatureType = FeatureType.boolean()
+
+    def __init__(self, key: str, value: Any | LiteralValue) -> None:
+        self.key = key
+        if isinstance(value, LiteralValue):
+            self.value = value
+        else:
+            self.value = LiteralValue.from_value(value)
+
+    async def transform_pandas(
+        self, df: pd.DataFrame, store: ContractStore
+    ) -> pd.Series:
+        vals = self.value.python_value
+        return (
+            pl.Series(df[self.key])
+            .list.eval(pl.element().is_in(vals))
+            .list.any()
+            .to_pandas()
+        )
+
+    def polars_expr(self) -> pl.Expr:
+        vals = self.value.python_value
+        return pl.col(self.key).list.eval(pl.element().is_in(vals)).list.any()
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            ArrayContainsAny("x", LiteralValue.from_value(["test", "nah"])),
+            input={"x": [["Hello", "test"], ["nah"], ["espania", None]]},
+            output=[True, True, False],
+        )
+
+
+@dataclass
+class ArrayContains(Transformation, PolarsExprTransformation):
     """Checks if an array contains a value
 
     some_array = List(String())
@@ -1539,9 +1168,7 @@ class ArrayContains(Transformation):
             pl.Series(df[self.key]).list.contains(self.value.python_value).to_pandas()
         )
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
+    def polars_expr(self) -> pl.Expr:
         return pl.col(self.key).list.contains(self.value.python_value)
 
     @staticmethod
@@ -1554,7 +1181,7 @@ class ArrayContains(Transformation):
 
 
 @dataclass
-class Contains(Transformation):
+class Contains(Transformation, PolarsExprTransformation):
     """Checks if a string value contains another string
 
     some_string = String()
@@ -1582,9 +1209,7 @@ class Contains(Transformation):
             .str.contains(self.value),  # type: ignore
         )
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
+    def polars_expr(self) -> pl.Expr:
         return pl.col(self.key).str.contains(self.value)
 
     @staticmethod
@@ -1665,111 +1290,9 @@ class ReplaceStrings(Transformation):
         transformed = await self.transform_pandas(pandas_column, store)
         return collected.with_columns(pl.Series(transformed).alias(alias)).lazy()
 
-    # @staticmethod
-    # def test_definition() -> TransformationTestDefinition:
-    #     from numpy import nan
-    #
-    #     return TransformationTestDefinition(
-    #         ReplaceStrings('x', [
-    #             (r'20[\s]*-[\s]*10', '15'),
-    #             (' ', ''),
-    #             ('.', ''),
-    #             ('10-20', '15'),
-    #             ('20\\+', '30')
-    #         ]),
-    #         input={'x': [' 20', '10 - 20', '.yeah', '20+', None, '20   - 10']},
-    #         output=['20', '15', 'yeah', '30', nan, '15'],
-    #     )
-
 
 @dataclass
-class Ratio(Transformation):
-    numerator: str
-    denumerator: str
-
-    name: str = "ratio"
-    dtype: FeatureType = FeatureType.floating_point()
-
-    def __init__(self, numerator: str, denumerator: str) -> None:
-        self.numerator = numerator
-        self.denumerator = denumerator
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(
-                df[self.numerator].isna()
-                | df[self.denumerator].isna()
-                | df[self.denumerator]
-                == 0
-            ),
-            transformation=lambda dfv: dfv[self.numerator].astype(float)
-            / dfv[self.denumerator].astype(float),
-        )
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return (
-            pl.when(pl.col(self.denumerator) != 0)
-            .then(pl.col(self.numerator) / pl.col(self.denumerator))
-            .otherwise(pl.lit(None))
-        )
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
-
-        return TransformationTestDefinition(
-            Ratio("x", "y"),
-            input={"x": [1, 2, 0, 1, None, 9], "y": [1, 0, 1, 4, 2, None]},
-            output=[1, nan, 0, 0.25, nan, nan],
-        )
-
-
-@dataclass
-class DivideDenumeratorValue(Transformation):
-    numerator: str
-    denumerator: LiteralValue
-
-    name: str = "div_denum_val"
-    dtype: FeatureType = FeatureType.floating_point()
-
-    def __init__(self, numerator: str, denumerator: LiteralValue) -> None:
-        self.numerator = numerator
-        self.denumerator = denumerator
-        assert denumerator.python_value != 0
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(df[self.numerator].isna()),  # type: ignore
-            transformation=lambda dfv: dfv[self.numerator].astype(float)
-            / self.denumerator.python_value,
-        )
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.numerator) / pl.lit(self.denumerator.python_value)
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
-
-        return TransformationTestDefinition(
-            DivideDenumeratorValue("x", LiteralValue.from_value(2)),
-            input={"x": [1, 2, 0, 1, None, 9]},
-            output=[0.5, 1, 0, 0.5, nan, 4.5],
-        )
-
-
-@dataclass
-class IsIn(Transformation):
+class IsIn(Transformation, PolarsExprTransformation):
     values: list
     key: str
 
@@ -1781,9 +1304,7 @@ class IsIn(Transformation):
     ) -> pd.Series:
         return df[self.key].isin(self.values)  # type: ignore
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
+    def polars_expr(self) -> pl.Expr:
         return pl.col(self.key).is_in(self.values)
 
     @staticmethod
@@ -1837,7 +1358,7 @@ class FillNaValuesColumns(Transformation):
 
 
 @dataclass
-class FillNaValues(Transformation):
+class FillNaValues(Transformation, PolarsExprTransformation):
     key: str
     value: LiteralValue
     dtype: FeatureType
@@ -1849,16 +1370,13 @@ class FillNaValues(Transformation):
     ) -> pd.Series:
         return df[self.key].fillna(self.value.python_value)  # type: ignore
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
+    def polars_expr(self) -> pl.Expr:
         if self.dtype == FeatureType.floating_point():
             return (
                 pl.col(self.key)
                 .fill_nan(self.value.python_value)
                 .fill_null(self.value.python_value)
             )
-
         else:
             return pl.col(self.key).fill_null(self.value.python_value)
 
@@ -1875,7 +1393,7 @@ class FillNaValues(Transformation):
 
 
 @dataclass
-class CopyTransformation(Transformation):
+class CopyTransformation(Transformation, PolarsExprTransformation):
     key: str
     dtype: FeatureType
 
@@ -1886,14 +1404,12 @@ class CopyTransformation(Transformation):
     ) -> pd.Series:
         return df[self.key]  # type: ignore
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key).alias(alias)
+    def polars_expr(self) -> pl.Expr:
+        return pl.col(self.key)
 
 
 @dataclass
-class Floor(Transformation):
+class Floor(Transformation, PolarsExprTransformation):
     key: str
     dtype: FeatureType = FeatureType.int64()
 
@@ -1906,10 +1422,8 @@ class Floor(Transformation):
 
         return floor(df[self.key])  # type: ignore
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key).floor().alias(alias)
+    def polars_expr(self) -> pl.Expr:
+        return pl.col(self.key).floor()
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -1921,7 +1435,7 @@ class Floor(Transformation):
 
 
 @dataclass
-class Ceil(Transformation):
+class Ceil(Transformation, PolarsExprTransformation):
     key: str
     dtype: FeatureType = FeatureType.int64()
 
@@ -1934,10 +1448,8 @@ class Ceil(Transformation):
 
         return ceil(df[self.key])  # type: ignore
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key).ceil().alias(alias)
+    def polars_expr(self) -> pl.Expr:
+        return pl.col(self.key).ceil()
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
@@ -1949,56 +1461,48 @@ class Ceil(Transformation):
 
 
 @dataclass
-class Round(Transformation):
-    key: str
+class Round(Transformation, InnerTransformation):
+    inner: Expression
     dtype: FeatureType = FeatureType.int64()
 
     name: str = "round"
 
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
         from numpy import round
 
-        return round(df[self.key])  # type: ignore
+        return round(column)  # type: ignore
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key).round(0).alias(alias)
+    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
+        return inner.round(0)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
-            Round("x"),
+            Round(Expression(column="x")),
             input={"x": [1.3, 1.9, None]},
             output=[1, 2, None],
         )
 
 
 @dataclass
-class Absolute(Transformation):
-    key: str
+class Absolute(Transformation, InnerTransformation):
+    inner: Expression
     dtype: FeatureType = FeatureType.floating_point()
 
     name: str = "abs"
 
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
         from numpy import abs
 
-        return abs(df[self.key])  # type: ignore
+        return abs(column)  # type: ignore
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key).abs().alias(alias)
+    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
+        return inner.abs()
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
-            Absolute("x"),
+            Absolute(Expression(column="x")),
             input={"x": [-13, 19, None]},
             output=[13, 19, None],
         )
@@ -2044,7 +1548,7 @@ class MapArgMax(Transformation):
                     .then(value.python_value)
                     .otherwise(pl.lit(None))
                 )
-            return df.with_columns(expr.alias(alias))
+            return expr.alias(alias)
         else:
             features = list(self.column_mappings.keys())
             arg_max_alias = f"{alias}_arg_max"
@@ -2179,43 +1683,7 @@ class GrayscaleImage(Transformation):
 
 
 @dataclass
-class Power(Transformation):
-    key: str
-    power: LiteralValue
-    name = "power"
-    dtype = FeatureType.floating_point()
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return df[self.key] ** self.power.python_value
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key).pow(self.power.python_value)
-
-
-@dataclass
-class PowerFeature(Transformation):
-    key: str
-    power_key: str
-    name = "power_feat"
-    dtype = FeatureType.floating_point()
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return df[self.key] ** df[self.power_key]
-
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key).pow(pl.col(self.power_key))
-
-
-@dataclass
-class AppendConstString(Transformation):
+class AppendConstString(Transformation, PolarsExprTransformation):
     key: str
     string: str
 
@@ -2227,16 +1695,14 @@ class AppendConstString(Transformation):
     ) -> pd.Series:
         return df[self.key] + self.string
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
+    def polars_expr(self) -> pl.Expr:
         return pl.concat_str(
             [pl.col(self.key).fill_null(""), pl.lit(self.string)], separator=""
-        ).alias(alias)
+        )
 
 
 @dataclass
-class AppendStrings(Transformation):
+class AppendStrings(Transformation, PolarsExprTransformation):
     first_key: str
     second_key: str
     sep: str
@@ -2249,22 +1715,18 @@ class AppendStrings(Transformation):
     ) -> pd.Series:
         return df[self.first_key] + self.sep + df[self.second_key]
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return df.with_columns(
-            pl.concat_str(
-                [
-                    pl.col(self.first_key).fill_null(""),
-                    pl.col(self.second_key).fill_null(""),
-                ],
-                separator=self.sep,
-            ).alias(alias)
+    def polars_expr(self) -> pl.Expr:
+        return pl.concat_str(
+            [
+                pl.col(self.first_key).fill_null(""),
+                pl.col(self.second_key).fill_null(""),
+            ],
+            separator=self.sep,
         )
 
 
 @dataclass
-class PrependConstString(Transformation):
+class PrependConstString(Transformation, PolarsExprTransformation):
     string: str
     key: str
 
@@ -2276,12 +1738,10 @@ class PrependConstString(Transformation):
     ) -> pd.Series:
         return self.string + df[self.key]
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
+    def polars_expr(self) -> pl.Expr:
         return pl.concat_str(
             [pl.lit(self.string), pl.col(self.key).fill_null("")], separator=""
-        ).alias(alias)
+        )
 
 
 @dataclass
@@ -2507,7 +1967,9 @@ class MedianAggregation(Transformation, PsqlTransformation, RedshiftTransformati
 
 
 @dataclass
-class PercentileAggregation(Transformation, PsqlTransformation, RedshiftTransformation):
+class PercentileAggregation(
+    Transformation, PsqlTransformation, RedshiftTransformation, PolarsExprTransformation
+):
     key: str
     percentile: float
 
@@ -2519,9 +1981,7 @@ class PercentileAggregation(Transformation, PsqlTransformation, RedshiftTransfor
     ) -> pd.Series:
         raise NotImplementedError()
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
+    def polars_expr(self) -> pl.Expr:
         return pl.col(self.key).quantile(self.percentile)
 
     def as_psql(self) -> str:
@@ -2529,39 +1989,27 @@ class PercentileAggregation(Transformation, PsqlTransformation, RedshiftTransfor
 
 
 @dataclass
-class Clip(Transformation, PsqlTransformation, RedshiftTransformation):
-    key: str
+class Clip(Transformation, InnerTransformation):
+    inner: Expression
     lower: LiteralValue
     upper: LiteralValue
 
     name = "clip"
     dtype = FeatureType.floating_point()
 
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return df[self.key].clip(
-            lower=self.lower.python_value, upper=self.upper.python_value
-        )  # type: ignore
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
+        return column.clip(lower=self.lower.python_value, upper=self.upper.python_value)  # type: ignore
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key).clip(
+    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
+        return inner.clip(
             lower_bound=self.lower.python_value, upper_bound=self.upper.python_value
-        )
-
-    def as_psql(self) -> str:
-        return (
-            f"CASE WHEN {self.key} < {self.lower} THEN {self.lower} WHEN "
-            f"{self.key} > {self.upper} THEN {self.upper} ELSE {self.key} END"
         )
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
             transformation=Clip(
-                key="a",
+                inner=Expression(column="a"),
                 lower=LiteralValue.from_value(0),
                 upper=LiteralValue.from_value(1),
             ),
@@ -2759,7 +2207,7 @@ class OllamaEmbedding(Transformation):
 
 
 @dataclass
-class JsonPath(Transformation):
+class JsonPath(Transformation, PolarsExprTransformation):
     key: str
     path: str
 
@@ -2771,28 +2219,22 @@ class JsonPath(Transformation):
     ) -> pd.Series:
         return pl.Series(df[self.key]).str.json_path_match(self.path).to_pandas()
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr:
-        return pl.col(self.key).str.json_path_match(self.path).alias(alias)
+    def polars_expr(self) -> pl.Expr:
+        return pl.col(self.key).str.json_path_match(self.path)
 
 
 @dataclass
-class Split(Transformation):
-    key: str
+class Split(Transformation, InnerTransformation):
+    inner: Expression
     separator: str
     name = "split"
     dtype: FeatureType = FeatureType.array(FeatureType.string())
 
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return df[self.key].str.split(self.separator)
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
+        return column.str.split(self.separator)
 
-    async def transform_polars(
-        self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr | pl.Expr:
-        return pl.col(self.key).str.split(self.separator)
+    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
+        return inner.str.split(self.separator)
 
 
 @dataclass
@@ -2822,7 +2264,7 @@ class LoadFeature(Transformation):
 
         if self.explode_key:
             group_keys = ["row_nr"]
-            entity_df = df.with_row_count("row_nr").explode(self.explode_key)
+            entity_df = df.with_row_index("row_nr").explode(self.explode_key)
         else:
             entity_df = df
 
@@ -2929,16 +2371,52 @@ class ListDotProduct(Transformation):
 
 
 @dataclass
-class HashColumns(Transformation):
+class HashColumns(Transformation, PolarsExprTransformation):
     columns: list[str]
 
     name = "hash_columns"
     dtype = FeatureType.uint64()
 
+    def polars_expr(self) -> pl.Expr:
+        return pl.concat_str(self.columns).hash()
+
+    async def transform_pandas(
+        self, df: pd.DataFrame, store: ContractStore
+    ) -> pd.Series:
+        pl_df = pl.from_pandas(df)
+        res = await self.transform_polars(pl_df.lazy(), "output", store)
+        if isinstance(res, pl.Expr):
+            return pl_df.with_columns(res.alias("output"))["output"].to_pandas()
+        else:
+            return res.collect()["output"].to_pandas()
+
+
+@dataclass
+class MultiTransformation(Transformation):
+    transformations: list[tuple[Transformation, str | None]]
+    name = "multi"
+    dtype = FeatureType.string()
+
     async def transform_polars(
         self, df: pl.LazyFrame, alias: str, store: ContractStore
     ) -> pl.LazyFrame | pl.Expr:
-        return pl.concat_str(self.columns).hash()
+        exclude_cols = []
+
+        for tran, sub_alias in self.transformations:
+            output = await tran.transform_polars(df, sub_alias or alias, store)
+
+            if sub_alias:
+                exclude_cols.append(sub_alias)
+
+            if isinstance(output, pl.Expr):
+                df = df.with_columns(output.alias(sub_alias or alias))
+            else:
+                df = output
+
+        if alias in exclude_cols:
+            exclude_cols.remove(alias)
+
+        return df.select(pl.exclude(exclude_cols))
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore

@@ -5,6 +5,7 @@
 mlflow
 mlruns
 docs
+delta
 
 test_data/feature-store.json
 test_data/mlruns

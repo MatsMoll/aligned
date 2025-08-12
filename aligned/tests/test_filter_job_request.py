@@ -1,3 +1,4 @@
+import pytest
 from aligned.retrieval_job import RetrievalJob, RetrievalRequest
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureType
 
@@ -60,3 +61,40 @@ def test_filter_job_retrieval_requests() -> None:
 
     assert set(filtered_job.request_result.feature_columns) == {"b"}
     assert set(filtered_job.request_result.entity_columns) == {"id"}
+
+
+@pytest.mark.asyncio
+async def test_filter_with_factory() -> None:
+    from aligned import data_contract, String, Int16, InMemorySource
+
+    @data_contract(
+        source=InMemorySource.from_values(
+            {
+                "some_id": [1, 2, 3, 4, 5, 6],
+                "x_value": [10, 10, 20, 20, 30, 30],
+                "partition_value": ["a", "b", "a", "b", "a", "b"],
+            }
+        )
+    )
+    class TestData:
+        some_id = Int16().as_entity()
+
+        x_value = Int16()
+        partition_value = String()
+
+        other = x_value + 20
+
+    schema = TestData()
+    df = await TestData.query().filter(schema.partition_value == "a").to_polars()
+
+    assert df.height == 3
+
+    df = (
+        await TestData.query()
+        .filter((schema.x_value > 25) & (schema.partition_value == "b"))
+        .to_polars()
+    )
+
+    schema.x_value.is_not_null
+
+    assert df.height == 1

@@ -23,7 +23,7 @@ def imports_for(file_path: Path) -> set[str]:
             tree = ast.parse(raw_file)
 
         imported_modules = set()
-        for node in ast.walk(tree):
+        for node in tree.body:
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     imported_modules.add(alias.name)
@@ -102,6 +102,7 @@ class RepoReader:
         )
 
         for py_file in files:
+            logger.debug(f"Checking file at {py_file}")
             imports = imports_for(py_file)
             module_path = path_to_py_module(py_file, root_path)
 

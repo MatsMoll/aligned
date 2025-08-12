@@ -19,6 +19,8 @@ from aligned.schemas.transformation import (
     FillNaValuesColumns,
     LiteralValue,
     EmbeddingModel,
+    BinaryOperators,
+    Expression,
 )
 
 if TYPE_CHECKING:
@@ -28,24 +30,17 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class EqualsFactory(TransformationFactory):
-    left: FeatureFactory
-    right: FeatureFactory | Any
+class IsNullFactory(TransformationFactory):
+    value: FeatureFactory
 
     @property
     def using_features(self) -> list[FeatureFactory]:
-        if isinstance(self.right, FeatureFactory):
-            return [self.left, self.right]
-        else:
-            return [self.left]
+        return [self.value]
 
     def compile(self) -> Transformation:
-        from aligned.schemas.transformation import EqualsLiteral, Equals
+        from aligned.schemas.transformation import IsNull
 
-        if isinstance(self.right, FeatureFactory):
-            return Equals(self.left.name, self.right.name)
-        else:
-            return EqualsLiteral(self.left.name, LiteralValue.from_value(self.right))
+        return IsNull(Expression.from_value(self.value))
 
 
 @dataclass
@@ -59,27 +54,7 @@ class NotNullFactory(TransformationFactory):
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import NotNull
 
-        return NotNull(self.value.name)
-
-
-@dataclass
-class RatioFactory(TransformationFactory):
-    numerator: FeatureFactory
-    denumerator: FeatureFactory | LiteralValue
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        if isinstance(self.denumerator, FeatureFactory):
-            return [self.numerator, self.denumerator]
-        else:
-            return [self.numerator]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import DivideDenumeratorValue, Ratio
-
-        if isinstance(self.denumerator, LiteralValue):
-            return DivideDenumeratorValue(self.numerator.name, self.denumerator)
-        return Ratio(self.numerator.name, self.denumerator.name)
+        return NotNull(Expression.from_value(self.value))
 
 
 @dataclass
@@ -113,6 +88,21 @@ class ArrayAtIndexFactory(TransformationFactory):
 
 
 @dataclass
+class ArrayContainsAnyFactory(TransformationFactory):
+    values: LiteralValue
+    in_feature: FeatureFactory
+
+    @property
+    def using_features(self) -> list[FeatureFactory]:
+        return [self.in_feature]
+
+    def compile(self) -> Transformation:
+        from aligned.schemas.transformation import ArrayContainsAny
+
+        return ArrayContainsAny(self.in_feature.name, self.values)
+
+
+@dataclass
 class ArrayContainsFactory(TransformationFactory):
     value: LiteralValue
     in_feature: FeatureFactory
@@ -143,102 +133,44 @@ class ContainsFactory(TransformationFactory):
 
 
 @dataclass
-class NotEqualsFactory(TransformationFactory):
-    value: Any | FeatureFactory
-    in_feature: FeatureFactory
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        return [self.in_feature]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import (
-            NotEqualsLiteral,
-            NotEquals as NotEqualsTransformation,
-        )
-
-        if isinstance(self.value, FeatureFactory):
-            return NotEqualsTransformation(self.in_feature.name, self.value.name)
-        else:
-            return NotEqualsLiteral(
-                self.in_feature.name, LiteralValue.from_value(self.value)
-            )
-
-
-@dataclass
-class GreaterThenFactory(TransformationFactory):
-    left_feature: FeatureFactory
+class BinaryFactory(TransformationFactory):
+    left: Any
     right: Any
+    operation: BinaryOperators
 
     @property
     def using_features(self) -> list[FeatureFactory]:
+        features = []
+        if isinstance(self.left, FeatureFactory):
+            features.append(self.left)
+            features.extend(
+                feat
+                for feat in self.left.feature_dependencies()
+                if feat._name is not None
+            )
         if isinstance(self.right, FeatureFactory):
-            return [self.left_feature, self.right]
-        else:
-            return [self.left_feature]
+            features.append(self.right)
+            features.extend(
+                feat
+                for feat in self.right.feature_dependencies()
+                if feat._name is not None
+            )
+        return features
 
     def compile(self) -> Transformation:
-        from aligned.schemas.transformation import GreaterThen, GreaterThenValue
+        from aligned.schemas.transformation import BinaryTransformation, Expression
+
+        if isinstance(self.left, FeatureFactory):
+            left = self.left.to_expression()
+        else:
+            left = Expression(literal=LiteralValue.from_value(self.left))
 
         if isinstance(self.right, FeatureFactory):
-            return GreaterThen(self.left_feature.name, self.right.name)
+            right = self.right.to_expression()
         else:
-            return GreaterThenValue(self.left_feature.name, self.right)
+            right = Expression(literal=LiteralValue.from_value(self.right))
 
-
-@dataclass
-class GreaterThenOrEqualFactory(TransformationFactory):
-    value: Any
-    in_feature: FeatureFactory
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        return [self.in_feature]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import (
-            GreaterThenOrEqual as GTETransformation,
-        )
-
-        return GTETransformation(self.in_feature.name, self.value)
-
-
-@dataclass
-class LowerThenFactory(TransformationFactory):
-    value: Any
-    in_feature: FeatureFactory
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        return [self.in_feature]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import LowerThen as LTTransformation
-        from aligned.schemas.transformation import LowerThenCol
-
-        if isinstance(self.value, FeatureFactory):
-            return LowerThenCol(self.in_feature.name, self.value.name)
-        else:
-            return LTTransformation(self.in_feature.name, self.value)
-
-
-@dataclass
-class LowerThenOrEqualFactory(TransformationFactory):
-    value: Any
-    in_feature: FeatureFactory
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        return [self.in_feature]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import LowerThenOrEqual as LTETransformation
-        from aligned.schemas.transformation import LowerThenOrEqualCol
-
-        if isinstance(self.value, FeatureFactory):
-            return LowerThenOrEqualCol(self.in_feature.name, self.value.name)
-
-        return LTETransformation(self.in_feature.name, self.value)
+        return BinaryTransformation(left, right, operator=self.operation)
 
 
 @dataclass
@@ -253,7 +185,9 @@ class Split(TransformationFactory):
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import Split as SplitTransformation
 
-        return SplitTransformation(self.from_feature.name, self.pattern)
+        return SplitTransformation(
+            Expression.from_value(self.from_feature), self.pattern
+        )
 
 
 @dataclass
@@ -297,43 +231,6 @@ class OllamaGenerate(TransformationFactory):
         )
 
 
-# @dataclass
-# class Split(TransformationFactory):
-
-#     pattern: str
-#     from_feature: FeatureFactory
-#     max_splits: int | None
-
-#     @property
-#     def method(self) -> Callable[[pd.DataFrame], pd.Series]:
-#         async def met(df: pd.DataFrame) -> pd.Series:
-#             return df[self.from_feature.name].str.split(pat=self.pattern, n=self.max_splits)
-
-#         return met
-
-#     def index(self, index: int) -> 'ArrayIndex':
-#         return ArrayIndex(index, self)
-
-
-# class ArrayIndex(DillTransformationFactory):
-
-#     index: int
-#     from_feature: FeatureFactory
-
-#     def __init__(self, index: int, feature: FeatureFactory) -> None:
-#         self.using_features = [feature]
-#         self.feature = Bool()
-#         self.index = index
-#         self.from_feature = feature
-
-#     @property
-#     def method(self) -> Callable[[pd.DataFrame], pd.Series]:
-#         async def met(df: pd.DataFrame) -> pd.Series:
-#             return df[self.from_feature.name].str[self.index]
-
-#         return met
-
-
 @dataclass
 class DateComponentFactory(TransformationFactory):
     component: str
@@ -347,71 +244,6 @@ class DateComponentFactory(TransformationFactory):
         from aligned.schemas.transformation import DateComponent as DCTransformation
 
         return DCTransformation(self.feature.name, self.component)
-
-
-@dataclass
-class DifferanceBetweenFactory(TransformationFactory):
-    first_feature: FeatureFactory
-    second_feature: FeatureFactory | LiteralValue
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        if isinstance(self.second_feature, FeatureFactory):
-            return [self.first_feature, self.second_feature]
-        else:
-            return [self.first_feature]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import Subtraction, SubtractionValue
-
-        if isinstance(self.second_feature, FeatureFactory):
-            return Subtraction(self.first_feature.name, self.second_feature.name)
-        else:
-            return SubtractionValue(self.first_feature.name, self.second_feature)
-
-
-@dataclass
-class AdditionBetweenFactory(TransformationFactory):
-    first_feature: FeatureFactory
-    second_feature: FeatureFactory | Any
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        if isinstance(self.second_feature, FeatureFactory):
-            return [self.first_feature, self.second_feature]
-        else:
-            return [self.first_feature]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import Addition, AdditionValue
-
-        if isinstance(self.second_feature, FeatureFactory):
-            return Addition(self.first_feature.name, self.second_feature.name)
-        else:
-            return AdditionValue(
-                self.first_feature.name, LiteralValue.from_value(self.second_feature)
-            )
-
-
-@dataclass
-class PowerFactory(TransformationFactory):
-    first: FeatureFactory
-    second: FeatureFactory | Any
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        if isinstance(self.second, FeatureFactory):
-            return [self.first, self.second]
-        return [self.first]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import Power, PowerFeature
-
-        if isinstance(self.second, FeatureFactory):
-            return PowerFeature(self.first.name, self.second.name)
-        else:
-            value = LiteralValue.from_value(self.second)
-            return Power(self.first.name, value)
 
 
 @dataclass
@@ -488,36 +320,6 @@ class IsInFactory(TransformationFactory):
         from aligned.schemas.transformation import IsIn as IsInTransformation
 
         return IsInTransformation(self.values, self.feature.name)
-
-
-@dataclass
-class AndFactory(TransformationFactory):
-    first_feature: FeatureFactory
-    second_feature: FeatureFactory
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        return [self.first_feature, self.second_feature]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import And as AndTransformation
-
-        return AndTransformation(self.first_feature.name, self.second_feature.name)
-
-
-@dataclass
-class OrFactory(TransformationFactory):
-    first_feature: FeatureFactory
-    second_feature: FeatureFactory
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        return [self.first_feature, self.second_feature]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import Or as OrTransformation
-
-        return OrTransformation(self.first_feature.name, self.second_feature.name)
 
 
 @dataclass
@@ -613,7 +415,7 @@ class RoundFactory(TransformationFactory):
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import Round
 
-        return Round(self.feature.name)
+        return Round(Expression.from_value(self.feature))
 
 
 @dataclass
@@ -627,7 +429,7 @@ class AbsoluteFactory(TransformationFactory):
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import Absolute
 
-        return Absolute(self.feature.name)
+        return Absolute(Expression.from_value(self.feature))
 
 
 @dataclass
@@ -775,7 +577,7 @@ class PolarsTransformationFactory(TransformationFactory):
 
         if isinstance(self.method, pl.Expr):
             return PolarsExpression(
-                self.method.meta.write_json(), dtype=self.dtype.dtype
+                self.method.meta.serialize(format="json"), dtype=self.dtype.dtype
             )
         else:
             function_name = dill.source.getname(self.method)
@@ -1015,31 +817,10 @@ class ClipFactory(TransformationFactory):
         from aligned.schemas.transformation import Clip
 
         return Clip(
-            self.feature.name,
+            Expression.from_value(self.feature),
             LiteralValue.from_value(self.lower_bound),
             LiteralValue.from_value(self.upper_bound),
         )
-
-
-@dataclass
-class MultiplyFactory(TransformationFactory):
-    first: FeatureFactory
-    behind: FeatureFactory | LiteralValue
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        if isinstance(self.behind, LiteralValue):
-            return [self.first]
-        else:
-            return [self.first, self.behind]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import Multiply, MultiplyValue
-
-        if isinstance(self.behind, LiteralValue):
-            return MultiplyValue(self.first.name, self.behind)
-        else:
-            return Multiply(self.first.name, self.behind.name)
 
 
 @dataclass

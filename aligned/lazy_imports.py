@@ -137,6 +137,7 @@ _REDIS_AVAILABLE = True
 _AWS_S3_AVAILABLE = True
 _LANGCHAIN_AVAILABLE = True
 _FAST_API_AVAILABLE = True
+_DATABRICKS_FE_AVAILABLE = True
 
 if TYPE_CHECKING:
     import pandas
@@ -146,6 +147,7 @@ if TYPE_CHECKING:
     import aioaws.s3 as s3
     import langchain_core
     import fastapi
+    import databricks.feature_enbineering as databricks_fe
 else:
     pandas, _PANDAS_AVAILABLE = _lazy_import("pandas")
     sentence_transformers, _SENTENCE_TRANSFORMERS = _lazy_import(
@@ -156,3 +158,6 @@ else:
     s3, _REDIS_AVAILABLE = _lazy_import("aioaws.s3")
     langchain_core, _LANGCHAIN_AVAILABLE = _lazy_import("langchain_core")
     fastapi, _FAST_API_AVAILABLE = _lazy_import("fastapi")
+    databricks_fe, _DATABRICKS_FE_AVAILABLE = _lazy_import(
+        "databricks.feature_engineering"
+    )

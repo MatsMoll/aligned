@@ -17,6 +17,7 @@ from typing import (
     Type,
     Callable,
     Union,
+    overload,
 )
 from uuid import uuid4
 
@@ -540,12 +541,43 @@ class FeatureViewWrapper(Generic[T]):
             RetrievalJob.from_convertable(data, request), request.needed_requests[0]
         )
 
+    def n_examples(self, n: int) -> RetrievalJob:
+        from aligned.sources.random_source import RandomDataSource
+
+        request = self.compile().request_all
+        return RandomDataSource(default_data_size=n).all(request.request_result, n)
+
+    @overload
     def drop_invalid(
-        self, data: ConvertableData, validator: Validator | None = None
-    ) -> ConvertableData:
+        self, values: pl.LazyFrame, validator: Validator | None = None
+    ) -> pl.LazyFrame: ...
+
+    @overload
+    def drop_invalid(
+        self, values: pl.DataFrame, validator: Validator | None = None
+    ) -> pl.DataFrame: ...
+
+    @overload
+    def drop_invalid(
+        self, values: pd.DataFrame, validator: Validator | None = None
+    ) -> pd.DataFrame: ...
+
+    @overload
+    def drop_invalid(
+        self, values: dict[str, list], validator: Validator | None = None
+    ) -> dict[str, list]: ...
+
+    @overload
+    def drop_invalid(
+        self, values: list[dict[str, Any]], validator: Validator | None = None
+    ) -> list[dict[str, Any]]: ...
+
+    def drop_invalid(
+        self, values: ConvertableToRetrievalJob, validator: Validator | None = None
+    ) -> ConvertableToRetrievalJob:
         from aligned.retrieval_job import DropInvalidJob
 
-        if not validator:
+        if validator is None:
             from aligned.validation.interface import PolarsValidator
 
             validator = PolarsValidator()
@@ -556,22 +588,26 @@ class FeatureViewWrapper(Generic[T]):
             )
         )
 
-        if isinstance(data, dict):
-            validate_data = pl.DataFrame(data, strict=False)
+        if isinstance(values, pl.LazyFrame):
+            return validator.validate_polars(features, values)
+        elif isinstance(values, pl.DataFrame):
+            df = values.lazy()
+            return validator.validate_polars(features, df).collect()
+        elif isinstance(values, dict):
+            df = pl.DataFrame(values).lazy()
+            return (
+                validator.validate_polars(features, df)
+                .collect()
+                .to_dict(as_series=False)
+            )
+        elif isinstance(values, list):
+            df = pl.DataFrame(values).lazy()
+            return validator.validate_polars(features, df).collect().to_dicts()
+        elif isinstance(values, pd.DataFrame):
+            df = pl.from_pandas(values).lazy()
+            return validator.validate_polars(features, df).collect().to_pandas()
         else:
-            validate_data = data
-
-        if isinstance(validate_data, pl.DataFrame):
-            validated = validator.validate_polars(
-                features, validate_data.lazy()
-            ).collect()
-            if isinstance(data, dict):
-                return validated.to_dict(as_series=False)
-            return validated  # type: ignore
-        elif isinstance(validate_data, pd.DataFrame):
-            return validator.validate_pandas(features, validate_data)
-        else:
-            raise ValueError(f"Invalid data type: {type(data)}")
+            raise ValueError(f"Unable to convert {type(values)}")
 
     def as_source(
         self, renames: dict[str, str] | None = None
@@ -634,6 +670,9 @@ def feature_view(
         return FeatureViewWrapper(metadata, cls())
 
     return decorator
+
+
+data_contract = feature_view
 
 
 class FeatureView(ABC):
@@ -703,9 +742,6 @@ class FeatureView(ABC):
     ) -> CompiledFeatureView:
         from aligned.compiler.feature_factory import FeatureFactory
 
-        # Used to deterministicly init names for hidden features
-        hidden_features = 0
-
         var_names = [
             name for name in feature_view.__dir__() if not name.startswith("_")
         ]
@@ -772,6 +808,7 @@ class FeatureView(ABC):
                 feature_deps = [
                     (feat.depth(), feat) for feat in feature.feature_dependencies()
                 ]
+                hidden_features: list[FeatureFactory] = []
 
                 # Sorting by key so the "core" features are first
                 # And then making it possible for other features to reference them
@@ -800,8 +837,8 @@ class FeatureView(ABC):
                         continue
 
                     if not feature_dep._name:
-                        feature_dep._name = str(hidden_features)
-                        hidden_features += 1
+                        hidden_features.append(feature_dep)
+                        continue
 
                     if isinstance(
                         feature_dep.transformation, AggregationTransformationFactory
@@ -819,8 +856,40 @@ class FeatureView(ABC):
                 if isinstance(feature.transformation, AggregationTransformationFactory):
                     aggregations.append(feature)
                 else:
+                    transformations = []
+                    deps: set[FeatureReference] = set()
+
+                    if hidden_features:
+                        for index, feat in enumerate(hidden_features):
+                            sub_name = str(index)
+                            feat._name = sub_name
+                            comp = feat.compile()
+                            transformations.append((comp.transformation, sub_name))
+                            deps.update(comp.depending_on)
+
+                    compiled_der = feature.compile()
+
+                    if hidden_features:
+                        for feat in hidden_features:
+                            # Clean up the name so they are not detected as actual features
+                            feat._name = None
+
+                    if transformations:
+                        from aligned.schemas.transformation import MultiTransformation
+
+                        transformations.append((compiled_der.transformation, None))
+                        compiled_der.transformation = MultiTransformation(
+                            transformations
+                        )
+                        compiled_der.depending_on = {
+                            dep
+                            for dep in deps
+                            # Aka only non hidden features
+                            if not dep.name.isdigit()
+                        }
+
                     view.derived_features.add(
-                        feature.compile()
+                        compiled_der
                     )  # Should decide on which payload to send
 
             elif isinstance(feature, EventTimestamp):

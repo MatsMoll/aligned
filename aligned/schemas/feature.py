@@ -32,6 +32,12 @@ class StaticFeatureTags:
     is_image = "is_image_url"
     is_prompt_completion = "is_prompt_completion"
 
+    # Data Types
+    is_ordinal = "is_ordinal"
+    is_nominal = "is_nomial"
+    is_interval = "is_interval"
+    is_ratio = "is_ratio"
+
 
 NAME_POLARS_MAPPING = [
     ("string", pl.Utf8),
