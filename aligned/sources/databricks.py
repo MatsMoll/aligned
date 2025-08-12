@@ -607,6 +607,8 @@ def features_to_read(
 ) -> list[str]:
     stored_fields = schema.fieldNames()
 
+    logger.debug(f"Stored columns in the source: {stored_fields}")
+
     columns = list(request.entity_names)
 
     if not renamer:
@@ -621,6 +623,7 @@ def features_to_read(
         db_name = invers_renamer.rename(feat.name)
 
         if db_name in stored_fields:
+            logger.debug(f"Selecting '{db_name}' as '{feat.name}'")
             if db_name not in columns:
                 columns.append(db_name)
         elif feat.name in derived_features:
@@ -732,6 +735,7 @@ class UnityCatalogTableAllJob(RetrievalJob):
 
             if self.renamer and cols:
                 renames = {col: self.renamer.rename(col) for col in cols}
+                logger.debug(f"Renaming with map {renames}")
                 spark_df = spark_df.withColumnsRenamed(renames)
 
         if self.where:
