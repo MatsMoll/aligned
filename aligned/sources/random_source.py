@@ -147,8 +147,12 @@ async def data_for_request(
     if request.event_timestamp:
         needed_features.add(request.event_timestamp.as_feature())
 
-    schema = {feature.name: feature.dtype.polars_type for feature in needed_features}
+    if values is not None:
+        needed_features = {
+            feat for feat in needed_features if feat.name not in values.columns
+        }
 
+    schema = {feature.name: feature.dtype.polars_type for feature in needed_features}
     exprs = {}
 
     for feature in sorted(needed_features, key=lambda f: f.name):
@@ -271,10 +275,15 @@ class RandomDataSource(
 
         source, _ = requests[0]
 
+        request = RetrievalRequest.unsafe_combine([request for _, request in requests])
+        join_entities = request.entity_names.intersection(
+            facts.request_result.all_returned_columns
+        )
+
         async def random_features_for(
             facts: RetrievalJob, request: RetrievalRequest
         ) -> pl.LazyFrame:
-            if source.partial_data.is_empty():
+            if not join_entities or source.partial_data.is_empty():
                 df = await facts.to_polars()
                 if source.fill_mode == "duplicate":
                     random = (await data_for_request(request, 1, values=df)).lazy()
@@ -301,7 +310,11 @@ class RandomDataSource(
                     )
                 ).lazy()
 
-        request = RetrievalRequest.unsafe_combine([request for _, request in requests])
+        if not join_entities:
+            return CustomMethodDataSource.from_methods(
+                features_for=random_features_for,
+            ).features_for(facts, request)
+
         return FileFactualJob(
             CustomMethodDataSource.from_methods(
                 features_for=random_features_for,
@@ -332,10 +345,10 @@ class RandomDataSource(
             if not join_columns:
                 return full_df.lazy()
 
-            random_df = (await data_for_request(request, full_df.height)).lazy()
-            return full_df.hstack(
-                random_df.select(pl.col(join_columns)).collect()
+            random_df = (
+                await data_for_request(request, full_df.height, values=full_df)
             ).lazy()
+            return random_df
 
         return CustomMethodDataSource.from_methods(all_data=all_data).all_data(
             request, limit

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from aligned import feature_view, String, Int16, List
+from aligned import data_contract, String, Int16, List
 from aligned.sources.random_source import RandomDataSource
 from conftest import DataTest
 
@@ -26,18 +26,19 @@ async def test_random_source(point_in_time_data_test: DataTest) -> None:
     assert len(df.columns) == len(request.all_returned_columns)
 
 
+@data_contract(source=RandomDataSource())
+class Features:
+    some_id = Int16().as_entity()
+    values = List(String())
+    contains_a = values.contains("a")
+
+    integer = Int16()
+
+    is_above_10 = integer > 10
+
+
 @pytest.mark.asyncio
 async def test_random_derived_feature() -> None:
-    @feature_view(source=RandomDataSource())
-    class Features:
-        some_id = Int16().as_entity()
-        values = List(String())
-        contains_a = values.contains("a")
-
-        integer = Int16()
-
-        is_above_10 = integer > 10
-
     query = Features.query()
 
     random_values = await query.all().limit(10).to_polars()
@@ -47,3 +48,69 @@ async def test_random_derived_feature() -> None:
         {"values": [["A", "b"], ["a", "B"]], "some_id": [1, 2]}
     ).to_polars()
     assert with_inject[Features().contains_a.name].to_list() == [False, True]
+
+
+@pytest.mark.asyncio
+async def test_random_source_features_for():
+    store = Features.query().store
+    store = store.update_source_for(
+        Features,
+        RandomDataSource.with_values(
+            {
+                "some_id": [1, 2, 3],
+                "values": [["A", "b"], ["a", "B"], ["B", "C"]],
+            }
+        ),
+    )
+
+    df = await store.contract(Features).all().to_polars()
+    assert df.height == 3
+    assert df["contains_a"].to_list() == [False, True, False]
+
+    df = (
+        await store.contract(Features)
+        .features_for({"integer": [1, 2, 11, 12]})
+        .to_polars()
+    )
+
+    assert df.height == 4
+    assert df["is_above_10"].to_list() == [False, False, True, True]
+    assert "values" in df.columns
+    assert "some_id" in df.columns
+
+
+@data_contract(
+    source=RandomDataSource.with_values(
+        {
+            "some_id": [1, 2, 3],
+            "values": [["A", "b"], ["a", "B"], ["B", "C"]],
+        }
+    )
+)
+class FeaturesWithoutEntities:
+    some_id = Int16()
+    values = List(String())
+    contains_a = values.contains("a")
+
+    integer = Int16()
+
+    is_above_10 = integer > 10
+
+
+@pytest.mark.asyncio
+async def test_random_source_without_entities():
+    df = await FeaturesWithoutEntities.query().all().to_polars()
+    assert df.height == 3
+    assert df["contains_a"].to_list() == [False, True, False]
+    assert "is_above_10" in df.columns
+
+    df = (
+        await FeaturesWithoutEntities.query()
+        .features_for({"integer": [1, 2, 11, 12]})
+        .to_polars()
+    )
+
+    assert df.height == 4
+    assert df["is_above_10"].to_list() == [False, False, True, True]
+    assert "values" in df.columns
+    assert "some_id" in df.columns
