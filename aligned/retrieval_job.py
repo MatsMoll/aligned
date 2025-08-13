@@ -1199,7 +1199,9 @@ class RetrievalJob(ABC):
                     RetrievalRequest(
                         name=req.name,
                         location=req.location,
-                        entities=req.entities,
+                        entities={
+                            ent for ent in req.entities if ent.name in loaded_features
+                        },
                         features={
                             feat
                             for feat in req.features
