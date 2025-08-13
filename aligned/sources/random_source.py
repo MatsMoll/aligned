@@ -75,13 +75,13 @@ def random_values_for(
         if max_value is None and dtype.name.startswith("uint"):
             bits = dtype.name.lstrip("uint")
             if bits.isdigit():
-                max_value = 2 ** int(bits)
+                max_value = 2 ** int(bits) - 1
                 min_value = 0
         elif max_value is None and dtype.name.startswith("int"):
             bits = dtype.name.lstrip("int")
             if bits.isdigit():
                 value_range = 2 ** int(bits) / 2
-                max_value = value_range
+                max_value = value_range - 1
                 min_value = -value_range
 
         if max_value and min_value:
