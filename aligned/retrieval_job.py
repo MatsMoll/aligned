@@ -1356,7 +1356,6 @@ def polars_filter_expressions_from(
         exprs: list = []
 
         for constraint in feature.constraints:
-            print(feature.name, constraint)
             if isinstance(constraint, LowerBound):
                 exprs.append(
                     (
