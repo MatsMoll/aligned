@@ -27,12 +27,6 @@ if TYPE_CHECKING:
     from pyspark.sql.types import DataType, StructType
 
 
-def is_running_on_databricks() -> bool:
-    import os
-
-    return "DATABRICKS_RUNTIME_VERSION" in os.environ
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -40,17 +34,6 @@ logger = logging.getLogger(__name__)
 class DatabricksAuthConfig:
     token: str
     host: str
-
-
-def polars_schema_to_spark(schema: dict[str, pl.PolarsDataType]) -> StructType:
-    from pyspark.sql.types import StructField, StructType
-
-    return StructType(
-        [
-            StructField(name=name, dataType=polars_dtype_to_spark(dtype))
-            for name, dtype in schema.items()
-        ]
-    )
 
 
 def raise_on_invalid_pyspark_schema(schema: DataType) -> None:
