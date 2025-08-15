@@ -875,27 +875,7 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.sources.databricks.html#is_running_on_databricks" class="internal-link" title="aligned.sources.databricks.is_running_on_databricks">is<wbr></wbr>_running<wbr></wbr>_on<wbr></wbr>_databricks</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
             <div class="itemName"><code><a href="aligned.sources.databricks.html#polars_dtype_to_spark" class="internal-link" title="aligned.sources.databricks.polars_dtype_to_spark">polars<wbr></wbr>_dtype<wbr></wbr>_to<wbr></wbr>_spark</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.sources.databricks.html#polars_schema_to_spark" class="internal-link" title="aligned.sources.databricks.polars_schema_to_spark">polars<wbr></wbr>_schema<wbr></wbr>_to<wbr></wbr>_spark</a></code>
             </div>
         
 
@@ -974,7 +954,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">UnityCatalogTableAllJob</span>(<a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a>): <a href="https://github.com/MatsMoll/aligned/tree/3504bd786b89408ebfbc7308f56d9430dbf7afe9/aligned/sources/databricks.py#L703" class="sourceLink">(source)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">UnityCatalogTableAllJob</span>(<a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a>): <a href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L686" class="sourceLink">(source)</a></code></p>
           <p><a href="classIndex.html#aligned.sources.databricks.UnityCatalogTableAllJob">View In Hierarchy</a></p>
         </div>
 
@@ -1301,7 +1281,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">filter</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">condition: <code><a href="aligned.retrieval_job.html#FilterRepresentable" class="internal-link" title="aligned.retrieval_job.FilterRepresentable">FilterRepresentable</a></code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3504bd786b89408ebfbc7308f56d9430dbf7afe9/aligned/sources/databricks.py#L720">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L703">
       
       (source)
     </a>
@@ -1329,7 +1309,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">to_lazy_polars</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code>pl.LazyFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3504bd786b89408ebfbc7308f56d9430dbf7afe9/aligned/sources/databricks.py#L752">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L735">
       
       (source)
     </a>
@@ -1356,7 +1336,7 @@ a feature name, or an polars expression to filter on.</p></div>
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">to_pandas</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code>pd.DataFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3504bd786b89408ebfbc7308f56d9430dbf7afe9/aligned/sources/databricks.py#L729">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L712">
       
       (source)
     </a>
@@ -1382,7 +1362,7 @@ a feature name, or an polars expression to filter on.</p></div>
   <div class="functionHeader">
     
     <span class="py-defname">config</span>: <code><a href="aligned.sources.databricks.DatabricksConnectionConfig.html" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig">DatabricksConnectionConfig</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3504bd786b89408ebfbc7308f56d9430dbf7afe9/aligned/sources/databricks.py#L705">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L688">
       
       (source)
     </a>
@@ -1409,7 +1389,7 @@ a feature name, or an polars expression to filter on.</p></div>
   <div class="functionHeader">
     
     <span class="py-defname">renamer</span>: <code><a href="aligned.sources.renamer.Renamer.html" class="internal-link" title="aligned.sources.renamer.Renamer">Renamer</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3504bd786b89408ebfbc7308f56d9430dbf7afe9/aligned/sources/databricks.py#L710">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L693">
       
       (source)
     </a>
@@ -1436,7 +1416,7 @@ a feature name, or an polars expression to filter on.</p></div>
   <div class="functionHeader">
     
     <span class="py-defname">request</span>: <code>RetrievalRequest</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3504bd786b89408ebfbc7308f56d9430dbf7afe9/aligned/sources/databricks.py#L707">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L690">
       
       (source)
     </a>
@@ -1463,7 +1443,7 @@ a feature name, or an polars expression to filter on.</p></div>
   <div class="functionHeader">
     
     <span class="py-defname">table</span>: <code><a href="aligned.sources.databricks.UnityCatalogTableConfig.html" class="internal-link" title="aligned.sources.databricks.UnityCatalogTableConfig">UnityCatalogTableConfig</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3504bd786b89408ebfbc7308f56d9430dbf7afe9/aligned/sources/databricks.py#L706">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L689">
       
       (source)
     </a>
@@ -1490,7 +1470,7 @@ a feature name, or an polars expression to filter on.</p></div>
   <div class="functionHeader">
     
     <span class="py-defname">where</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3504bd786b89408ebfbc7308f56d9430dbf7afe9/aligned/sources/databricks.py#L709">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L692">
       
       (source)
     </a>
@@ -1517,7 +1497,7 @@ a feature name, or an polars expression to filter on.</p></div>
   <div class="functionHeader">
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
     <span class="py-defname">request_result</span>: <code>RequestResult</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3504bd786b89408ebfbc7308f56d9430dbf7afe9/aligned/sources/databricks.py#L712">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L695">
       
       (source)
     </a>
@@ -1544,7 +1524,7 @@ a feature name, or an polars expression to filter on.</p></div>
   <div class="functionHeader">
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
     <span class="py-defname">retrieval_requests</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>RetrievalRequest]</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3504bd786b89408ebfbc7308f56d9430dbf7afe9/aligned/sources/databricks.py#L716">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L699">
       
       (source)
     </a>
@@ -1571,7 +1551,7 @@ a feature name, or an polars expression to filter on.</p></div>
   <div class="functionHeader">
     
     <span class="py-defname">_limit</span>: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3504bd786b89408ebfbc7308f56d9430dbf7afe9/aligned/sources/databricks.py#L708">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L691">
       
       (source)
     </a>
@@ -1598,7 +1578,7 @@ a feature name, or an polars expression to filter on.</p></div>
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    25.4.0 at 2025-08-14 09:36:55.
+    25.4.0 at 2025-08-15 12:04:26.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 
