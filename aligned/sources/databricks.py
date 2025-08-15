@@ -917,7 +917,7 @@ WHEN NOT MATCHED THEN
         pdf = (await job.unique_entities().to_polars()).select(
             request.all_returned_columns
         )
-        schema = polars_schema_to_spark(pdf.schema)  # type: ignore
+        schema = request.spark_schema()
         raise_on_invalid_pyspark_schema(schema)
         conn = self.config.connection()
         df = conn.createDataFrame(pdf.to_pandas(), schema=schema)
