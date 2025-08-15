@@ -27,12 +27,6 @@ if TYPE_CHECKING:
     from pyspark.sql.types import DataType, StructType
 
 
-def is_running_on_databricks() -> bool:
-    import os
-
-    return "DATABRICKS_RUNTIME_VERSION" in os.environ
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -40,17 +34,6 @@ logger = logging.getLogger(__name__)
 class DatabricksAuthConfig:
     token: str
     host: str
-
-
-def polars_schema_to_spark(schema: dict[str, pl.PolarsDataType]) -> StructType:
-    from pyspark.sql.types import StructField, StructType
-
-    return StructType(
-        [
-            StructField(name=name, dataType=polars_dtype_to_spark(dtype))
-            for name, dtype in schema.items()
-        ]
-    )
 
 
 def raise_on_invalid_pyspark_schema(schema: DataType) -> None:
@@ -871,12 +854,12 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
 
     async def insert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         pdf = (await job.to_polars()).select(request.all_returned_columns)
-        schema = polars_schema_to_spark(pdf.schema)  # type: ignore
+        schema = request.spark_schema()
 
         conn = self.config.connection()
         df = conn.createDataFrame(
             pdf.to_pandas(),
-            schema=schema,  # type: ignore
+            schema=schema,
         )
         if conn.catalog.tableExists(self.table.identifier()):
             schema = conn.table(self.table.identifier()).schema
@@ -899,10 +882,7 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
             on_statement = " AND ".join(
                 [f"target.{ent} = source.{ent}" for ent in entities]
             )
-            df = conn.createDataFrame(
-                pdf.to_pandas(),
-                schema=polars_schema_to_spark(pdf.schema),  # type: ignore
-            )
+            df = conn.createDataFrame(pdf.to_pandas(), schema=request.spark_schema())
             schema = conn.table(target_table).schema
             validate_pyspark_schema(old=schema, new=df.schema)
 
@@ -920,7 +900,7 @@ WHEN NOT MATCHED THEN
         pdf = (await job.unique_entities().to_polars()).select(
             request.all_returned_columns
         )
-        schema = polars_schema_to_spark(pdf.schema)  # type: ignore
+        schema = request.spark_schema()
         raise_on_invalid_pyspark_schema(schema)
         conn = self.config.connection()
         df = conn.createDataFrame(pdf.to_pandas(), schema=schema)
