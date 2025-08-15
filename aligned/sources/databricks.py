@@ -871,12 +871,12 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
 
     async def insert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         pdf = (await job.to_polars()).select(request.all_returned_columns)
-        schema = polars_schema_to_spark(pdf.schema)  # type: ignore
+        schema = request.spark_schema()
 
         conn = self.config.connection()
         df = conn.createDataFrame(
             pdf.to_pandas(),
-            schema=schema,  # type: ignore
+            schema=schema,
         )
         if conn.catalog.tableExists(self.table.identifier()):
             schema = conn.table(self.table.identifier()).schema
@@ -899,10 +899,7 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
             on_statement = " AND ".join(
                 [f"target.{ent} = source.{ent}" for ent in entities]
             )
-            df = conn.createDataFrame(
-                pdf.to_pandas(),
-                schema=polars_schema_to_spark(pdf.schema),  # type: ignore
-            )
+            df = conn.createDataFrame(pdf.to_pandas(), schema=request.spark_schema())
             schema = conn.table(target_table).schema
             validate_pyspark_schema(old=schema, new=df.schema)
 
