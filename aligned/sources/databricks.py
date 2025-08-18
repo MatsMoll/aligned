@@ -23,6 +23,7 @@ from aligned.lazy_imports import databricks_fe
 from aligned.sources.renamer import Renamer
 
 if TYPE_CHECKING:
+    from sqlglot import exp
     import pandas as pd
     from pyspark.sql import SparkSession
     from pyspark.sql.types import DataType, StructType
@@ -278,13 +279,21 @@ class DatabricksConnectionConfig:
         """
         return UCSqlSource(self, query)
 
-    def sql_file(self, file: str | Path) -> UCSqlSource:
+    def sql_file(
+        self, file: str | Path, format_values: dict[str, str] | None = None
+    ) -> UCSqlSource:
         """
         Creates a SQL query source by reading the file.
         """
         if not isinstance(file, Path):
             file = Path(file)
-        return UCSqlSource(self, file.read_text())
+
+        content = file.read_text()
+
+        if format_values:
+            content = content.format(**format_values)
+
+        return UCSqlSource(self, content)
 
 
 @dataclass
@@ -361,6 +370,49 @@ class DatabricksSource:
 
 
 @dataclass
+class UCSqlJob(RetrievalJob):
+    config: DatabricksConnectionConfig
+    query: exp.Select
+    request: RetrievalRequest
+
+    @property
+    def request_result(self) -> RequestResult:
+        return self.request.request_result
+
+    @property
+    def retrieval_requests(self) -> list[RetrievalRequest]:
+        return [self.request]
+
+    async def to_lazy_polars(self) -> pl.LazyFrame:
+        return pl.from_pandas(await self.to_pandas()).lazy()
+
+    async def to_pandas(self) -> pd.DataFrame:
+        client = self.config.connection()
+
+        spark_df = client.sql(self.query.sql(dialect="spark"))
+
+        return spark_df.toPandas()
+
+    def filter(self, condition: FilterRepresentable) -> RetrievalJob:
+        new_query = self.query
+
+        if isinstance(condition, str):
+            new_query = new_query.where(condition)
+        elif isinstance(condition, pl.Expr):
+            from aligned.polars_to_spark import polars_expression_to_spark
+
+            spark_exp = polars_expression_to_spark(condition)
+            if spark_exp:
+                new_query = new_query.where(spark_exp, dialect="spark")
+            else:
+                return RetrievalJob.filter(self, condition)
+        else:
+            new_query = new_query.where(condition.name)
+
+        return UCSqlJob(config=self.config, query=new_query, request=self.request)
+
+
+@dataclass
 class UCSqlSource(CodableBatchDataSource, DatabricksSource):
     config: DatabricksConnectionConfig
     query: str
@@ -392,17 +444,18 @@ class UCSqlSource(CodableBatchDataSource, DatabricksSource):
         }
 
     def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
-        client = self.config.connection()
+        from sqlglot import parse_one
 
-        async def load() -> pl.LazyFrame:
-            spark_df = client.sql(self.query)
+        expression = parse_one(self.query, read="spark")
 
-            if limit:
-                spark_df = spark_df.limit(limit)
+        assert isinstance(
+            expression, exp.Select
+        ), f"Unable to read a spark query that is not a SELECT. Got {type(expression)}"
 
-            return pl.from_pandas(spark_df.toPandas()).lazy()
+        if limit:
+            expression = expression.limit(limit)
 
-        return RetrievalJob.from_lazy_function(load, request)
+        return UCSqlJob(self.config, expression, request)
 
     def all_between_dates(
         self,
@@ -713,12 +766,24 @@ class UnityCatalogTableAllJob(RetrievalJob):
         return [self.request]
 
     def filter(self, condition: FilterRepresentable) -> RetrievalJob:
+        new_where = None
         if isinstance(condition, Feature):
-            self.where = condition.name
+            new_where = condition.name
+        elif isinstance(condition, pl.Expr):
+            from aligned.polars_to_spark import polars_expression_to_spark
+
+            new_where = polars_expression_to_spark(condition)
         elif isinstance(condition, str):
-            self.where = condition
-        else:
+            new_where = condition
+
+        if not new_where:
             return RetrievalJob.filter(self, condition)
+
+        if self.where:
+            self.where = f"({self.where}) AND ({new_where})"
+        else:
+            self.where = new_where
+
         return self
 
     async def to_pandas(self) -> pd.DataFrame:
