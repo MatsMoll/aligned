@@ -34,7 +34,7 @@ class BinaryExpression(BaseModel):
     def to_spark_expression(self) -> str:
         spark_op = {
             "NotEq": "!=",
-            "Eq": "==",
+            "Eq": "=",
             "GtEq": ">=",
             "Gt": ">",
             "Lt": "<",

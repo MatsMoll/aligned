@@ -444,7 +444,7 @@ class UCSqlSource(CodableBatchDataSource, DatabricksSource):
         }
 
     def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
-        from sqlglot import parse_one
+        from sqlglot import parse_one, exp
 
         expression = parse_one(self.query, read="spark")
 
