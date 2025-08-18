@@ -334,6 +334,16 @@
             </div>
         
 
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.polars_to_spark.html" class="internal-link" title="aligned.polars_to_spark">polars<wbr></wbr>_to<wbr></wbr>_spark</a></code>
+            </div>
+        
+
     </li><li class=" thisobject">
         
         
@@ -675,7 +685,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <a href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/proxy_api.py" class="sourceLink">(source)</a>
+          <a href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/proxy_api.py" class="sourceLink">(source)</a>
           <p></p>
         </div>
 
@@ -684,7 +694,7 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id142">
+          <table class="children sortable" id="id149">
   
   
   <tr class="function">
@@ -733,7 +743,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">add_infer_route</span><span class="function-signature long-signature">(<span class="rst-sig-param">route: <code>fastapi.APIRouter | fastapi.FastAPI</code>, </span><span class="rst-sig-param">location: <code>FeatureLocation</code>, </span><span class="rst-sig-param">store: <code><a href="aligned.ContractStore.html" class="internal-link" title="aligned.ContractStore">ContractStore</a></code></span>):</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/proxy_api.py#L197">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/proxy_api.py#L197">
       
       (source)
     </a>
@@ -760,7 +770,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">add_read_data_route</span><span class="function-signature long-signature">(<span class="rst-sig-param">app: <code>fastapi.APIRouter | fastapi.FastAPI</code>, </span><span class="rst-sig-param">location: <code>FeatureLocation</code>, </span><span class="rst-sig-param">store: <code><a href="aligned.ContractStore.html" class="internal-link" title="aligned.ContractStore">ContractStore</a></code></span>):</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/proxy_api.py#L49">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/proxy_api.py#L49">
       
       (source)
     </a>
@@ -787,7 +797,7 @@
     <div class="function-overload"><div><span class="decorator">@<a href="https://docs.python.org/3/library/typing.html#typing.overload" class="intersphinx-link">overload</a><br /></span></div><div><span class="py-keyword">def</span>&#160;<span class="py-defname">router_for_store</span><span class="function-signature">(<span class="rst-sig-param">store: <code><a href="aligned.ContractStore.html" class="internal-link" title="aligned.ContractStore">ContractStore</a></code>, </span><span class="rst-sig-param">expose_tag: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code></span>) -&gt; <code>fastapi.APIRouter</code>:</span></div></div><div class="function-overload"><div><span class="decorator">@<a href="https://docs.python.org/3/library/typing.html#typing.overload" class="intersphinx-link">overload</a><br /></span></div><div><span class="py-keyword">def</span>&#160;<span class="py-defname">router_for_store</span><span class="function-signature">(<span class="rst-sig-param">store: <code><a href="aligned.ContractStore.html" class="internal-link" title="aligned.ContractStore">ContractStore</a></code>, </span><span class="rst-sig-param">expose_tag: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code>, </span><span class="rst-sig-param">app: <code>fastapi.FastAPI | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code></span>):</span></div></div>
     
     
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/proxy_api.py#L270">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/proxy_api.py#L270">
       
       (source)
     </a>
@@ -827,7 +837,7 @@ expose_tag (str | None): the tag to expose. Will default to <code>is_exposed_thr
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">schema_for_dtype</span><span class="function-signature long-signature">(<span class="rst-sig-param">dtype: <code>FeatureType</code>, </span><span class="rst-sig-param">description: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">constraints: <code><a href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" class="intersphinx-link">Iterable</a>[<wbr></wbr>Constraint] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/proxy_api.py#L15">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/proxy_api.py#L15">
       
       (source)
     </a>
@@ -853,7 +863,7 @@ expose_tag (str | None): the tag to expose. Will default to <code>is_exposed_thr
   <div class="functionHeader">
     
     <span class="py-defname">logger</span> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/proxy_api.py#L12">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/proxy_api.py#L12">
       
       (source)
     </a>
@@ -880,7 +890,7 @@ expose_tag (str | None): the tag to expose. Will default to <code>is_exposed_thr
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    25.4.0 at 2025-08-15 12:04:26.
+    25.4.0 at 2025-08-18 07:17:51.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

@@ -201,6 +201,16 @@
         
 
         
+            <div class="itemName"><code><a href="#sql_file" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.sql_file">sql<wbr></wbr>_file</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
             <div class="itemName"><code><a href="#with_auth" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.with_auth">with<wbr></wbr>_auth</a></code>
             </div>
         
@@ -314,6 +324,16 @@
 
         
             <div class="itemName"><code><a href="aligned.sources.databricks.UCFeatureTableSource.html" class="internal-link" title="aligned.sources.databricks.UCFeatureTableSource"><wbr></wbr>UCFeature<wbr></wbr>Table<wbr></wbr>Source</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.databricks.UCSqlJob.html" class="internal-link" title="aligned.sources.databricks.UCSqlJob"><wbr></wbr>UCSql<wbr></wbr>Job</a></code>
             </div>
         
 
@@ -488,7 +508,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">DatabricksConnectionConfig</span>: <a href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L180" class="sourceLink">(source)</a></code></p><p>Constructors: <code><a href="#databricks_or_serverless" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.databricks_or_serverless">DatabricksConnectionConfig.databricks_or_serverless(host, token)</a></code>, <code><a href="#serverless" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.serverless">DatabricksConnectionConfig.serverless(host, token)</a></code>, <code><a href="#with_cluster_id" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.with_cluster_id">DatabricksConnectionConfig.with_cluster_id(cluster_id, host)</a></code>, <code><a href="#__init__" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.__init__">DatabricksConnectionConfig(host, cluster_id, token)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">DatabricksConnectionConfig</span>: <a href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L182" class="sourceLink">(source)</a></code></p><p>Constructors: <code><a href="#databricks_or_serverless" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.databricks_or_serverless">DatabricksConnectionConfig.databricks_or_serverless(host, token)</a></code>, <code><a href="#serverless" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.serverless">DatabricksConnectionConfig.serverless(host, token)</a></code>, <code><a href="#with_cluster_id" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.with_cluster_id">DatabricksConnectionConfig.with_cluster_id(cluster_id, host)</a></code>, <code><a href="#__init__" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.__init__">DatabricksConnectionConfig(host, cluster_id, token)</a></code></p>
           <p><a href="classIndex.html#aligned.sources.databricks.DatabricksConnectionConfig">View In Hierarchy</a></p>
         </div>
 
@@ -497,7 +517,7 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id326">
+          <table class="children sortable" id="id333">
   
   
   <tr class="staticmethod">
@@ -534,7 +554,12 @@
     
     <td>Method</td>
     <td><code><a href="#sql" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.sql">sql</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
+    <td>Creates a SQL query source by running the defined query.</td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#sql_file" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig.sql_file">sql<wbr></wbr>_file</a></code></td>
+    <td>Creates a SQL query source by reading the file.</td>
   </tr><tr class="method">
     
     <td>Method</td>
@@ -576,7 +601,7 @@
     
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br /></span></div>
     <span class="py-keyword">def</span>&#160;<span class="py-defname">databricks_or_serverless</span><span class="function-signature long-signature">(<span class="rst-sig-param">host: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">token: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.sources.databricks.DatabricksConnectionConfig.html" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig">DatabricksConnectionConfig</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L207">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L209">
       
       (source)
     </a>
@@ -603,7 +628,7 @@
     
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br /></span></div>
     <span class="py-keyword">def</span>&#160;<span class="py-defname">serverless</span><span class="function-signature long-signature">(<span class="rst-sig-param">host: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">token: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.sources.databricks.DatabricksConnectionConfig.html" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig">DatabricksConnectionConfig</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L217">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L219">
       
       (source)
     </a>
@@ -630,7 +655,7 @@
     
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br /></span></div>
     <span class="py-keyword">def</span>&#160;<span class="py-defname">with_cluster_id</span><span class="function-signature long-signature">(<span class="rst-sig-param">cluster_id: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code>, </span><span class="rst-sig-param">host: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code></span>) -&gt; <code><a href="aligned.sources.databricks.DatabricksConnectionConfig.html" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig">DatabricksConnectionConfig</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L227">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L229">
       
       (source)
     </a>
@@ -657,7 +682,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">__init__</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">host: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code>, </span><span class="rst-sig-param">cluster_id: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code>, </span><span class="rst-sig-param">token: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code></span>):</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L186">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L188">
       
       (source)
     </a>
@@ -684,7 +709,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">catalog</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">catalog: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code></span>) -&gt; <code><a href="aligned.sources.databricks.UnityCatalog.html" class="internal-link" title="aligned.sources.databricks.UnityCatalog">UnityCatalog</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L233">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L235">
       
       (source)
     </a>
@@ -711,7 +736,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">connection</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code>SparkSession</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L236">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L238">
       
       (source)
     </a>
@@ -738,7 +763,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">sql</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">query: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code></span>) -&gt; <code><a href="aligned.sources.databricks.UCSqlSource.html" class="internal-link" title="aligned.sources.databricks.UCSqlSource">UCSqlSource</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L274">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L276">
       
       (source)
     </a>
@@ -750,7 +775,34 @@
   </div>
   <div class="docstring functionBody">
     
-    <div><p class="undocumented">Undocumented</p></div>
+    <div><p>Creates a SQL query source by running the defined query.</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.sources.databricks.DatabricksConnectionConfig.sql_file">
+    
+  </a>
+  <a name="sql_file">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">sql_file</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">file: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" class="intersphinx-link">Path</a></code>, </span><span class="rst-sig-param">format_values: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.sources.databricks.UCSqlSource.html" class="internal-link" title="aligned.sources.databricks.UCSqlSource">UCSqlSource</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L282">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#sql_file" title="aligned.sources.databricks.DatabricksConnectionConfig.sql_file">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p>Creates a SQL query source by reading the file.</p></div>
   </div>
 </div><div class="basemethod">
   
@@ -765,7 +817,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">with_auth</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">token: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code>, </span><span class="rst-sig-param">host: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code></span>) -&gt; <code><a href="aligned.sources.databricks.DatabricksConnectionConfig.html" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig">DatabricksConnectionConfig</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L200">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L202">
       
       (source)
     </a>
@@ -791,7 +843,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">cluster_id</span>: <code><a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L183">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L185">
       
       (source)
     </a>
@@ -818,7 +870,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">host</span>: <code><a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L182">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L184">
       
       (source)
     </a>
@@ -845,7 +897,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">token</span>: <code><a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L184">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L186">
       
       (source)
     </a>
@@ -872,7 +924,7 @@
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    25.4.0 at 2025-08-15 12:04:26.
+    25.4.0 at 2025-08-18 07:17:51.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

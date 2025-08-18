@@ -178,6 +178,16 @@
         
 
         
+            <div class="itemName"><code><a href="aligned.sources.databricks.UCSqlJob.html" class="internal-link" title="aligned.sources.databricks.UCSqlJob"><wbr></wbr>UCSql<wbr></wbr>Job</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
             <div class="itemName"><code><a href="aligned.sources.databricks.UCSqlSource.html" class="internal-link" title="aligned.sources.databricks.UCSqlSource"><wbr></wbr>UCSql<wbr></wbr>Source</a></code>
             </div>
         
@@ -515,7 +525,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <a href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py" class="sourceLink">(source)</a>
+          <a href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py" class="sourceLink">(source)</a>
           <p></p>
         </div>
 
@@ -524,7 +534,7 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id323">
+          <table class="children sortable" id="id330">
   
   
   <tr class="class">
@@ -536,7 +546,7 @@
     
     <td>Class</td>
     <td><code><a href="aligned.sources.databricks.DatabricksConnectionConfig.html" class="internal-link" title="aligned.sources.databricks.DatabricksConnectionConfig"><wbr></wbr>Databricks<wbr></wbr>Connection<wbr></wbr>Config</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
+    <td><span class="rst-undocumented">No class docstring; 0/3 instance variable, 2/6 methods, 0/3 static method documented</span></td>
   </tr><tr class="class">
     
     <td>Class</td>
@@ -552,6 +562,11 @@
     <td>Class</td>
     <td><code><a href="aligned.sources.databricks.UCFeatureTableSource.html" class="internal-link" title="aligned.sources.databricks.UCFeatureTableSource"><wbr></wbr>UCFeature<wbr></wbr>Table<wbr></wbr>Source</a></code></td>
     <td><span class="rst-undocumented">No class docstring; 0/3 class variable, 2/10 methods, 0/1 class method documented</span></td>
+  </tr><tr class="class">
+    
+    <td>Class</td>
+    <td><code><a href="aligned.sources.databricks.UCSqlJob.html" class="internal-link" title="aligned.sources.databricks.UCSqlJob"><wbr></wbr>UCSql<wbr></wbr>Job</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="class">
     
     <td>Class</td>
@@ -633,7 +648,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">convert_pyspark_type</span><span class="function-signature">(<span class="rst-sig-param">data_type: <code>DataType</code></span>) -&gt; <code><a href="aligned.sources.databricks.SparkDataType.html" class="internal-link" title="aligned.sources.databricks.SparkDataType">SparkDataType</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L110">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L112">
       
       (source)
     </a>
@@ -660,7 +675,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">features_to_read</span><span class="function-signature long-signature">(<span class="rst-sig-param">request: <code>RetrievalRequest</code>, </span><span class="rst-sig-param">schema: <code>StructType</code>, </span><span class="rst-sig-param">renamer: <code><a href="aligned.sources.renamer.Renamer.html" class="internal-link" title="aligned.sources.renamer.Renamer">Renamer</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L588">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L653">
       
       (source)
     </a>
@@ -687,7 +702,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">polars_dtype_to_spark</span><span class="function-signature">(<span class="rst-sig-param">data_type: <code>pl.PolarsDataType</code></span>) -&gt; <code>DataType</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L53">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L55">
       
       (source)
     </a>
@@ -714,7 +729,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">raise_on_invalid_pyspark_schema</span><span class="function-signature">(<span class="rst-sig-param">schema: <code>DataType</code></span>):</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L39">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L41">
       
       (source)
     </a>
@@ -741,7 +756,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">validate_pyspark_schema</span><span class="function-signature">(<span class="rst-sig-param">old: <code>StructType</code>, </span><span class="rst-sig-param">new: <code>StructType</code>, </span><span class="rst-sig-param">sub_property: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> = <span class="rst-variable-quote">'</span><span class="rst-variable-string"></span><span class="rst-variable-quote">'</span></span>):</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L630">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L695">
       
       (source)
     </a>
@@ -767,7 +782,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">logger</span> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/sources/databricks.py#L30">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/sources/databricks.py#L32">
       
       (source)
     </a>
@@ -794,7 +809,7 @@
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    25.4.0 at 2025-08-15 12:04:26.
+    25.4.0 at 2025-08-18 07:17:51.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

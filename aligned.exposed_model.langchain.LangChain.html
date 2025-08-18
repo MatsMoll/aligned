@@ -355,7 +355,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">LangChain</span>(ExposedModel, <a href="aligned.exposed_model.interface.StreamablePredictor.html" class="internal-link" title="aligned.exposed_model.interface.StreamablePredictor">StreamablePredictor</a>): <a href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/exposed_model/langchain.py#L23" class="sourceLink">(source)</a></code></p><p>Constructor: <code><a href="#from_chain" class="internal-link" title="aligned.exposed_model.langchain.LangChain.from_chain">LangChain.from_chain(chain, chain_output, output_key, depends_on)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">LangChain</span>(ExposedModel, <a href="aligned.exposed_model.interface.StreamablePredictor.html" class="internal-link" title="aligned.exposed_model.interface.StreamablePredictor">StreamablePredictor</a>): <a href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/exposed_model/langchain.py#L23" class="sourceLink">(source)</a></code></p><p>Constructor: <code><a href="#from_chain" class="internal-link" title="aligned.exposed_model.langchain.LangChain.from_chain">LangChain.from_chain(chain, chain_output, output_key, depends_on)</a></code></p>
           <p><a href="classIndex.html#aligned.exposed_model.langchain.LangChain">View In Hierarchy</a></p>
         </div>
 
@@ -448,7 +448,7 @@
     
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#staticmethod" class="intersphinx-link">staticmethod</a><br /></span></div>
     <span class="py-keyword">def</span>&#160;<span class="py-defname">from_chain</span><span class="function-signature long-signature">(<span class="rst-sig-param">chain: <code>langchain_core.language_models.base.LanguageModelLike</code>, </span><span class="rst-sig-param">chain_output: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> = <span class="rst-variable-quote">'</span><span class="rst-variable-string">answer</span><span class="rst-variable-quote">'</span>, </span><span class="rst-sig-param">output_key: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> = <span class="rst-variable-quote">'</span><span class="rst-variable-string">answer</span><span class="rst-variable-quote">'</span>, </span><span class="rst-sig-param">depends_on: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>FeatureLocation | <a href="aligned.feature_view.feature_view.FeatureViewWrapper.html" class="internal-link" title="aligned.feature_view.feature_view.FeatureViewWrapper">FeatureViewWrapper</a> | ModelContractWrapper] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code><a href="aligned.exposed_model.langchain.LangChain.html" class="internal-link" title="aligned.exposed_model.langchain.LangChain">LangChain</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/exposed_model/langchain.py#L42">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/exposed_model/langchain.py#L42">
       
       (source)
     </a>
@@ -475,7 +475,7 @@
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">depends_on</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>FeatureLocation]</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/exposed_model/langchain.py#L70">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/exposed_model/langchain.py#L70">
       
       (source)
     </a>
@@ -502,7 +502,7 @@
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">run_polars</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">values: <code>RetrievalJob</code>, </span><span class="rst-sig-param">store: <code>ModelFeatureStore</code></span>) -&gt; <code>pl.DataFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/exposed_model/langchain.py#L73">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/exposed_model/langchain.py#L73">
       
       (source)
     </a>
@@ -529,7 +529,7 @@
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">stream_predict</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">input: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/typing.html#typing.Any" class="intersphinx-link">Any</a>]</code></span>) -&gt; <code><a href="https://docs.python.org/3/library/typing.html#typing.AsyncIterable" class="intersphinx-link">AsyncIterable</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/typing.html#typing.Any" class="intersphinx-link">Any</a>]]</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/exposed_model/langchain.py#L94">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/exposed_model/langchain.py#L94">
       
       (source)
     </a>
@@ -555,7 +555,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">chain_bytes</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#bytes" class="intersphinx-link">bytes</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/exposed_model/langchain.py#L25">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/exposed_model/langchain.py#L25">
       
       (source)
     </a>
@@ -582,7 +582,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">chain_output</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/exposed_model/langchain.py#L26">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/exposed_model/langchain.py#L26">
       
       (source)
     </a>
@@ -609,7 +609,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">depends_on_data</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>FeatureLocation]</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/exposed_model/langchain.py#L29">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/exposed_model/langchain.py#L29">
       
       (source)
     </a>
@@ -636,7 +636,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">model_type</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/exposed_model/langchain.py#L30">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/exposed_model/langchain.py#L30">
       
       (source)
     </a>
@@ -663,7 +663,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">output_key</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/exposed_model/langchain.py#L27">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/exposed_model/langchain.py#L27">
       
       (source)
     </a>
@@ -690,7 +690,7 @@
   <div class="functionHeader">
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
     <span class="py-defname">as_markdown</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/exposed_model/langchain.py#L38">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/exposed_model/langchain.py#L38">
       
       (source)
     </a>
@@ -717,7 +717,7 @@
   <div class="functionHeader">
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
     <span class="py-defname">chain</span>: <code>langchain_core.language_models.base.LanguageModelLike</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/exposed_model/langchain.py#L32">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/exposed_model/langchain.py#L32">
       
       (source)
     </a>
@@ -744,7 +744,7 @@
   <div class="functionHeader">
     <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
     <span class="py-defname">version</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/exposed_model/langchain.py#L64">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/exposed_model/langchain.py#L64">
       
       (source)
     </a>
@@ -771,7 +771,7 @@
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    25.4.0 at 2025-08-15 12:04:26.
+    25.4.0 at 2025-08-18 07:17:51.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

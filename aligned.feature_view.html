@@ -307,6 +307,16 @@
         
 
         
+            <div class="itemName"><code><a href="aligned.polars_to_spark.html" class="internal-link" title="aligned.polars_to_spark">polars<wbr></wbr>_to<wbr></wbr>_spark</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
             <div class="itemName"><code><a href="aligned.proxy_api.html" class="internal-link" title="aligned.proxy_api">proxy<wbr></wbr>_api</a></code>
             </div>
         
@@ -685,7 +695,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">check_schema</span><span class="function-signature">() -&gt; <code>Callable</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/feature_view/feature_view.py#L1037">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/feature_view/feature_view.py#L1037">
       
       (source)
     </a>
@@ -730,7 +740,7 @@ my_function(pd.DataFrame({</p>
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">feature_view</span><span class="function-signature long-signature">(<span class="rst-sig-param">source: <code>BatchSourceable | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">name: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">description: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">stream_source: <code>StreamDataSource | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">application_source: <code>BatchSourceable | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">materialized_source: <code>BatchSourceable | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">materialize_from: <code><a href="https://docs.python.org/3/library/datetime.html#module-datetime" class="intersphinx-link">datetime</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">contacts: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr>Contact] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">tags: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">acceptable_freshness: <code>timedelta | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a>, </span><span class="rst-sig-param">unacceptable_freshness: <code>timedelta | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code>Callable[<wbr></wbr>[<wbr></wbr><a href="https://docs.python.org/3/library/functions.html#type" class="intersphinx-link">type</a>[<wbr></wbr>T]], <wbr></wbr>FeatureViewWrapper[<wbr></wbr>T]]</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/85c3aa0e065b5387e6440bc8cabb0768f79e3470/aligned/feature_view/feature_view.py#L629">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/43f8172ef401d1a5604969321ed316058b1026d9/aligned/feature_view/feature_view.py#L629">
       
       (source)
     </a>
@@ -756,7 +766,7 @@ my_function(pd.DataFrame({</p>
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    25.4.0 at 2025-08-15 12:04:26.
+    25.4.0 at 2025-08-18 07:17:51.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 
