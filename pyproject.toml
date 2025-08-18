@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aligned"
-version = "0.0.128"
+version = "0.0.129"
 description = "A data management and lineage tool for ML applications."
 authors = ["Mats E. Mollestad <mats@mollestad.no>"]
 license = "FSL-1.1-ALv2"
@@ -93,7 +93,7 @@ lancedb = ["lancedb"]
 pandas = ["pandas"]
 sentence-transformers = ["sentence-transformers"]
 openai = ["openai", "tiktoken"]
-databricks = ["databricks-connect"]
+databricks = ["databricks-connect", "sqlglot"]
 
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.2.6"
