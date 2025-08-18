@@ -5,7 +5,7 @@ from aligned.compiler.feature_factory import FeatureFactory, FeatureReferencable
 import polars as pl
 from aligned.config_value import ConfigValue
 
-from aligned.lazy_imports import pandas as pd
+from aligned.lazy_imports import pandas as pd, _PANDAS_AVAILABLE
 
 import logging
 from collections import defaultdict
@@ -634,6 +634,17 @@ class ContractStore:
                         feature_names.update(request.all_returned_columns)
 
         if not isinstance(entities, RetrievalJob):
+            if isinstance(entities, pl.DataFrame) and entities.is_empty():
+                return RetrievalJob.from_convertable(entities, requests)
+            if (
+                _PANDAS_AVAILABLE
+                and isinstance(entities, pd.DataFrame)
+                and entities.empty
+            ):
+                return RetrievalJob.from_convertable(entities, requests)
+            if isinstance(entities, list) and not entities:
+                return RetrievalJob.from_convertable(entities, requests)
+
             entities = RetrievalJob.from_convertable(entities, requests)
             feature_names.update(entities.loaded_columns)
         else:

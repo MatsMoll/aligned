@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import polars as pl
@@ -272,7 +273,18 @@ class DatabricksConnectionConfig:
         return builder.getOrCreate()
 
     def sql(self, query: str) -> UCSqlSource:
+        """
+        Creates a SQL query source by running the defined query.
+        """
         return UCSqlSource(self, query)
+
+    def sql_file(self, file: str | Path) -> UCSqlSource:
+        """
+        Creates a SQL query source by reading the file.
+        """
+        if not isinstance(file, Path):
+            file = Path(file)
+        return UCSqlSource(self, file.read_text())
 
 
 @dataclass
