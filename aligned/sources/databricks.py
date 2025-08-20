@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from contextlib import suppress
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -407,8 +406,12 @@ class UCSqlJob(RetrievalJob):
         elif isinstance(condition, pl.Expr):
             new_query = polars_expression_to_spark(condition)
         elif isinstance(condition, FeatureFactory):
-            with suppress(ValueError):
-                return self.filter(condition.compile())
+            if condition.transformation and isinstance(
+                condition.transformation, PolarsExprTransformation
+            ):
+                exp = condition.transformation.polars_expr()
+                assert exp is not None
+                new_query = polars_expression_to_spark(exp)
         elif isinstance(condition, DerivedFeature):
             if isinstance(condition.transformation, PolarsExprTransformation):
                 exp = condition.transformation.polars_expr()
@@ -791,8 +794,12 @@ class UnityCatalogTableAllJob(RetrievalJob):
         elif isinstance(condition, pl.Expr):
             new_where = polars_expression_to_spark(condition)
         elif isinstance(condition, FeatureFactory):
-            with suppress(ValueError):
-                return self.filter(condition.compile())
+            if condition.transformation and isinstance(
+                condition.transformation, PolarsExprTransformation
+            ):
+                exp = condition.transformation.polars_expr()
+                assert exp is not None
+                new_where = polars_expression_to_spark(exp)
         elif isinstance(condition, DerivedFeature):
             if isinstance(condition.transformation, PolarsExprTransformation):
                 exp = condition.transformation.polars_expr()
