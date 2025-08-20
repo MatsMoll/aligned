@@ -406,12 +406,12 @@ class UCSqlJob(RetrievalJob):
         elif isinstance(condition, pl.Expr):
             new_query = polars_expression_to_spark(condition)
         elif isinstance(condition, FeatureFactory):
-            if condition.transformation and isinstance(
-                condition.transformation, PolarsExprTransformation
-            ):
-                exp = condition.transformation.polars_expr()
-                assert exp is not None
-                new_query = polars_expression_to_spark(exp)
+            if condition.transformation:
+                compiled = condition.transformation.compile()
+                if isinstance(compiled, PolarsExprTransformation):
+                    exp = compiled.polars_expr()
+                    assert exp is not None
+                    new_query = polars_expression_to_spark(exp)
         elif isinstance(condition, DerivedFeature):
             if isinstance(condition.transformation, PolarsExprTransformation):
                 exp = condition.transformation.polars_expr()
@@ -794,12 +794,12 @@ class UnityCatalogTableAllJob(RetrievalJob):
         elif isinstance(condition, pl.Expr):
             new_where = polars_expression_to_spark(condition)
         elif isinstance(condition, FeatureFactory):
-            if condition.transformation and isinstance(
-                condition.transformation, PolarsExprTransformation
-            ):
-                exp = condition.transformation.polars_expr()
-                assert exp is not None
-                new_where = polars_expression_to_spark(exp)
+            if condition.transformation:
+                compiled = condition.transformation.compile()
+                if isinstance(compiled, PolarsExprTransformation):
+                    exp = compiled.polars_expr()
+                    assert exp is not None
+                    new_where = polars_expression_to_spark(exp)
         elif isinstance(condition, DerivedFeature):
             if isinstance(condition.transformation, PolarsExprTransformation):
                 exp = condition.transformation.polars_expr()
