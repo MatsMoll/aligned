@@ -510,6 +510,7 @@ class ContractStore:
             if request.location in self.sources
         }
 
+        logger.debug(f"Loading the sources in the following groups: {source_groupes}")
         loaded_columns = set(facts.loaded_columns)
 
         def needs_to_load_source(requests: list[RetrievalRequest]) -> bool:
@@ -550,6 +551,9 @@ class ContractStore:
             requests = [req for _, req in requests_with_source]
 
             if needs_to_load_source(requests):
+                logger.debug(
+                    f"Loading features from source with group name '{source_group}'"
+                )
                 job = (
                     self.source_types[source_group]
                     .multi_source_features_for(
@@ -619,6 +623,9 @@ class ContractStore:
         requests = self.requests_for(
             feature_request, event_timestamp_column, model_version_as_entity
         )
+        logger.debug(
+            f"Preparing job to fetch data from '{[req.location for req in requests.needed_requests]}'"
+        )
 
         feature_names = set()
 
@@ -634,6 +641,7 @@ class ContractStore:
                         feature_names.update(request.all_returned_columns)
 
         if not isinstance(entities, RetrievalJob):
+            logger.debug("Converting entities into a RetrievalJob")
             if isinstance(entities, pl.DataFrame) and entities.is_empty():
                 return RetrievalJob.from_convertable(entities, requests)
             if (
@@ -665,6 +673,10 @@ class ContractStore:
                     if feature.name not in existing_features
                 }
                 loaded_requests.append(request)
+            else:
+                logger.debug(
+                    f"Dropping request from {request.location} as all features where already loaded"
+                )
 
         if not loaded_requests:
             from aligned.local.job import LiteralRetrievalJob
@@ -675,6 +687,9 @@ class ContractStore:
 
         new_request = FeatureRequest(
             requests.location, requests.features_to_include, loaded_requests
+        )
+        logger.debug(
+            f"Updated request for following locs: '{[req.location for req in new_request.needed_requests]}'"
         )
         return self.features_for_request(
             new_request, entities, feature_names
