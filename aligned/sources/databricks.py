@@ -445,6 +445,9 @@ class UCSqlSource(CodableBatchDataSource, DatabricksSource):
 ```
 """
 
+    def job_group_key(self) -> str:
+        return str(hash(self.query))
+
     def depends_on(self) -> set[FeatureLocation]:
         from sqlglot import parse_one, exp
 
