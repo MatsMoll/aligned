@@ -44,15 +44,17 @@ class BinaryExpression(BaseModel):
             "TrueDivide": "/",
             "Modulus": "/",
             "Xor": "^",
-            "And": "&",
+            "And": "AND",
             "Minus": "-",
-            # "Or": "|",
+            "Or": "OR",
             # "FloorDivide": "/",
         }
         expr = [
+            "(",
             self.left.to_spark_expression(),
             spark_op[self.op],
             self.right.to_spark_expression(),
+            ")",
         ]
         return " ".join(expr)
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import suppress
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -16,7 +17,9 @@ from aligned.data_source.batch_data_source import (
 from aligned.feature_source import WritableFeatureSource
 from aligned.retrieval_job import FilterRepresentable, RetrievalJob, RetrievalRequest
 from aligned.schemas.constraints import MaxLength, MinLength
+from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import Constraint, Feature, FeatureLocation
+from aligned.schemas.transformation import PolarsExprTransformation
 from aligned.sources.local import FileFactualJob
 from aligned.config_value import EnvironmentValue, LiteralValue, ConfigValue
 from aligned.lazy_imports import databricks_fe
@@ -394,22 +397,34 @@ class UCSqlJob(RetrievalJob):
         return spark_df.toPandas()
 
     def filter(self, condition: FilterRepresentable) -> RetrievalJob:
-        new_query = self.query
+        from aligned.compiler.feature_factory import FeatureFactory
+        from aligned.polars_to_spark import polars_expression_to_spark
+
+        new_query = None
 
         if isinstance(condition, str):
-            new_query = new_query.where(condition)
+            new_query = condition
         elif isinstance(condition, pl.Expr):
-            from aligned.polars_to_spark import polars_expression_to_spark
-
-            spark_exp = polars_expression_to_spark(condition)
-            if spark_exp:
-                new_query = new_query.where(spark_exp, dialect="spark")
-            else:
-                return RetrievalJob.filter(self, condition)
+            new_query = polars_expression_to_spark(condition)
+        elif isinstance(condition, FeatureFactory):
+            with suppress(ValueError):
+                return self.filter(condition.compile())
+        elif isinstance(condition, DerivedFeature):
+            if isinstance(condition.transformation, PolarsExprTransformation):
+                exp = condition.transformation.polars_expr()
+                assert exp is not None
+                new_query = polars_expression_to_spark(exp)
         else:
-            new_query = new_query.where(condition.name)
+            new_query = condition.name
 
-        return UCSqlJob(config=self.config, query=new_query, request=self.request)
+        if not new_query:
+            return RetrievalJob.filter(self, condition)
+
+        return UCSqlJob(
+            config=self.config,
+            query=self.query.where(new_query, dialect="spark"),
+            request=self.request,
+        )
 
 
 @dataclass
@@ -766,15 +781,25 @@ class UnityCatalogTableAllJob(RetrievalJob):
         return [self.request]
 
     def filter(self, condition: FilterRepresentable) -> RetrievalJob:
-        new_where = None
-        if isinstance(condition, Feature):
-            new_where = condition.name
-        elif isinstance(condition, pl.Expr):
-            from aligned.polars_to_spark import polars_expression_to_spark
+        from aligned.compiler.feature_factory import FeatureFactory
+        from aligned.polars_to_spark import polars_expression_to_spark
 
-            new_where = polars_expression_to_spark(condition)
-        elif isinstance(condition, str):
+        new_where = None
+
+        if isinstance(condition, str):
             new_where = condition
+        elif isinstance(condition, pl.Expr):
+            new_where = polars_expression_to_spark(condition)
+        elif isinstance(condition, FeatureFactory):
+            with suppress(ValueError):
+                return self.filter(condition.compile())
+        elif isinstance(condition, DerivedFeature):
+            if isinstance(condition.transformation, PolarsExprTransformation):
+                exp = condition.transformation.polars_expr()
+                assert exp is not None
+                new_where = polars_expression_to_spark(exp)
+        else:
+            new_where = condition.name
 
         if not new_where:
             return RetrievalJob.filter(self, condition)
