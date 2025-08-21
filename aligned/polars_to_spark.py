@@ -50,13 +50,11 @@ class BinaryExpression(BaseModel):
             # "FloorDivide": "/",
         }
         expr = [
-            "(",
             self.left.to_spark_expression(),
             spark_op[self.op],
             self.right.to_spark_expression(),
-            ")",
         ]
-        return " ".join(expr)
+        return "(" + " ".join(expr) + ")"
 
 
 class ScalarValue(BaseModel):
