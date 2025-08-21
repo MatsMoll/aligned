@@ -46,4 +46,4 @@ def test_databricks_table_modification() -> None:
     another_job = filter_job.filter(pl.col("b") == "test")
 
     assert isinstance(another_job, UnityCatalogTableAllJob)
-    assert filter_job.where == "(a = 10) AND (b = 'test')"
+    assert filter_job.where == "((a = 10) AND (b = 'test'))"
