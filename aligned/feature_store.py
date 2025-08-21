@@ -15,6 +15,7 @@ from typing import (
     Any,
     Iterable,
     Protocol,
+    Sequence,
     Union,
     TypeVar,
     Callable,
@@ -588,7 +589,13 @@ class ContractStore:
     def features_for(
         self,
         entities: ConvertableToRetrievalJob | RetrievalJob,
-        features: list[str] | list[FeatureReference] | list[FeatureReferencable],
+        features: Sequence[
+            str
+            | FeatureReference
+            | FeatureReferencable
+            | FeatureViewWrapper
+            | ModelContractWrapper
+        ],
         event_timestamp_column: str | None = None,
         model_version_as_entity: bool | None = None,
     ) -> RetrievalJob:
@@ -609,16 +616,31 @@ class ContractStore:
             RetrievalJob: A job that knows how to fetch the features
         """
         assert features, "One or more features are needed"
-        raw_features = {
-            feat.identifier
-            if isinstance(feat, FeatureReference)
-            else (
-                feat.feature_reference().identifier
-                if isinstance(feat, FeatureReferencable)
-                else feat
-            )
-            for feat in features
-        }
+
+        raw_features: set[str] = set()
+
+        for feature in features:
+            if isinstance(feature, str):
+                raw_features.add(feature)
+            elif isinstance(feature, FeatureReference):
+                raw_features.add(feature.identifier)
+            elif isinstance(feature, FeatureReferencable):
+                raw_features.add(feature.feature_reference().identifier)
+            elif isinstance(feature, FeatureViewWrapper):
+                raw_features.update(
+                    feat.as_reference(feature.location).identifier
+                    for feat in feature.compile().request_all.request_result.features
+                )
+            elif isinstance(feature, ModelContractWrapper):
+                raw_features.update(
+                    feat.as_reference(feature.location).identifier
+                    for feat in feature.compile().request_all_predictions.request_result.features
+                )
+            else:
+                raise ValueError(
+                    f"Unable to look up feature of type {type(feature)} - {feature}"
+                )
+
         feature_request = RawStringFeatureRequest(features=raw_features)
         requests = self.requests_for(
             feature_request, event_timestamp_column, model_version_as_entity
