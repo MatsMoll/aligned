@@ -815,7 +815,7 @@ class UnityCatalogTableAllJob(RetrievalJob):
             return RetrievalJob.filter(self, condition)
 
         if self.where:
-            self.where = f"({self.where}) AND ({new_where})"
+            self.where = f"{self.where} AND {new_where}"
         else:
             self.where = new_where
 
