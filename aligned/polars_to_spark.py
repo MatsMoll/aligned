@@ -44,9 +44,9 @@ class BinaryExpression(BaseModel):
             "TrueDivide": "/",
             "Modulus": "/",
             "Xor": "^",
-            "And": "&",
+            "And": "AND",
             "Minus": "-",
-            # "Or": "|",
+            "Or": "OR",
             # "FloorDivide": "/",
         }
         expr = [
@@ -54,7 +54,7 @@ class BinaryExpression(BaseModel):
             spark_op[self.op],
             self.right.to_spark_expression(),
         ]
-        return " ".join(expr)
+        return "(" + " ".join(expr) + ")"
 
 
 class ScalarValue(BaseModel):

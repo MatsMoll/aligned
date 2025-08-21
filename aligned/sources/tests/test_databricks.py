@@ -22,7 +22,7 @@ def test_databricks_filter_modification() -> None:
     filter = filtered_job.query.find(exp.Where)
     assert filter
 
-    assert filter.sql(dialect="spark") == "WHERE a = 10"
+    assert filter.sql(dialect="spark") == "WHERE (a = 10)"
 
 
 def test_databricks_sql_depends_on() -> None:
@@ -41,7 +41,7 @@ def test_databricks_table_modification() -> None:
     filter_job = job.filter(pl.col("a") == 10)
 
     assert isinstance(filter_job, UnityCatalogTableAllJob)
-    assert filter_job.where == "a = 10"
+    assert filter_job.where == "(a = 10)"
 
     another_job = filter_job.filter(pl.col("b") == "test")
 

@@ -4,9 +4,9 @@ from aligned.polars_to_spark import polars_expression_to_spark
 
 def test_basic_expressions() -> None:
     test_cases = [
-        (pl.col("a") == 10, "a = 10"),
-        (pl.col("a") == "test", "a = 'test'"),
-        ((pl.col("a") * 100) + pl.col("other") < 10, "a * 100 + other < 10"),
+        (pl.col("a") == 10, "(a = 10)"),
+        (pl.col("a") == "test", "(a = 'test')"),
+        ((pl.col("a") * 100) + pl.col("other") < 10, "(((a * 100) + other) < 10)"),
     ]
 
     for expr, spark_sql in test_cases:
