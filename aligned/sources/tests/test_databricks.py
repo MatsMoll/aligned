@@ -22,7 +22,7 @@ def test_databricks_filter_modification() -> None:
     filter = filtered_job.query.find(exp.Where)
     assert filter
 
-    assert filter.sql(dialect="spark") == "WHERE a = 10"
+    assert filter.sql(dialect="spark") == "WHERE (a = 10)"
 
 
 def test_databricks_sql_depends_on() -> None:
