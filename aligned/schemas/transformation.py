@@ -1149,27 +1149,31 @@ class ArrayContains(Transformation, PolarsExprTransformation):
     """
 
     key: str
-    value: LiteralValue
+    value: LiteralValue | str
 
     name: str = "array_contains"
     dtype: FeatureType = FeatureType.boolean()
 
-    def __init__(self, key: str, value: Any | LiteralValue) -> None:
-        self.key = key
-        if isinstance(value, LiteralValue):
-            self.value = value
-        else:
-            self.value = LiteralValue.from_value(value)
-
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
-        return (
-            pl.Series(df[self.key]).list.contains(self.value.python_value).to_pandas()
-        )
+        if isinstance(self.value, str):
+            pdf = pl.DataFrame({self.key: df[self.key], self.value: df[self.value]})
+            return pdf.select(
+                output=pl.col(self.key).list.contains(pl.col(self.value))
+            )["output"].to_pandas()
+        else:
+            return (
+                pl.Series(df[self.key])
+                .list.contains(self.value.python_value)
+                .to_pandas()
+            )
 
     def polars_expr(self) -> pl.Expr:
-        return pl.col(self.key).list.contains(self.value.python_value)
+        if isinstance(self.value, str):
+            return pl.col(self.key).list.contains(pl.col(self.value))
+        else:
+            return pl.col(self.key).list.contains(self.value.python_value)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:

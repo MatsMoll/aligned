@@ -13,7 +13,7 @@ from aligned.schemas.feature import EventTimestamp, Feature, FeatureReference
 from aligned.schemas.event_trigger import EventTrigger
 from aligned.schemas.target import (
     ClassificationTarget,
-    RecommendationTarget,
+    RecommendationConfig,
     RegressionTarget,
 )
 from aligned.schemas.feature_view import (
@@ -78,7 +78,7 @@ class PredictionsView(Codable):
 
     regression_targets: set[RegressionTarget] | None = field(default=None)
     classification_targets: set[ClassificationTarget] | None = field(default=None)
-    recommendation_targets: set[RecommendationTarget] | None = field(default=None)
+    recommendation_targets: set[RecommendationConfig] | None = field(default=None)
 
     acceptable_freshness: timedelta | None = field(default=None)
     unacceptable_freshness: timedelta | None = field(default=None)
@@ -236,8 +236,6 @@ class PredictionsView(Codable):
             return {feature.estimating for feature in self.classification_targets}
         elif self.regression_targets:
             return {feature.estimating for feature in self.regression_targets}
-        elif self.recommendation_targets:
-            return {feature.estimating for feature in self.recommendation_targets}
         else:
             return set()
 
@@ -247,7 +245,10 @@ class PredictionsView(Codable):
         elif self.regression_targets:
             return {feature.feature for feature in self.regression_targets}
         elif self.recommendation_targets:
-            return {feature.feature for feature in self.recommendation_targets}
+            feature_names = {
+                feature.feature_name for feature in self.recommendation_targets
+            }
+            return {feat for feat in self.full_schema if feat.name in feature_names}
         else:
             return {
                 feat

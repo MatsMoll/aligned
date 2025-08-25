@@ -14,7 +14,6 @@ from aligned.compiler.feature_factory import (
     EventTimestamp,
     FeatureFactory,
     FeatureReferencable,
-    RecommendationTarget,
     RegressionLabel,
     TargetProbability,
 )
@@ -511,13 +510,15 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
             probability_features[feature_name] = probability_features.get(
                 feature_name, set()
             ).union({feature})
-        elif isinstance(feature, RecommendationTarget):
-            inference_view.recommendation_targets.add(feature.compile())
         elif isinstance(feature, FeatureFactory):
             if feature.tags and StaticFeatureTags.is_entity in feature.tags:
                 inference_view.entities.add(feature.feature())
                 continue
 
+            if feature._rec_target is not None:
+                inference_view.recommendation_targets.add(
+                    feature._rec_target.serializable(feature.name)
+                )
             if feature.transformation:
                 # Adding features that is not stored in the view
                 # e.g:

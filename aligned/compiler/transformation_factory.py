@@ -104,17 +104,23 @@ class ArrayContainsAnyFactory(TransformationFactory):
 
 @dataclass
 class ArrayContainsFactory(TransformationFactory):
-    value: LiteralValue
+    value: LiteralValue | FeatureFactory
     in_feature: FeatureFactory
 
     @property
     def using_features(self) -> list[FeatureFactory]:
-        return [self.in_feature]
+        if isinstance(self.value, FeatureFactory):
+            return [self.in_feature, self.value]
+        else:
+            return [self.in_feature]
 
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import ArrayContains
 
-        return ArrayContains(self.in_feature.name, self.value)
+        return ArrayContains(
+            self.in_feature.name,
+            self.value.name if isinstance(self.value, FeatureFactory) else self.value,
+        )
 
 
 @dataclass

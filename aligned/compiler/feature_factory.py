@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar
 
 from aligned.lazy_imports import pandas as pd
 import polars as pl
@@ -36,11 +36,12 @@ from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.target import ClassificationTarget as ClassificationTargetSchemas
 from aligned.schemas.target import ClassTargetProbability
 from aligned.schemas.target import RegressionTarget as RegressionTargetSchemas
-from aligned.schemas.target import RecommendationTarget as RecommendationTargetSchemas
+from aligned.schemas.target import RecommendationConfig as RecommendationConfigSchema
 from aligned.schemas.transformation import EmbeddingModel, Expression, Transformation
 from aligned.schemas.vector_storage import VectorStorage
 
 if TYPE_CHECKING:
+    from aligned.feature_view.feature_view import FeatureViewWrapper
     from aligned.sources.s3 import AwsS3Config
     from aligned.feature_store import ContractStore
 
@@ -78,6 +79,7 @@ class AggregationTransformationFactory:
 
 
 T = TypeVar("T", bound="FeatureFactory")
+A = TypeVar("A", bound="FeatureFactory")
 
 
 @dataclass
@@ -184,36 +186,27 @@ def compile_hidden_features(
 
 
 @dataclass
-class RecommendationTarget(FeatureReferencable):
-    feature: FeatureFactory
-    rank_feature: FeatureFactory | None = field(default=None)
+class RecommendationConfig:
+    selected_items: List | FeatureViewWrapper
+    top_k: int
+    output_type: Literal["rank", "score"]
+    item_id: FeatureReferencable
 
-    _name: str | None = field(default=None)
-    _location: FeatureLocation | None = field(default=None)
+    def serializable(self, feature_name: str) -> RecommendationConfigSchema:
+        if isinstance(self.selected_items, FeatureFactory):
+            self.selected_items._name = self.selected_items._name or "was_selected"
 
-    def __set_name__(self, owner: str, name: str) -> None:
-        self._name = name
-
-    def feature_reference(self) -> FeatureReference:
-        if not self._name:
-            raise ValueError("Missing name, can not create reference")
-        if not self._location:
-            raise ValueError("Missing location, can not create reference")
-        return FeatureReference(self._name, self._location)
-
-    def estemating_rank(self, feature: FeatureFactory) -> RecommendationTarget:
-        self.rank_feature = feature
-        return self
-
-    def compile(self) -> RecommendationTargetSchemas:
-        self_ref = self.feature_reference()
-
-        return RecommendationTargetSchemas(
-            self.feature.feature_reference(),
-            feature=self_ref.as_feature(),
-            estimating_rank=self.rank_feature.feature_reference()
-            if self.rank_feature
+        return RecommendationConfigSchema(
+            was_selected_list=self.selected_items.feature_reference()
+            if isinstance(self.selected_items, FeatureFactory)
             else None,
+            was_selected_view=self.selected_items.location
+            if not isinstance(self.selected_items, FeatureFactory)
+            else None,
+            feature_name=feature_name,
+            output_type=self.output_type,
+            item_feature=self.item_id.feature_reference(),
+            top_k=self.top_k,
         )
 
 
@@ -417,6 +410,7 @@ class FeatureFactory(FeatureReferencable):
     _description: str | None = None
     _default_value: LiteralValue | None = None
     _loads_feature: FeatureReference | None = None
+    _rec_target: RecommendationConfig | None = None
 
     tags: set[str] | None = None
     transformation: TransformationFactory | None = None
@@ -494,8 +488,27 @@ class FeatureFactory(FeatureReferencable):
         """
         return RegressionLabel(self)
 
-    def as_recommendation_target(self) -> RecommendationTarget:
-        return RecommendationTarget(self)
+    def is_recommendation_score(
+        self: T,
+        selected_items: List[A] | FeatureViewWrapper,
+        item_id: A,
+        top_k: int = 10,
+    ) -> T:
+        self._rec_target = RecommendationConfig(
+            selected_items, top_k=top_k, output_type="score", item_id=item_id
+        )
+        return self
+
+    def is_recommendation_rank(
+        self: T,
+        selected_items: List[A] | FeatureViewWrapper,
+        item_id: A,
+        top_k: int = 10,
+    ) -> T:
+        self._rec_target = RecommendationConfig(
+            selected_items, top_k=top_k, output_type="rank", item_id=item_id
+        )
+        return self
 
     def is_nominal(self: T) -> T:
         """
@@ -1745,12 +1758,15 @@ class List(FeatureFactory, Generic[GenericFeature]):
         )
         return feature
 
-    def contains(self, value: Any) -> Bool:
+    def contains(self, value: GenericFeature | str | int | float | bool) -> Bool:
         from aligned.compiler.transformation_factory import ArrayContainsFactory
 
         feature = Bool()
         feature.transformation = ArrayContainsFactory(
-            LiteralValue.from_value(value), self
+            LiteralValue.from_value(value)
+            if not isinstance(value, FeatureFactory)
+            else value,
+            self,
         )
         return feature
 
