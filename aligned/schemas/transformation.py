@@ -1112,14 +1112,14 @@ class ArrayContainsAny(Transformation, PolarsExprTransformation):
     def __init__(self, key: str, value: Any | LiteralValue) -> None:
         self.key = key
         if isinstance(value, LiteralValue):
-            self.value = value
+            self.values = value
         else:
-            self.value = LiteralValue.from_value(value)
+            self.values = LiteralValue.from_value(value)
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
-        vals = self.value.python_value
+        vals = self.values.python_value
         return (
             pl.Series(df[self.key])
             .list.eval(pl.element().is_in(vals))
@@ -1128,7 +1128,7 @@ class ArrayContainsAny(Transformation, PolarsExprTransformation):
         )
 
     def polars_expr(self) -> pl.Expr:
-        vals = self.value.python_value
+        vals = self.values.python_value
         return pl.col(self.key).list.eval(pl.element().is_in(vals)).list.any()
 
     @staticmethod
