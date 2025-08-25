@@ -1109,12 +1109,12 @@ class ArrayContainsAny(Transformation, PolarsExprTransformation):
     name: str = "array_contains_any"
     dtype: FeatureType = FeatureType.boolean()
 
-    def __init__(self, key: str, value: Any | LiteralValue) -> None:
+    def __init__(self, key: str, values: Any | LiteralValue) -> None:
         self.key = key
-        if isinstance(value, LiteralValue):
-            self.values = value
+        if isinstance(values, LiteralValue):
+            self.values = values
         else:
-            self.values = LiteralValue.from_value(value)
+            self.values = LiteralValue.from_value(values)
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
