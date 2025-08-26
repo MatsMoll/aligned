@@ -187,19 +187,38 @@ class DatabricksConnectionConfig:
     cluster_id: ConfigValue | None
     token: ConfigValue | None
 
+    azure_client_id: ConfigValue | None = None
+    azure_client_secret: ConfigValue | None = None
+    azure_tenant_id: ConfigValue | None = None
+
     def __init__(
         self,
         host: str | ConfigValue,
         cluster_id: str | ConfigValue | None,
         token: str | ConfigValue | None,
+        azure_client_id: ConfigValue | None = None,
+        azure_client_secret: ConfigValue | None = None,
+        azure_tenant_id: ConfigValue | None = None,
     ) -> None:
         self.host = LiteralValue.from_value(host)
-        self.cluster_id = (
-            LiteralValue.from_value(cluster_id)
-            if isinstance(cluster_id, str)
-            else cluster_id
-        )
-        self.token = LiteralValue(token) if isinstance(token, str) else token
+        self.cluster_id = LiteralValue.from_value(cluster_id) if cluster_id else None
+        self.token = LiteralValue.from_value(token) if token else None
+        self.azure_client_secret = azure_client_secret
+        self.azure_client_id = azure_client_id
+        self.azure_tenant_id = azure_tenant_id
+
+    def storage_provider(self) -> pl.CredentialProvider | None:
+        if self.azure_client_id and self.azure_client_secret and self.azure_tenant_id:
+            from azure.identity import ClientSecretCredential
+
+            creds = ClientSecretCredential(
+                tenant_id=self.azure_tenant_id.read(),
+                client_id=self.azure_client_id.read(),
+                client_secret=self.azure_client_secret.read(),
+            )
+
+            return pl.CredentialProviderAzure(credential=creds)
+        return None
 
     def with_auth(
         self, token: str | ConfigValue, host: str | ConfigValue
@@ -845,14 +864,45 @@ class UnityCatalogTableAllJob(RetrievalJob):
         return spark_df.toPandas()
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
-        return pl.from_pandas(
-            await self.to_pandas(),
-            schema_overrides={
-                feat.name: feat.dtype.polars_type
-                for feat in self.retrieval_requests[0].features
-                if feat.dtype != FeatureType.json()
-            },
-        ).lazy()
+        try:
+            from polars import Catalog
+
+            creds = self.config.storage_provider()
+
+            assert creds is not None
+            assert self.config.token is not None
+
+            catalog = Catalog(
+                workspace_url=self.config.host.read(),
+                bearer_token=self.config.token.read(),
+            )
+            logger.info(
+                f"Trying to use polars as the processing engine when loading {self.table.table.read()}."
+            )
+            df = catalog.scan_table(
+                catalog_name=self.table.catalog.read(),
+                namespace=self.table.schema.read(),
+                table_name=self.table.table.read(),
+                credential_provider=creds,
+            )
+
+            if self._limit:
+                df = df.limit(self._limit)
+
+            return df
+        except Exception:
+            logger.info(
+                "Missing configuration to use polars as the processing engine.",
+                " Will create a spark connection.",
+            )
+            return pl.from_pandas(
+                await self.to_pandas(),
+                schema_overrides={
+                    feat.name: feat.dtype.polars_type
+                    for feat in self.retrieval_requests[0].features
+                    if feat.dtype != FeatureType.json()
+                },
+            ).lazy()
 
 
 @dataclass
