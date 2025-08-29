@@ -739,17 +739,17 @@ class FeatureFactory(FeatureReferencable):
             raise ValueError(f"Unable to add constraint {constraint}.")
 
     def is_null(self) -> Bool:
-        from aligned.compiler.transformation_factory import NotNullFactory
+        from aligned.compiler.transformation_factory import UnaryFactory
 
         instance = Bool()
-        instance.transformation = NotNullFactory(self)
+        instance.transformation = UnaryFactory(self, "is_null")
         return instance
 
     def is_not_null(self) -> Bool:
-        from aligned.compiler.transformation_factory import NotNullFactory
+        from aligned.compiler.transformation_factory import UnaryFactory
 
         instance = Bool()
-        instance.transformation = NotNullFactory(self)
+        instance.transformation = UnaryFactory(self, "is_not_null")
         return instance
 
     def with_name(self: T, name: str) -> T:
@@ -901,18 +901,11 @@ class ArithmeticFeature(ComparableFeature):
         feature.transformation = BinaryFactory(self, other, "div")
         return feature
 
-    def __floordiv__(self, other: FeatureFactory | Any) -> Float32:
-        from aligned.compiler.transformation_factory import BinaryFactory
-
-        feature = Float32()
-        feature.transformation = BinaryFactory(self, other, "div")
-        return feature
-
     def __abs__(self) -> Int64:
-        from aligned.compiler.transformation_factory import AbsoluteFactory
+        from aligned.compiler.transformation_factory import UnaryFactory
 
         feature = Int64()
-        feature.transformation = AbsoluteFactory(self)
+        feature.transformation = UnaryFactory(self, "abs")
         return feature
 
     def __mul__(self, other: FeatureFactory | Any) -> Float32:
@@ -937,10 +930,10 @@ class ArithmeticFeature(ComparableFeature):
         return feature
 
     def log1p(self) -> Float32:
-        from aligned.compiler.transformation_factory import LogTransformFactory
+        from aligned.compiler.transformation_factory import UnaryFactory
 
         feature = Float32()
-        feature.transformation = LogTransformFactory(self)
+        feature.transformation = UnaryFactory(self, "log1p")
         return feature
 
     def clip(self: T, lower_bound: float, upper_bound: float) -> T:
@@ -950,33 +943,493 @@ class ArithmeticFeature(ComparableFeature):
         feature.transformation = ClipFactory(self, lower_bound, upper_bound)  # type: ignore
         return feature
 
+    def is_nan(self) -> Bool:
+        """Check if the value is NaN (Not a Number).
+
+        Returns:
+            Bool: A boolean feature that is True where the original feature is NaN.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                x = Float32()
+                x_is_nan = x.is_nan()
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Bool()
+        feature.transformation = UnaryFactory(self, "is_nan")
+        return feature
+
+    def is_not_nan(self) -> Bool:
+        """Check if the value is not NaN (Not a Number).
+
+        Returns:
+            Bool: A boolean feature that is True where the original feature is not NaN.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                x = Float32()
+                x_is_valid = x.is_not_nan()
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Bool()
+        feature.transformation = UnaryFactory(self, "is_not_nan")
+        return feature
+
+    def is_finite(self) -> Bool:
+        """Check if the value is finite (not infinite and not NaN).
+
+        Returns:
+            Bool: A boolean feature that is True where the original feature is finite.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                temperature = Float32()
+                temp_is_finite = temperature.is_finite()
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Bool()
+        feature.transformation = UnaryFactory(self, "is_finite")
+        return feature
+
+    def is_infinite(self) -> Bool:
+        """Check if the value is infinite.
+
+        Returns:
+            Bool: A boolean feature that is True where the original feature is infinite.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                ratio = Float32()
+                ratio_is_infinite = ratio.is_infinite()
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Bool()
+        feature.transformation = UnaryFactory(self, "is_infinite")
+        return feature
+
+    def sqrt(self) -> Float32:
+        """Calculate the square root of the feature.
+
+        Returns:
+            Float32: A feature containing the square root of the original values.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                area = Float32()
+                side_length = area.sqrt()
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "sqrt")
+        return feature
+
+    def log10(self) -> Float32:
+        """Calculate the base-10 logarithm of the feature.
+
+        Returns:
+            Float32: A feature containing the base-10 logarithm of the original values.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                value = Float32()
+                log_value = value.log10()
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "log10")
+        return feature
+
+    def exp(self) -> Float32:
+        """Calculate the exponential (e^x) of the feature.
+
+        Returns:
+            Float32: A feature containing the exponential of the original values.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                log_prob = Float32()
+                probability = log_prob.exp()
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "exp")
+        return feature
+
+    def sign(self) -> Float32:
+        """Calculate the sign of the feature (-1, 0, or 1).
+
+        Returns:
+            Float32: A feature containing the sign of the original values.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                change = Float32()
+                direction = change.sign()
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "sign")
+        return feature
+
+    def sin(self) -> Float32:
+        """Calculate the sine of the feature.
+
+        Returns:
+            Float32: A feature containing the sine of the original values.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                angle = Float32()  # angle in radians
+                sin_value = angle.sin()
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "sin")
+        return feature
+
+    def cos(self) -> Float32:
+        """Calculate the cosine of the feature.
+
+        Returns:
+            Float32: A feature containing the cosine of the original values.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                angle = Float32()  # angle in radians
+                cos_value = angle.cos()
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "cos")
+        return feature
+
+    def tan(self) -> Float32:
+        """Calculate the tangent of the feature.
+
+        Returns:
+            Float32: A feature containing the tangent of the original values.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                angle = Float32()  # angle in radians
+                tan_value = angle.tan()
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "tan")
+        return feature
+
+    def cot(self) -> Float32:
+        """Calculate the cotangent of the feature.
+
+        Returns:
+            Float32: A feature containing the cotangent of the original values.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                angle = Float32()  # angle in radians
+                cot_value = angle.cot()
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "cot")
+        return feature
+
+    def arcsin(self) -> Float32:
+        """Calculate the arcsine (inverse sine) of the feature.
+
+        Returns:
+            Float32: A feature containing the arcsine of the original values in radians.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                ratio = Float32()  # values between -1 and 1
+                angle = ratio.arcsin()  # result in radians
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "arcsin")
+        return feature
+
+    def arccos(self) -> Float32:
+        """Calculate the arccosine (inverse cosine) of the feature.
+
+        Returns:
+            Float32: A feature containing the arccosine of the original values in radians.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                ratio = Float32()  # values between -1 and 1
+                angle = ratio.arccos()  # result in radians
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "arccos")
+        return feature
+
+    def arctan(self) -> Float32:
+        """Calculate the arctangent (inverse tangent) of the feature.
+
+        Returns:
+            Float32: A feature containing the arctangent of the original values in radians.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                slope = Float32()
+                angle = slope.arctan()  # result in radians
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "arctan")
+        return feature
+
+    def sinh(self) -> Float32:
+        """Calculate the hyperbolic sine of the feature.
+
+        Returns:
+            Float32: A feature containing the hyperbolic sine of the original values.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                value = Float32()
+                sinh_value = value.sinh()
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "sinh")
+        return feature
+
+    def cosh(self) -> Float32:
+        """Calculate the hyperbolic cosine of the feature.
+
+        Returns:
+            Float32: A feature containing the hyperbolic cosine of the original values.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                value = Float32()
+                cosh_value = value.cosh()
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "cosh")
+        return feature
+
+    def tanh(self) -> Float32:
+        """Calculate the hyperbolic tangent of the feature.
+
+        Returns:
+            Float32: A feature containing the hyperbolic tangent of the original values.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                value = Float32()
+                tanh_value = value.tanh()  # often used as activation function
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "tanh")
+        return feature
+
+    def arcsinh(self) -> Float32:
+        """Calculate the inverse hyperbolic sine of the feature.
+
+        Returns:
+            Float32: A feature containing the inverse hyperbolic sine of the original values.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                value = Float32()
+                arcsinh_value = value.arcsinh()
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "arcsinh")
+        return feature
+
+    def arccosh(self) -> Float32:
+        """Calculate the inverse hyperbolic cosine of the feature.
+
+        Returns:
+            Float32: A feature containing the inverse hyperbolic cosine of the original values.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                value = Float32()  # values >= 1
+                arccosh_value = value.arccosh()
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "arccosh")
+        return feature
+
+    def arctanh(self) -> Float32:
+        """Calculate the inverse hyperbolic tangent of the feature.
+
+        Returns:
+            Float32: A feature containing the inverse hyperbolic tangent of the original values.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                value = Float32()  # values between -1 and 1
+                arctanh_value = value.arctanh()
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "arctanh")
+        return feature
+
+    def degrees(self) -> Float32:
+        """Convert the feature from radians to degrees.
+
+        Returns:
+            Float32: A feature containing the original values converted from radians to degrees.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                angle_rad = Float32()  # angle in radians
+                angle_deg = angle_rad.degrees()  # converted to degrees
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "degrees")
+        return feature
+
+    def radians(self) -> Float32:
+        """Convert the feature from degrees to radians.
+
+        Returns:
+            Float32: A feature containing the original values converted from degrees to radians.
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                angle_deg = Float32()  # angle in degrees
+                angle_rad = angle_deg.radians()  # converted to radians
+            ```
+        """
+        from aligned.compiler.transformation_factory import UnaryFactory
+
+        feature = Float32()
+        feature.transformation = UnaryFactory(self, "radians")
+        return feature
+
 
 class DecimalOperations(FeatureFactory):
     def __round__(self) -> Int64:
-        from aligned.compiler.transformation_factory import RoundFactory
+        from aligned.compiler.transformation_factory import UnaryFactory
 
         feature = Int64()
-        feature.transformation = RoundFactory(self)
+        feature.transformation = UnaryFactory(self, "round")
         return feature
 
     def round(self) -> Int64:
         return self.__round__()
 
     def __ceil__(self) -> Int64:
-        from aligned.compiler.transformation_factory import CeilFactory
+        from aligned.compiler.transformation_factory import UnaryFactory
 
         feature = Int64()
-        feature.transformation = CeilFactory(self)
+        feature.transformation = UnaryFactory(self, "ceil")
         return feature
 
-    def cail(self) -> Int64:
+    def ceil(self) -> Int64:
         return self.__ceil__()
 
     def __floor__(self) -> Int64:
-        from aligned.compiler.transformation_factory import FloorFactory
+        from aligned.compiler.transformation_factory import UnaryFactory
 
         feature = Int64()
-        feature.transformation = FloorFactory(self)
+        feature.transformation = UnaryFactory(self, "floor")
         return feature
 
     def floor(self) -> Int64:
@@ -1005,10 +1458,10 @@ class NumberConvertableFeature(FeatureFactory):
 
 class InvertableFeature(FeatureFactory):
     def __invert__(self) -> Bool:
-        from aligned.compiler.transformation_factory import InverseFactory
+        from aligned.compiler.transformation_factory import UnaryFactory
 
         feature = Bool()
-        feature.transformation = InverseFactory(self)
+        feature.transformation = UnaryFactory(self, "not")
         return feature
 
 
@@ -1444,13 +1897,6 @@ class String(
         feature.transformation = OllamaGenerate(model, system or "", self, host_env)
         return feature
 
-    def split(self, pattern: str) -> String:
-        from aligned.compiler.transformation_factory import Split
-
-        feature = self.copy_type()
-        feature.transformation = Split(pattern, self)
-        return feature
-
     def format_string(self, features: list[FeatureFactory], format: str) -> String:
         from aligned.compiler.transformation_factory import FormatString
 
@@ -1465,11 +1911,109 @@ class String(
         feature.transformation = ReplaceFactory(values, self)
         return feature
 
-    def contains(self, value: str) -> Bool:
-        from aligned.compiler.transformation_factory import ContainsFactory
+    def contains(self, value: str | FeatureFactory) -> Bool:
+        """
+        Checks if a string contains a pattern.
+
+        Returns:
+            Bool: A boolean feature that is True where the column contains the pattern
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                text = String()
+                text_contains_not = text.contains("not")
+            ```
+        """
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Bool()
-        feature.transformation = ContainsFactory(value, self)
+        feature.transformation = BinaryFactory(self, value, "str_contains")
+        return feature
+
+    def starts_with(self, value: str | FeatureFactory) -> Bool:
+        """
+        Checks if a string starts with a specific pattern.
+
+        Returns:
+            Bool: A boolean feature that is True where the column starts with the pattern
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                text = String()
+                text_starts_with_hello = text.starts_with("Hello")
+            ```
+        """
+        from aligned.compiler.transformation_factory import BinaryFactory
+
+        feature = Bool()
+        feature.transformation = BinaryFactory(self, value, "str_starts_with")
+        return feature
+
+    def ends_with(self, value: str | FeatureFactory) -> Bool:
+        """
+        Checks if a string ends with a specific pattern.
+
+        Returns:
+            Bool: A boolean feature that is True where the column ends with the pattern
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                filename = String()
+                is_python_file = filename.ends_with(".py")
+            ```
+        """
+        from aligned.compiler.transformation_factory import BinaryFactory
+
+        feature = Bool()
+        feature.transformation = BinaryFactory(self, value, "str_ends_with")
+        return feature
+
+    def split(self, delimiter: str | FeatureFactory) -> List[String]:
+        """
+        Splits a string by a delimiter.
+
+        Returns:
+            String: A string feature containing the split result
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                full_name = String()
+                name_parts = full_name.split(" ")
+            ```
+        """
+        from aligned.compiler.transformation_factory import BinaryFactory
+
+        feature = List(String())
+        feature.transformation = BinaryFactory(self, delimiter, "str_split")
+        return feature
+
+    def find(self, substring: str | FeatureFactory) -> Int32:
+        """
+        Finds the position of a substring within the string.
+
+        Returns:
+            Int32: An integer feature containing the position (0-indexed, -1 if not found)
+
+        Example:
+            ```python
+            @data_contract()
+            class YourData:
+                text = String()
+                position_of_word = text.find("word")
+            ```
+        """
+        from aligned.compiler.transformation_factory import BinaryFactory
+
+        feature = Int32()
+        feature.transformation = BinaryFactory(self, substring, "str_find")
         return feature
 
     def sentence_vector(self, model: EmbeddingModel) -> Embedding:
@@ -1759,15 +2303,10 @@ class List(FeatureFactory, Generic[GenericFeature]):
         return feature
 
     def contains(self, value: GenericFeature | str | int | float | bool) -> Bool:
-        from aligned.compiler.transformation_factory import ArrayContainsFactory
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Bool()
-        feature.transformation = ArrayContainsFactory(
-            LiteralValue.from_value(value)
-            if not isinstance(value, FeatureFactory)
-            else value,
-            self,
-        )
+        feature.transformation = BinaryFactory(self, value, "list_contains")
         return feature
 
     def at_index(self, index: int) -> GenericFeature:

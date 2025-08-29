@@ -21,6 +21,8 @@ if TYPE_CHECKING:
     from aligned.sources.s3 import AwsS3Config
     from aligned.feature_store import ContractStore
 
+    from pyspark.sql import Column, DataFrame as SparkFrame
+
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +85,18 @@ class PolarsExprTransformation:
         raise NotImplementedError(type(self))
 
 
-class InnerTransformation(PolarsExprTransformation):
+class SparkExpression:
+    def spark_col(self) -> Column | None:
+        raise NotImplementedError(type(self))
+
+
+class InnerTransformation(PolarsExprTransformation, SparkExpression):
+    """
+    A general representation of transformations that transforms one value.
+
+    E.g. Is null, taking the absolute or rounding
+    """
+
     inner: Expression
 
     def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
@@ -98,6 +111,16 @@ class InnerTransformation(PolarsExprTransformation):
 
     def pandas_tran(self, column: pd.Series) -> pd.Series:
         raise NotImplementedError(type(self))
+
+    def spark_col_from(self, inner: Column) -> Column | None:
+        raise NotImplementedError(type(self))
+
+    def spark_col(self) -> Column | None:
+        inner_exp = self.inner.to_spark()
+        if inner_exp is not None:
+            return self.spark_col_from(inner_exp)
+        else:
+            return None
 
 
 class Transformation(Codable, SerializableType):
@@ -123,7 +146,7 @@ class Transformation(Codable, SerializableType):
 
     async def transform_polars(
         self, df: pl.LazyFrame, alias: str, store: ContractStore
-    ) -> pl.LazyFrame | pl.Expr | pl.Expr:
+    ) -> pl.LazyFrame | pl.Expr:
         if isinstance(self, PolarsExprTransformation):
             exp = self.polars_expr()
             if exp is not None:
@@ -141,6 +164,16 @@ class Transformation(Codable, SerializableType):
                 return df.with_columns(
                     self.polars_expr_from(pl.col(output_key))
                 ).select(pl.exclude(output_key))
+
+        raise NotImplementedError(type(self))
+
+    async def transform_spark(
+        self, df: SparkFrame, alias: str, store: ContractStore
+    ) -> SparkFrame:
+        if isinstance(self, SparkExpression):
+            exp = self.spark_col()
+            if exp is not None:
+                return df.withColumn(alias, exp)
 
         raise NotImplementedError(type(self))
 
@@ -248,7 +281,6 @@ class SupportedTransformations:
         self.types = {}
 
         for tran_type in [
-            NotNull,
             PandasLambdaTransformation,
             PandasFunctionTransformation,
             PolarsLambdaTransformation,
@@ -257,22 +289,16 @@ class SupportedTransformations:
             Contains,
             DateComponent,
             TimeDifference,
-            Logarithm,
-            LogarithmOnePluss,
             ToNumerical,
             HashColumns,
             ReplaceStrings,
             MultiTransformation,
             IsIn,
             BinaryTransformation,
-            Inverse,
+            UnaryTransformation,
             Ordinal,
             FillNaValues,
             FillNaValuesColumns,
-            Absolute,
-            Round,
-            Ceil,
-            Floor,
             CopyTransformation,
             WordVectoriser,
             MapArgMax,
@@ -320,9 +346,30 @@ class SupportedTransformations:
 
 @dataclass
 class Expression(Codable):
+    """
+    A structure that makes it easy to encode column transformations.
+
+    This can also contain references to columns or literal values.
+
+    Therefore, making it possible to nest multiple levels of transformations in one expression.
+
+    E.g.: ((a + b) ** 2) > 20
+    """
+
     column: str | None = field(default=None)
     transformation: Transformation | None = field(default=None)
     literal: LiteralValue | None = field(default=None)
+
+    def to_spark(self) -> Column | None:
+        from pyspark.sql.functions import col, lit
+
+        if self.column:
+            return col(self.column)
+        if self.literal:
+            return lit(self.literal.python_value)
+        if self.transformation and isinstance(self.transformation, SparkExpression):
+            return self.transformation.spark_col()
+        return None
 
     def to_polars(self) -> pl.Expr | None:
         if self.column:
@@ -364,11 +411,23 @@ BinaryOperators = Literal[
     "and",
     "pow",
     "mod",
+    "xor",
+    "list_contains",
+    "isin",
+    "floor_div",
+    "min",
+    "max",
+    "concat",
+    "str_contains",
+    "str_starts_with",
+    "str_ends_with",
+    "str_split",
+    "str_find",
 ]
 
 
 @dataclass
-class BinaryTransformation(Transformation, PolarsExprTransformation):
+class BinaryTransformation(Transformation, PolarsExprTransformation, SparkExpression):
     left: Expression
     right: Expression
 
@@ -385,69 +444,200 @@ class BinaryTransformation(Transformation, PolarsExprTransformation):
 
         return None
 
-    def _polars_expr(self, left: pl.Expr, right: pl.Expr) -> pl.Expr:
-        if self.operator == "add":
-            return left + right
-        elif self.operator == "sub":
-            return left - right
-        elif self.operator == "eq":
-            return left == right
-        elif self.operator == "neq":
-            return left != right
-        elif self.operator == "gt":
-            return left > right
-        elif self.operator == "gte":
-            return left >= right
-        elif self.operator == "lt":
-            return left < right
-        elif self.operator == "lte":
-            return left <= right
-        elif self.operator == "mul":
-            return left * right
-        elif self.operator == "div":
-            return left / right
-        elif self.operator == "or":
-            return left | right
-        elif self.operator == "and":
-            return left & right
-        elif self.operator == "pow":
-            return left.pow(right)
-        elif self.operator == "mod":
-            return left.mod(right)
+    def spark_col(self) -> Column | None:
+        left = self.left.to_spark()
+        right = self.right.to_spark()
 
-        raise ValueError(f"Unable to compute {self.operator}")
+        if left is None or right is None:
+            return None
+
+        match self.operator:
+            case "neq":
+                return left != right
+            case "eq":
+                return left == right
+            case "gte":
+                return left >= right
+            case "gt":
+                return left > right
+            case "lte":
+                return left <= right
+            case "lt":
+                return left < right
+            case "add":
+                return left + right
+            case "sub":
+                return left - right
+            case "mul":
+                return left * right
+            case "div":
+                return left / right
+            case "mod":
+                return left % right
+            case "xor":
+                return left.bitwiseXOR(right)
+            case "and":
+                return left & right
+            case "or":
+                return left | right
+            case "pow":
+                return left**right
+            case "str_contains":
+                return left.contains(right)
+            case "list_contains":
+                import pyspark.sql.functions as F
+
+                return F.array_contains(left, right)
+            case "isin":
+                return left.isin(right)
+            case "floor_div":
+                # Spark doesn't have floor division operator, but we can simulate it
+                return (left / right).cast("integer")
+            case "min":
+                import pyspark.sql.functions as F
+
+                return F.least(left, right)
+            case "max":
+                import pyspark.sql.functions as F
+
+                return F.greatest(left, right)
+            case "concat":
+                import pyspark.sql.functions as F
+
+                return F.concat(left, right)
+            case "str_starts_with":
+                return left.startswith(right)
+            case "str_ends_with":
+                return left.endswith(right)
+            case "str_split":
+                import pyspark.sql.functions as F
+
+                return F.split(left, right)
+            case "str_find":
+                import pyspark.sql.functions as F
+
+                assert (
+                    self.right.literal is not None
+                ), "Needed a python literal got None"
+                return F.locate(self.right.literal.python_value, left) - 1
+            case _:
+                raise ValueError(f"Unable to format '{self.operator}' for {self}")
+
+    def _polars_expr(self, left: pl.Expr, right: pl.Expr) -> pl.Expr:
+        match self.operator:
+            case "add":
+                return left + right
+            case "sub":
+                return left - right
+            case "eq":
+                return left == right
+            case "neq":
+                return left != right
+            case "gt":
+                return left > right
+            case "gte":
+                return left >= right
+            case "lt":
+                return left < right
+            case "lte":
+                return left <= right
+            case "mul":
+                return left * right
+            case "div":
+                return left / right
+            case "or":
+                return left | right
+            case "and":
+                return left & right
+            case "pow":
+                return left.pow(right)
+            case "mod":
+                return left.mod(right)
+            case "xor":
+                return left.xor(right)
+            case "str_contains":
+                return left.str.contains(right)
+            case "list_contains":
+                return left.list.contains(right)
+            case "isin":
+                return left.is_in(right)
+            case "floor_div":
+                return left.floordiv(right)
+            case "min":
+                return pl.min_horizontal([left, right])
+            case "max":
+                return pl.max_horizontal([left, right])
+            case "concat":
+                return pl.concat_str([left, right])
+            case "str_starts_with":
+                return left.str.starts_with(right)
+            case "str_ends_with":
+                return left.str.ends_with(right)
+            case "str_split":
+                return left.str.split(right)
+            case "str_find":
+                return left.str.find(right)
+            case _:
+                raise ValueError(f"Unable to compute {self.operator}")
 
     def pandas_op(self, left: pd.Series, right: pd.Series) -> pd.Series:
-        if self.operator == "add":
-            return left + right
-        elif self.operator == "sub":
-            return left - right
-        elif self.operator == "eq":
-            return left == right
-        elif self.operator == "neq":
-            return left != right
-        elif self.operator == "gt":
-            return left > right
-        elif self.operator == "gte":
-            return left >= right
-        elif self.operator == "lt":
-            return left < right
-        elif self.operator == "lte":
-            return left <= right
-        elif self.operator == "mul":
-            return left * right
-        elif self.operator == "div":
-            return left / right
-        elif self.operator == "or":
-            return left | right
-        elif self.operator == "and":
-            return left & right
-        elif self.operator == "pow":
-            return left**right
-        elif self.operator == "mod":
-            return left.mod(right)
-
-        raise ValueError(f"Unable to compute {self.operator}")
+        match self.operator:
+            case "add":
+                return left + right
+            case "sub":
+                return left - right
+            case "eq":
+                return left == right
+            case "neq":
+                return left != right
+            case "gt":
+                return left > right
+            case "gte":
+                return left >= right
+            case "lt":
+                return left < right
+            case "lte":
+                return left <= right
+            case "mul":
+                return left * right
+            case "div":
+                return left / right
+            case "or":
+                return left | right
+            case "and":
+                return left & right
+            case "pow":
+                return left**right
+            case "mod":
+                return left.mod(right)
+            case "xor":
+                return left ^ right
+            case "str_contains":
+                return left.str.contains(right)
+            case "list_contains":
+                pl_left = pl.Series(left)
+                pl_right = pl.Series(right)
+                return pl_left.list.contains(pl_right).to_pandas()
+            case "isin":
+                return left.isin(right)
+            case "floor_div":
+                return left // right
+            case "min":
+                return np.minimum(left, right)  # type: ignore
+            case "max":
+                return np.maximum(left, right)  # type: ignore
+            case "concat":
+                return left.astype(str) + right.astype(str)
+            case "str_starts_with":
+                return left.str.startswith(right)
+            case "str_ends_with":
+                return left.str.endswith(right)
+            case "str_split":
+                return left.str.split(right)
+            case "str_find":
+                return left.str.find(right)
+            case _:
+                raise ValueError(f"Unable to compute {self.operator}")
 
     async def transform_polars(
         self, df: pl.LazyFrame, alias: str, store: ContractStore
@@ -510,6 +700,299 @@ class BinaryTransformation(Transformation, PolarsExprTransformation):
         assert right_series is not None
 
         return self.pandas_op(left_series, right_series)  # type: ignore
+
+
+UnaryFunction = Literal[
+    "is_null",
+    "is_not_null",
+    "is_nan",
+    "is_not_nan",
+    "is_finite",
+    "is_infinite",
+    "not",
+    "floor",
+    "ceil",
+    "round",
+    "abs",
+    "sqrt",
+    "log10",
+    "exp",
+    "sign",
+    "sin",
+    "cos",
+    "tan",
+    "cot",
+    "arcsin",
+    "arccos",
+    "arctan",
+    "sinh",
+    "cosh",
+    "tanh",
+    "arcsinh",
+    "arccosh",
+    "arctanh",
+    "degrees",
+    "radians",
+    "log1p",
+]
+
+
+@dataclass
+class UnaryTransformation(Transformation, InnerTransformation):
+    inner: Expression
+    func: UnaryFunction
+    name: str = "unary"
+    dtype: FeatureType = FeatureType.floating_point()
+
+    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
+        match self.func:
+            case "is_null":
+                return inner.is_null()
+            case "is_not_null":
+                return inner.is_not_null()
+            case "is_nan":
+                return inner.is_nan()
+            case "is_not_nan":
+                return inner.is_not_nan()
+            case "is_finite":
+                return inner.is_finite()
+            case "is_infinite":
+                return inner.is_infinite()
+            case "not":
+                return inner.not_()
+            case "floor":
+                return inner.floor()
+            case "ceil":
+                return inner.ceil()
+            case "round":
+                return inner.round()
+            case "abs":
+                return inner.abs()
+            case "sqrt":
+                return inner.sqrt()
+            case "log10":
+                return inner.log10()
+            case "exp":
+                return inner.exp()
+            case "sign":
+                return inner.sign()
+            case "sin":
+                return inner.sin()
+            case "cos":
+                return inner.cos()
+            case "tan":
+                return inner.tan()
+            case "cot":
+                return inner.cot()
+            case "arcsin":
+                return inner.arcsin()
+            case "arccos":
+                return inner.arccos()
+            case "arctan":
+                return inner.arctan()
+            case "sinh":
+                return inner.sinh()
+            case "cosh":
+                return inner.cosh()
+            case "tanh":
+                return inner.tanh()
+            case "arcsinh":
+                return inner.arcsinh()
+            case "arccosh":
+                return inner.arccosh()
+            case "arctanh":
+                return inner.arctanh()
+            case "degrees":
+                return inner.degrees()
+            case "radians":
+                return inner.radians()
+            case "log1p":
+                return inner.log1p()
+            case _:
+                raise ValueError(f"Unary function '{self.func}' not supported")
+
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
+        match self.func:
+            case "is_null":
+                return column.isnull()
+            case "is_not_null":
+                return column.notnull()
+            case "is_nan":
+                return column.isna()
+            case "is_not_nan":
+                return ~column.isna()
+            case "is_finite":
+                return np.isfinite(column)  # type: ignore
+            case "is_infinite":
+                return np.isinf(column)  # type: ignore
+            case "not":
+                return ~column
+            case "floor":
+                return np.floor(column)  # type: ignore
+            case "ceil":
+                return np.ceil(column)  # type: ignore
+            case "round":
+                return np.round(column)  # type: ignore
+            case "abs":
+                return np.abs(column)  # type: ignore
+            case "sqrt":
+                return np.sqrt(column)  # type: ignore
+            case "log10":
+                return np.log10(column)  # type: ignore
+            case "exp":
+                return np.exp(column)  # type: ignore
+            case "sign":
+                return np.sign(column)  # type: ignore
+            case "sin":
+                return np.sin(column)  # type: ignore
+            case "cos":
+                return np.cos(column)  # type: ignore
+            case "tan":
+                return np.tan(column)  # type: ignore
+            case "cot":
+                return 1 / np.tan(column)  # type: ignore
+            case "arcsin":
+                return np.arcsin(column)  # type: ignore
+            case "arccos":
+                return np.arccos(column)  # type: ignore
+            case "arctan":
+                return np.arctan(column)  # type: ignore
+            case "sinh":
+                return np.sinh(column)  # type: ignore
+            case "cosh":
+                return np.cosh(column)  # type: ignore
+            case "tanh":
+                return np.tanh(column)  # type: ignore
+            case "arcsinh":
+                return np.arcsinh(column)  # type: ignore
+            case "arccosh":
+                return np.arccosh(column)  # type: ignore
+            case "arctanh":
+                return np.arctanh(column)  # type: ignore
+            case "degrees":
+                return np.degrees(column)  # type: ignore
+            case "radians":
+                return np.radians(column)  # type: ignore
+            case "log1p":
+                return np.log1p(column)  # type: ignore
+            case _:
+                raise ValueError(
+                    f"Unary function '{self.func}' not supported in pandas"
+                )
+
+    def spark_col_from(self, inner: Column) -> Column | None:
+        import pyspark.sql.functions as F
+
+        match self.func:
+            case "is_null":
+                return inner.isNull()
+            case "is_not_null":
+                return inner.isNotNull()
+            case "is_nan":
+                return F.isnan(inner)
+            case "is_not_nan":
+                return ~F.isnan(inner)
+            case "is_finite":
+                return ~(F.isnan(inner) | F.isinf(inner))  # type: ignore
+            case "is_infinite":
+                return F.isinf(inner)  # type: ignore
+            case "not":
+                return ~inner
+            case "floor":
+                return F.floor(inner)
+            case "ceil":
+                return F.ceil(inner)
+            case "round":
+                return F.round(inner)
+            case "abs":
+                return F.abs(inner)
+            case "sqrt":
+                return F.sqrt(inner)
+            case "log10":
+                return F.log10(inner)
+            case "exp":
+                return F.exp(inner)
+            case "sign":
+                return F.signum(inner)
+            case "sin":
+                return F.sin(inner)
+            case "cos":
+                return F.cos(inner)
+            case "tan":
+                return F.tan(inner)
+            case "cot":
+                return F.cot(inner)
+            case "arcsin":
+                return F.asin(inner)
+            case "arccos":
+                return F.acos(inner)
+            case "arctan":
+                return F.atan(inner)
+            case "sinh":
+                return F.sinh(inner)
+            case "cosh":
+                return F.cosh(inner)
+            case "tanh":
+                return F.tanh(inner)
+            case "arcsinh":
+                # Spark doesn't have built-in arcsinh, using formula: log(x + sqrt(x^2 + 1))
+                return F.log(inner + F.sqrt(inner * inner + F.lit(1)))
+            case "arccosh":
+                # Spark doesn't have built-in arccosh, using formula: log(x + sqrt(x^2 - 1))
+                return F.log(inner + F.sqrt(inner * inner - F.lit(1)))
+            case "arctanh":
+                # Spark doesn't have built-in arctanh, using formula: 0.5 * log((1 + x) / (1 - x))
+                return F.lit(0.5) * F.log((F.lit(1) + inner) / (F.lit(1) - inner))
+            case "degrees":
+                return F.degrees(inner)
+            case "radians":
+                return F.radians(inner)
+            case "log1p":
+                return F.log1p(inner)
+            case _:
+                raise ValueError(f"Unary function '{self.func}' not supported in Spark")
+
+    async def transform_polars(
+        self, df: pl.LazyFrame, alias: str, store: ContractStore
+    ) -> pl.LazyFrame | pl.Expr:
+        exp = self.polars_expr()
+        if exp is not None:
+            return exp
+
+        inner_col = "_aligned_inner"
+        assert self.inner.transformation
+
+        inner = await self.inner.transformation.transform_polars(df, inner_col, store)
+
+        if isinstance(inner, pl.Expr):
+            return self.polars_expr_from(inner)
+
+        return inner.with_columns(
+            self.polars_expr_from(pl.col(inner_col)).alias(alias)
+        ).select(pl.exclude(inner_col))
+
+    async def transform_pandas(
+        self, df: pd.DataFrame, store: ContractStore
+    ) -> pd.Series:
+        if self.inner.column:
+            series = df[self.inner.column]
+        elif self.inner.literal:
+            series = self.inner.literal.python_value
+        else:
+            assert self.inner.transformation
+            series = await self.inner.transformation.transform_pandas(df, store)
+
+        return self.pandas_tran(series)  # type: ignore
+
+    @staticmethod
+    def test_definition() -> TransformationTestDefinition:
+        return TransformationTestDefinition(
+            transformation=UnaryTransformation(
+                inner=Expression(column="x"), func="abs"
+            ),
+            input={"x": [-1.5, 2.3, -3.7, None]},
+            output=[1.5, 2.3, 3.7, None],
+        )
 
 
 @dataclass
@@ -733,80 +1216,6 @@ class PolarsLambdaTransformation(Transformation):
 
 
 @dataclass
-class IsNull(Transformation, InnerTransformation):
-    inner: Expression
-    name: str = "is_null"
-    dtype: FeatureType = FeatureType.boolean()
-
-    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
-        return inner.is_null()
-
-    def pandas_tran(self, column: pd.Series) -> pd.Series:
-        return column.isnull()
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            IsNull(Expression(column="x")),
-            input={"x": ["Hello", None, None, "test", None]},
-            output=[False, True, True, False, True],
-        )
-
-
-@dataclass
-class NotNull(Transformation, InnerTransformation):
-    inner: Expression
-
-    name: str = "not_null"
-    dtype: FeatureType = FeatureType.boolean()
-
-    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
-        return inner.is_not_null()
-
-    def pandas_tran(self, column: pd.Series) -> pd.Series:
-        return column.notnull()  # type: ignore
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            NotNull(Expression(column="x")),
-            input={"x": ["Hello", None, None, "test", None]},
-            output=[True, False, False, True, False],
-        )
-
-
-@dataclass
-class Inverse(Transformation, PolarsExprTransformation):
-    key: str
-
-    name: str = "inverse"
-    dtype: FeatureType = FeatureType.boolean()
-
-    def __init__(self, key: str) -> None:
-        self.key = key
-
-    def polars_expr(self) -> pl.Expr:
-        return ~pl.col(self.key)
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(df[self.key].isnull()),  # type: ignore
-            transformation=lambda dfv: ~dfv[self.key].astype("bool"),  # type: ignore
-        )
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            Inverse("x"),
-            input={"x": [False, True, True, False, None]},
-            output=[True, False, False, True, None],
-        )
-
-
-@dataclass
 class TimeDifference(Transformation, PsqlTransformation, RedshiftTransformation):
     front: str
     behind: str
@@ -864,80 +1273,6 @@ class TimeDifference(Transformation, PsqlTransformation, RedshiftTransformation)
 
     def as_psql(self) -> str:
         return f"DATEDIFF('sec', {self.behind}, {self.front})"
-
-
-@dataclass
-class Logarithm(Transformation, PolarsExprTransformation):
-    key: str
-
-    name: str = "log"
-    dtype: FeatureType = FeatureType.floating_point()
-
-    def __init__(self, key: str) -> None:
-        self.key = key
-
-    def polars_expr(self) -> pl.Expr:
-        return (
-            pl.when(pl.col(self.key) > 0)
-            .then(pl.col(self.key).log())
-            .otherwise(pl.lit(None))
-        )
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(df[self.key].isna() | (df[self.key] <= 0)),
-            transformation=lambda dfv: np.log(dfv[self.key]),  # type: ignore
-        )
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
-
-        return TransformationTestDefinition(
-            Logarithm("x"),
-            input={"x": [1, 0, np.e, None, -1]},
-            output=[0, nan, 1, nan, nan],
-        )
-
-
-@dataclass
-class LogarithmOnePluss(Transformation, PolarsExprTransformation):
-    key: str
-
-    name: str = "log1p"
-    dtype: FeatureType = FeatureType.floating_point()
-
-    def __init__(self, key: str) -> None:
-        self.key = key
-
-    def polars_expr(self) -> pl.Expr:
-        return (
-            pl.when(pl.col(self.key) > -1)
-            .then((pl.col(self.key) + 1).log())
-            .otherwise(pl.lit(None))
-        )
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        return gracefull_transformation(
-            df,
-            is_valid_mask=~(df[self.key].isna() | (df[self.key] <= -1)),
-            transformation=lambda dfv: np.log1p(dfv[self.key]),  # type: ignore
-        )
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        from numpy import nan
-
-        return TransformationTestDefinition(
-            LogarithmOnePluss("x"),
-            input={"x": [1, 0, np.e - 1, None, -1]},
-            output=[0.6931471806, 0, 1, nan, nan],
-        )
 
 
 @dataclass
@@ -1410,106 +1745,6 @@ class CopyTransformation(Transformation, PolarsExprTransformation):
 
     def polars_expr(self) -> pl.Expr:
         return pl.col(self.key)
-
-
-@dataclass
-class Floor(Transformation, PolarsExprTransformation):
-    key: str
-    dtype: FeatureType = FeatureType.int64()
-
-    name: str = "floor"
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        from numpy import floor
-
-        return floor(df[self.key])  # type: ignore
-
-    def polars_expr(self) -> pl.Expr:
-        return pl.col(self.key).floor()
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            Floor("x"),
-            input={"x": [1.3, 1.9, None]},
-            output=[1, 1, None],
-        )
-
-
-@dataclass
-class Ceil(Transformation, PolarsExprTransformation):
-    key: str
-    dtype: FeatureType = FeatureType.int64()
-
-    name: str = "ceil"
-
-    async def transform_pandas(
-        self, df: pd.DataFrame, store: ContractStore
-    ) -> pd.Series:
-        from numpy import ceil
-
-        return ceil(df[self.key])  # type: ignore
-
-    def polars_expr(self) -> pl.Expr:
-        return pl.col(self.key).ceil()
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            Ceil("x"),
-            input={"x": [1.3, 1.9, None]},
-            output=[2, 2, None],
-        )
-
-
-@dataclass
-class Round(Transformation, InnerTransformation):
-    inner: Expression
-    dtype: FeatureType = FeatureType.int64()
-
-    name: str = "round"
-
-    def pandas_tran(self, column: pd.Series) -> pd.Series:
-        from numpy import round
-
-        return round(column)  # type: ignore
-
-    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
-        return inner.round(0)
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            Round(Expression(column="x")),
-            input={"x": [1.3, 1.9, None]},
-            output=[1, 2, None],
-        )
-
-
-@dataclass
-class Absolute(Transformation, InnerTransformation):
-    inner: Expression
-    dtype: FeatureType = FeatureType.floating_point()
-
-    name: str = "abs"
-
-    def pandas_tran(self, column: pd.Series) -> pd.Series:
-        from numpy import abs
-
-        return abs(column)  # type: ignore
-
-    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
-        return inner.abs()
-
-    @staticmethod
-    def test_definition() -> TransformationTestDefinition:
-        return TransformationTestDefinition(
-            Absolute(Expression(column="x")),
-            input={"x": [-13, 19, None]},
-            output=[13, 19, None],
-        )
 
 
 @dataclass
@@ -2009,6 +2244,14 @@ class Clip(Transformation, InnerTransformation):
             lower_bound=self.lower.python_value, upper_bound=self.upper.python_value
         )
 
+    def spark_col_from(self, inner: Column) -> Column | None:
+        import pyspark.sql.functions as F
+
+        return F.greatest(
+            F.least(inner, F.lit(self.upper.python_value)),
+            F.lit(self.lower.python_value),
+        )
+
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
@@ -2239,6 +2482,11 @@ class Split(Transformation, InnerTransformation):
 
     def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
         return inner.str.split(self.separator)
+
+    def spark_col_from(self, inner: Column) -> Column | None:
+        import pyspark.sql.functions as F
+
+        return F.split(inner, pattern=self.separator)
 
 
 @dataclass

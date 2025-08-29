@@ -21,40 +21,13 @@ from aligned.schemas.transformation import (
     EmbeddingModel,
     BinaryOperators,
     Expression,
+    UnaryFunction,
 )
 
 if TYPE_CHECKING:
     from aligned.feature_store import ContractStore
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class IsNullFactory(TransformationFactory):
-    value: FeatureFactory
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        return [self.value]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import IsNull
-
-        return IsNull(Expression.from_value(self.value))
-
-
-@dataclass
-class NotNullFactory(TransformationFactory):
-    value: FeatureFactory
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        return [self.value]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import NotNull
-
-        return NotNull(Expression.from_value(self.value))
 
 
 @dataclass
@@ -100,42 +73,6 @@ class ArrayContainsAnyFactory(TransformationFactory):
         from aligned.schemas.transformation import ArrayContainsAny
 
         return ArrayContainsAny(self.in_feature.name, self.values)
-
-
-@dataclass
-class ArrayContainsFactory(TransformationFactory):
-    value: LiteralValue | FeatureFactory
-    in_feature: FeatureFactory
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        if isinstance(self.value, FeatureFactory):
-            return [self.in_feature, self.value]
-        else:
-            return [self.in_feature]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import ArrayContains
-
-        return ArrayContains(
-            self.in_feature.name,
-            self.value.name if isinstance(self.value, FeatureFactory) else self.value,
-        )
-
-
-@dataclass
-class ContainsFactory(TransformationFactory):
-    text: str
-    in_feature: FeatureFactory
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        return [self.in_feature]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import Contains as ContainsTransformation
-
-        return ContainsTransformation(self.in_feature.name, self.text)
 
 
 @dataclass
@@ -268,20 +205,6 @@ class TimeDifferanceFactory(TransformationFactory):
 
 
 @dataclass
-class LogTransformFactory(TransformationFactory):
-    feature: FeatureFactory
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        return [self.feature]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import LogarithmOnePluss
-
-        return LogarithmOnePluss(self.feature.name)
-
-
-@dataclass
 class ReplaceFactory(TransformationFactory):
     values: dict[str, str]
     source_feature: FeatureFactory
@@ -328,20 +251,6 @@ class IsInFactory(TransformationFactory):
         return IsInTransformation(self.values, self.feature.name)
 
 
-@dataclass
-class InverseFactory(TransformationFactory):
-    from_feature: FeatureFactory
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        return [self.from_feature]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import Inverse as InverseTransformation
-
-        return InverseTransformation(self.from_feature.name)
-
-
 class FillNaStrategy:
     def compile(self) -> Any:
         pass
@@ -383,59 +292,20 @@ class FillMissingFactory(TransformationFactory):
 
 
 @dataclass
-class FloorFactory(TransformationFactory):
-    feature: FeatureFactory
+class UnaryFactory(TransformationFactory):
+    inner: FeatureFactory
+    func: UnaryFunction
 
     @property
     def using_features(self) -> list[FeatureFactory]:
-        return [self.feature]
+        return [self.inner]
 
     def compile(self) -> Transformation:
-        from aligned.schemas.transformation import Floor
+        from aligned.schemas.transformation import UnaryTransformation
 
-        return Floor(self.feature.name)
-
-
-@dataclass
-class CeilFactory(TransformationFactory):
-    feature: FeatureFactory
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        return [self.feature]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import Ceil
-
-        return Ceil(self.feature.name)
-
-
-@dataclass
-class RoundFactory(TransformationFactory):
-    feature: FeatureFactory
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        return [self.feature]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import Round
-
-        return Round(Expression.from_value(self.feature))
-
-
-@dataclass
-class AbsoluteFactory(TransformationFactory):
-    feature: FeatureFactory
-
-    @property
-    def using_features(self) -> list[FeatureFactory]:
-        return [self.feature]
-
-    def compile(self) -> Transformation:
-        from aligned.schemas.transformation import Absolute
-
-        return Absolute(Expression.from_value(self.feature))
+        return UnaryTransformation(
+            inner=Expression.from_value(self.inner), func=self.func
+        )
 
 
 @dataclass

@@ -53,6 +53,8 @@ if TYPE_CHECKING:
     from aligned.sources.local import DataFileReference, StorageFileReference
     from aligned.feature_store import ContractStore
 
+    from pyspark.sql import DataFrame as SparkFrame, SparkSession
+
 
 logger = logging.getLogger(__name__)
 
@@ -708,6 +710,17 @@ class RetrievalJob(ABC):
     @abstractmethod
     async def to_lazy_polars(self) -> pl.LazyFrame:
         raise NotImplementedError(f"For {type(self)}")
+
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        if not session:
+            from pyspark.sql import SparkSession
+
+            session = (
+                SparkSession.getActiveSession() or SparkSession.builder.getOrCreate()
+            )
+
+        pandas = await self.to_pandas()
+        return session.createDataFrame(pandas)
 
     async def to_polars(self) -> pl.DataFrame:
         return await (await self.to_lazy_polars()).collect_async()
@@ -1463,6 +1476,16 @@ class OnErrorJob(Generic[ErrorType], RetrievalJob, ModificationJob):
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
 
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        try:
+            return await self.job.to_spark(session)
+        except self.error_type as error:
+            other_data = self.error_handler(error)
+            requests = self.job.retrieval_requests
+            return await RetrievalJob.from_convertable(other_data, requests).to_spark(
+                session
+            )
+
 
 @dataclass
 class ReturnInvalidJob(RetrievalJob, ModificationJob):
@@ -1991,6 +2014,10 @@ class LimitJob(RetrievalJob, ModificationJob):
         df = await self.job.to_lazy_polars()
         return df.limit(self._limit)
 
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        df = await self.to_spark(session)
+        return df.limit(self._limit)
+
 
 @dataclass
 class RenameJob(RetrievalJob, ModificationJob):
@@ -2011,6 +2038,19 @@ class RenameJob(RetrievalJob, ModificationJob):
         else:
             return df.rename(self.mappings)
 
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        df = await self.job.to_spark(session)
+        if isinstance(self.mappings, Renamer):
+            return df.withColumnsRenamed(
+                {field: self.mappings.rename(field) for field in df.schema.fieldNames()}
+            )
+        elif isinstance(self.mappings, Callable):
+            return df.withColumnsRenamed(
+                {field: self.mappings(field) for field in df.schema.fieldNames()}
+            )
+        else:
+            return df.withColumnsRenamed(self.mappings)
+
 
 @dataclass
 class DropDuplicateEntities(RetrievalJob, ModificationJob):
@@ -2027,6 +2067,10 @@ class DropDuplicateEntities(RetrievalJob, ModificationJob):
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.job.to_pandas()
         return df.drop_duplicates(subset=self.entity_columns)
+
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        df = await self.job.to_spark(session)
+        return df.drop_duplicates(self.entity_columns)
 
 
 @dataclass
@@ -2135,6 +2179,22 @@ class LogJob(RetrievalJob, ModificationJob):
         self.logger(df.collect_schema().names())
         self.logger(df)
         self.logger(df.head(10).collect())
+        return df
+
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        if logger.level == 0:
+            logging.basicConfig(level=logging.DEBUG)
+
+        job_name = self.retrieval_requests[0].name
+        self.logger(f"Starting to run {type(self.job).__name__} - {job_name}")
+        try:
+            df = await self.job.to_spark(session)
+        except Exception as error:
+            self.logger(f"Failed in job: {type(self.job).__name__} - {job_name}")
+            raise error
+        self.logger(f"Results from {type(self.job).__name__} - {job_name}")
+        self.logger(df.schema.fieldNames())
+        self.logger(df.head(10))
         return df
 
     def remove_derived_features(self) -> RetrievalJob:
@@ -2344,6 +2404,14 @@ class UniqueRowsJob(RetrievalJob, ModificationJob):
             data = data.sort(self.sort_key, descending=self.descending)
 
         return data.unique(self.unique_on, keep="first", maintain_order=True).lazy()
+
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        df = await self.job.to_spark(session)
+
+        if self.sort_key:
+            df = df.sort(self.sort_key, ascending=not self.descending)
+
+        return df.drop_duplicates(self.unique_on)
 
 
 @dataclass
@@ -2721,6 +2789,9 @@ class WithRequests(RetrievalJob, ModificationJob):
     async def to_lazy_polars(self) -> pl.LazyFrame:
         return await self.job.to_lazy_polars()
 
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        return await self.job.to_spark(session)
+
 
 @dataclass
 class TimeMetricLoggerJob(RetrievalJob, ModificationJob):
@@ -3021,6 +3092,18 @@ class SelectColumnsJob(RetrievalJob, ModificationJob):
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         df = await self.job.to_lazy_polars()
+        if self.include_features:
+            total_list = list(
+                {ent.name for ent in self.request_result.entities}.union(
+                    self.include_features
+                )
+            )
+            return df.select(total_list)
+        else:
+            return df
+
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        df = await self.job.to_spark(session)
         if self.include_features:
             total_list = list(
                 {ent.name for ent in self.request_result.entities}.union(
