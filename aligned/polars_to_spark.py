@@ -134,9 +134,9 @@ class LiteralPolarsValue(BaseModel):
             return self.dynamic.to_spark_expression()
         if self.scalar:
             return self.scalar.value.to_spark_expression()
-        if self.string:
+        if self.string is not None:
             return f"'{self.string}'"
-        if self.integer:
+        if self.integer is not None:
             return f"{self.integer}"
 
         raise ValueError(f"Unable to format '{self}'")
@@ -148,9 +148,9 @@ class LiteralPolarsValue(BaseModel):
             return self.dynamic.to_spark_column()
         if self.scalar:
             return self.scalar.value.to_spark_column()
-        if self.string:
+        if self.string is not None:
             return lit(self.string)
-        if self.integer:
+        if self.integer is not None:
             return lit(self.integer)
 
         raise ValueError(f"Unable to format '{self}'")
@@ -160,9 +160,9 @@ class LiteralPolarsValue(BaseModel):
             return self.dynamic.to_expression()
         if self.scalar:
             return self.scalar.value.to_expression()
-        if self.string:
+        if self.string is not None:
             return Expression(literal=LiteralValue.from_value(self.string))
-        if self.integer:
+        if self.integer is not None:
             return Expression(literal=LiteralValue.from_value(self.integer))
 
         raise ValueError(f"Unable to format '{self}'")
@@ -242,6 +242,19 @@ def polars_expression_to_spark_column(expr: pl.Expr) -> Column | None:
     try:
         return node.to_spark_column()
     except ValueError:
+        logger.error(
+            f"Unable to transform expression {content}, which was decoded {node}"
+        )
+        return None
+
+
+def polars_to_expression(expr: pl.Expr) -> Expression | None:
+    content = expr.meta.serialize(format="json")
+    node = ExpressionNode.model_validate_json(content)
+    try:
+        return node.to_expression()
+    except ValueError as e:
+        logger.exception(e)
         logger.error(
             f"Unable to transform expression {content}, which was decoded {node}"
         )

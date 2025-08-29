@@ -13,6 +13,7 @@ from aligned.schemas.constraints import Constraint
 from aligned.schemas.literal_value import LiteralValue
 
 if TYPE_CHECKING:
+    from aligned.schemas.transformation import Expression
     from aligned.compiler.feature_factory import FeatureFactory
     from pyspark.sql.types import DataType
 
@@ -573,6 +574,11 @@ class Feature(Codable):
                 assert isinstance(constraint, Constraint)
 
         return self
+
+    def to_expression(self) -> Expression:
+        from aligned.schemas.transformation import Expression
+
+        return Expression(column=self.name)
 
     def renamed(self, new_name: str) -> Feature:
         return Feature(

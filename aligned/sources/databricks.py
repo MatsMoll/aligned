@@ -18,7 +18,11 @@ from aligned.retrieval_job import FilterRepresentable, RetrievalJob, RetrievalRe
 from aligned.schemas.constraints import MaxLength, MinLength
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import Constraint, Feature, FeatureLocation
-from aligned.schemas.transformation import PolarsExprTransformation
+from aligned.schemas.transformation import (
+    BinaryTransformation,
+    Expression,
+    PolarsExprTransformation,
+)
 from aligned.sources.local import FileFactualJob
 from aligned.config_value import EnvironmentValue, LiteralValue, ConfigValue
 from aligned.lazy_imports import databricks_fe
@@ -27,7 +31,7 @@ from aligned.sources.renamer import Renamer
 if TYPE_CHECKING:
     from sqlglot import exp
     import pandas as pd
-    from pyspark.sql import SparkSession
+    from pyspark.sql import SparkSession, DataFrame as SparkFrame
     from pyspark.sql.types import DataType, StructType
 
 
@@ -794,7 +798,7 @@ class UnityCatalogTableAllJob(RetrievalJob):
     table: UnityCatalogTableConfig
     request: RetrievalRequest
     _limit: int | None
-    where: str | None = field(default=None)
+    where: Expression | None = field(default=None)
     renamer: Renamer | None = field(default=None)
 
     @property
@@ -806,42 +810,30 @@ class UnityCatalogTableAllJob(RetrievalJob):
         return [self.request]
 
     def filter(self, condition: FilterRepresentable) -> RetrievalJob:
-        from aligned.compiler.feature_factory import FeatureFactory
-        from aligned.polars_to_spark import polars_expression_to_spark
-
-        new_where = None
-
         if isinstance(condition, str):
-            new_where = condition
-        elif isinstance(condition, pl.Expr):
-            new_where = polars_expression_to_spark(condition)
-        elif isinstance(condition, FeatureFactory):
-            if condition.transformation:
-                compiled = condition.transformation.compile()
-                if isinstance(compiled, PolarsExprTransformation):
-                    exp = compiled.polars_expr()
-                    assert exp is not None
-                    new_where = polars_expression_to_spark(exp)
-        elif isinstance(condition, DerivedFeature):
-            if isinstance(condition.transformation, PolarsExprTransformation):
-                exp = condition.transformation.polars_expr()
-                assert exp is not None
-                new_where = polars_expression_to_spark(exp)
+            new_where = Expression(column=condition)
         else:
-            new_where = condition.name
-
-        if not new_where:
-            return RetrievalJob.filter(self, condition)
+            try:
+                new_where = Expression.from_value(condition)
+            except Exception:
+                return RetrievalJob.filter(self, condition)
 
         if self.where:
-            self.where = f"{self.where} AND {new_where}"
+            self.where = Expression(
+                transformation=BinaryTransformation(
+                    left=self.where, right=new_where, operator="and"
+                )
+            )
         else:
             self.where = new_where
 
         return self
 
     async def to_pandas(self) -> pd.DataFrame:
-        con = self.config.connection()
+        return (await self.to_spark()).toPandas()
+
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        con = session or self.config.connection()
         spark_df = con.read.table(self.table.identifier())
 
         if self.request.features_to_include:
@@ -856,12 +848,14 @@ class UnityCatalogTableAllJob(RetrievalJob):
                 logger.debug(f"Selecting '{cols}'")
 
         if self.where:
-            spark_df = spark_df.filter(self.where)
+            spark_exp = self.where.to_spark()
+            assert spark_exp is not None
+            spark_df = spark_df.filter(spark_exp)
 
         if self._limit:
             spark_df = spark_df.limit(self._limit)
 
-        return spark_df.toPandas()
+        return spark_df
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         try:
@@ -886,10 +880,18 @@ class UnityCatalogTableAllJob(RetrievalJob):
                 credential_provider=creds,
             )
 
+            if self.where:
+                polars_exp = self.where.to_polars()
+                assert (
+                    polars_exp is not None
+                ), f"Unable to transform where to polars exp. This is an internal error so please let the maintainers know by setting up an issue. '{self.where}'"
+                df = df.filter(polars_exp)
+
             if self._limit:
                 df = df.limit(self._limit)
 
             return df
+
         except Exception:
             logger.info(
                 "Missing configuration to use polars as the processing engine.",

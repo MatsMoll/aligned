@@ -385,6 +385,10 @@ class Expression(Codable):
     @staticmethod
     def from_value(value: Any) -> Expression:
         from aligned.compiler.feature_factory import FeatureFactory
+        from aligned.schemas.derivied_feature import DerivedFeature, Feature
+
+        if isinstance(value, Expression):
+            return value
 
         if isinstance(value, FeatureFactory):
             if value._name is not None:
@@ -392,6 +396,18 @@ class Expression(Codable):
 
             assert value.transformation is not None
             return Expression(transformation=value.transformation.compile())
+
+        if isinstance(value, pl.Expr):
+            from aligned.polars_to_spark import polars_to_expression
+
+            exp = polars_to_expression(value)
+            assert (
+                exp is not None
+            ), f"Unable to transform polars expression '{value}' to aligned expression."
+            return exp
+
+        if isinstance(value, (Feature, DerivedFeature)):
+            return value.to_expression()
 
         return Expression(literal=LiteralValue.from_value(value))
 
