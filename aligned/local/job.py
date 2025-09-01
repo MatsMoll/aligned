@@ -20,7 +20,6 @@ from aligned.schemas.feature import Feature
 from aligned.data_file import DataFileReference
 import logging
 
-from aligned.sources.databricks import DatabricksSource
 
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession, DataFrame as SparkFrame
@@ -630,6 +629,8 @@ class FileFactualJob(RetrievalJob):
             return entities.with_columns(columns)
 
     async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        from aligned.sources.databricks import DatabricksSource
+
         if isinstance(self.source, DataFileReference):
             from pyspark.sql import SparkSession
 
