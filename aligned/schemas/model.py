@@ -192,6 +192,10 @@ class PredictionsView(Codable):
         if model_version_as_entity and self.model_version_column:
             entities = entities.union({self.model_version_column})
 
+        event_timestamp = self.event_timestamp
+        if not event_timestamp and self.freshness_feature:
+            event_timestamp = EventTimestamp(name=self.freshness_feature.name, ttl=None)
+
         return RetrievalRequest(
             name=name,
             location=FeatureLocation.model(name),
