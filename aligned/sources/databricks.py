@@ -16,12 +16,9 @@ from aligned.data_source.batch_data_source import (
 from aligned.feature_source import WritableFeatureSource
 from aligned.retrieval_job import FilterRepresentable, RetrievalJob, RetrievalRequest
 from aligned.schemas.constraints import MaxLength, MinLength
-from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import Constraint, Feature, FeatureLocation
 from aligned.schemas.transformation import (
-    BinaryTransformation,
     Expression,
-    PolarsExprTransformation,
 )
 from aligned.sources.local import FileFactualJob
 from aligned.config_value import EnvironmentValue, LiteralValue, ConfigValue
@@ -400,6 +397,8 @@ class UCSqlJob(RetrievalJob):
     query: exp.Select
     request: RetrievalRequest
 
+    filter_exp: Expression | None = field(default=None)
+
     @property
     def request_result(self) -> RequestResult:
         return self.request.request_result
@@ -408,49 +407,46 @@ class UCSqlJob(RetrievalJob):
     def retrieval_requests(self) -> list[RetrievalRequest]:
         return [self.request]
 
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        client = session or self.config.connection()
+
+        spark_df = client.sql(self.query.sql(dialect="spark"))
+
+        if self.filter_exp is None:
+            return spark_df
+
+        sp_filter = self.filter_exp.to_spark()
+        assert (
+            sp_filter is not None
+        ), f"Unable to create spark filter from '{self.filter_exp}'"
+        return spark_df.filter(sp_filter)
+
     async def to_lazy_polars(self) -> pl.LazyFrame:
         return pl.from_pandas(await self.to_pandas()).lazy()
 
     async def to_pandas(self) -> pd.DataFrame:
-        client = self.config.connection()
-
-        spark_df = client.sql(self.query.sql(dialect="spark"))
-
-        return spark_df.toPandas()
+        return (await self.to_spark()).toPandas()
 
     def filter(self, condition: FilterRepresentable) -> RetrievalJob:
-        from aligned.compiler.feature_factory import FeatureFactory
-        from aligned.polars_to_spark import polars_expression_to_spark
-
-        new_query = None
-
         if isinstance(condition, str):
-            new_query = condition
-        elif isinstance(condition, pl.Expr):
-            new_query = polars_expression_to_spark(condition)
-        elif isinstance(condition, FeatureFactory):
-            if condition.transformation:
-                compiled = condition.transformation.compile()
-                if isinstance(compiled, PolarsExprTransformation):
-                    exp = compiled.polars_expr()
-                    assert exp is not None
-                    new_query = polars_expression_to_spark(exp)
-        elif isinstance(condition, DerivedFeature):
-            if isinstance(condition.transformation, PolarsExprTransformation):
-                exp = condition.transformation.polars_expr()
-                assert exp is not None
-                new_query = polars_expression_to_spark(exp)
-        else:
-            new_query = condition.name
+            return UCSqlJob(
+                config=self.config,
+                query=self.query.where(condition, dialect="spark"),
+                request=self.request,
+                filter_exp=self.filter_exp,
+            )
 
-        if not new_query:
+        try:
+            exp = Expression.from_value(condition)
+
+            return UCSqlJob(
+                config=self.config,
+                query=self.query,
+                request=self.request,
+                filter_exp=self.filter_exp & exp if self.filter_exp else exp,
+            )
+        except Exception:
             return RetrievalJob.filter(self, condition)
-
-        return UCSqlJob(
-            config=self.config,
-            query=self.query.where(new_query, dialect="spark"),
-            request=self.request,
-        )
 
 
 @dataclass
@@ -819,11 +815,7 @@ class UnityCatalogTableAllJob(RetrievalJob):
                 return RetrievalJob.filter(self, condition)
 
         if self.where:
-            self.where = Expression(
-                transformation=BinaryTransformation(
-                    left=self.where, right=new_where, operator="and"
-                )
-            )
+            self.where = self.where & new_where
         else:
             self.where = new_where
 
@@ -950,7 +942,14 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
         start_date: datetime,
         end_date: datetime,
     ) -> RetrievalJob:
-        raise NotImplementedError(type(self))
+        job = self.all_data(request, None)
+
+        assert request.event_timestamp_request, "Need an event timestamp to filter on."
+        return job.filter(
+            pl.col(request.event_timestamp_request.event_timestamp.name).is_between(
+                start_date, end_date
+            )
+        )
 
     @classmethod
     def multi_source_features_for(  # type: ignore

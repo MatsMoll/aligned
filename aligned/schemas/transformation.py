@@ -360,6 +360,11 @@ class Expression(Codable):
     transformation: Transformation | None = field(default=None)
     literal: LiteralValue | None = field(default=None)
 
+    def __and__(self, other: Expression) -> Expression:
+        return Expression(
+            transformation=BinaryTransformation(left=self, right=other, operator="and")
+        )
+
     def to_spark(self) -> Column | None:
         from pyspark.sql.functions import col, lit
 
@@ -750,6 +755,9 @@ UnaryFunction = Literal[
     "degrees",
     "radians",
     "log1p",
+    "str_len_char",
+    "str_to_upper",
+    "str_to_lower",
 ]
 
 
@@ -824,6 +832,12 @@ class UnaryTransformation(Transformation, InnerTransformation):
                 return inner.radians()
             case "log1p":
                 return inner.log1p()
+            case "str_len_char":
+                return inner.str.len_chars()
+            case "str_to_lower":
+                return inner.str.to_lowercase()
+            case "str_to_upper":
+                return inner.str.to_uppercase()
             case _:
                 raise ValueError(f"Unary function '{self.func}' not supported")
 
@@ -2484,6 +2498,81 @@ class JsonPath(Transformation, PolarsExprTransformation):
 
     def polars_expr(self) -> pl.Expr:
         return pl.col(self.key).str.json_path_match(self.path)
+
+
+@dataclass
+class IsBetweenTransformation(
+    PolarsExprTransformation, SparkExpression, Transformation
+):
+    value: Expression
+    lower_bound: Expression
+    upper_bound: Expression
+
+    name = "is_between"
+    dtype: FeatureType = FeatureType.boolean()
+
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
+        import numpy as np
+
+        return np.log(self.base, column)  # type: ignore
+
+    def polars_expr(self) -> pl.Expr:
+        val = self.value.to_polars()
+        lower = self.lower_bound.to_polars()
+        upper = self.upper_bound.to_polars()
+        assert val is not None
+        assert lower is not None
+        assert upper is not None
+        return val.is_between(lower, upper)
+
+    def spark_col(self) -> Column:
+        val = self.value.to_spark()
+        lower = self.lower_bound.to_spark()
+        upper = self.upper_bound.to_spark()
+        assert val is not None
+        assert lower is not None
+        assert upper is not None
+        return (lower <= val) & (val <= upper)
+
+
+@dataclass
+class CastTransform(Transformation, InnerTransformation):
+    inner: Expression
+    dtype: FeatureType
+
+    name = "log"
+    dtype: FeatureType = FeatureType.float32()
+
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
+        return column.astype(self.dtype.pandas_type)
+
+    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
+        return inner.cast(self.dtype.polars_type)
+
+    def spark_col_from(self, inner: Column) -> Column | None:
+        return inner.cast(self.dtype.spark_type)
+
+
+@dataclass
+class Log(Transformation, InnerTransformation):
+    inner: Expression
+    base: float
+
+    name = "log"
+    dtype: FeatureType = FeatureType.float32()
+
+    def pandas_tran(self, column: pd.Series) -> pd.Series:
+        import numpy as np
+
+        return np.log(self.base, column)  # type: ignore
+
+    def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
+        return inner.log(self.base)
+
+    def spark_col_from(self, inner: Column) -> Column | None:
+        import pyspark.sql.functions as F
+
+        return F.log(self.base, inner)
 
 
 @dataclass

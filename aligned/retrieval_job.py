@@ -1933,16 +1933,31 @@ class FilteredJob(RetrievalJob, ModificationJob):
     def filter(self, condition: FilterRepresentable) -> RetrievalJob:
         from aligned.schemas.transformation import BinaryTransformation
 
-        return FilteredJob(
-            job=self.job,
-            condition=Expression(
-                transformation=BinaryTransformation(
-                    left=Expression.from_value(self.condition),
-                    right=Expression.from_value(condition),
-                    operator="and",
-                )
-            ),
-        )
+        try:
+            return FilteredJob(
+                job=self.job,
+                condition=Expression(
+                    transformation=BinaryTransformation(
+                        left=Expression.from_value(self.condition),
+                        right=Expression.from_value(condition),
+                        operator="and",
+                    )
+                ),
+            )
+        except Exception as e:
+            if not isinstance(condition, pl.Expr):
+                raise e
+
+            if isinstance(self.condition, pl.Expr):
+                self.condition = self.condition & condition
+            else:
+                exp = Expression.from_value(self.condition).to_polars()
+                if exp is None:
+                    return FilteredJob(job=self, condition=condition)
+
+                self.condition = exp & condition
+
+            return self
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         from aligned.feature_store import ContractStore

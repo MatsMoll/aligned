@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 from pytz import timezone
 from datetime import datetime
@@ -19,6 +19,10 @@ from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.feature import Feature
 from aligned.data_file import DataFileReference
 import logging
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession, DataFrame as SparkFrame
+
 
 logger = logging.getLogger(__name__)
 
@@ -210,7 +214,7 @@ def decode_timestamps(
 class FileFullJob(RetrievalJob):
     source: DataFileReference | RetrievalJob
     request: RetrievalRequest
-    limit: int | None = field(default=None)
+    _limit: int | None = field(default=None)
     date_formatter: DateFormatter = field(default_factory=DateFormatter.iso_8601)
 
     @property
@@ -267,10 +271,14 @@ class FileFullJob(RetrievalJob):
         if self.request.aggregated_features:
             df = await aggregate(self.request, df)
 
-        if self.limit:
-            return df.limit(self.limit)
+        if self._limit:
+            return df.limit(self._limit)
         else:
             return df
+
+    def limit(self, limit: int) -> RetrievalJob:
+        self._limit = limit
+        return self
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
@@ -618,6 +626,34 @@ class FileFactualJob(RetrievalJob):
                 )
 
             return entities.with_columns(columns)
+
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        if isinstance(self.source, DataFileReference):
+            from pyspark.sql import SparkSession
+
+            spark = (
+                session
+                or SparkSession.getActiveSession()
+                or SparkSession.builder.getOrCreate()
+            )
+            return spark.createDataFrame(await self.to_pandas())
+
+        # A simplified version that only supports one request with no event timestamp and no aggregations
+        facts = await self.facts.to_spark(session)
+        features = await self.source.to_spark(session)
+
+        assert (
+            len(self.requests) == 1
+        ), f"Currently only one request per source is supported. Got {len(self.requests)}"
+        request = next(iter(self.requests))
+
+        return facts.join(
+            features.select(
+                list(request.all_required_feature_names.union(request.entity_names)),
+            ),
+            on=list(request.entity_names),
+            how="left",
+        )
 
     def log_each_job(
         self, logger_func: Callable[[object], None] | None = None
