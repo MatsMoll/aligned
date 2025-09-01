@@ -392,7 +392,7 @@ class DatabricksSource:
 
 
 @dataclass
-class UCSqlJob(RetrievalJob):
+class UCSqlJob(RetrievalJob, DatabricksSource):
     config: DatabricksConnectionConfig
     query: exp.Select
     request: RetrievalRequest
@@ -789,7 +789,7 @@ def validate_pyspark_schema(
 
 
 @dataclass
-class UnityCatalogTableAllJob(RetrievalJob):
+class UnityCatalogTableAllJob(RetrievalJob, DatabricksSource):
     config: DatabricksConnectionConfig
     table: UnityCatalogTableConfig
     request: RetrievalRequest

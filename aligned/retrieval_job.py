@@ -2870,7 +2870,7 @@ class EnsureTypesJob(RetrievalJob, ModificationJob):
             features_to_check = request.all_required_features
 
             df = df.withColumns(
-                **{
+                {
                     feat.name: col(feat.name).cast(feat.dtype.spark_type)
                     for feat in features_to_check
                 }

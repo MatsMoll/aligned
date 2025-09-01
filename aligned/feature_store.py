@@ -475,6 +475,7 @@ class ContractStore:
 
                 if filter is not None:
                     filter_exp = glot_to_polars(filter.this)
+                    logger.info(f"Adding filter to '{req.location.name}' - '{filter}'")
                     job = job.filter(filter_exp)
 
                 dfs[req.location.name] = await job.to_lazy_polars()

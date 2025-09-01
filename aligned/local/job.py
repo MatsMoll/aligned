@@ -20,6 +20,8 @@ from aligned.schemas.feature import Feature
 from aligned.data_file import DataFileReference
 import logging
 
+from aligned.sources.databricks import DatabricksSource
+
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession, DataFrame as SparkFrame
 
@@ -639,18 +641,54 @@ class FileFactualJob(RetrievalJob):
             return spark.createDataFrame(await self.to_pandas())
 
         # A simplified version that only supports one request with no event timestamp and no aggregations
-        facts = await self.facts.to_spark(session)
-        features = await self.source.to_spark(session)
+
+        if isinstance(self.facts, DatabricksSource):
+            # The order can be important in case one of them is a databricks source
+            # As it is not possible to create a Spark session if the databricks
+            # package is installed.
+            # Therefore, the databricks source should be loaded first
+            facts = await self.facts.to_spark(session)
+            features = await self.source.to_spark(session)
+        else:
+            features = await self.source.to_spark(session)
+            facts = await self.facts.to_spark(session)
 
         assert (
             len(self.requests) == 1
         ), f"Currently only one request per source is supported. Got {len(self.requests)}"
         request = next(iter(self.requests))
 
+        if (
+            request.event_timestamp_request
+            and request.event_timestamp_request.entity_column is not None
+        ):
+            raise ValueError(
+                "features_for with spark do not support event timestamps yet. As it can not guarantee a 1:1 relationship with the source."
+            )
+        elif request.event_timestamp:
+            from pyspark.sql import Window
+            import pyspark.sql.functions as F
+
+            features = (
+                features.withColumn(
+                    "row_num",
+                    F.row_number().over(
+                        Window.partitionBy(list(request.entity_names)).orderBy(
+                            F.desc(request.event_timestamp.name)
+                        )
+                    ),
+                )
+                .filter(F.col("row_num") == 1)
+                .drop("row_num")
+            )
+
+        selected_features = list(
+            request.all_required_feature_names.union(request.entity_names)
+        )
+        logger.info(f"Selecting the following features: '{selected_features}'")
+
         return facts.join(
-            features.select(
-                list(request.all_required_feature_names.union(request.entity_names)),
-            ),
+            features.select(selected_features),
             on=list(request.entity_names),
             how="left",
         )
