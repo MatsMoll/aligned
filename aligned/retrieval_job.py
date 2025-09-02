@@ -681,7 +681,9 @@ ConvertableToRetrievalJob = Union[
     list[dict[str, Any]], dict[str, list], "pd.DataFrame", pl.DataFrame, pl.LazyFrame
 ]
 
-FilterRepresentable = str | pl.Expr | FeatureFactory | DerivedFeature | Feature
+FilterRepresentable = (
+    str | pl.Expr | FeatureFactory | DerivedFeature | Feature | Expression
+)
 
 
 class RetrievalJob(ABC):
@@ -1928,7 +1930,7 @@ class JoinJobs(RetrievalJob):
 @dataclass
 class FilteredJob(RetrievalJob, ModificationJob):
     job: RetrievalJob
-    condition: FilterRepresentable | Expression
+    condition: FilterRepresentable
 
     def filter(self, condition: FilterRepresentable) -> RetrievalJob:
         from aligned.schemas.transformation import BinaryTransformation
@@ -2307,20 +2309,12 @@ class DerivedFeatureJob(RetrievalJob, ModificationJob):
         return job
 
     def filter(self, condition: FilterRepresentable) -> RetrievalJob:
-        if isinstance(condition, str):
-            column_name = condition
-        elif isinstance(condition, pl.Expr):
-            column_name = condition.meta.output_name(raise_if_undetermined=False)
-        elif isinstance(condition, FeatureFactory) and condition._name is None:
-            column_name = None
-        else:
-            column_name = condition.name
-
-        if column_name is None:
-            return FilteredJob(self, condition)
+        needed_columns = set(Expression.from_value(condition).needed_columns())
 
         if any(
-            column_name in [feature.name for feature in request.derived_features]
+            needed_columns.intersection(
+                feature.name for feature in request.derived_features
+            )
             for request in self.requests
         ):
             return FilteredJob(self, condition)
@@ -2867,7 +2861,7 @@ class EnsureTypesJob(RetrievalJob, ModificationJob):
         df = await self.job.to_spark(session)
 
         for request in self.requests:
-            features_to_check = request.all_required_features
+            features_to_check = request.all_required_features.union(request.entities)
 
             df = df.withColumns(
                 {
@@ -2886,7 +2880,7 @@ class EnsureTypesJob(RetrievalJob, ModificationJob):
         df = await self.job.to_lazy_polars()
         org_schema = dict(df.collect_schema())
         for request in self.requests:
-            features_to_check = request.all_required_features
+            features_to_check = request.all_required_features.union(request.entities)
 
             if request.aggregated_features:
                 features_to_check.update(

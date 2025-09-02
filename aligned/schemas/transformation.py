@@ -127,6 +127,9 @@ class Transformation(Codable, SerializableType):
     name: str
     dtype: FeatureType
 
+    def needed_columns(self) -> list[str]:
+        raise NotImplementedError(self)
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -360,6 +363,13 @@ class Expression(Codable):
     transformation: Transformation | None = field(default=None)
     literal: LiteralValue | None = field(default=None)
 
+    def needed_columns(self) -> list[str]:
+        if self.column is not None:
+            return [self.column]
+        elif self.transformation:
+            return self.transformation.needed_columns()
+        return []
+
     def __and__(self, other: Expression) -> Expression:
         return Expression(
             transformation=BinaryTransformation(left=self, right=other, operator="and")
@@ -455,6 +465,11 @@ class BinaryTransformation(Transformation, PolarsExprTransformation, SparkExpres
     operator: BinaryOperators
     dtype: FeatureType = FeatureType.string()
     name: str = "binary"
+
+    def needed_columns(self) -> list[str]:
+        all = self.left.needed_columns()
+        all.extend(self.right.needed_columns())
+        return all
 
     def polars_expr(self) -> pl.Expr | None:
         left_exp = self.left.to_polars()
@@ -768,6 +783,9 @@ class UnaryTransformation(Transformation, InnerTransformation):
     name: str = "unary"
     dtype: FeatureType = FeatureType.floating_point()
 
+    def needed_columns(self) -> list[str]:
+        return self.inner.needed_columns()
+
     def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
         match self.func:
             case "is_null":
@@ -1039,6 +1057,9 @@ class PolarsMapRowTransformation(Transformation):
     dtype: FeatureType
     name: str = "pol_map_row"
 
+    def needed_columns(self) -> list[str]:
+        return []
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -1080,6 +1101,9 @@ class PandasFunctionTransformation(Transformation):
     function_name: str
     dtype: FeatureType
     name: str = "pandas_code_tran"
+
+    def needed_columns(self) -> list[str]:
+        return []
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -1131,6 +1155,9 @@ class PandasLambdaTransformation(Transformation):
     dtype: FeatureType
     name: str = "pandas_lambda_tran"
 
+    def needed_columns(self) -> list[str]:
+        return []
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -1173,6 +1200,9 @@ class PolarsFunctionTransformation(Transformation):
     dtype: FeatureType
     name: str = "pandas_code_tran"
 
+    def needed_columns(self) -> list[str]:
+        return []
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -1204,6 +1234,9 @@ class PolarsExpression(Transformation, PolarsExprTransformation):
     def polars_expr(self) -> pl.Expr:
         return pl.Expr.deserialize(self.polars_expression.encode(), format="json")
 
+    def needed_columns(self) -> list[str]:
+        return self.polars_expr().meta.root_names()
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -1222,6 +1255,9 @@ class PolarsLambdaTransformation(Transformation):
     code: str
     dtype: FeatureType
     name: str = "polars_lambda_tran"
+
+    def needed_columns(self) -> list[str]:
+        return []
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -1253,6 +1289,9 @@ class TimeDifference(Transformation, PsqlTransformation, RedshiftTransformation)
 
     name: str = "time-diff"
     dtype: FeatureType = FeatureType.floating_point()
+
+    def needed_columns(self) -> list[str]:
+        return [self.front, self.behind]
 
     def __init__(self, front: str, behind: str, unit: str = "s") -> None:
         self.front = front
@@ -1312,6 +1351,9 @@ class ToNumerical(Transformation, PolarsExprTransformation):
     name: str = "to-num"
     dtype: FeatureType = FeatureType.floating_point()
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     def __init__(self, key: str) -> None:
         self.key = key
 
@@ -1341,6 +1383,9 @@ class DateComponent(Transformation, PolarsExprTransformation):
 
     name: str = "date-component"
     dtype: FeatureType = FeatureType.int32()
+
+    def needed_columns(self) -> list[str]:
+        return [self.key]
 
     def __init__(self, key: str, component: str) -> None:
         self.key = key
@@ -1443,6 +1488,9 @@ class ArrayAtIndex(Transformation, PolarsExprTransformation):
     name: str = "array_at_index"
     dtype: FeatureType = FeatureType.boolean()
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -1473,6 +1521,9 @@ class ArrayContainsAny(Transformation, PolarsExprTransformation):
 
     name: str = "array_contains_any"
     dtype: FeatureType = FeatureType.boolean()
+
+    def needed_columns(self) -> list[str]:
+        return [self.key]
 
     def __init__(self, key: str, values: Any | LiteralValue) -> None:
         self.key = key
@@ -1518,6 +1569,9 @@ class ArrayContains(Transformation, PolarsExprTransformation):
 
     name: str = "array_contains"
     dtype: FeatureType = FeatureType.boolean()
+
+    def needed_columns(self) -> list[str]:
+        return self.polars_expr().meta.root_names()
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -1567,6 +1621,9 @@ class Contains(Transformation, PolarsExprTransformation):
         self.key = key
         self.value = value
 
+    def needed_columns(self) -> list[str]:
+        return self.polars_expr().meta.root_names()
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -1606,6 +1663,9 @@ class Ordinal(Transformation):
         self.key = key
         self.orders = orders
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -1640,6 +1700,9 @@ class ReplaceStrings(Transformation):
         self.key = key
         self.values = values
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -1668,6 +1731,9 @@ class IsIn(Transformation, PolarsExprTransformation):
     name = "isin"
     dtype = FeatureType.boolean()
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -1692,6 +1758,9 @@ class FillNaValuesColumns(Transformation):
     dtype: FeatureType
 
     name: str = "fill_missing_key"
+
+    def needed_columns(self) -> list[str]:
+        return [self.key, self.fill_key]
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -1734,6 +1803,9 @@ class FillNaValues(Transformation, PolarsExprTransformation):
 
     name: str = "fill_missing"
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -1768,6 +1840,9 @@ class CopyTransformation(Transformation, PolarsExprTransformation):
 
     name: str = "nothing"
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -1785,6 +1860,9 @@ class MapArgMax(Transformation):
     @property
     def dtype(self) -> FeatureType:  # type: ignore
         return list(self.column_mappings.values())[0].dtype
+
+    def needed_columns(self) -> list[str]:
+        return list(self.column_mappings.keys())
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -1865,6 +1943,9 @@ class WordVectoriser(Transformation):
     name = "word_vectoriser"
     dtype = FeatureType.embedding(768)
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -1882,6 +1963,9 @@ class LoadImageUrlBytes(Transformation):
 
     name = "load_image"
     dtype = FeatureType.binary()
+
+    def needed_columns(self) -> list[str]:
+        return [self.image_url_key]
 
     async def transform_polars(
         self, df: pl.LazyFrame, alias: str, store: ContractStore
@@ -1906,6 +1990,9 @@ class LoadImageUrl(Transformation):
 
     name = "load_image"
     dtype = FeatureType.array()
+
+    def needed_columns(self) -> list[str]:
+        return [self.image_url_key]
 
     async def transform_polars(
         self, df: pl.LazyFrame, alias: str, store: ContractStore
@@ -1934,6 +2021,9 @@ class GrayscaleImage(Transformation):
 
     name = "grayscale_image"
     dtype = FeatureType.array()
+
+    def needed_columns(self) -> list[str]:
+        return [self.image_key]
 
     async def transform_polars(
         self, df: pl.LazyFrame, alias: str, store: ContractStore
@@ -1979,6 +2069,9 @@ class AppendStrings(Transformation, PolarsExprTransformation):
     name = "append_strings"
     dtype = FeatureType.string()
 
+    def needed_columns(self) -> list[str]:
+        return [self.first_key, self.second_key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -2002,6 +2095,9 @@ class PrependConstString(Transformation, PolarsExprTransformation):
     name = "prepend_const_string"
     dtype = FeatureType.string()
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -2022,6 +2118,9 @@ class ConcatStringAggregation(
 
     name = "concat_string_agg"
     dtype = FeatureType.string()
+
+    def needed_columns(self) -> list[str]:
+        return [self.key]
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -2051,6 +2150,9 @@ class SumAggregation(Transformation, PsqlTransformation, RedshiftTransformation)
     name = "sum_agg"
     dtype = FeatureType.floating_point()
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -2071,6 +2173,9 @@ class MeanAggregation(Transformation, PsqlTransformation, RedshiftTransformation
 
     name = "mean_agg"
     dtype = FeatureType.floating_point()
+
+    def needed_columns(self) -> list[str]:
+        return [self.key]
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -2093,6 +2198,9 @@ class MinAggregation(Transformation, PsqlTransformation, RedshiftTransformation)
     name = "min_agg"
     dtype = FeatureType.floating_point()
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -2114,6 +2222,9 @@ class MaxAggregation(Transformation, PsqlTransformation, RedshiftTransformation)
     name = "max_agg"
     dtype = FeatureType.floating_point()
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -2134,6 +2245,9 @@ class CountAggregation(Transformation, PsqlTransformation, RedshiftTransformatio
 
     name = "count_agg"
     dtype = FeatureType.floating_point()
+
+    def needed_columns(self) -> list[str]:
+        return [self.key]
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -2158,6 +2272,9 @@ class CountDistinctAggregation(
     name = "count_distinct_agg"
     dtype = FeatureType.floating_point()
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -2178,6 +2295,9 @@ class StdAggregation(Transformation, PsqlTransformation, RedshiftTransformation)
 
     name = "std_agg"
     dtype = FeatureType.floating_point()
+
+    def needed_columns(self) -> list[str]:
+        return [self.key]
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -2200,6 +2320,9 @@ class VarianceAggregation(Transformation, PsqlTransformation, RedshiftTransforma
     name = "var_agg"
     dtype = FeatureType.floating_point()
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -2220,6 +2343,9 @@ class MedianAggregation(Transformation, PsqlTransformation, RedshiftTransformati
 
     name = "median_agg"
     dtype = FeatureType.floating_point()
+
+    def needed_columns(self) -> list[str]:
+        return [self.key]
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -2245,6 +2371,9 @@ class PercentileAggregation(
     name = "percentile_agg"
     dtype = FeatureType.floating_point()
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -2265,6 +2394,9 @@ class Clip(Transformation, InnerTransformation):
 
     name = "clip"
     dtype = FeatureType.floating_point()
+
+    def needed_columns(self) -> list[str]:
+        return self.inner.needed_columns()
 
     def pandas_tran(self, column: pd.Series) -> pd.Series:
         return column.clip(lower=self.lower.python_value, upper=self.upper.python_value)  # type: ignore
@@ -2305,6 +2437,9 @@ class PresignedAwsUrl(Transformation):
     name = "presigned_aws_url"
     dtype = FeatureType.string()
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -2341,6 +2476,9 @@ class StructField(Transformation):
     name = "struct_field"
     dtype = FeatureType.string()
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -2372,6 +2510,9 @@ class OllamaGenerate(Transformation):
     host_env: str | None = None
     name = "ollama_embedding"
     dtype = FeatureType.json()
+
+    def needed_columns(self) -> list[str]:
+        return [self.key]
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -2436,6 +2577,9 @@ class OllamaEmbedding(Transformation):
     name = "ollama_embedding"
     dtype = FeatureType.embedding(768)
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -2491,6 +2635,9 @@ class JsonPath(Transformation, PolarsExprTransformation):
     name = "json_path"
     dtype = FeatureType.string()
 
+    def needed_columns(self) -> list[str]:
+        return [self.key]
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -2510,6 +2657,13 @@ class IsBetweenTransformation(
 
     name = "is_between"
     dtype: FeatureType = FeatureType.boolean()
+
+    def needed_columns(self) -> list[str]:
+        return [
+            *self.value.needed_columns(),
+            *self.lower_bound.needed_columns(),
+            *self.upper_bound.needed_columns(),
+        ]
 
     def pandas_tran(self, column: pd.Series) -> pd.Series:
         import numpy as np
@@ -2543,6 +2697,9 @@ class CastTransform(Transformation, InnerTransformation):
     name = "log"
     dtype: FeatureType = FeatureType.float32()
 
+    def needed_columns(self) -> list[str]:
+        return self.inner.needed_columns()
+
     def pandas_tran(self, column: pd.Series) -> pd.Series:
         return column.astype(self.dtype.pandas_type)
 
@@ -2560,6 +2717,9 @@ class Log(Transformation, InnerTransformation):
 
     name = "log"
     dtype: FeatureType = FeatureType.float32()
+
+    def needed_columns(self) -> list[str]:
+        return self.inner.needed_columns()
 
     def pandas_tran(self, column: pd.Series) -> pd.Series:
         import numpy as np
@@ -2582,6 +2742,9 @@ class Split(Transformation, InnerTransformation):
     name = "split"
     dtype: FeatureType = FeatureType.array(FeatureType.string())
 
+    def needed_columns(self) -> list[str]:
+        return self.inner.needed_columns()
+
     def pandas_tran(self, column: pd.Series) -> pd.Series:
         return column.str.split(self.separator)
 
@@ -2601,6 +2764,9 @@ class LoadFeature(Transformation):
     explode_key: str | None
     dtype: FeatureType
     name = "load_feature"
+
+    def needed_columns(self) -> list[str]:
+        return list(self.entities.values())
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -2653,6 +2819,9 @@ class FormatStringTransformation(Transformation):
     keys: list[str]
     name = "format_string"
 
+    def needed_columns(self) -> list[str]:
+        return self.keys
+
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
@@ -2682,6 +2851,9 @@ class ListDotProduct(Transformation):
 
     name = "list_dot_product"
     dtype = FeatureType.floating_point()
+
+    def needed_columns(self) -> list[str]:
+        return [self.left, self.right]
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -2734,6 +2906,9 @@ class HashColumns(Transformation, PolarsExprTransformation):
     name = "hash_columns"
     dtype = FeatureType.uint64()
 
+    def needed_columns(self) -> list[str]:
+        return self.columns
+
     def polars_expr(self) -> pl.Expr:
         return pl.concat_str(self.columns).hash()
 
@@ -2753,6 +2928,12 @@ class MultiTransformation(Transformation):
     transformations: list[tuple[Transformation, str | None]]
     name = "multi"
     dtype = FeatureType.string()
+
+    def needed_columns(self) -> list[str]:
+        all_col = []
+        for tran, _ in self.transformations:
+            all_col.extend(tran.needed_columns())
+        return all_col
 
     async def transform_polars(
         self, df: pl.LazyFrame, alias: str, store: ContractStore

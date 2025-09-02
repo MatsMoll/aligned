@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, overload
 
 from aligned.lazy_imports import pandas as pd
 import polars as pl
@@ -44,6 +44,8 @@ if TYPE_CHECKING:
     from aligned.feature_view.feature_view import FeatureViewWrapper
     from aligned.sources.s3 import AwsS3Config
     from aligned.feature_store import ContractStore
+
+    from pyspark.sql import Column
 
 
 class TransformationFactory:
@@ -465,6 +467,40 @@ class FeatureFactory(FeatureReferencable):
             return Expression(column=self.name)
 
         return Expression(transformation=self.transformation.compile())
+
+    @overload
+    def to_polars(self) -> pl.Expr: ...
+
+    @overload
+    def to_polars(self, should_raise: Literal[True]) -> pl.Expr: ...
+
+    @overload
+    def to_polars(self, should_raise: Literal[False]) -> pl.Expr | None: ...
+
+    def to_polars(self, should_raise: bool = True) -> pl.Expr | None:
+        expr = self.to_expression().to_polars()
+        if should_raise and expr is None:
+            raise ValueError(
+                f"Expression '{self}' did not manage to create a polars expression"
+            )
+        return expr
+
+    @overload
+    def to_spark(self) -> Column: ...
+
+    @overload
+    def to_spark(self, should_raise: Literal[True]) -> Column: ...
+
+    @overload
+    def to_spark(self, should_raise: Literal[False]) -> Column | None: ...
+
+    def to_spark(self, should_raise: bool = True) -> Column | None:
+        expr = self.to_expression().to_spark()
+        if should_raise and expr is None:
+            raise ValueError(
+                f"Expression '{self}' did not manage to create a spark expression"
+            )
+        return expr
 
     def cast(self, to_dtype: T) -> T:
         to_dtype.transformation = self.transformation

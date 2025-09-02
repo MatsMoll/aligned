@@ -202,7 +202,7 @@ class PredictionsView(Codable):
             entities=entities,
             features=self.features,
             derived_features=self.derived_features,
-            event_timestamp=self.event_timestamp,
+            event_timestamp=event_timestamp,
         )
 
     def request_for(

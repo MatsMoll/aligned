@@ -1016,14 +1016,20 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
         )
 
     async def insert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
-        pdf = (await job.to_polars()).select(request.all_returned_columns)
-        schema = request.spark_schema()
+        import pyspark.sql.functions as F
+
+        expected_schema = request.spark_schema()
 
         conn = self.config.connection()
-        df = conn.createDataFrame(
-            pdf.to_pandas(),
-            schema=schema,
+        spark_df = await job.to_spark(conn)
+
+        df = spark_df.select(
+            [
+                F.col(field.name).cast(field.dataType).alias(field.name)
+                for field in expected_schema.fields
+            ]
         )
+
         if conn.catalog.tableExists(self.table.identifier()):
             schema = conn.table(self.table.identifier()).schema
             validate_pyspark_schema(old=schema, new=df.schema)
@@ -1031,12 +1037,21 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
         df.write.mode("append").saveAsTable(self.table.identifier())
 
     async def upsert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
-        pdf = (await job.unique_entities().to_polars()).select(
-            request.all_returned_columns
+        import pyspark.sql.functions as F
+
+        expected_schema = request.spark_schema()
+
+        conn = self.config.connection()
+        spark_df = await job.to_spark(conn)
+
+        df = spark_df.select(
+            [
+                F.col(field.name).cast(field.dataType).alias(field.name)
+                for field in expected_schema.fields
+            ]
         )
 
         target_table = self.table.identifier()
-        conn = self.config.connection()
 
         if not conn.catalog.tableExists(target_table):
             await self.insert(job, request)
@@ -1045,7 +1060,6 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
             on_statement = " AND ".join(
                 [f"target.{ent} = source.{ent}" for ent in entities]
             )
-            df = conn.createDataFrame(pdf.to_pandas(), schema=request.spark_schema())
             schema = conn.table(target_table).schema
             validate_pyspark_schema(old=schema, new=df.schema)
 
@@ -1060,13 +1074,20 @@ WHEN NOT MATCHED THEN
   INSERT *""")
 
     async def overwrite(self, job: RetrievalJob, request: RetrievalRequest) -> None:
-        pdf = (await job.unique_entities().to_polars()).select(
-            request.all_returned_columns
-        )
-        schema = request.spark_schema()
-        raise_on_invalid_pyspark_schema(schema)
+        import pyspark.sql.functions as F
+
+        expected_schema = request.spark_schema()
+
         conn = self.config.connection()
-        df = conn.createDataFrame(pdf.to_pandas(), schema=schema)
+        spark_df = await job.to_spark(conn)
+
+        df = spark_df.select(
+            [
+                F.col(field.name).cast(field.dataType).alias(field.name)
+                for field in expected_schema.fields
+            ]
+        )
+        raise_on_invalid_pyspark_schema(df.schema)
         df.write.mode("overwrite").option(
             "overwriteSchema", self.should_overwrite_schema
         ).saveAsTable(self.table.identifier())

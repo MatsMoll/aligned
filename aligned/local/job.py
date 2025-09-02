@@ -14,7 +14,10 @@ from aligned.request.retrieval_request import (
     AggregateOver,
     RetrievalRequest,
 )
-from aligned.retrieval_job import RequestResult, RetrievalJob
+from aligned.retrieval_job import (
+    RequestResult,
+    RetrievalJob,
+)
 from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.feature import Feature
 from aligned.data_file import DataFileReference
@@ -666,12 +669,24 @@ class FileFactualJob(RetrievalJob):
             raise ValueError(
                 "features_for with spark do not support event timestamps yet. As it can not guarantee a 1:1 relationship with the source."
             )
-        elif request.event_timestamp:
+
+        selected_features = list(
+            request.all_required_feature_names.union(request.entity_names)
+        )
+        logger.info(f"Selecting the following features: '{selected_features}'")
+
+        joined_features = facts.join(
+            features.select(selected_features),
+            on=list(request.entity_names),
+            how="left",
+        )
+
+        if request.event_timestamp:
             from pyspark.sql import Window
             import pyspark.sql.functions as F
 
-            features = (
-                features.withColumn(
+            joined_features = (
+                joined_features.withColumn(
                     "row_num",
                     F.row_number().over(
                         Window.partitionBy(list(request.entity_names)).orderBy(
@@ -683,16 +698,7 @@ class FileFactualJob(RetrievalJob):
                 .drop("row_num")
             )
 
-        selected_features = list(
-            request.all_required_feature_names.union(request.entity_names)
-        )
-        logger.info(f"Selecting the following features: '{selected_features}'")
-
-        return facts.join(
-            features.select(selected_features),
-            on=list(request.entity_names),
-            how="left",
-        )
+        return joined_features
 
     def log_each_job(
         self, logger_func: Callable[[object], None] | None = None
