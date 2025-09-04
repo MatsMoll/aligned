@@ -268,6 +268,10 @@ def add_infer_route(
 
 
 @overload
+def router_for_store(store: ContractStore) -> fastapi.APIRouter: ...
+
+
+@overload
 def router_for_store(
     store: ContractStore, expose_tag: str | None
 ) -> fastapi.APIRouter: ...

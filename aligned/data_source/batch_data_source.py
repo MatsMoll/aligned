@@ -361,6 +361,11 @@ class CodableBatchDataSource(Codable, SerializableType, BatchDataSource):
         return self.type_name
 
     def _serialize(self) -> dict:
+        from aligned.sources.in_mem_source import InMemorySource
+
+        if self.type_name == InMemorySource.type_name:
+            return InMemorySource.to_dict(self)  # type: ignore
+
         return self.to_dict()
 
     @classmethod
@@ -370,7 +375,15 @@ class CodableBatchDataSource(Codable, SerializableType, BatchDataSource):
         name_type = value.get("type_name", "missing type name in source")
 
         if name_type == InMemorySource.type_name:
-            return InMemorySource.empty()
+            import io
+
+            if "data" in value:
+                json_bytes = io.BytesIO(bytes.fromhex(value["data"]))
+                return InMemorySource(
+                    data=pl.DataFrame.deserialize(json_bytes, format="binary")
+                )
+            else:
+                return InMemorySource.from_dict(value)
 
         if name_type not in BatchDataSourceFactory.shared().supported_data_sources:
             return UnknownDataSource(type_name=name_type, content=value)

@@ -10,13 +10,13 @@ from aligned.schemas.literal_value import LiteralValue
 
 @dataclass
 class RecommendationConfig(Codable):
-    was_selected_list: FeatureReference | None
-    was_selected_view: FeatureLocation | None
-
     feature_name: str
     output_type: Literal["rank", "score"]
     item_feature: FeatureReference
     top_k: int
+
+    was_selected_list: FeatureReference | None = field(default=None)
+    was_selected_view: FeatureLocation | None = field(default=None)
 
     def __hash__(self) -> int:
         return self.feature_name.__hash__()
