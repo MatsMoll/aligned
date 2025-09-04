@@ -19,7 +19,6 @@ from typing import (
     Union,
     overload,
 )
-from uuid import uuid4
 
 from aligned.lazy_imports import pandas as pd
 from aligned.compiler.feature_factory import (
@@ -41,7 +40,11 @@ from aligned.data_source.batch_data_source import (
 from aligned.data_source.stream_data_source import StreamDataSource
 from aligned.local.job import LiteralRetrievalJob
 from aligned.request.retrieval_request import RetrievalRequest
-from aligned.retrieval_job import ConvertableToRetrievalJob, RetrievalJob
+from aligned.retrieval_job import (
+    ConvertableToRetrievalJob,
+    FilterRepresentable,
+    RetrievalJob,
+)
 from aligned.schemas.derivied_feature import (
     AggregatedFeature,
 )
@@ -49,6 +52,8 @@ from aligned.schemas.feature import FeatureLocation, FeatureReference, StaticFea
 from aligned.schemas.feature_view import CompiledFeatureView, Contact
 from aligned.compiler.feature_factory import FeatureFactory
 from datetime import datetime
+
+from aligned.schemas.transformation import Expression
 
 if TYPE_CHECKING:
     from aligned.feature_store import FeatureViewStore
@@ -216,7 +221,7 @@ class FeatureViewWrapper(Generic[T]):
     def filter(
         self,
         name: str,
-        where: Callable[[T], Bool] | pl.Expr,
+        where: Callable[[T], Bool] | FilterRepresentable,
         materialize_source: CodableBatchDataSource | None = None,
     ) -> FeatureViewWrapper[T]:
         from aligned.data_source.batch_data_source import FilteredDataSource
@@ -230,20 +235,14 @@ class FeatureViewWrapper(Generic[T]):
             self.compile(), FeatureLocation.feature_view(self.metadata.name)
         )
 
-        if isinstance(where, pl.Expr):
-            filter = where.meta.serialize()
-        else:
+        if callable(where):
             condition = where(self.__call__())
+        else:
+            condition = where
 
-            if not condition._name:
-                condition._name = str(uuid4())
-                condition._location = FeatureLocation.feature_view(name)
+        exp = Expression.from_value(condition)
 
-            if condition.transformation:
-                filter = condition.compile()
-            else:
-                filter = condition.feature()
-        meta.source = FilteredDataSource(main_source, filter)
+        meta.source = FilteredDataSource(main_source, exp)
         return FeatureViewWrapper(metadata=meta, view=self.view)
 
     def join(

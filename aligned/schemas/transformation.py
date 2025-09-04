@@ -406,11 +406,10 @@ class Expression(Codable):
             return value
 
         if isinstance(value, FeatureFactory):
-            if value._name is not None:
-                return Expression(column=value.name)
+            if value.transformation:
+                return Expression(transformation=value.transformation.compile())
 
-            assert value.transformation is not None
-            return Expression(transformation=value.transformation.compile())
+            return Expression(column=value.name)
 
         if isinstance(value, pl.Expr):
             from aligned.polars_to_spark import polars_to_expression

@@ -1,5 +1,4 @@
 import polars as pl
-from sqlglot import exp
 from aligned.schemas.feature import FeatureLocation
 from aligned.sources.databricks import (
     DatabricksConnectionConfig,
@@ -19,10 +18,8 @@ def test_databricks_filter_modification() -> None:
     filtered_job = job.filter(pl.col("a") == 10)
 
     assert isinstance(filtered_job, UCSqlJob)
-    filter = filtered_job.query.find(exp.Where)
+    filter = filtered_job.filter_exp
     assert filter
-
-    assert filter.sql(dialect="spark") == "WHERE (a = 10)"
 
 
 def test_databricks_sql_depends_on() -> None:

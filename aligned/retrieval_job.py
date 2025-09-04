@@ -2382,7 +2382,7 @@ class DerivedFeatureJob(RetrievalJob, ModificationJob):
 
                     logger.debug(f"Computing feature with pandas: {feature.name}")
                     df[feature.name] = await feature.transformation.transform_pandas(
-                        df[feature.depending_on_names],  # type: ignore
+                        df,  # type: ignore
                         self.store or ContractStore.empty(),
                     )
 
