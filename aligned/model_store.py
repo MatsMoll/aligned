@@ -502,12 +502,20 @@ class ModelFeatureStore:
             >>> }
             ```
         """
-        locs = {req.location for req in self.request().needed_requests}
-        label_refs = self.model.predictions_view.labels_estimates_refs()
-        if label_refs:
-            for ref in label_refs:
-                locs.add(ref.location)
-        return locs
+        try:
+            locs = {req.location for req in self.request().needed_requests}
+            label_refs = self.model.predictions_view.labels_estimates_refs()
+            if label_refs:
+                for ref in label_refs:
+                    locs.add(ref.location)
+
+            for conf in self.model.predictions_view.recommendation_targets or set():
+                if conf.was_selected_view:
+                    locs.add(conf.was_selected_view)
+
+            return locs
+        except ValueError:
+            return set()
 
     async def overwrite(self, output: ConvertableToRetrievalJob | RetrievalJob) -> None:
         """

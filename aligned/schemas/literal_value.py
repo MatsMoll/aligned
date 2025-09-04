@@ -14,14 +14,13 @@ if TYPE_CHECKING:
 
 
 class SupportedLiteralValues:
-
     values: dict[str, type[LiteralValue]]
 
     _shared: SupportedLiteralValues | None = None
 
     def __init__(self) -> None:
         self.values = {}
-        lits: list[type[LiteralValue]] = [
+        literals: list[type[LiteralValue]] = [
             IntValue,
             FloatValue,
             BoolValue,
@@ -31,7 +30,7 @@ class SupportedLiteralValues:
             ArrayValue,
             NullValue,
         ]
-        for lit in lits:
+        for lit in literals:
             self.values[lit.name] = lit
 
     @classmethod
@@ -60,8 +59,8 @@ class LiteralValue(Codable, SerializableType):
 
     @classmethod
     def _deserialize(cls, value: dict) -> LiteralValue:
-        name_type = value['name']
-        del value['name']
+        name_type = value["name"]
+        del value["name"]
         data_class = SupportedLiteralValues.shared().values[name_type]
         return data_class.from_dict(value)
 
@@ -83,13 +82,13 @@ class LiteralValue(Codable, SerializableType):
             return ArrayValue([LiteralValue.from_value(val) for val in value])
         elif value is None:
             return NullValue()
-        raise ValueError(f'Unable to find literal value for type {type(value)}')
+        raise ValueError(f"Unable to find literal value for type {type(value)}")
 
 
 @dataclass
 class IntValue(LiteralValue):
     value: int
-    name = 'int'
+    name = "int"
 
     @property
     def python_value(self) -> Any:
@@ -99,7 +98,7 @@ class IntValue(LiteralValue):
 @dataclass
 class FloatValue(LiteralValue):
     value: float
-    name = 'float'
+    name = "float"
 
     @property
     def python_value(self) -> Any:
@@ -109,7 +108,7 @@ class FloatValue(LiteralValue):
 @dataclass
 class BoolValue(LiteralValue):
     value: bool
-    name = 'bool'
+    name = "bool"
 
     @property
     def python_value(self) -> Any:
@@ -119,7 +118,7 @@ class BoolValue(LiteralValue):
 @dataclass
 class DateValue(LiteralValue):
     value: date
-    name = 'date'
+    name = "date"
 
     @property
     def python_value(self) -> Any:
@@ -129,7 +128,7 @@ class DateValue(LiteralValue):
 @dataclass
 class DatetimeValue(LiteralValue):
     value: datetime
-    name = 'datetime'
+    name = "datetime"
 
     @property
     def python_value(self) -> Any:
@@ -139,7 +138,7 @@ class DatetimeValue(LiteralValue):
 @dataclass
 class StringValue(LiteralValue):
     value: str
-    name = 'string'
+    name = "string"
 
     @property
     def python_value(self) -> Any:
@@ -148,7 +147,7 @@ class StringValue(LiteralValue):
 
 @dataclass
 class NullValue(LiteralValue):
-    name = 'null'
+    name = "null"
 
     @property
     def python_value(self) -> Any:
@@ -158,7 +157,7 @@ class NullValue(LiteralValue):
 @dataclass
 class ArrayValue(LiteralValue):
     value: list[LiteralValue]
-    name = 'array'
+    name = "array"
 
     @property
     def python_value(self) -> Any:

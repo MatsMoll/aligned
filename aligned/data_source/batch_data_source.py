@@ -19,6 +19,7 @@ from mashumaro.types import SerializableType
 from aligned.config_value import ConfigValue
 from aligned.data_file import DataFileReference
 
+from aligned.retrieval_job import FilterRepresentable
 from aligned.schemas.codable import Codable
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import (
@@ -32,6 +33,8 @@ from polars._typing import TimeUnit
 import polars as pl
 
 import logging
+
+from aligned.schemas.transformation import Expression
 
 
 logger = logging.getLogger(__name__)
@@ -161,7 +164,7 @@ class BatchDataSource:
         if isinstance(self, DataFileReference):
             from aligned.local.job import FileFullJob
 
-            return FileFullJob(self, request=request, limit=limit)
+            return FileFullJob(self, request=request, _limit=limit)
 
         raise NotImplementedError(type(self))
 
@@ -305,9 +308,9 @@ class BatchDataSource:
 
         raise NotImplementedError(f"Freshness is not implemented for {type(self)}.")
 
-    def filter(self, condition: DerivedFeature | Feature) -> CodableBatchDataSource:
+    def filter(self, condition: FilterRepresentable) -> CodableBatchDataSource:
         assert isinstance(self, CodableBatchDataSource)
-        return FilteredDataSource(self, condition)
+        return FilteredDataSource(self, Expression.from_value(condition))
 
     def location_id(self) -> set[FeatureLocation]:
         return self.depends_on()
@@ -358,6 +361,11 @@ class CodableBatchDataSource(Codable, SerializableType, BatchDataSource):
         return self.type_name
 
     def _serialize(self) -> dict:
+        from aligned.sources.in_mem_source import InMemorySource
+
+        if self.type_name == InMemorySource.type_name:
+            return InMemorySource.to_dict(self)  # type: ignore
+
         return self.to_dict()
 
     @classmethod
@@ -367,7 +375,15 @@ class CodableBatchDataSource(Codable, SerializableType, BatchDataSource):
         name_type = value.get("type_name", "missing type name in source")
 
         if name_type == InMemorySource.type_name:
-            return InMemorySource.empty()
+            import io
+
+            if "data" in value:
+                json_bytes = io.BytesIO(bytes.fromhex(value["data"]))
+                return InMemorySource(
+                    data=pl.DataFrame.deserialize(json_bytes, format="binary")
+                )
+            else:
+                return InMemorySource.from_dict(value)
 
         if name_type not in BatchDataSourceFactory.shared().supported_data_sources:
             return UnknownDataSource(type_name=name_type, content=value)
@@ -778,23 +794,9 @@ class CustomMethodDataSource(CodableBatchDataSource):
 @dataclass
 class FilteredDataSource(CodableBatchDataSource):
     source: CodableBatchDataSource
-    condition: DerivedFeature | Feature | str | bytes
+    condition: Expression
 
     type_name: str = "subset"
-
-    @property
-    def polars_expression(self) -> pl.Expr:
-        if isinstance(self.condition, bytes):
-            return pl.Expr.deserialize(self.condition, format="binary")
-        elif isinstance(self.condition, str):
-            try:
-                return pl.Expr.deserialize(self.condition.encode(), format="json")
-            except:  # noqa: E722
-                return pl.col(self.condition)
-        elif isinstance(self.condition, (DerivedFeature, Feature)):
-            return pl.col(self.condition.name)
-        else:
-            raise ValueError(f"Unable to `{self.condition}`")
 
     def job_group_key(self) -> str:
         return f"subset/{self.source.job_group_key()}"
@@ -818,20 +820,7 @@ class FilteredDataSource(CodableBatchDataSource):
                 f"Type: {cls} have not implemented how to load fact data with multiple sources."
             )
         source, request = requests[0]
-
-        if isinstance(source.condition, DerivedFeature):
-            request.derived_features.add(source.condition)
-            condition = source.condition
-        elif isinstance(source.condition, Feature):
-            request.features.add(source.condition)
-            condition = source.condition
-        else:
-            expr = source.condition
-            if isinstance(expr, str):
-                expr = expr.encode()
-            condition = pl.Expr.deserialize(expr, format="json")
-
-        return source.source.features_for(facts, request).filter(condition)
+        return source.source.features_for(facts, request).filter(source.condition)
 
     async def freshness(self, feature: Feature) -> datetime | None:
         return await self.source.freshness(feature)
@@ -839,14 +828,9 @@ class FilteredDataSource(CodableBatchDataSource):
     def all_between_dates(
         self, request: RetrievalRequest, start_date: datetime, end_date: datetime
     ) -> RetrievalJob:
-        if isinstance(self.condition, DerivedFeature):
-            request.derived_features.add(self.condition)
-        elif isinstance(self.condition, Feature):
-            request.features.add(self.condition)
-
         return (
             self.source.all_between_dates(request, start_date, end_date)
-            .filter(self.polars_expression)
+            .filter(self.condition)
             .aggregate(request)
             .derive_features([request])
         )
@@ -858,14 +842,14 @@ class FilteredDataSource(CodableBatchDataSource):
                 self.source.all_data(request, limit)
                 .aggregate(request)
                 .derive_features([request])
-                .filter(self.polars_expression)
+                .filter(self.condition)
             )
         elif isinstance(self.condition, Feature):
             request.features.add(self.condition)
 
         return (
             self.source.all_data(request, limit)
-            .filter(self.polars_expression)
+            .filter(self.condition)
             .aggregate(request)
             .derive_features([request])
         )

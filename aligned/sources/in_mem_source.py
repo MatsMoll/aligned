@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import logging
 import uuid
 
 import polars as pl
@@ -16,6 +17,8 @@ from aligned.sources.vector_index import VectorIndex
 
 if TYPE_CHECKING:
     from aligned.schemas.feature_view import CompiledFeatureView
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -63,14 +66,11 @@ class InMemorySource(
         self.job_key = str(uuid.uuid4())
         self._vector_index_name = None
 
-    def to_dict(self, **kwargs) -> dict:  # type: ignore
-        return {"type_name": "in_mem_source"}
-
-    @classmethod
-    def from_dict(  # type: ignore
-        cls, d: dict, **kwargs
-    ) -> "InMemorySource":
-        return InMemorySource.empty()
+    def _serialize(self) -> dict:
+        return {
+            "type_name": "in_mem_source",
+            "data": self.data.serialize(format="binary").hex(),
+        }
 
     def vector_index_name(self) -> str | None:
         return self._vector_index_name

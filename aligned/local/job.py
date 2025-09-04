@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 from pytz import timezone
 from datetime import datetime
@@ -14,11 +14,19 @@ from aligned.request.retrieval_request import (
     AggregateOver,
     RetrievalRequest,
 )
-from aligned.retrieval_job import RequestResult, RetrievalJob
+from aligned.retrieval_job import (
+    RequestResult,
+    RetrievalJob,
+)
 from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.feature import Feature
 from aligned.data_file import DataFileReference
 import logging
+
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession, DataFrame as SparkFrame
+
 
 logger = logging.getLogger(__name__)
 
@@ -210,7 +218,7 @@ def decode_timestamps(
 class FileFullJob(RetrievalJob):
     source: DataFileReference | RetrievalJob
     request: RetrievalRequest
-    limit: int | None = field(default=None)
+    _limit: int | None = field(default=None)
     date_formatter: DateFormatter = field(default_factory=DateFormatter.iso_8601)
 
     @property
@@ -267,10 +275,14 @@ class FileFullJob(RetrievalJob):
         if self.request.aggregated_features:
             df = await aggregate(self.request, df)
 
-        if self.limit:
-            return df.limit(self.limit)
+        if self._limit:
+            return df.limit(self._limit)
         else:
             return df
+
+    def limit(self, limit: int) -> RetrievalJob:
+        self._limit = limit
+        return self
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
@@ -618,6 +630,75 @@ class FileFactualJob(RetrievalJob):
                 )
 
             return entities.with_columns(columns)
+
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        from aligned.sources.databricks import DatabricksSource
+
+        if isinstance(self.source, DataFileReference):
+            from pyspark.sql import SparkSession
+
+            spark = (
+                session
+                or SparkSession.getActiveSession()
+                or SparkSession.builder.getOrCreate()
+            )
+            return spark.createDataFrame(await self.to_pandas())
+
+        # A simplified version that only supports one request with no event timestamp and no aggregations
+
+        if isinstance(self.facts, DatabricksSource):
+            # The order can be important in case one of them is a databricks source
+            # As it is not possible to create a Spark session if the databricks
+            # package is installed.
+            # Therefore, the databricks source should be loaded first
+            facts = await self.facts.to_spark(session)
+            features = await self.source.to_spark(session)
+        else:
+            features = await self.source.to_spark(session)
+            facts = await self.facts.to_spark(session)
+
+        assert (
+            len(self.requests) == 1
+        ), f"Currently only one request per source is supported. Got {len(self.requests)}"
+        request = next(iter(self.requests))
+
+        if (
+            request.event_timestamp_request
+            and request.event_timestamp_request.entity_column is not None
+        ):
+            raise ValueError(
+                "features_for with spark do not support event timestamps yet. As it can not guarantee a 1:1 relationship with the source."
+            )
+
+        selected_features = list(
+            request.all_required_feature_names.union(request.entity_names)
+        )
+        logger.info(f"Selecting the following features: '{selected_features}'")
+
+        joined_features = facts.join(
+            features.select(selected_features),
+            on=list(request.entity_names),
+            how="left",
+        )
+
+        if request.event_timestamp:
+            from pyspark.sql import Window
+            import pyspark.sql.functions as F
+
+            joined_features = (
+                joined_features.withColumn(
+                    "row_num",
+                    F.row_number().over(
+                        Window.partitionBy(list(request.entity_names)).orderBy(
+                            F.desc(request.event_timestamp.name)
+                        )
+                    ),
+                )
+                .filter(F.col("row_num") == 1)
+                .drop("row_num")
+            )
+
+        return joined_features
 
     def log_each_job(
         self, logger_func: Callable[[object], None] | None = None

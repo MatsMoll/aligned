@@ -1,5 +1,4 @@
 from __future__ import annotations
-from io import StringIO
 from aligned.compiler.feature_factory import FeatureFactory
 from aligned.config_value import PathResolver
 from aligned.schemas.date_formatter import DateFormatter, TimeUnit
@@ -36,6 +35,7 @@ from aligned.request.retrieval_request import (
 )
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureType
 from aligned.schemas.derivied_feature import DerivedFeature
+from aligned.schemas.transformation import Expression
 from aligned.schemas.vector_storage import VectorIndex
 from aligned.sources.renamer import Renamer
 from aligned.split_strategy import SupervisedDataSet
@@ -52,6 +52,8 @@ if TYPE_CHECKING:
     from aligned.schemas.model import EventTrigger, Model
     from aligned.sources.local import DataFileReference, StorageFileReference
     from aligned.feature_store import ContractStore
+
+    from pyspark.sql import DataFrame as SparkFrame, SparkSession
 
 
 logger = logging.getLogger(__name__)
@@ -679,7 +681,9 @@ ConvertableToRetrievalJob = Union[
     list[dict[str, Any]], dict[str, list], "pd.DataFrame", pl.DataFrame, pl.LazyFrame
 ]
 
-FilterRepresentable = str | pl.Expr | FeatureFactory | DerivedFeature | Feature
+FilterRepresentable = (
+    str | pl.Expr | FeatureFactory | DerivedFeature | Feature | Expression
+)
 
 
 class RetrievalJob(ABC):
@@ -708,6 +712,17 @@ class RetrievalJob(ABC):
     @abstractmethod
     async def to_lazy_polars(self) -> pl.LazyFrame:
         raise NotImplementedError(f"For {type(self)}")
+
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        if not session:
+            from pyspark.sql import SparkSession
+
+            session = (
+                SparkSession.getActiveSession() or SparkSession.builder.getOrCreate()
+            )
+
+        pandas = await self.to_pandas()
+        return session.createDataFrame(pandas)
 
     async def to_polars(self) -> pl.DataFrame:
         return await (await self.to_lazy_polars()).collect_async()
@@ -848,11 +863,12 @@ class RetrievalJob(ABC):
         if isinstance(self, ModificationJob):
             return self.copy_with(self.job.filter(condition))
 
-        if isinstance(condition, FeatureFactory):
-            if not condition.transformation:
-                condition = condition.feature()
+        if isinstance(condition, str):
+            exp = Expression(column=condition)
+        else:
+            exp = Expression.from_value(condition)
 
-        return FilteredJob(self, condition)
+        return FilteredJob(self, exp)
 
     def chunked(self, size: int) -> DataLoaderJob:
         return DataLoaderJob(self, size)
@@ -1463,6 +1479,16 @@ class OnErrorJob(Generic[ErrorType], RetrievalJob, ModificationJob):
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
 
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        try:
+            return await self.job.to_spark(session)
+        except self.error_type as error:
+            other_data = self.error_handler(error)
+            requests = self.job.retrieval_requests
+            return await RetrievalJob.from_convertable(other_data, requests).to_spark(
+                session
+            )
+
 
 @dataclass
 class ReturnInvalidJob(RetrievalJob, ModificationJob):
@@ -1906,51 +1932,82 @@ class FilteredJob(RetrievalJob, ModificationJob):
     job: RetrievalJob
     condition: FilterRepresentable
 
+    def filter(self, condition: FilterRepresentable) -> RetrievalJob:
+        from aligned.schemas.transformation import BinaryTransformation
+
+        try:
+            return FilteredJob(
+                job=self.job,
+                condition=Expression(
+                    transformation=BinaryTransformation(
+                        left=Expression.from_value(self.condition),
+                        right=Expression.from_value(condition),
+                        operator="and",
+                    )
+                ),
+            )
+        except Exception as e:
+            if not isinstance(condition, pl.Expr):
+                raise e
+
+            if isinstance(self.condition, pl.Expr):
+                self.condition = self.condition & condition
+            else:
+                exp = Expression.from_value(self.condition).to_polars()
+                if exp is None:
+                    return FilteredJob(job=self, condition=condition)
+
+                self.condition = exp & condition
+
+            return self
+
     async def to_lazy_polars(self) -> pl.LazyFrame:
+        from aligned.feature_store import ContractStore
+
         df = await self.job.to_lazy_polars()
 
-        if isinstance(self.condition, FeatureFactory):
-            if self.condition.transformation:
-                from aligned.feature_store import ContractStore
-
-                transformation = self.condition.transformation.compile()
-
-                store = ContractStore.empty()
-                out = await transformation.transform_polars(df, "filter_col", store)
-
-                if isinstance(out, pl.Expr):
-                    return df.filter(out)
-                else:
-                    return df.filter(pl.col("filter_col")).select(
-                        pl.exclude("filter_col")
-                    )
-
         if isinstance(self.condition, str):
-            try:
-                col = pl.Expr.deserialize(StringIO(self.condition))
-            except Exception:
-                col = pl.col(self.condition)
-        elif isinstance(self.condition, pl.Expr):
-            col = self.condition
-        elif isinstance(self.condition, DerivedFeature):
-            from aligned.feature_store import ContractStore
+            return df.filter(self.condition)
+
+        try:
+            exp = Expression.from_value(self.condition)
+
+            polars_exp = exp.to_polars()
+            if polars_exp is not None:
+                return df.filter(polars_exp)
+
+            assert exp.transformation is not None
 
             store = ContractStore.empty()
-            expr = await self.condition.transformation.transform_polars(
-                df, self.condition.name, store
+            filter_df = await exp.transformation.transform_polars(
+                df, "filter_col", store
             )
-            if not self.condition.name.isdigit():
-                col = pl.col(self.condition.name)
-            elif isinstance(expr, pl.Expr):
-                col = expr
-            else:
-                return expr.filter(pl.col(self.condition.name))
-        elif isinstance(self.condition, Feature):
-            col = pl.col(self.condition.name)
-        else:
-            raise ValueError()
 
-        return df.filter(col)
+            if isinstance(filter_df, pl.Expr):
+                return df.filter(filter_df)
+            else:
+                return df
+        except Exception:
+            assert isinstance(self.condition, pl.Expr)
+            return df.filter(self.condition)
+
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        df = await self.job.to_spark(session)
+
+        if isinstance(self.condition, str):
+            return df.filter(self.condition)
+
+        exp = Expression.from_value(self.condition)
+        spark_exp = exp.to_spark()
+
+        if spark_exp is not None:
+            return df.filter(spark_exp)
+
+        assert exp.transformation is not None
+
+        store = ContractStore.empty()
+        filter_df = await exp.transformation.transform_spark(df, "filter_col", store)
+        return filter_df.filter("filter_col").drop("filter_col")
 
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.job.to_pandas()
@@ -1991,6 +2048,10 @@ class LimitJob(RetrievalJob, ModificationJob):
         df = await self.job.to_lazy_polars()
         return df.limit(self._limit)
 
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        df = await self.to_spark(session)
+        return df.limit(self._limit)
+
 
 @dataclass
 class RenameJob(RetrievalJob, ModificationJob):
@@ -2011,6 +2072,19 @@ class RenameJob(RetrievalJob, ModificationJob):
         else:
             return df.rename(self.mappings)
 
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        df = await self.job.to_spark(session)
+        if isinstance(self.mappings, Renamer):
+            return df.withColumnsRenamed(
+                {field: self.mappings.rename(field) for field in df.schema.fieldNames()}
+            )
+        elif isinstance(self.mappings, Callable):
+            return df.withColumnsRenamed(
+                {field: self.mappings(field) for field in df.schema.fieldNames()}
+            )
+        else:
+            return df.withColumnsRenamed(self.mappings)
+
 
 @dataclass
 class DropDuplicateEntities(RetrievalJob, ModificationJob):
@@ -2027,6 +2101,10 @@ class DropDuplicateEntities(RetrievalJob, ModificationJob):
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.job.to_pandas()
         return df.drop_duplicates(subset=self.entity_columns)
+
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        df = await self.job.to_spark(session)
+        return df.drop_duplicates(self.entity_columns)
 
 
 @dataclass
@@ -2137,6 +2215,22 @@ class LogJob(RetrievalJob, ModificationJob):
         self.logger(df.head(10).collect())
         return df
 
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        if logger.level == 0:
+            logging.basicConfig(level=logging.DEBUG)
+
+        job_name = self.retrieval_requests[0].name
+        self.logger(f"Starting to run {type(self.job).__name__} - {job_name}")
+        try:
+            df = await self.job.to_spark(session)
+        except Exception as error:
+            self.logger(f"Failed in job: {type(self.job).__name__} - {job_name}")
+            raise error
+        self.logger(f"Results from {type(self.job).__name__} - {job_name}")
+        self.logger(df.schema.fieldNames())
+        self.logger(df.head(10))
+        return df
+
     def remove_derived_features(self) -> RetrievalJob:
         return self.job.remove_derived_features()
 
@@ -2215,20 +2309,12 @@ class DerivedFeatureJob(RetrievalJob, ModificationJob):
         return job
 
     def filter(self, condition: FilterRepresentable) -> RetrievalJob:
-        if isinstance(condition, str):
-            column_name = condition
-        elif isinstance(condition, pl.Expr):
-            column_name = condition.meta.output_name(raise_if_undetermined=False)
-        elif isinstance(condition, FeatureFactory) and condition._name is None:
-            column_name = None
-        else:
-            column_name = condition.name
-
-        if column_name is None:
-            return FilteredJob(self, condition)
+        needed_columns = set(Expression.from_value(condition).needed_columns())
 
         if any(
-            column_name in [feature.name for feature in request.derived_features]
+            needed_columns.intersection(
+                feature.name for feature in request.derived_features
+            )
             for request in self.requests
         ):
             return FilteredJob(self, condition)
@@ -2296,7 +2382,7 @@ class DerivedFeatureJob(RetrievalJob, ModificationJob):
 
                     logger.debug(f"Computing feature with pandas: {feature.name}")
                     df[feature.name] = await feature.transformation.transform_pandas(
-                        df[feature.depending_on_names],  # type: ignore
+                        df,  # type: ignore
                         self.store or ContractStore.empty(),
                     )
 
@@ -2344,6 +2430,14 @@ class UniqueRowsJob(RetrievalJob, ModificationJob):
             data = data.sort(self.sort_key, descending=self.descending)
 
         return data.unique(self.unique_on, keep="first", maintain_order=True).lazy()
+
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        df = await self.job.to_spark(session)
+
+        if self.sort_key:
+            df = df.sort(self.sort_key, ascending=not self.descending)
+
+        return df.drop_duplicates(self.unique_on)
 
 
 @dataclass
@@ -2721,6 +2815,9 @@ class WithRequests(RetrievalJob, ModificationJob):
     async def to_lazy_polars(self) -> pl.LazyFrame:
         return await self.job.to_lazy_polars()
 
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        return await self.job.to_spark(session)
+
 
 @dataclass
 class TimeMetricLoggerJob(RetrievalJob, ModificationJob):
@@ -2758,6 +2855,23 @@ class EnsureTypesJob(RetrievalJob, ModificationJob):
     def retrieval_requests(self) -> list[RetrievalRequest]:
         return self.requests
 
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        from pyspark.sql.functions import col
+
+        df = await self.job.to_spark(session)
+
+        for request in self.requests:
+            features_to_check = request.all_required_features.union(request.entities)
+
+            df = df.withColumns(
+                {
+                    feat.name: col(feat.name).cast(feat.dtype.spark_type)
+                    for feat in features_to_check
+                }
+            )
+
+        return df
+
     async def to_pandas(self) -> pd.DataFrame:
         df = await self.to_polars()
         return df.to_pandas()
@@ -2766,7 +2880,7 @@ class EnsureTypesJob(RetrievalJob, ModificationJob):
         df = await self.job.to_lazy_polars()
         org_schema = dict(df.collect_schema())
         for request in self.requests:
-            features_to_check = request.all_required_features
+            features_to_check = request.all_required_features.union(request.entities)
 
             if request.aggregated_features:
                 features_to_check.update(
@@ -2927,6 +3041,27 @@ class CombineFactualJob(RetrievalJob):
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
 
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        if not self.jobs:
+            raise ValueError(
+                "Have no jobs to fetch. This is probably an internal error.\n"
+                "Please submit an issue, and describe how to reproduce it.\n"
+                "Or maybe even submit a PR"
+            )
+
+        dfs: list[SparkFrame] = await asyncio.gather(
+            *[job.to_spark(session) for job in self.jobs]
+        )
+        results = [job.request_result for job in self.jobs]
+
+        df = dfs[0]
+
+        for other_df, job_result in list(zip(dfs, results))[1:]:
+            join_on = job_result.entity_columns
+
+            df = df.join(other_df, join_on, how="left")
+        return df
+
     async def to_lazy_polars(self) -> pl.LazyFrame:
         if not self.jobs:
             raise ValueError(
@@ -3021,6 +3156,18 @@ class SelectColumnsJob(RetrievalJob, ModificationJob):
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         df = await self.job.to_lazy_polars()
+        if self.include_features:
+            total_list = list(
+                {ent.name for ent in self.request_result.entities}.union(
+                    self.include_features
+                )
+            )
+            return df.select(total_list)
+        else:
+            return df
+
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        df = await self.job.to_spark(session)
         if self.include_features:
             total_list = list(
                 {ent.name for ent in self.request_result.entities}.union(

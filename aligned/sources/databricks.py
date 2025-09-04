@@ -16,9 +16,10 @@ from aligned.data_source.batch_data_source import (
 from aligned.feature_source import WritableFeatureSource
 from aligned.retrieval_job import FilterRepresentable, RetrievalJob, RetrievalRequest
 from aligned.schemas.constraints import MaxLength, MinLength
-from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import Constraint, Feature, FeatureLocation
-from aligned.schemas.transformation import PolarsExprTransformation
+from aligned.schemas.transformation import (
+    Expression,
+)
 from aligned.sources.local import FileFactualJob
 from aligned.config_value import EnvironmentValue, LiteralValue, ConfigValue
 from aligned.lazy_imports import databricks_fe
@@ -27,7 +28,7 @@ from aligned.sources.renamer import Renamer
 if TYPE_CHECKING:
     from sqlglot import exp
     import pandas as pd
-    from pyspark.sql import SparkSession
+    from pyspark.sql import SparkSession, DataFrame as SparkFrame
     from pyspark.sql.types import DataType, StructType
 
 
@@ -187,19 +188,38 @@ class DatabricksConnectionConfig:
     cluster_id: ConfigValue | None
     token: ConfigValue | None
 
+    azure_client_id: ConfigValue | None = None
+    azure_client_secret: ConfigValue | None = None
+    azure_tenant_id: ConfigValue | None = None
+
     def __init__(
         self,
         host: str | ConfigValue,
         cluster_id: str | ConfigValue | None,
         token: str | ConfigValue | None,
+        azure_client_id: ConfigValue | None = None,
+        azure_client_secret: ConfigValue | None = None,
+        azure_tenant_id: ConfigValue | None = None,
     ) -> None:
         self.host = LiteralValue.from_value(host)
-        self.cluster_id = (
-            LiteralValue.from_value(cluster_id)
-            if isinstance(cluster_id, str)
-            else cluster_id
-        )
-        self.token = LiteralValue(token) if isinstance(token, str) else token
+        self.cluster_id = LiteralValue.from_value(cluster_id) if cluster_id else None
+        self.token = LiteralValue.from_value(token) if token else None
+        self.azure_client_secret = azure_client_secret
+        self.azure_client_id = azure_client_id
+        self.azure_tenant_id = azure_tenant_id
+
+    def storage_provider(self) -> pl.CredentialProvider | None:
+        if self.azure_client_id and self.azure_client_secret and self.azure_tenant_id:
+            from azure.identity import ClientSecretCredential
+
+            creds = ClientSecretCredential(
+                tenant_id=self.azure_tenant_id.read(),
+                client_id=self.azure_client_id.read(),
+                client_secret=self.azure_client_secret.read(),
+            )
+
+            return pl.CredentialProviderAzure(credential=creds)
+        return None
 
     def with_auth(
         self, token: str | ConfigValue, host: str | ConfigValue
@@ -372,10 +392,12 @@ class DatabricksSource:
 
 
 @dataclass
-class UCSqlJob(RetrievalJob):
+class UCSqlJob(RetrievalJob, DatabricksSource):
     config: DatabricksConnectionConfig
     query: exp.Select
     request: RetrievalRequest
+
+    filter_exp: Expression | None = field(default=None)
 
     @property
     def request_result(self) -> RequestResult:
@@ -385,49 +407,46 @@ class UCSqlJob(RetrievalJob):
     def retrieval_requests(self) -> list[RetrievalRequest]:
         return [self.request]
 
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        client = session or self.config.connection()
+
+        spark_df = client.sql(self.query.sql(dialect="spark"))
+
+        if self.filter_exp is None:
+            return spark_df
+
+        sp_filter = self.filter_exp.to_spark()
+        assert (
+            sp_filter is not None
+        ), f"Unable to create spark filter from '{self.filter_exp}'"
+        return spark_df.filter(sp_filter)
+
     async def to_lazy_polars(self) -> pl.LazyFrame:
         return pl.from_pandas(await self.to_pandas()).lazy()
 
     async def to_pandas(self) -> pd.DataFrame:
-        client = self.config.connection()
-
-        spark_df = client.sql(self.query.sql(dialect="spark"))
-
-        return spark_df.toPandas()
+        return (await self.to_spark()).toPandas()
 
     def filter(self, condition: FilterRepresentable) -> RetrievalJob:
-        from aligned.compiler.feature_factory import FeatureFactory
-        from aligned.polars_to_spark import polars_expression_to_spark
-
-        new_query = None
-
         if isinstance(condition, str):
-            new_query = condition
-        elif isinstance(condition, pl.Expr):
-            new_query = polars_expression_to_spark(condition)
-        elif isinstance(condition, FeatureFactory):
-            if condition.transformation:
-                compiled = condition.transformation.compile()
-                if isinstance(compiled, PolarsExprTransformation):
-                    exp = compiled.polars_expr()
-                    assert exp is not None
-                    new_query = polars_expression_to_spark(exp)
-        elif isinstance(condition, DerivedFeature):
-            if isinstance(condition.transformation, PolarsExprTransformation):
-                exp = condition.transformation.polars_expr()
-                assert exp is not None
-                new_query = polars_expression_to_spark(exp)
-        else:
-            new_query = condition.name
+            return UCSqlJob(
+                config=self.config,
+                query=self.query.where(condition, dialect="spark"),
+                request=self.request,
+                filter_exp=self.filter_exp,
+            )
 
-        if not new_query:
+        try:
+            exp = Expression.from_value(condition)
+
+            return UCSqlJob(
+                config=self.config,
+                query=self.query,
+                request=self.request,
+                filter_exp=self.filter_exp & exp if self.filter_exp else exp,
+            )
+        except Exception:
             return RetrievalJob.filter(self, condition)
-
-        return UCSqlJob(
-            config=self.config,
-            query=self.query.where(new_query, dialect="spark"),
-            request=self.request,
-        )
 
 
 @dataclass
@@ -770,12 +789,12 @@ def validate_pyspark_schema(
 
 
 @dataclass
-class UnityCatalogTableAllJob(RetrievalJob):
+class UnityCatalogTableAllJob(RetrievalJob, DatabricksSource):
     config: DatabricksConnectionConfig
     table: UnityCatalogTableConfig
     request: RetrievalRequest
     _limit: int | None
-    where: str | None = field(default=None)
+    where: Expression | None = field(default=None)
     renamer: Renamer | None = field(default=None)
 
     @property
@@ -787,42 +806,26 @@ class UnityCatalogTableAllJob(RetrievalJob):
         return [self.request]
 
     def filter(self, condition: FilterRepresentable) -> RetrievalJob:
-        from aligned.compiler.feature_factory import FeatureFactory
-        from aligned.polars_to_spark import polars_expression_to_spark
-
-        new_where = None
-
         if isinstance(condition, str):
-            new_where = condition
-        elif isinstance(condition, pl.Expr):
-            new_where = polars_expression_to_spark(condition)
-        elif isinstance(condition, FeatureFactory):
-            if condition.transformation:
-                compiled = condition.transformation.compile()
-                if isinstance(compiled, PolarsExprTransformation):
-                    exp = compiled.polars_expr()
-                    assert exp is not None
-                    new_where = polars_expression_to_spark(exp)
-        elif isinstance(condition, DerivedFeature):
-            if isinstance(condition.transformation, PolarsExprTransformation):
-                exp = condition.transformation.polars_expr()
-                assert exp is not None
-                new_where = polars_expression_to_spark(exp)
+            new_where = Expression(column=condition)
         else:
-            new_where = condition.name
-
-        if not new_where:
-            return RetrievalJob.filter(self, condition)
+            try:
+                new_where = Expression.from_value(condition)
+            except Exception:
+                return RetrievalJob.filter(self, condition)
 
         if self.where:
-            self.where = f"{self.where} AND {new_where}"
+            self.where = self.where & new_where
         else:
             self.where = new_where
 
         return self
 
     async def to_pandas(self) -> pd.DataFrame:
-        con = self.config.connection()
+        return (await self.to_spark()).toPandas()
+
+    async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
+        con = session or self.config.connection()
         spark_df = con.read.table(self.table.identifier())
 
         if self.request.features_to_include:
@@ -837,22 +840,63 @@ class UnityCatalogTableAllJob(RetrievalJob):
                 logger.debug(f"Selecting '{cols}'")
 
         if self.where:
-            spark_df = spark_df.filter(self.where)
+            spark_exp = self.where.to_spark()
+            assert spark_exp is not None
+            spark_df = spark_df.filter(spark_exp)
 
         if self._limit:
             spark_df = spark_df.limit(self._limit)
 
-        return spark_df.toPandas()
+        return spark_df
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
-        return pl.from_pandas(
-            await self.to_pandas(),
-            schema_overrides={
-                feat.name: feat.dtype.polars_type
-                for feat in self.retrieval_requests[0].features
-                if feat.dtype != FeatureType.json()
-            },
-        ).lazy()
+        try:
+            from polars import Catalog
+
+            creds = self.config.storage_provider()
+
+            assert creds is not None
+            assert self.config.token is not None
+
+            catalog = Catalog(
+                workspace_url=self.config.host.read(),
+                bearer_token=self.config.token.read(),
+            )
+            logger.info(
+                f"Trying to use polars as the processing engine when loading {self.table.table.read()}."
+            )
+            df = catalog.scan_table(
+                catalog_name=self.table.catalog.read(),
+                namespace=self.table.schema.read(),
+                table_name=self.table.table.read(),
+                credential_provider=creds,
+            )
+
+            if self.where:
+                polars_exp = self.where.to_polars()
+                assert (
+                    polars_exp is not None
+                ), f"Unable to transform where to polars exp. This is an internal error so please let the maintainers know by setting up an issue. '{self.where}'"
+                df = df.filter(polars_exp)
+
+            if self._limit:
+                df = df.limit(self._limit)
+
+            return df
+
+        except Exception:
+            logger.info(
+                "Missing configuration to use polars as the processing engine.",
+                " Will create a spark connection.",
+            )
+            return pl.from_pandas(
+                await self.to_pandas(),
+                schema_overrides={
+                    feat.name: feat.dtype.polars_type
+                    for feat in self.retrieval_requests[0].features
+                    if feat.dtype != FeatureType.json()
+                },
+            ).lazy()
 
 
 @dataclass
@@ -898,7 +942,14 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
         start_date: datetime,
         end_date: datetime,
     ) -> RetrievalJob:
-        raise NotImplementedError(type(self))
+        job = self.all_data(request, None)
+
+        assert request.event_timestamp_request, "Need an event timestamp to filter on."
+        return job.filter(
+            pl.col(request.event_timestamp_request.event_timestamp.name).is_between(
+                start_date, end_date
+            )
+        )
 
     @classmethod
     def multi_source_features_for(  # type: ignore
@@ -965,14 +1016,20 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
         )
 
     async def insert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
-        pdf = (await job.to_polars()).select(request.all_returned_columns)
-        schema = request.spark_schema()
+        import pyspark.sql.functions as F
+
+        expected_schema = request.spark_schema()
 
         conn = self.config.connection()
-        df = conn.createDataFrame(
-            pdf.to_pandas(),
-            schema=schema,
+        spark_df = await job.to_spark(conn)
+
+        df = spark_df.select(
+            [
+                F.col(field.name).cast(field.dataType).alias(field.name)
+                for field in expected_schema.fields
+            ]
         )
+
         if conn.catalog.tableExists(self.table.identifier()):
             schema = conn.table(self.table.identifier()).schema
             validate_pyspark_schema(old=schema, new=df.schema)
@@ -980,12 +1037,21 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
         df.write.mode("append").saveAsTable(self.table.identifier())
 
     async def upsert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
-        pdf = (await job.unique_entities().to_polars()).select(
-            request.all_returned_columns
+        import pyspark.sql.functions as F
+
+        expected_schema = request.spark_schema()
+
+        conn = self.config.connection()
+        spark_df = await job.to_spark(conn)
+
+        df = spark_df.select(
+            [
+                F.col(field.name).cast(field.dataType).alias(field.name)
+                for field in expected_schema.fields
+            ]
         )
 
         target_table = self.table.identifier()
-        conn = self.config.connection()
 
         if not conn.catalog.tableExists(target_table):
             await self.insert(job, request)
@@ -994,7 +1060,6 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
             on_statement = " AND ".join(
                 [f"target.{ent} = source.{ent}" for ent in entities]
             )
-            df = conn.createDataFrame(pdf.to_pandas(), schema=request.spark_schema())
             schema = conn.table(target_table).schema
             validate_pyspark_schema(old=schema, new=df.schema)
 
@@ -1009,13 +1074,20 @@ WHEN NOT MATCHED THEN
   INSERT *""")
 
     async def overwrite(self, job: RetrievalJob, request: RetrievalRequest) -> None:
-        pdf = (await job.unique_entities().to_polars()).select(
-            request.all_returned_columns
-        )
-        schema = request.spark_schema()
-        raise_on_invalid_pyspark_schema(schema)
+        import pyspark.sql.functions as F
+
+        expected_schema = request.spark_schema()
+
         conn = self.config.connection()
-        df = conn.createDataFrame(pdf.to_pandas(), schema=schema)
+        spark_df = await job.to_spark(conn)
+
+        df = spark_df.select(
+            [
+                F.col(field.name).cast(field.dataType).alias(field.name)
+                for field in expected_schema.fields
+            ]
+        )
+        raise_on_invalid_pyspark_schema(df.schema)
         df.write.mode("overwrite").option(
             "overwriteSchema", self.should_overwrite_schema
         ).saveAsTable(self.table.identifier())

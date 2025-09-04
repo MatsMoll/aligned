@@ -11,7 +11,7 @@ from aligned.schemas.feature import (
     FeatureReference,
     FeatureType,
 )
-from aligned.schemas.transformation import Transformation
+from aligned.schemas.transformation import Transformation, Expression
 
 
 class DerivedFeature(Feature):
@@ -71,6 +71,9 @@ class DerivedFeature(Feature):
             tags=self.tags,
             constraints=self.constraints,
         )
+
+    def to_expression(self) -> Expression:
+        return Expression(transformation=self.transformation)
 
 
 @dataclass

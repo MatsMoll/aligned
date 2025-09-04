@@ -117,22 +117,15 @@ class CompiledFeatureView(Codable):
         return FeatureRequest(
             FeatureLocation.feature_view(self.name),
             {feature.name for feature in self.full_schema},
-            needed_requests=[
-                RetrievalRequest(
-                    name=self.name,
-                    location=FeatureLocation.feature_view(self.name),
-                    entities=self.entities,
-                    features=self.features,
-                    derived_features=self.derived_features,
-                    aggregated_features=self.aggregated_features,
-                    event_timestamp=self.event_timestamp,
-                    features_to_include={feature.name for feature in self.full_schema},
-                )
-            ],
+            needed_requests=[self.retrieval_request],
         )
 
     @property
     def retrieval_request(self) -> RetrievalRequest:
+        event_timestamp = self.event_timestamp
+        if not event_timestamp and self.freshness_feature:
+            event_timestamp = EventTimestamp(name=self.freshness_feature.name, ttl=None)
+
         return RetrievalRequest(
             name=self.name,
             location=FeatureLocation.feature_view(self.name),
@@ -140,7 +133,7 @@ class CompiledFeatureView(Codable):
             features=self.features,
             derived_features=self.derived_features,
             aggregated_features=self.aggregated_features,
-            event_timestamp=self.event_timestamp,
+            event_timestamp=event_timestamp,
             features_to_include={feature.name for feature in self.full_schema},
         )
 
