@@ -508,6 +508,11 @@ class ModelFeatureStore:
             if label_refs:
                 for ref in label_refs:
                     locs.add(ref.location)
+
+            for conf in self.model.predictions_view.recommendation_targets or set():
+                if conf.was_selected_view:
+                    locs.add(conf.was_selected_view)
+
             return locs
         except ValueError:
             return set()

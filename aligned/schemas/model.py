@@ -240,6 +240,12 @@ class PredictionsView(Codable):
             return {feature.estimating for feature in self.classification_targets}
         elif self.regression_targets:
             return {feature.estimating for feature in self.regression_targets}
+        elif self.recommendation_targets:
+            return {
+                target.was_selected_list
+                for target in self.recommendation_targets
+                if target.was_selected_list
+            }
         else:
             return set()
 
