@@ -145,6 +145,16 @@
             </div>
         
 
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#to_spark" class="internal-link" title="aligned.retrieval_job.UniqueRowsJob.to_spark">to<wbr></wbr>_spark</a></code>
+            </div>
+        
+
     </li>
 </ul> 
 
@@ -1334,7 +1344,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">UniqueRowsJob</span>(<a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a>, <a href="aligned.retrieval_job.ModificationJob.html" class="internal-link" title="aligned.retrieval_job.ModificationJob">ModificationJob</a>): <a href="https://github.com/MatsMoll/aligned/tree/a024120b514c73566f7f911dad5e13bb7f99d538/aligned/retrieval_job.py#L2330" class="sourceLink">(source)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">UniqueRowsJob</span>(<a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a>, <a href="aligned.retrieval_job.ModificationJob.html" class="internal-link" title="aligned.retrieval_job.ModificationJob">ModificationJob</a>): <a href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/retrieval_job.py#L2416" class="sourceLink">(source)</a></code></p>
           <p><a href="classIndex.html#aligned.retrieval_job.UniqueRowsJob">View In Hierarchy</a></p>
         </div>
 
@@ -1343,7 +1353,7 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id244">
+          <table class="children sortable" id="id249">
   
   
   <tr class="method">
@@ -1355,6 +1365,11 @@
     
     <td>Async Method</td>
     <td><code><a href="#to_pandas" class="internal-link" title="aligned.retrieval_job.UniqueRowsJob.to_pandas">to<wbr></wbr>_pandas</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#to_spark" class="internal-link" title="aligned.retrieval_job.UniqueRowsJob.to_spark">to<wbr></wbr>_spark</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="classvariable">
     
@@ -1377,7 +1392,7 @@
             <p class="inheritedFrom">
               Inherited from <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:
             </p>
-            <table class="children sortable" id="id245">
+            <table class="children sortable" id="id250">
   
   
   <tr class="basestaticmethod">
@@ -1631,7 +1646,7 @@
             <p class="inheritedFrom">
               Inherited from <code><a href="aligned.retrieval_job.ModificationJob.html" class="internal-link" title="aligned.retrieval_job.ModificationJob">ModificationJob</a></code> (via <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>):
             </p>
-            <table class="children sortable" id="id246">
+            <table class="children sortable" id="id251">
   
   
   <tr class="basemethod">
@@ -1660,7 +1675,7 @@
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">to_lazy_polars</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code>pl.LazyFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/a024120b514c73566f7f911dad5e13bb7f99d538/aligned/retrieval_job.py#L2340">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/retrieval_job.py#L2426">
       
       (source)
     </a>
@@ -1687,7 +1702,7 @@
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">to_pandas</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code>pd.DataFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/a024120b514c73566f7f911dad5e13bb7f99d538/aligned/retrieval_job.py#L2337">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/retrieval_job.py#L2423">
       
       (source)
     </a>
@@ -1699,6 +1714,33 @@
   </div>
   <div class="docstring functionBody">
     <div class="interfaceinfo">overrides <code><a href="aligned.retrieval_job.RetrievalJob.html#to_pandas" class="internal-link">aligned.retrieval_job.RetrievalJob.to_pandas</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.UniqueRowsJob.to_spark">
+    
+  </a>
+  <a name="to_spark">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">to_spark</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">session: <code>SparkSession | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code>SparkFrame</code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/retrieval_job.py#L2434">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#to_spark" title="aligned.retrieval_job.UniqueRowsJob.to_spark">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.retrieval_job.RetrievalJob.html#to_spark" class="internal-link">aligned.retrieval_job.RetrievalJob.to_spark</a></code></div>
     <div><p class="undocumented">Undocumented</p></div>
   </div>
 </div><div class="baseclassvariable">
@@ -1713,7 +1755,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">descending</span>: <code><a href="https://docs.python.org/3/library/functions.html#bool" class="intersphinx-link">bool</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/a024120b514c73566f7f911dad5e13bb7f99d538/aligned/retrieval_job.py#L2335">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/retrieval_job.py#L2421">
       
       (source)
     </a>
@@ -1740,7 +1782,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">sort_key</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/a024120b514c73566f7f911dad5e13bb7f99d538/aligned/retrieval_job.py#L2334">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/retrieval_job.py#L2420">
       
       (source)
     </a>
@@ -1767,7 +1809,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">job</span>: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/a024120b514c73566f7f911dad5e13bb7f99d538/aligned/retrieval_job.py#L2332">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/retrieval_job.py#L2418">
       
       (source)
     </a>
@@ -1794,7 +1836,7 @@
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    25.4.0 at 2025-08-21 07:47:57.
+    25.4.0 at 2025-09-04 12:42:01.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

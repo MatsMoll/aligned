@@ -141,6 +141,16 @@
         
 
         
+            <div class="itemName"><code><a href="#filter" class="internal-link" title="aligned.retrieval_job.FilteredJob.filter">filter</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
             <div class="itemName"><code><a href="#to_lazy_polars" class="internal-link" title="aligned.retrieval_job.FilteredJob.to_lazy_polars">to<wbr></wbr>_lazy<wbr></wbr>_polars</a></code>
             </div>
         
@@ -152,6 +162,16 @@
 
         
             <div class="itemName"><code><a href="#to_pandas" class="internal-link" title="aligned.retrieval_job.FilteredJob.to_pandas">to<wbr></wbr>_pandas</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#to_spark" class="internal-link" title="aligned.retrieval_job.FilteredJob.to_spark">to<wbr></wbr>_spark</a></code>
             </div>
         
 
@@ -308,16 +328,6 @@
 
         
             <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#fill_missing_columns" class="internal-link" title="aligned.retrieval_job.RetrievalJob.fill_missing_columns">fill<wbr></wbr>_missing<wbr></wbr>_columns</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.retrieval_job.RetrievalJob.html#filter" class="internal-link" title="aligned.retrieval_job.RetrievalJob.filter">filter</a></code>
             </div>
         
 
@@ -1324,7 +1334,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">FilteredJob</span>(<a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a>, <a href="aligned.retrieval_job.ModificationJob.html" class="internal-link" title="aligned.retrieval_job.ModificationJob">ModificationJob</a>): <a href="https://github.com/MatsMoll/aligned/tree/a024120b514c73566f7f911dad5e13bb7f99d538/aligned/retrieval_job.py#L1904" class="sourceLink">(source)</a></code></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">FilteredJob</span>(<a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a>, <a href="aligned.retrieval_job.ModificationJob.html" class="internal-link" title="aligned.retrieval_job.ModificationJob">ModificationJob</a>): <a href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/retrieval_job.py#L1930" class="sourceLink">(source)</a></code></p>
           <p><a href="classIndex.html#aligned.retrieval_job.FilteredJob">View In Hierarchy</a></p>
         </div>
 
@@ -1333,7 +1343,7 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id218">
+          <table class="children sortable" id="id223">
   
   
   <tr class="method">
@@ -1343,6 +1353,11 @@
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
+    <td>Method</td>
+    <td><code><a href="#filter" class="internal-link" title="aligned.retrieval_job.FilteredJob.filter">filter</a></code></td>
+    <td>Filters based on a condition referencing either a feature, a feature name, or an polars expression to filter on.</td>
+  </tr><tr class="method">
+    
     <td>Async Method</td>
     <td><code><a href="#to_lazy_polars" class="internal-link" title="aligned.retrieval_job.FilteredJob.to_lazy_polars">to<wbr></wbr>_lazy<wbr></wbr>_polars</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
@@ -1350,6 +1365,11 @@
     
     <td>Async Method</td>
     <td><code><a href="#to_pandas" class="internal-link" title="aligned.retrieval_job.FilteredJob.to_pandas">to<wbr></wbr>_pandas</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#to_spark" class="internal-link" title="aligned.retrieval_job.FilteredJob.to_spark">to<wbr></wbr>_spark</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="classvariable">
     
@@ -1367,7 +1387,7 @@
             <p class="inheritedFrom">
               Inherited from <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:
             </p>
-            <table class="children sortable" id="id219">
+            <table class="children sortable" id="id224">
   
   
   <tr class="basestaticmethod">
@@ -1440,11 +1460,6 @@
     <td>Method</td>
     <td><code><a href="aligned.retrieval_job.RetrievalJob.html#fill_missing_columns" class="internal-link" title="aligned.retrieval_job.RetrievalJob.fill_missing_columns">fill<wbr></wbr>_missing<wbr></wbr>_columns</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="basemethod">
-    
-    <td>Method</td>
-    <td><code><a href="aligned.retrieval_job.RetrievalJob.html#filter" class="internal-link" title="aligned.retrieval_job.RetrievalJob.filter">filter</a></code></td>
-    <td>Filters based on a condition referencing either a feature, a feature name, or an polars expression to filter on.</td>
   </tr><tr class="basemethod">
     
     <td>Method</td>
@@ -1616,7 +1631,7 @@
             <p class="inheritedFrom">
               Inherited from <code><a href="aligned.retrieval_job.ModificationJob.html" class="internal-link" title="aligned.retrieval_job.ModificationJob">ModificationJob</a></code> (via <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>):
             </p>
-            <table class="children sortable" id="id220">
+            <table class="children sortable" id="id225">
   
   
   <tr class="basemethod">
@@ -1645,7 +1660,7 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">describe</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/a024120b514c73566f7f911dad5e13bb7f99d538/aligned/retrieval_job.py#L1974">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/retrieval_job.py#L2031">
       
       (source)
     </a>
@@ -1662,6 +1677,34 @@
 </div><div class="basemethod">
   
   
+  <a name="aligned.retrieval_job.FilteredJob.filter">
+    
+  </a>
+  <a name="filter">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">filter</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">condition: <code><a href="aligned.retrieval_job.html#FilterRepresentable" class="internal-link" title="aligned.retrieval_job.FilterRepresentable">FilterRepresentable</a></code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/retrieval_job.py#L1935">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#filter" title="aligned.retrieval_job.FilteredJob.filter">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.retrieval_job.RetrievalJob.html#filter" class="internal-link">aligned.retrieval_job.RetrievalJob.filter</a></code></div>
+    <div><p>Filters based on a condition referencing either a feature,
+a feature name, or an polars expression to filter on.</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
   <a name="aligned.retrieval_job.FilteredJob.to_lazy_polars">
     
   </a>
@@ -1672,7 +1715,7 @@
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">to_lazy_polars</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code>pl.LazyFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/a024120b514c73566f7f911dad5e13bb7f99d538/aligned/retrieval_job.py#L1909">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/retrieval_job.py#L1964">
       
       (source)
     </a>
@@ -1699,7 +1742,7 @@
     
     
     <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">to_pandas</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code>pd.DataFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/a024120b514c73566f7f911dad5e13bb7f99d538/aligned/retrieval_job.py#L1955">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/retrieval_job.py#L2012">
       
       (source)
     </a>
@@ -1711,6 +1754,33 @@
   </div>
   <div class="docstring functionBody">
     <div class="interfaceinfo">overrides <code><a href="aligned.retrieval_job.RetrievalJob.html#to_pandas" class="internal-link">aligned.retrieval_job.RetrievalJob.to_pandas</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.retrieval_job.FilteredJob.to_spark">
+    
+  </a>
+  <a name="to_spark">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">to_spark</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">session: <code>SparkSession | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>) -&gt; <code>SparkFrame</code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/retrieval_job.py#L1994">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#to_spark" title="aligned.retrieval_job.FilteredJob.to_spark">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.retrieval_job.RetrievalJob.html#to_spark" class="internal-link">aligned.retrieval_job.RetrievalJob.to_spark</a></code></div>
     <div><p class="undocumented">Undocumented</p></div>
   </div>
 </div><div class="baseclassvariable">
@@ -1725,7 +1795,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">condition</span>: <code><a href="aligned.retrieval_job.html#FilterRepresentable" class="internal-link" title="aligned.retrieval_job.FilterRepresentable">FilterRepresentable</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/a024120b514c73566f7f911dad5e13bb7f99d538/aligned/retrieval_job.py#L1907">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/retrieval_job.py#L1933">
       
       (source)
     </a>
@@ -1752,7 +1822,7 @@
   <div class="functionHeader">
     
     <span class="py-defname">job</span>: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/a024120b514c73566f7f911dad5e13bb7f99d538/aligned/retrieval_job.py#L1906">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/retrieval_job.py#L1932">
       
       (source)
     </a>
@@ -1779,7 +1849,7 @@
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    25.4.0 at 2025-08-21 07:47:57.
+    25.4.0 at 2025-09-04 12:42:01.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 
