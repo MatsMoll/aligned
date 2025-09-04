@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aligned"
-version = "0.0.130"
+version = "0.0.131"
 description = "A data management and lineage tool for ML applications."
 authors = ["Mats E. Mollestad <mats@mollestad.no>"]
 license = "FSL-1.1-ALv2"
