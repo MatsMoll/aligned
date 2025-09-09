@@ -869,7 +869,7 @@ class DeltaFileConfig(Codable):
 
 @dataclass
 class DeltaConfig(Codable):
-    schema_mode: Literal["merge", "overwrite"] = field(default="overwrite")
+    schema_mode: Literal["merge", "overwrite"] | None = field(default=None)
     partition_by: list[str] | str | None = field(default=None)
     target_file_size: int | None = field(default=None)
 
@@ -1021,7 +1021,9 @@ class DeltaFileSource(
     async def insert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         data = await job.to_lazy_polars()
         data.select(request.all_returned_columns).collect().write_delta(
-            self.path.as_posix(), mode="append"
+            self.path.as_posix(),
+            mode="append",
+            delta_write_options=self.config.write_options(),
         )
 
     async def upsert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
