@@ -1932,16 +1932,17 @@ class ReplaceStrings(Transformation):
 @dataclass
 class IsIn(Transformation, PolarsExprTransformation, GlotExprTransformation):
     values: list
-    key: str
+    key: Expression
 
     name = "isin"
     dtype = FeatureType.boolean()
 
     def needed_columns(self) -> list[str]:
-        return [self.key]
+        return self.key.needed_columns()
 
     def to_glot(self) -> exp.Expression:
-        col_exp = exp.column(self.key)
+        col_exp = self.key.to_glot()
+        assert col_exp is not None
         # Create literals for each value in the list
         value_literals = []
         for value in self.values:
@@ -1957,12 +1958,14 @@ class IsIn(Transformation, PolarsExprTransformation, GlotExprTransformation):
         return df[self.key].isin(self.values)  # type: ignore
 
     def polars_expr(self) -> pl.Expr:
-        return pl.col(self.key).is_in(self.values)
+        key_exp = self.key.to_polars()
+        assert key_exp is not None
+        return key_exp.is_in(self.values)
 
     @staticmethod
     def test_definition() -> TransformationTestDefinition:
         return TransformationTestDefinition(
-            IsIn(values=["hello", "test"], key="x"),
+            IsIn(values=["hello", "test"], key=Expression(column="x")),
             input={"x": ["No", "Hello", "hello", "test", "nah", "nehtest"]},
             output=[False, False, True, True, False, False],
         )
