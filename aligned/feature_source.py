@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from aligned.request.retrieval_request import FeatureRequest, RetrievalRequest
 from aligned.retrieval_job import RetrievalJob
 from aligned.schemas.feature import FeatureLocation, Feature
+from aligned.schemas.transformation import Expression
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -34,7 +35,12 @@ class WritableFeatureSource:
     async def upsert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         raise NotImplementedError(f"Upsert write is not implemented for {type(self)}.")
 
-    async def overwrite(self, job: RetrievalJob, request: RetrievalRequest) -> None:
+    async def overwrite(
+        self,
+        job: RetrievalJob,
+        request: RetrievalRequest,
+        predicate: Expression | None = None,
+    ) -> None:
         raise NotImplementedError(
             f"Overwrite write is not implemented for {type(self)}."
         )

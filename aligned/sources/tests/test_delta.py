@@ -8,7 +8,8 @@ from aligned.feature_view.feature_view import FeatureView
 from aligned.retrieval_job import RetrievalJob
 from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureType
-from aligned.sources.local import DeltaFileSource
+from aligned.schemas.transformation import Expression
+from aligned.sources.local import DeltaConfig, DeltaFileSource
 from conftest import DataTest
 
 
@@ -167,6 +168,110 @@ async def test_delta_overwrite():
 
 
 @pytest.mark.asyncio
+async def test_delta_overwrite_predicate():
+    from polars.testing import assert_frame_equal
+    from aligned import FileSource
+    from aligned.request.retrieval_request import RetrievalRequest
+
+    dir = FileSource.directory("test_data/temp")
+    source = dir.delta_at("delta/upsert")
+
+    request = RetrievalRequest(
+        name="test",
+        location=FeatureLocation.feature_view("test"),
+        entities={Feature("e", FeatureType.int8())},
+        features={
+            Feature("a", FeatureType.int8()),
+            Feature("b", FeatureType.int8()),
+            Feature("x", FeatureType.int8()),
+        },
+        derived_features=set(),
+    )
+    initial_data = pl.DataFrame(
+        {
+            "a": [1, 1, 1, 2, 2, 2],
+            "b": [1, 2, 3, 1, 2, 3],
+            "e": [1, 2, 3, 4, 5, 6],
+            "x": [1, 2, 3, 4, 5, 6],
+        }
+    )
+    new_data = pl.DataFrame(
+        {"a": [1, 1, 1, 1], "b": [2, 2, 3, 1], "e": [1, 2, 3, 7], "x": [7, 8, 9, 10]}
+    )
+    expected = pl.concat([initial_data.filter(pl.col("a") != 1), new_data])
+
+    # clean up the data
+    await source.delete()
+    await source.overwrite(
+        RetrievalJob.from_polars_df(initial_data, [request]), request
+    )
+    data = await source.to_polars()
+    assert_frame_equal(data, initial_data, check_column_order=False)
+
+    await source.overwrite(
+        RetrievalJob.from_polars_df(new_data, [request]),
+        request,
+        predicate=Expression.from_value(pl.col("a") == 1),
+    )
+    new = await source.to_polars()
+    assert_frame_equal(new.sort("e"), expected.sort("e"), check_column_order=False)
+
+
+@pytest.mark.asyncio
+async def test_delta_overwrite_predicate_with_partition():
+    from polars.testing import assert_frame_equal
+    from aligned import FileSource
+    from aligned.request.retrieval_request import RetrievalRequest
+
+    dir = FileSource.directory("test_data/temp")
+    source = dir.delta_at(
+        "delta/overwrite-with-partition", config=DeltaConfig(partition_by="a")
+    )
+
+    request = RetrievalRequest(
+        name="test",
+        location=FeatureLocation.feature_view("test"),
+        entities={Feature("e", FeatureType.int8())},
+        features={
+            Feature("a", FeatureType.int8()),
+            Feature("b", FeatureType.int8()),
+            Feature("x", FeatureType.int8()),
+        },
+        derived_features=set(),
+    )
+    initial_data = pl.DataFrame(
+        {
+            "a": [1, 1, 1, 2, 2, 2],
+            "b": [1, 2, 3, 1, 2, 3],
+            "e": [1, 2, 3, 4, 5, 6],
+            "x": [1, 2, 3, 4, 5, 6],
+        }
+    )
+    new_data = pl.DataFrame(
+        {"a": [1, 1, 1, 1], "b": [2, 2, 3, 1], "e": [1, 2, 3, 7], "x": [7, 8, 9, 10]}
+    )
+    expected = pl.concat([initial_data.filter(pl.col("a") != 1), new_data])
+
+    # clean up the data
+    await source.delete()
+    await source.overwrite(
+        RetrievalJob.from_polars_df(initial_data, [request]), request
+    )
+    data = await source.to_polars()
+    assert_frame_equal(data, initial_data, check_column_order=False)
+
+    await source.overwrite(
+        RetrievalJob.from_polars_df(new_data, [request]),
+        request,
+        predicate=Expression.from_value(pl.col("a") == 1),
+    )
+    new = await source.to_polars()
+    print(new)
+    print(expected)
+    assert_frame_equal(new.sort("e"), expected.sort("e"), check_column_order=False)
+
+
+@pytest.mark.asyncio
 async def test_parquet(point_in_time_data_test: DataTest) -> None:
     store = ContractStore.experimental()
 
@@ -276,7 +381,7 @@ async def test_read_csv(point_in_time_data_test: DataTest) -> None:
 
         store.add_compiled_view(compiled)
 
-        Path(file_source.path).unlink(missing_ok=True)
+        Path(file_source.path.as_posix()).unlink(missing_ok=True)
 
         await store.feature_view(compiled.name).insert(
             store.feature_view(compiled.name).process_input(source.data)

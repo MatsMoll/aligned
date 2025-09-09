@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal
 import numpy as np
 import polars as pl
 from mashumaro.types import SerializableType
+from sqlglot import exp
 
 from aligned.lazy_imports import pandas as pd
 from aligned.schemas.codable import Codable
@@ -78,6 +79,11 @@ class RedshiftTransformation:
         if isinstance(self, PsqlTransformation):
             return self.as_psql()
         raise NotImplementedError()
+
+
+class GlotExprTransformation:
+    def to_glot(self) -> exp.Expression:
+        raise NotImplementedError(type(self))
 
 
 class PolarsExprTransformation:
@@ -397,6 +403,21 @@ class Expression(Codable):
             return self.transformation.polars_expr()
         return None
 
+    def to_glot(self) -> exp.Expression | None:
+        if self.column:
+            return exp.column(self.column)
+        if self.literal:
+            val = self.literal.python_value
+            if isinstance(val, str):
+                return exp.Literal.string(val)
+            else:
+                return exp.Literal.number(val)
+        if self.transformation and isinstance(
+            self.transformation, GlotExprTransformation
+        ):
+            return self.transformation.to_glot()
+        return None
+
     @staticmethod
     def from_value(value: Any) -> Expression:
         from aligned.compiler.feature_factory import FeatureFactory
@@ -457,7 +478,9 @@ BinaryOperators = Literal[
 
 
 @dataclass
-class BinaryTransformation(Transformation, PolarsExprTransformation, SparkExpression):
+class BinaryTransformation(
+    Transformation, PolarsExprTransformation, SparkExpression, GlotExprTransformation
+):
     left: Expression
     right: Expression
 
@@ -469,6 +492,72 @@ class BinaryTransformation(Transformation, PolarsExprTransformation, SparkExpres
         all = self.left.needed_columns()
         all.extend(self.right.needed_columns())
         return all
+
+    def to_glot(self) -> exp.Expression:
+        left = self.left.to_glot()
+        right = self.right.to_glot()
+
+        assert left is not None
+        assert right is not None
+
+        match self.operator:
+            case "neq":
+                return exp.NEQ(this=left, expression=right)
+            case "eq":
+                return exp.EQ(this=left, expression=right)
+            case "gte":
+                return exp.GTE(this=left, expression=right)
+            case "gt":
+                return exp.GT(this=left, expression=right)
+            case "lte":
+                return exp.LTE(this=left, expression=right)
+            case "lt":
+                return exp.LT(this=left, expression=right)
+            case "add":
+                return exp.Add(this=left, expression=right)
+            case "sub":
+                return exp.Sub(this=left, expression=right)
+            case "mul":
+                return exp.Mul(this=left, expression=right)
+            case "div":
+                return exp.Div(this=left, expression=right)
+            case "mod":
+                return exp.Mod(this=left, expression=right)
+            case "xor":
+                return exp.BitwiseXor(this=left, expression=right)
+            case "and":
+                return exp.And(this=left, expression=right)
+            case "or":
+                return exp.Or(this=left, expression=right)
+            case "pow":
+                return exp.Pow(this=left, expression=right)
+            case "str_contains":
+                return exp.Anonymous(this="CONTAINS", expressions=[left, right])
+            case "list_contains":
+                return exp.Anonymous(this="ARRAY_CONTAINS", expressions=[left, right])
+            case "isin":
+                return exp.In(this=left, expressions=[right])
+            case "floor_div":
+                # SQLglot doesn't have floor division, simulate with FLOOR(a / b)
+                return exp.Anonymous(
+                    this="FLOOR", expressions=[exp.Div(this=left, expression=right)]
+                )
+            case "min":
+                return exp.Anonymous(this="LEAST", expressions=[left, right])
+            case "max":
+                return exp.Anonymous(this="GREATEST", expressions=[left, right])
+            case "concat":
+                return exp.Concat(expressions=[left, right])
+            case "str_starts_with":
+                return exp.Anonymous(this="STARTS_WITH", expressions=[left, right])
+            case "str_ends_with":
+                return exp.Anonymous(this="ENDS_WITH", expressions=[left, right])
+            case "str_split":
+                return exp.Anonymous(this="SPLIT", expressions=[left, right])
+            case "str_find":
+                return exp.Anonymous(this="POSITION", expressions=[right, left])
+            case _:
+                raise ValueError(f"Unable to format '{self.operator}' for {self}")
 
     def polars_expr(self) -> pl.Expr | None:
         left_exp = self.left.to_polars()
@@ -776,7 +865,7 @@ UnaryFunction = Literal[
 
 
 @dataclass
-class UnaryTransformation(Transformation, InnerTransformation):
+class UnaryTransformation(Transformation, InnerTransformation, GlotExprTransformation):
     inner: Expression
     func: UnaryFunction
     name: str = "unary"
@@ -784,6 +873,84 @@ class UnaryTransformation(Transformation, InnerTransformation):
 
     def needed_columns(self) -> list[str]:
         return self.inner.needed_columns()
+
+    def to_glot(self) -> exp.Expression:
+        inner_exp = self.inner.to_glot()
+        assert inner_exp is not None
+
+        match self.func:
+            case "is_null":
+                return exp.Anonymous(this="IS NULL", expressions=[inner_exp])
+            case "is_not_null":
+                return exp.Anonymous(this="IS NOT NULL", expressions=[inner_exp])
+            case "is_nan":
+                return exp.Anonymous(this="IS_NAN", expressions=[inner_exp])
+            case "is_not_nan":
+                return exp.Anonymous(this="NOT IS_NAN", expressions=[inner_exp])
+            case "is_finite":
+                return exp.Anonymous(this="IS_FINITE", expressions=[inner_exp])
+            case "is_infinite":
+                return exp.Anonymous(this="IS_INFINITE", expressions=[inner_exp])
+            case "not":
+                return exp.Not(this=inner_exp)
+            case "floor":
+                return exp.Anonymous(this="FLOOR", expressions=[inner_exp])
+            case "ceil":
+                return exp.Anonymous(this="CEIL", expressions=[inner_exp])
+            case "round":
+                return exp.Anonymous(this="ROUND", expressions=[inner_exp])
+            case "abs":
+                return exp.Anonymous(this="ABS", expressions=[inner_exp])
+            case "sqrt":
+                return exp.Anonymous(this="SQRT", expressions=[inner_exp])
+            case "log10":
+                return exp.Anonymous(this="LOG10", expressions=[inner_exp])
+            case "exp":
+                return exp.Anonymous(this="EXP", expressions=[inner_exp])
+            case "sign":
+                return exp.Anonymous(this="SIGN", expressions=[inner_exp])
+            case "sin":
+                return exp.Anonymous(this="SIN", expressions=[inner_exp])
+            case "cos":
+                return exp.Anonymous(this="COS", expressions=[inner_exp])
+            case "tan":
+                return exp.Anonymous(this="TAN", expressions=[inner_exp])
+            case "cot":
+                return exp.Anonymous(this="COT", expressions=[inner_exp])
+            case "arcsin":
+                return exp.Anonymous(this="ASIN", expressions=[inner_exp])
+            case "arccos":
+                return exp.Anonymous(this="ACOS", expressions=[inner_exp])
+            case "arctan":
+                return exp.Anonymous(this="ATAN", expressions=[inner_exp])
+            case "sinh":
+                return exp.Anonymous(this="SINH", expressions=[inner_exp])
+            case "cosh":
+                return exp.Anonymous(this="COSH", expressions=[inner_exp])
+            case "tanh":
+                return exp.Anonymous(this="TANH", expressions=[inner_exp])
+            case "arcsinh":
+                return exp.Anonymous(this="ASINH", expressions=[inner_exp])
+            case "arccosh":
+                return exp.Anonymous(this="ACOSH", expressions=[inner_exp])
+            case "arctanh":
+                return exp.Anonymous(this="ATANH", expressions=[inner_exp])
+            case "degrees":
+                return exp.Anonymous(this="DEGREES", expressions=[inner_exp])
+            case "radians":
+                return exp.Anonymous(this="RADIANS", expressions=[inner_exp])
+            case "log1p":
+                return exp.Anonymous(this="LOG1P", expressions=[inner_exp])
+            case "str_len_char":
+                return exp.Anonymous(this="LENGTH", expressions=[inner_exp])
+            case "str_to_lower":
+                return exp.Anonymous(this="LOWER", expressions=[inner_exp])
+            case "str_to_upper":
+                return exp.Anonymous(this="UPPER", expressions=[inner_exp])
+            case _:
+                raise ValueError(
+                    f"Unary function '{self.func}' not supported for SQLglot"
+                )
 
     def polars_expr_from(self, inner: pl.Expr) -> pl.Expr:
         match self.func:
@@ -1376,7 +1543,7 @@ class ToNumerical(Transformation, PolarsExprTransformation):
 
 
 @dataclass
-class DateComponent(Transformation, PolarsExprTransformation):
+class DateComponent(Transformation, PolarsExprTransformation, GlotExprTransformation):
     key: str
     component: str
 
@@ -1389,6 +1556,40 @@ class DateComponent(Transformation, PolarsExprTransformation):
     def __init__(self, key: str, component: str) -> None:
         self.key = key
         self.component = component
+
+    def to_glot(self) -> exp.Expression:
+        col_exp = exp.column(self.key)
+
+        # Map component to SQL date/time extraction functions
+        match self.component:
+            case "day":
+                return exp.Anonymous(this="DAY", expressions=[col_exp])
+            case "hour":
+                return exp.Anonymous(this="HOUR", expressions=[col_exp])
+            case "minute":
+                return exp.Anonymous(this="MINUTE", expressions=[col_exp])
+            case "second":
+                return exp.Anonymous(this="SECOND", expressions=[col_exp])
+            case "month":
+                return exp.Anonymous(this="MONTH", expressions=[col_exp])
+            case "year":
+                return exp.Anonymous(this="YEAR", expressions=[col_exp])
+            case "quarter":
+                return exp.Anonymous(this="QUARTER", expressions=[col_exp])
+            case "week":
+                return exp.Anonymous(this="WEEK", expressions=[col_exp])
+            case "weekday":
+                return exp.Anonymous(this="DAYOFWEEK", expressions=[col_exp])
+            case "dayofweek":
+                return exp.Anonymous(this="DAYOFWEEK", expressions=[col_exp])
+            case "epoch":
+                return exp.Anonymous(this="UNIX_TIMESTAMP", expressions=[col_exp])
+            case _:
+                # For unsupported components, fall back to generic EXTRACT function
+                return exp.Anonymous(
+                    this="EXTRACT",
+                    expressions=[exp.Literal.string(self.component.upper()), col_exp],
+                )
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -1603,7 +1804,7 @@ class ArrayContains(Transformation, PolarsExprTransformation):
 
 
 @dataclass
-class Contains(Transformation, PolarsExprTransformation):
+class Contains(Transformation, PolarsExprTransformation, GlotExprTransformation):
     """Checks if a string value contains another string
 
     some_string = String()
@@ -1622,6 +1823,12 @@ class Contains(Transformation, PolarsExprTransformation):
 
     def needed_columns(self) -> list[str]:
         return self.polars_expr().meta.root_names()
+
+    def to_glot(self) -> exp.Expression:
+        col_exp = exp.column(self.key)
+        value_literal = exp.Literal.string(self.value)
+        # Use CONTAINS or LIKE depending on SQL dialect preference
+        return exp.Anonymous(this="CONTAINS", expressions=[col_exp, value_literal])
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -1723,7 +1930,7 @@ class ReplaceStrings(Transformation):
 
 
 @dataclass
-class IsIn(Transformation, PolarsExprTransformation):
+class IsIn(Transformation, PolarsExprTransformation, GlotExprTransformation):
     values: list
     key: str
 
@@ -1732,6 +1939,17 @@ class IsIn(Transformation, PolarsExprTransformation):
 
     def needed_columns(self) -> list[str]:
         return [self.key]
+
+    def to_glot(self) -> exp.Expression:
+        col_exp = exp.column(self.key)
+        # Create literals for each value in the list
+        value_literals = []
+        for value in self.values:
+            if isinstance(value, str):
+                value_literals.append(exp.Literal.string(value))
+            else:
+                value_literals.append(exp.Literal.number(value))
+        return exp.In(this=col_exp, expressions=value_literals)
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -1795,7 +2013,7 @@ class FillNaValuesColumns(Transformation):
 
 
 @dataclass
-class FillNaValues(Transformation, PolarsExprTransformation):
+class FillNaValues(Transformation, PolarsExprTransformation, GlotExprTransformation):
     key: str
     value: LiteralValue
     dtype: FeatureType
@@ -1804,6 +2022,16 @@ class FillNaValues(Transformation, PolarsExprTransformation):
 
     def needed_columns(self) -> list[str]:
         return [self.key]
+
+    def to_glot(self) -> exp.Expression:
+        col_exp = exp.column(self.key)
+        if isinstance(self.value.python_value, str):
+            value_literal = exp.Literal.string(self.value.python_value)
+        else:
+            value_literal = exp.Literal.number(self.value.python_value)
+
+        # Use COALESCE to fill null values - standard SQL function
+        return exp.Anonymous(this="COALESCE", expressions=[col_exp, value_literal])
 
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
@@ -2689,15 +2917,42 @@ class IsBetweenTransformation(
 
 
 @dataclass
-class CastTransform(Transformation, InnerTransformation):
+class CastTransform(Transformation, InnerTransformation, GlotExprTransformation):
     inner: Expression
     dtype: FeatureType
 
-    name = "log"
+    name = "cast"
     dtype: FeatureType = FeatureType.float32()
 
     def needed_columns(self) -> list[str]:
         return self.inner.needed_columns()
+
+    def to_glot(self) -> exp.Expression:
+        inner_exp = self.inner.to_glot()
+        assert inner_exp is not None
+
+        # Map FeatureType to SQL types
+        sql_type = None
+        if self.dtype == FeatureType.int32():
+            sql_type = "INT"
+        elif self.dtype == FeatureType.int64():
+            sql_type = "BIGINT"
+        elif self.dtype == FeatureType.float32():
+            sql_type = "FLOAT"
+        elif (
+            self.dtype == FeatureType.float64()
+            or self.dtype == FeatureType.floating_point()
+        ):
+            sql_type = "DOUBLE"
+        elif self.dtype == FeatureType.string():
+            sql_type = "VARCHAR"
+        elif self.dtype == FeatureType.boolean():
+            sql_type = "BOOLEAN"
+        else:
+            # Default fallback for unsupported types
+            sql_type = "VARCHAR"
+
+        return exp.Cast(this=inner_exp, to=sql_type)
 
     def pandas_tran(self, column: pd.Series) -> pd.Series:
         return column.astype(self.dtype.pandas_type)

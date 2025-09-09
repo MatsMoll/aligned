@@ -4,7 +4,7 @@ import logging
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 from uuid import uuid4
 
 from aligned.config_value import ConfigValue, PathResolver, PlaceholderValue
@@ -31,6 +31,7 @@ from aligned.sources.azure_blob_config import AzureBlobConfig
 
 if TYPE_CHECKING:
     from datetime import datetime
+    from aligned.schemas.transformation import Expression
     from aligned.schemas.repo_definition import RepoDefinition
     from aligned.schemas.feature_view import CompiledFeatureView
     from aligned.feature_store import ContractStore
@@ -40,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 class Deletable:
-    async def delete(self) -> None:
+    async def delete(self, predicate: Expression | None = None) -> None:
         raise NotImplementedError(type(self))
 
 
@@ -255,8 +256,15 @@ class CsvFileSource(
 [Go to file]({self.path.as_posix()})
 """  # noqa
 
-    async def delete(self) -> None:
-        delete_path(self.path.as_posix())
+    async def delete(self, predicate: Expression | None = None) -> None:
+        if not predicate:
+            delete_path(self.path.as_posix())
+        else:
+            polars_exp = predicate.to_polars()
+            assert polars_exp is not None
+            df = await self.to_lazy_polars()
+            filtered_df = df.filter(polars_exp.not_())
+            await self.write_polars(filtered_df)
 
     async def read_pandas(self) -> pd.DataFrame:
         path = self.path.as_posix()
@@ -358,8 +366,22 @@ class CsvFileSource(
 
         await self.write_polars(write_df)
 
-    async def overwrite(self, job: RetrievalJob, request: RetrievalRequest) -> None:
+    async def overwrite(
+        self,
+        job: RetrievalJob,
+        request: RetrievalRequest,
+        predicate: Expression | None = None,
+    ) -> None:
         data = (await job.to_lazy_polars()).select(request.all_returned_columns)
+
+        if predicate is not None:
+            polars_exp = predicate.to_polars()
+            assert polars_exp is not None
+            existing = await self.to_lazy_polars()
+            data = pl.concat(
+                [data, existing.filter(polars_exp).select(data.columns)], how="vertical"
+            )
+
         for feature in request.features:
             if feature.dtype.is_datetime:
                 data = data.with_columns(self.formatter.encode_polars(feature.name))
@@ -525,8 +547,15 @@ class PartitionedParquetFileSource(
             date_formatter=self.date_formatter,
         )
 
-    async def delete(self) -> None:
-        delete_path(self.directory.as_posix())
+    async def delete(self, predicate: Expression | None = None) -> None:
+        if not predicate:
+            delete_path(self.directory.as_posix())
+        else:
+            polars_exp = predicate.to_polars()
+            assert polars_exp is not None
+            df = await self.to_lazy_polars()
+            filtered_df = df.filter(polars_exp.not_())
+            await self.write_polars(filtered_df)
 
     async def to_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
@@ -673,8 +702,18 @@ class PartitionedParquetFileSource(
 
         await self.write_polars(write_df.lazy())
 
-    async def overwrite(self, job: RetrievalJob, request: RetrievalRequest) -> None:
+    async def overwrite(
+        self,
+        job: RetrievalJob,
+        request: RetrievalRequest,
+        predicate: Expression | None = None,
+    ) -> None:
         import shutil
+
+        if predicate:
+            raise NotImplementedError(
+                f"Have not implemented the partial overwrite for {type(self)}"
+            )
 
         posix_dir = self.directory.as_posix()
         if Path(posix_dir).exists():
@@ -724,8 +763,15 @@ class ParquetFileSource(
     def __hash__(self) -> int:
         return hash(self.job_group_key())
 
-    async def delete(self) -> None:
-        delete_path(self.path.as_posix())
+    async def delete(self, predicate: Expression | None = None) -> None:
+        if not predicate:
+            delete_path(self.path.as_posix())
+        else:
+            polars_exp = predicate.to_polars()
+            assert polars_exp is not None
+            df = await self.to_lazy_polars()
+            filtered_df = df.filter(polars_exp.not_())
+            await self.write_polars(filtered_df)
 
     async def read_pandas(self) -> pd.DataFrame:
         path = self.path.as_posix()
@@ -822,6 +868,18 @@ class DeltaFileConfig(Codable):
 
 
 @dataclass
+class DeltaConfig(Codable):
+    schema_mode: Literal["merge", "overwrite"] = field(default="overwrite")
+    partition_by: list[str] | str | None = field(default=None)
+    target_file_size: int | None = field(default=None)
+
+    def write_options(self) -> dict[str, Any]:
+        return {
+            key: value for key, value in self.to_dict().items() if value is not None
+        }
+
+
+@dataclass
 class DeltaFileSource(
     CodableBatchDataSource,
     ColumnFeatureMappable,
@@ -833,10 +891,12 @@ class DeltaFileSource(
     A source pointing to a Parquet file
     """
 
-    path: str
+    path: PathResolver
     mapping_keys: dict[str, str] = field(default_factory=dict)
-    config: DeltaFileConfig = field(default_factory=DeltaFileConfig)
+    config: DeltaConfig = field(default_factory=DeltaConfig)
     date_formatter: DateFormatter = field(default_factory=lambda: DateFormatter.noop())
+
+    azure_config: AzureBlobConfig | None = field(default=None)
 
     type_name: str = "delta"
 
@@ -846,8 +906,10 @@ class DeltaFileSource(
     def __hash__(self) -> int:
         return hash(self.job_group_key())
 
-    async def delete(self) -> None:
-        delete_path(self.path)
+    async def delete(self, predicate: Expression | None = None) -> None:
+        if not predicate:
+            delete_path(self.path.as_posix())
+            return
 
     async def read_pandas(self) -> pd.DataFrame:
         return (await self.to_lazy_polars()).collect().to_pandas()
@@ -856,20 +918,30 @@ class DeltaFileSource(
         await self.write_polars(pl.from_pandas(df).lazy())
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
-        if not do_dir_exist(self.path):
-            raise UnableToFindFileException(self.path)
+        storage_options = None
+        if self.azure_config:
+            storage_options = self.azure_config.read_creds()
+
+        if storage_options is None and not do_dir_exist(self.path.as_posix()):
+            raise UnableToFindFileException(self.path.as_posix())
 
         try:
-            return pl.scan_delta(self.path)
+            return pl.scan_delta(self.path.as_posix(), storage_options=storage_options)
         except OSError:
-            raise UnableToFindFileException(self.path)
+            raise UnableToFindFileException(self.path.as_posix())
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
-        create_parent_dir(self.path)
+        storage_options = None
+        if self.azure_config:
+            storage_options = self.azure_config.read_creds()
+        else:
+            # Only in local dirs
+            create_parent_dir(self.path.as_posix())
+
         df.collect().write_delta(
-            self.path,
-            mode=self.config.mode,
-            overwrite_schema=self.config.overwrite_schema,
+            self.path.as_posix(),
+            delta_write_options=self.config.write_options(),
+            storage_options=storage_options,
         )
 
     def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
@@ -905,7 +977,7 @@ class DeltaFileSource(
         )
 
     async def schema(self) -> dict[str, FeatureType]:
-        parquet_schema = pl.read_delta(self.path).schema
+        parquet_schema = pl.read_delta(self.path.as_posix()).schema
         return {
             name: FeatureType.from_polars(pl_type)
             for name, pl_type in parquet_schema.items()
@@ -921,26 +993,54 @@ class DeltaFileSource(
             schema, data_source_code, view_name, "from aligned import FileSource"
         )
 
-    async def overwrite(self, job: RetrievalJob, request: RetrievalRequest) -> None:
+    async def overwrite(
+        self,
+        job: RetrievalJob,
+        request: RetrievalRequest,
+        predicate: Expression | None = None,
+    ) -> None:
+        write_options = self.config.write_options()
+
+        if predicate:
+            glot = predicate.to_glot()
+            assert glot is not None
+            write_options["predicate"] = glot.sql(dialect="spark")
+
+        storage_options = None
+        if self.azure_config:
+            storage_options = self.azure_config.read_creds()
+
         data = await job.to_lazy_polars()
         data.select(request.all_returned_columns).collect().write_delta(
-            self.path, mode="overwrite"
+            self.path.as_posix(),
+            mode="overwrite",
+            delta_write_options=write_options,
+            storage_options=storage_options,
         )
 
     async def insert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         data = await job.to_lazy_polars()
         data.select(request.all_returned_columns).collect().write_delta(
-            self.path, mode="append"
+            self.path.as_posix(), mode="append"
         )
 
     async def upsert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         new_data = await job.to_lazy_polars()
         existing = await self.to_lazy_polars()
 
+        storage_options = None
+        if self.azure_config:
+            storage_options = self.azure_config.read_creds()
+
         # Should to a merge statement instead
         upsert_on_column(
             list(request.entity_names), new_data, existing
-        ).collect().write_delta(self.path, mode="overwrite")
+        ).collect().write_delta(
+            self.path.as_posix(),
+            mode="overwrite",
+            storage_options=storage_options,
+            delta_write_options=self.config.write_options(),
+        )
 
 
 @dataclass
@@ -1014,7 +1114,7 @@ class Directory(Protocol):
         self,
         path: str,
         mapping_keys: dict[str, str] | None = None,
-        config: DeltaFileConfig | None = None,
+        config: DeltaConfig | None = None,
     ) -> CodableBatchDataSource: ...
 
     def sub_directory(self, path: str | ConfigValue) -> Directory: ...
@@ -1081,10 +1181,12 @@ class FileDirectory(Codable, Directory):
         self,
         path: str,
         mapping_keys: dict[str, str] | None = None,
-        config: DeltaFileConfig | None = None,
+        config: DeltaConfig | None = None,
     ) -> DeltaFileSource:
         return DeltaFileSource(
-            path, mapping_keys or {}, config=config or DeltaFileConfig()
+            PathResolver([ConfigValue.from_value(path)]),
+            mapping_keys or {},
+            config=config or DeltaConfig(),
         )
 
     def sub_directory(self, path: str | ConfigValue) -> FileDirectory:
@@ -1171,13 +1273,13 @@ class FileSource:
     def delta_at(
         path: str,
         mapping_keys: dict[str, str] | None = None,
-        config: DeltaFileConfig | None = None,
+        config: DeltaConfig | None = None,
         date_formatter: DateFormatter | None = None,
     ) -> DeltaFileSource:
         return DeltaFileSource(
-            path,
+            PathResolver([ConfigValue.from_value(path)]),
             mapping_keys or {},
-            config=config or DeltaFileConfig(),
+            config=config or DeltaConfig(),
             date_formatter=date_formatter or DateFormatter.noop(),
         )
 
