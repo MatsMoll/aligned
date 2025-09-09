@@ -11,11 +11,11 @@ from aligned.config_value import (
     NothingValue,
     PathResolver,
 )
-from aligned.sources.local import DeltaConfig, DeltaFileSource
 from aligned.storage import Storage
 from io import BytesIO
 
 if TYPE_CHECKING:
+    from aligned.sources.local import DeltaConfig, DeltaFileSource
     from azure.storage.blob import BlobServiceClient
     from aligned.sources.azure_blob_storage import (
         AzureBlobParquetDataSource,
@@ -196,6 +196,8 @@ You can choose between two ways of authenticating with Azure Blob Storage.
         config: DeltaConfig | None = None,
         date_formatter: DateFormatter | None = None,
     ) -> DeltaFileSource:
+        from aligned.sources.local import DeltaConfig
+
         return DeltaFileSource(
             path=PathResolver.from_value(path),
             config=config or DeltaConfig(),
