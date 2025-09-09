@@ -5,6 +5,7 @@ from aligned.polars_to_spark import ExpressionNode
 def test_polars_decoding() -> None:
     test_cases = [
         # Basic comparisons
+        pl.col("a") == False,  # noqa: E712
         pl.col("a") == 10,
         pl.col("a") == "test",
         pl.col("a") != 5,

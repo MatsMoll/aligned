@@ -74,9 +74,14 @@ class BinaryExpression(BaseModel):
 
 class ScalarValue(BaseModel):
     string: str | None = Field(None, alias="StringOwned")
+    boolean: bool | None = Field(None, alias="Boolean")
 
     def to_expression(self) -> Expression:
-        return Expression(literal=LiteralValue.from_value(self.string))
+        if self.string:
+            return Expression(literal=LiteralValue.from_value(self.string))
+        elif self.boolean:
+            return Expression(literal=LiteralValue.from_value(self.boolean))
+        raise ValueError(f"Unable to format '{self}'")
 
 
 class Scalar(BaseModel):
