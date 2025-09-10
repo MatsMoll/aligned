@@ -266,8 +266,6 @@ async def test_delta_overwrite_predicate_with_partition():
         predicate=Expression.from_value(pl.col("a") == 1),
     )
     new = await source.to_polars()
-    print(new)
-    print(expected)
     assert_frame_equal(new.sort("e"), expected.sort("e"), check_column_order=False)
 
 
