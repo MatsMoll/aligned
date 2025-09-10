@@ -258,7 +258,7 @@ async def test_delta_overwrite_predicate_with_partition():
         RetrievalJob.from_polars_df(initial_data, [request]), request
     )
     data = await source.to_polars()
-    assert_frame_equal(data, initial_data, check_column_order=False)
+    assert_frame_equal(data.sort("e"), initial_data.sort("e"), check_column_order=False)
 
     await source.overwrite(
         RetrievalJob.from_polars_df(new_data, [request]),

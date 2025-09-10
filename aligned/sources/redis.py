@@ -10,6 +10,7 @@ import polars as pl
 
 from aligned.config_value import ConfigValue, EnvironmentValue, LiteralValue
 from aligned.schemas.feature_view import CompiledFeatureView
+from aligned.schemas.transformation import Expression
 from aligned.streams.interface import ReadableStream
 from aligned.lazy_imports import redis
 from aligned.data_source.batch_data_source import (
@@ -294,7 +295,12 @@ class RedisSource(WritableFeatureSource, CodableBatchDataSource):
     async def upsert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         await self.insert(job, request)
 
-    async def overwrite(self, job: RetrievalJob, request: RetrievalRequest) -> None:
+    async def overwrite(
+        self,
+        job: RetrievalJob,
+        request: RetrievalRequest,
+        predicate: Expression | None = None,
+    ) -> None:
         return await self.insert(job, request)
 
 

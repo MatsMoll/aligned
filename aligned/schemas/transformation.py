@@ -1964,7 +1964,8 @@ class IsIn(Transformation, PolarsExprTransformation, GlotExprTransformation):
     async def transform_pandas(
         self, df: pd.DataFrame, store: ContractStore
     ) -> pd.Series:
-        return df[self.key].isin(self.values)  # type: ignore
+        assert self.key.column is not None
+        return df[self.key.column].isin(self.values)  # type: ignore
 
     def polars_expr(self) -> pl.Expr:
         key_exp = self.key.to_polars()

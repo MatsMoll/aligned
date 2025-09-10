@@ -110,7 +110,9 @@ class FactualRedisJob(RetrievalJob):
                         )
                     )
                 elif feature.dtype.is_array:
-                    reqs = reqs.with_columns(pl.col(feature.name).str.json_decode())
+                    reqs = reqs.with_columns(
+                        pl.col(feature.name).str.json_decode(pl.List)
+                    )
                 else:
                     reqs = reqs.with_columns(
                         pl.col(feature.name).cast(feature.dtype.polars_type)
