@@ -76,7 +76,6 @@ class BatchDataSourceFactory:
         from aligned.sources.s3 import AwsS3CsvDataSource, AwsS3ParquetDataSource
         from aligned.sources.azure_blob_storage import (
             AzureBlobCsvDataSource,
-            AzureBlobDeltaDataSource,
             AzureBlobParquetDataSource,
             AzureBlobPartitionedParquetDataSource,
         )
@@ -98,7 +97,6 @@ class BatchDataSourceFactory:
             RedshiftSQLDataSource,
             # Azure Sources
             AzureBlobCsvDataSource,
-            AzureBlobDeltaDataSource,
             AzureBlobParquetDataSource,
             AzureBlobPartitionedParquetDataSource,
             # LanceDB
