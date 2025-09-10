@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Union
 import polars as pl
 
 from aligned.config_value import ConfigValue, EnvironmentValue, LiteralValue
+from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.transformation import Expression
 from aligned.streams.interface import ReadableStream
@@ -181,6 +182,8 @@ class RedisSource(WritableFeatureSource, CodableBatchDataSource):
     config: RedisConfig
     batch_size = 1_000_000
     expire_duration: timedelta | None = None
+    formatter: DateFormatter = field(default_factory=DateFormatter.unix_timestamp)
+
     type_name: str = "redis_source"
 
     def job_group_key(self) -> str:

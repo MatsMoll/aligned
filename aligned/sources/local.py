@@ -900,6 +900,11 @@ class DeltaFileSource(
 
     type_name: str = "delta"
 
+    def storage_options(self) -> dict[str, Any] | None:
+        if self.azure_config:
+            return self.azure_config.read_creds()
+        return None
+
     def job_group_key(self) -> str:
         return f"{self.type_name}/{self.path}"
 
@@ -918,9 +923,7 @@ class DeltaFileSource(
         await self.write_polars(pl.from_pandas(df).lazy())
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
-        storage_options = None
-        if self.azure_config:
-            storage_options = self.azure_config.read_creds()
+        storage_options = self.storage_options()
 
         if storage_options is None and not do_dir_exist(self.path.as_posix()):
             raise UnableToFindFileException(self.path.as_posix())
@@ -931,10 +934,9 @@ class DeltaFileSource(
             raise UnableToFindFileException(self.path.as_posix())
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
-        storage_options = None
-        if self.azure_config:
-            storage_options = self.azure_config.read_creds()
-        else:
+        storage_options = self.storage_options()
+
+        if storage_options is None:
             # Only in local dirs
             create_parent_dir(self.path.as_posix())
 
@@ -1006,9 +1008,7 @@ class DeltaFileSource(
             assert glot is not None
             write_options["predicate"] = glot.sql(dialect="spark")
 
-        storage_options = None
-        if self.azure_config:
-            storage_options = self.azure_config.read_creds()
+        storage_options = self.storage_options()
 
         data = await job.to_lazy_polars()
         data.select(request.all_returned_columns).collect().write_delta(
@@ -1024,15 +1024,12 @@ class DeltaFileSource(
             self.path.as_posix(),
             mode="append",
             delta_write_options=self.config.write_options(),
+            storage_options=self.storage_options(),
         )
 
     async def upsert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         new_data = await job.to_lazy_polars()
         existing = await self.to_lazy_polars()
-
-        storage_options = None
-        if self.azure_config:
-            storage_options = self.azure_config.read_creds()
 
         # Should to a merge statement instead
         upsert_on_column(
@@ -1040,7 +1037,7 @@ class DeltaFileSource(
         ).collect().write_delta(
             self.path.as_posix(),
             mode="overwrite",
-            storage_options=storage_options,
+            storage_options=self.storage_options(),
             delta_write_options=self.config.write_options(),
         )
 
