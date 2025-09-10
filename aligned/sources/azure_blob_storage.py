@@ -387,7 +387,7 @@ Partition Keys: *{self.partition_keys}*
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
         try:
-            url = f"az://{self.directory}/**/*.parquet"
+            url = f"az://{self.directory.as_posix()}/**/*.parquet"
             creds = self.config.read_creds()
             return pl.scan_parquet(url, storage_options=creds, hive_partitioning=True)
         except FileNotFoundError as error:
@@ -414,7 +414,7 @@ Partition Keys: *{self.partition_keys}*
 
         write_to_dataset(
             table=df.collect().to_arrow(),
-            root_path=self.directory,
+            root_path=self.directory.as_posix(),
             **(pyarrow_options or {}),
         )
 
