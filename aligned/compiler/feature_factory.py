@@ -2,7 +2,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    Sequence,
+    TypeVar,
+    overload,
+)
 
 from aligned.lazy_imports import pandas as pd
 import polars as pl
@@ -854,7 +863,7 @@ class EquatableFeature(FeatureFactory):
     def not_equals(self: T, right: T | PythonType) -> Bool:
         return self != right  # type: ignore
 
-    def is_in(self: T, values: list[PythonType] | List[T]) -> Bool:
+    def is_in(self: T, values: Sequence[PythonType] | List[T]) -> Bool:
         from aligned.compiler.transformation_factory import BinaryFactory
 
         instance = Bool()
