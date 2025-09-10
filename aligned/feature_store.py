@@ -667,7 +667,16 @@ class ContractStore:
         if not isinstance(entities, RetrievalJob):
             logger.debug("Converting entities into a RetrievalJob")
             if isinstance(entities, pl.DataFrame) and entities.is_empty():
-                return RetrievalJob.from_convertable(entities, requests)
+                return RetrievalJob.from_convertable(
+                    entities.with_columns(
+                        *[
+                            pl.lit(None).alias(feat.name).cast(feat.dtype.polars_type)
+                            for feat in requests.request_result.features
+                            if feat.name not in entities.columns
+                        ]
+                    ),
+                    requests,
+                )
             if (
                 _PANDAS_AVAILABLE
                 and isinstance(entities, pd.DataFrame)
