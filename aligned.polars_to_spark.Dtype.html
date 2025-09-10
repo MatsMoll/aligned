@@ -6,7 +6,7 @@
 
   <head>
     
-    <title>aligned.polars_to_spark.ScalarValue</title>
+    <title>aligned.polars_to_spark.Dtype</title>
     <meta name="generator" content="pydoctor 25.4.0"> 
         
     </meta>
@@ -110,7 +110,7 @@
 
       <div class="thingTitle">
         <span>Class</span>
-        <code class="thisobject"><a href="aligned.polars_to_spark.ScalarValue.html" class="internal-link" title="This class"><wbr></wbr>Scalar<wbr></wbr>Value</a></code> 
+        <code class="thisobject"><a href="aligned.polars_to_spark.Dtype.html" class="internal-link" title="This class"><wbr></wbr>Dtype</a></code> 
       </div>
       
       <div>
@@ -122,21 +122,8 @@
         
         
 
-        <div class="childrenKindTitle">Methods</div>
-        <ul>
-    
-    <li class="">
         
-        
-        
-
-        
-            <div class="itemName"><code><a href="#to_expression" class="internal-link" title="aligned.polars_to_spark.ScalarValue.to_expression">to<wbr></wbr>_expression</a></code>
-            </div>
-        
-
-    </li>
-</ul> 
+         
 
         
          
@@ -150,7 +137,7 @@
         
 
         
-            <div class="itemName"><code><a href="#string" class="internal-link" title="aligned.polars_to_spark.ScalarValue.string">string</a></code>
+            <div class="itemName"><code><a href="#literal" class="internal-link" title="aligned.polars_to_spark.Dtype.literal">literal</a></code>
             </div>
         
 
@@ -204,6 +191,16 @@
 
         
             <div class="itemName"><code><a href="aligned.polars_to_spark.CastExpr.html" class="internal-link" title="aligned.polars_to_spark.CastExpr"><wbr></wbr>Cast<wbr></wbr>Expr</a></code>
+            </div>
+        
+
+    </li><li class=" thisobject">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.polars_to_spark.Dtype.html" class="internal-link" title="aligned.polars_to_spark.Dtype"><wbr></wbr>Dtype</a></code>
             </div>
         
 
@@ -264,16 +261,6 @@
 
         
             <div class="itemName"><code><a href="aligned.polars_to_spark.Scalar.html" class="internal-link" title="aligned.polars_to_spark.Scalar"><wbr></wbr>Scalar</a></code>
-            </div>
-        
-
-    </li><li class=" thisobject">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.polars_to_spark.ScalarValue.html" class="internal-link" title="aligned.polars_to_spark.ScalarValue"><wbr></wbr>Scalar<wbr></wbr>Value</a></code>
             </div>
         
 
@@ -407,7 +394,7 @@
         
 
         <div class="page-header">
-          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.polars_to_spark.html" class="internal-link" title="aligned.polars_to_spark">polars_to_spark</a></code><wbr></wbr>.<code><a href="aligned.polars_to_spark.ScalarValue.html" class="internal-link" title="aligned.polars_to_spark.ScalarValue">ScalarValue</a></code></code></h1>
+          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.polars_to_spark.html" class="internal-link" title="aligned.polars_to_spark">polars_to_spark</a></code><wbr></wbr>.<code><a href="aligned.polars_to_spark.Dtype.html" class="internal-link" title="aligned.polars_to_spark.Dtype">Dtype</a></code></code></h1>
           <div id="showPrivate">
             <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
           </div>
@@ -418,8 +405,8 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">ScalarValue</span>(BaseModel): <a href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/polars_to_spark.py#L75" class="sourceLink">(source)</a></code></p>
-          <p><a href="classIndex.html#aligned.polars_to_spark.ScalarValue">View In Hierarchy</a></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">Dtype</span>(BaseModel): <a href="https://github.com/MatsMoll/aligned/tree/5a07be050448d89e238399fbd436925b038f77dd/aligned/polars_to_spark.py#L115" class="sourceLink">(source)</a></code></p>
+          <p><a href="classIndex.html#aligned.polars_to_spark.Dtype">View In Hierarchy</a></p>
         </div>
 
         <div class="moduleDocstring">
@@ -427,18 +414,13 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id144">
+          <table class="children sortable" id="id146">
   
   
-  <tr class="method">
-    
-    <td>Method</td>
-    <td><code><a href="#to_expression" class="internal-link" title="aligned.polars_to_spark.ScalarValue.to_expression">to<wbr></wbr>_expression</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="classvariable">
+  <tr class="classvariable">
     
     <td>Class Variable</td>
-    <td><code><a href="#string" class="internal-link" title="aligned.polars_to_spark.ScalarValue.string">string</a></code></td>
+    <td><code><a href="#literal" class="internal-link" title="aligned.polars_to_spark.Dtype.literal">literal</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr>
 </table>
@@ -448,50 +430,23 @@
         </div>
 
         <div id="childList">
-          <div class="basemethod">
+          <div class="baseclassvariable">
   
   
-  <a name="aligned.polars_to_spark.ScalarValue.to_expression">
+  <a name="aligned.polars_to_spark.Dtype.literal">
     
   </a>
-  <a name="to_expression">
-    
-  </a>
-  <div class="functionHeader">
-    
-    
-    <span class="py-keyword">def</span>&#160;<span class="py-defname">to_expression</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code>Expression</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/polars_to_spark.py#L78">
-      
-      (source)
-    </a>
-    <a class="headerLink" href="#to_expression" title="aligned.polars_to_spark.ScalarValue.to_expression">
-      
-      
-      ¶
-    </a>
-  </div>
-  <div class="docstring functionBody">
-    
-    <div><p class="undocumented">Undocumented</p></div>
-  </div>
-</div><div class="baseclassvariable">
-  
-  
-  <a name="aligned.polars_to_spark.ScalarValue.string">
-    
-  </a>
-  <a name="string">
+  <a name="literal">
     
   </a>
   <div class="functionHeader">
     
-    <span class="py-defname">string</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/d0b0b5895798653800be574ac64790c7e7305b64/aligned/polars_to_spark.py#L76">
+    <span class="py-defname">literal</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5a07be050448d89e238399fbd436925b038f77dd/aligned/polars_to_spark.py#L116">
       
       (source)
     </a>
-    <a class="headerLink" href="#string" title="aligned.polars_to_spark.ScalarValue.string">
+    <a class="headerLink" href="#literal" title="aligned.polars_to_spark.Dtype.literal">
       
       
       ¶
@@ -514,7 +469,7 @@
   <div class="container-fluid">
     <a href="index.html">API Documentation</a> for <a href="https://github.com/MatsMoll/aligned" class="projecthome">aligned</a>,
   generated by <a href="https://github.com/twisted/pydoctor/">pydoctor</a>
-    25.4.0 at 2025-09-04 12:42:01.
+    25.4.0 at 2025-09-10 11:22:03.
   </div>
 
   <!-- Search related scripts needs to be loaded at the end of HTML 

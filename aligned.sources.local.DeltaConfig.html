@@ -6,7 +6,7 @@
 
   <head>
     
-    <title>aligned.sources.local.DirectoryRepo</title>
+    <title>aligned.sources.local.DeltaConfig</title>
     <meta name="generator" content="pydoctor 25.4.0"> 
         
     </meta>
@@ -110,7 +110,7 @@
 
       <div class="thingTitle">
         <span>Class</span>
-        <code class="thisobject"><a href="aligned.sources.local.DirectoryRepo.html" class="internal-link" title="This class"><wbr></wbr>Directory<wbr></wbr>Repo</a></code> 
+        <code class="thisobject"><a href="aligned.sources.local.DeltaConfig.html" class="internal-link" title="This class"><wbr></wbr>Delta<wbr></wbr>Config</a></code> 
       </div>
       
       <div>
@@ -131,38 +131,15 @@
         
 
         
-            <div class="itemName"><code><a href="#as_repo_definition" class="internal-link" title="aligned.sources.local.DirectoryRepo.as_repo_definition">as<wbr></wbr>_repo<wbr></wbr>_definition</a></code>
+            <div class="itemName"><code><a href="#write_options" class="internal-link" title="aligned.sources.local.DeltaConfig.write_options">write<wbr></wbr>_options</a></code>
             </div>
         
 
     </li>
 </ul> 
 
-        <div class="childrenKindTitle">Inherited Methods</div>
-        <ul>
-    
-    <li class="">
         
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.sources.local.AsRepoDefinition.html#as_contract_store" class="internal-link" title="aligned.sources.local.AsRepoDefinition.as_contract_store">as<wbr></wbr>_contract<wbr></wbr>_store</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.sources.local.AsRepoDefinition.html#feature_store" class="internal-link" title="aligned.sources.local.AsRepoDefinition.feature_store">feature<wbr></wbr>_store</a></code>
-            </div>
-        
-
-    </li>
-</ul> 
+         
 
         <div class="childrenKindTitle">Attributes</div>
         <ul>
@@ -173,7 +150,7 @@
         
 
         
-            <div class="itemName"><code><a href="#dir" class="internal-link" title="aligned.sources.local.DirectoryRepo.dir">dir</a></code>
+            <div class="itemName"><code><a href="#partition_by" class="internal-link" title="aligned.sources.local.DeltaConfig.partition_by">partition<wbr></wbr>_by</a></code>
             </div>
         
 
@@ -183,7 +160,17 @@
         
 
         
-            <div class="itemName"><code><a href="#exclude" class="internal-link" title="aligned.sources.local.DirectoryRepo.exclude">exclude</a></code>
+            <div class="itemName"><code><a href="#schema_mode" class="internal-link" title="aligned.sources.local.DeltaConfig.schema_mode">schema<wbr></wbr>_mode</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#target_file_size" class="internal-link" title="aligned.sources.local.DeltaConfig.target_file_size">target<wbr></wbr>_file<wbr></wbr>_size</a></code>
             </div>
         
 
@@ -250,7 +237,7 @@
             </div>
         
 
-    </li><li class="">
+    </li><li class=" thisobject">
         
         
         
@@ -280,7 +267,7 @@
             </div>
         
 
-    </li><li class=" thisobject">
+    </li><li class="">
         
         
         
@@ -470,7 +457,7 @@
         
 
         <div class="page-header">
-          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.sources.html" class="internal-link" title="aligned.sources">sources</a></code><wbr></wbr>.<code><a href="aligned.sources.local.html" class="internal-link" title="aligned.sources.local">local</a></code><wbr></wbr>.<code><a href="aligned.sources.local.DirectoryRepo.html" class="internal-link" title="aligned.sources.local.DirectoryRepo">DirectoryRepo</a></code></code></h1>
+          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.sources.html" class="internal-link" title="aligned.sources">sources</a></code><wbr></wbr>.<code><a href="aligned.sources.local.html" class="internal-link" title="aligned.sources.local">local</a></code><wbr></wbr>.<code><a href="aligned.sources.local.DeltaConfig.html" class="internal-link" title="aligned.sources.local.DeltaConfig">DeltaConfig</a></code></code></h1>
           <div id="showPrivate">
             <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
           </div>
@@ -481,8 +468,8 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">DirectoryRepo</span>(<a href="aligned.sources.local.AsRepoDefinition.html" class="internal-link" title="aligned.sources.local.AsRepoDefinition">AsRepoDefinition</a>): <a href="https://github.com/MatsMoll/aligned/tree/5a07be050448d89e238399fbd436925b038f77dd/aligned/sources/local.py#L1082" class="sourceLink">(source)</a></code></p>
-          <p><a href="classIndex.html#aligned.sources.local.DirectoryRepo">View In Hierarchy</a></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">DeltaConfig</span>(Codable): <a href="https://github.com/MatsMoll/aligned/tree/5a07be050448d89e238399fbd436925b038f77dd/aligned/sources/local.py#L870" class="sourceLink">(source)</a></code></p>
+          <p><a href="classIndex.html#aligned.sources.local.DeltaConfig">View In Hierarchy</a></p>
         </div>
 
         <div class="moduleDocstring">
@@ -490,46 +477,32 @@
         </div>
 
         <div id="splitTables">
-          <table class="children sortable" id="id398">
+          <table class="children sortable" id="id389">
   
   
   <tr class="method">
     
-    <td>Async Method</td>
-    <td><code><a href="#as_repo_definition" class="internal-link" title="aligned.sources.local.DirectoryRepo.as_repo_definition">as<wbr></wbr>_repo<wbr></wbr>_definition</a></code></td>
+    <td>Method</td>
+    <td><code><a href="#write_options" class="internal-link" title="aligned.sources.local.DeltaConfig.write_options">write<wbr></wbr>_options</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="classvariable">
     
     <td>Class Variable</td>
-    <td><code><a href="#dir" class="internal-link" title="aligned.sources.local.DirectoryRepo.dir">dir</a></code></td>
+    <td><code><a href="#partition_by" class="internal-link" title="aligned.sources.local.DeltaConfig.partition_by">partition<wbr></wbr>_by</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="classvariable">
     
     <td>Class Variable</td>
-    <td><code><a href="#exclude" class="internal-link" title="aligned.sources.local.DirectoryRepo.exclude">exclude</a></code></td>
+    <td><code><a href="#schema_mode" class="internal-link" title="aligned.sources.local.DeltaConfig.schema_mode">schema<wbr></wbr>_mode</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
+  </tr><tr class="classvariable">
+    
+    <td>Class Variable</td>
+    <td><code><a href="#target_file_size" class="internal-link" title="aligned.sources.local.DeltaConfig.target_file_size">target<wbr></wbr>_file<wbr></wbr>_size</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr>
 </table>
           
-            <p class="inheritedFrom">
-              Inherited from <code><a href="aligned.sources.local.AsRepoDefinition.html" class="internal-link" title="aligned.sources.local.AsRepoDefinition">AsRepoDefinition</a></code>:
-            </p>
-            <table class="children sortable" id="id399">
-  
-  
-  <tr class="basemethod">
-    
-    <td>Async Method</td>
-    <td><code><a href="aligned.sources.local.AsRepoDefinition.html#as_contract_store" class="internal-link" title="aligned.sources.local.AsRepoDefinition.as_contract_store">as<wbr></wbr>_contract<wbr></wbr>_store</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="basemethod">
-    
-    <td>Async Method</td>
-    <td><code><a href="aligned.sources.local.AsRepoDefinition.html#feature_store" class="internal-link" title="aligned.sources.local.AsRepoDefinition.feature_store">feature<wbr></wbr>_store</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr>
-</table>
-            
 
             
         </div>
@@ -538,47 +511,47 @@
           <div class="basemethod">
   
   
-  <a name="aligned.sources.local.DirectoryRepo.as_repo_definition">
+  <a name="aligned.sources.local.DeltaConfig.write_options">
     
   </a>
-  <a name="as_repo_definition">
+  <a name="write_options">
     
   </a>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">as_repo_definition</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code>RepoDefinition</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5a07be050448d89e238399fbd436925b038f77dd/aligned/sources/local.py#L1087">
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">write_options</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/typing.html#typing.Any" class="intersphinx-link">Any</a>]</code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5a07be050448d89e238399fbd436925b038f77dd/aligned/sources/local.py#L876">
       
       (source)
     </a>
-    <a class="headerLink" href="#as_repo_definition" title="aligned.sources.local.DirectoryRepo.as_repo_definition">
+    <a class="headerLink" href="#write_options" title="aligned.sources.local.DeltaConfig.write_options">
       
       
       ¶
     </a>
   </div>
   <div class="docstring functionBody">
-    <div class="interfaceinfo">overrides <code><a href="aligned.sources.local.AsRepoDefinition.html#as_repo_definition" class="internal-link">aligned.sources.local.AsRepoDefinition.as_repo_definition</a></code></div>
+    
     <div><p class="undocumented">Undocumented</p></div>
   </div>
 </div><div class="baseclassvariable">
   
   
-  <a name="aligned.sources.local.DirectoryRepo.dir">
+  <a name="aligned.sources.local.DeltaConfig.partition_by">
     
   </a>
-  <a name="dir">
+  <a name="partition_by">
     
   </a>
   <div class="functionHeader">
     
-    <span class="py-defname">dir</span>: <code><a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" class="intersphinx-link">Path</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5a07be050448d89e238399fbd436925b038f77dd/aligned/sources/local.py#L1084">
+    <span class="py-defname">partition_by</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5a07be050448d89e238399fbd436925b038f77dd/aligned/sources/local.py#L873">
       
       (source)
     </a>
-    <a class="headerLink" href="#dir" title="aligned.sources.local.DirectoryRepo.dir">
+    <a class="headerLink" href="#partition_by" title="aligned.sources.local.DeltaConfig.partition_by">
       
       
       ¶
@@ -592,20 +565,47 @@
 </div><div class="baseclassvariable">
   
   
-  <a name="aligned.sources.local.DirectoryRepo.exclude">
+  <a name="aligned.sources.local.DeltaConfig.schema_mode">
     
   </a>
-  <a name="exclude">
+  <a name="schema_mode">
     
   </a>
   <div class="functionHeader">
     
-    <span class="py-defname">exclude</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5a07be050448d89e238399fbd436925b038f77dd/aligned/sources/local.py#L1085">
+    <span class="py-defname">schema_mode</span>: <code><a href="https://docs.python.org/3/library/typing.html#typing.Literal" class="intersphinx-link">Literal</a>[<wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">merge</span><span class="rst-variable-quote">'</span>, <wbr></wbr><span class="rst-variable-quote">'</span><span class="rst-variable-string">overwrite</span><span class="rst-variable-quote">'</span>] | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5a07be050448d89e238399fbd436925b038f77dd/aligned/sources/local.py#L872">
       
       (source)
     </a>
-    <a class="headerLink" href="#exclude" title="aligned.sources.local.DirectoryRepo.exclude">
+    <a class="headerLink" href="#schema_mode" title="aligned.sources.local.DeltaConfig.schema_mode">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+    
+  </div>
+</div><div class="baseclassvariable">
+  
+  
+  <a name="aligned.sources.local.DeltaConfig.target_file_size">
+    
+  </a>
+  <a name="target_file_size">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <span class="py-defname">target_file_size</span>: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/5a07be050448d89e238399fbd436925b038f77dd/aligned/sources/local.py#L874">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#target_file_size" title="aligned.sources.local.DeltaConfig.target_file_size">
       
       
       ¶
