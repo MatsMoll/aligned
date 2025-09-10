@@ -72,46 +72,62 @@ class BinaryExpression(BaseModel):
         )
 
 
-class ScalarValue(BaseModel):
-    string: str | None = Field(None, alias="StringOwned")
+class Scalar(BaseModel):
+    value: LiteralPolarsValue | None = Field(None, alias="value")
 
     def to_expression(self) -> Expression:
-        return Expression(literal=LiteralValue.from_value(self.string))
-
-
-class Scalar(BaseModel):
-    value: ScalarValue
+        if self.value is not None:
+            return self.value.to_expression()
+        raise ValueError(f"Unable to format '{self}'")
 
 
 class LiteralPolarsValue(BaseModel):
+    string_owned: str | None = Field(None, alias="StringOwned")
     string: str | None = Field(None, alias="String")
     integer: int | None = Field(None, alias="Int")
     dynamic: LiteralPolarsValue | None = Field(None, alias="Dyn")
-    scalar: Scalar | None = Field(None, alias="Scalar")
+    floating_point: float | None = Field(None, alias="Float")
+    scalar: LiteralPolarsValue | None = Field(None, alias="Scalar")
+    boolean: bool | None = Field(None, alias="Boolean")
+    value: LiteralPolarsValue | None = Field(None)
 
     def to_expression(self) -> Expression:
         if self.dynamic:
             return self.dynamic.to_expression()
         if self.scalar:
-            return self.scalar.value.to_expression()
+            return self.scalar.to_expression()
+        if self.boolean is not None:
+            return Expression(literal=LiteralValue.from_value(self.boolean))
         if self.string is not None:
             return Expression(literal=LiteralValue.from_value(self.string))
+        if self.string_owned is not None:
+            return Expression(literal=LiteralValue.from_value(self.string_owned))
         if self.integer is not None:
             return Expression(literal=LiteralValue.from_value(self.integer))
+        if self.floating_point is not None:
+            return Expression(literal=LiteralValue.from_value(self.floating_point))
+        if self.value is not None:
+            return self.value.to_expression()
 
         raise ValueError(f"Unable to format '{self}'")
 
 
+class Dtype(BaseModel):
+    literal: str = Field(alias="Literal")
+
+
 class CastExpr(BaseModel):
     expr: ExpressionNode
-    dtype: str
+    dtype: str | Dtype
 
     def to_expression(self) -> Expression:
         from aligned.schemas.feature import NAME_POLARS_MAPPING
         from aligned.schemas.transformation import CastTransform
 
+        dtype_name = self.dtype if isinstance(self.dtype, str) else self.dtype.literal
+
         for name, dtype in NAME_POLARS_MAPPING:
-            if self.dtype.lower() == name:
+            if dtype_name.lower() == name:
                 return Expression(
                     transformation=CastTransform(
                         inner=self.expr.to_expression(),
@@ -168,7 +184,7 @@ BoolFunctions = Literal["IsNan", "Not", "IsNull", "IsNotNull", "IsNotNan"]
 StrFunctions = Literal[
     "StartsWith", "EndsWith", "Contains", "LenChars", "Lowercase", "Uppercase"
 ]
-UnaryFunctions = Literal["Exp", "Abs"]
+UnaryFunctions = Literal["Exp", "Abs", "Log"]
 TrigFunctions = Literal["Sin", "Cos", "Tan"]
 TemporalFunctions = Literal[
     "Day",
@@ -206,6 +222,7 @@ class FunctionNode(BaseModel):
             func_mapping: dict[UnaryFunctions, UnaryFunction] = {
                 "Exp": "exp",
                 "Abs": "abs",
+                "Log": "log",
             }
             tran = UnaryTransformation(
                 inner=self.input[0].to_expression(), func=func_mapping[self.function]

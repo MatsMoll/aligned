@@ -2,7 +2,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    Sequence,
+    TypeVar,
+    overload,
+)
 
 from aligned.lazy_imports import pandas as pd
 import polars as pl
@@ -829,6 +838,9 @@ class CouldBeEntityFeature:
         return self.with_tag(StaticFeatureTags.is_entity)
 
 
+PythonType = str | int | float | list
+
+
 class EquatableFeature(FeatureFactory):
     # Comparable operators
     def __eq__(self, right: FeatureFactory | Any) -> Bool:  # type: ignore[override]
@@ -838,8 +850,8 @@ class EquatableFeature(FeatureFactory):
         instance.transformation = BinaryFactory(self, right, "eq")
         return instance
 
-    def equals(self, right: object) -> Bool:
-        return self == right
+    def equals(self: T, right: T | PythonType) -> Bool:
+        return self == right  # type: ignore
 
     def __ne__(self, right: FeatureFactory | Any) -> Bool:  # type: ignore[override]
         from aligned.compiler.transformation_factory import BinaryFactory
@@ -848,14 +860,14 @@ class EquatableFeature(FeatureFactory):
         instance.transformation = BinaryFactory(right, self, "neq")
         return instance
 
-    def not_equals(self, right: object) -> Bool:
-        return self != right
+    def not_equals(self: T, right: T | PythonType) -> Bool:
+        return self != right  # type: ignore
 
-    def is_in(self, values: list[Any]) -> Bool:
-        from aligned.compiler.transformation_factory import IsInFactory
+    def is_in(self: T, values: Sequence[PythonType] | List[T]) -> Bool:
+        from aligned.compiler.transformation_factory import BinaryFactory
 
         instance = Bool()
-        instance.transformation = IsInFactory(self, values)
+        instance.transformation = BinaryFactory(self, values, operation="isin")
         return instance
 
 

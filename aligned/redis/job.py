@@ -7,6 +7,7 @@ import polars as pl
 from aligned.lazy_imports import pandas as pd
 from aligned.request.retrieval_request import RetrievalRequest
 from aligned.retrieval_job import RequestResult, RetrievalJob
+from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.feature import FeatureType
 from aligned.sources.redis import RedisConfig
 
@@ -16,6 +17,7 @@ class FactualRedisJob(RetrievalJob):
     config: RedisConfig
     requests: list[RetrievalRequest]
     facts: RetrievalJob
+    formatter: DateFormatter
 
     @property
     def request_result(self) -> RequestResult:
@@ -85,7 +87,7 @@ class FactualRedisJob(RetrievalJob):
                     continue
 
                 if feature.dtype.is_datetime:
-                    reqs = reqs.with_columns(pl.col(feature.name).str.to_datetime())
+                    reqs = reqs.with_columns(self.formatter.decode_polars(feature.name))
                 elif feature.dtype == FeatureType.boolean():
                     reqs = reqs.with_columns(
                         pl.col(feature.name).cast(pl.Int8).cast(pl.Boolean)
@@ -110,7 +112,9 @@ class FactualRedisJob(RetrievalJob):
                         )
                     )
                 elif feature.dtype.is_array:
-                    reqs = reqs.with_columns(pl.col(feature.name).str.json_decode())
+                    reqs = reqs.with_columns(
+                        pl.col(feature.name).str.json_decode(feature.dtype.polars_type)
+                    )
                 else:
                     reqs = reqs.with_columns(
                         pl.col(feature.name).cast(feature.dtype.polars_type)

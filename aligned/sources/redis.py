@@ -9,7 +9,9 @@ from typing import TYPE_CHECKING, Union
 import polars as pl
 
 from aligned.config_value import ConfigValue, EnvironmentValue, LiteralValue
+from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.feature_view import CompiledFeatureView
+from aligned.schemas.transformation import Expression
 from aligned.streams.interface import ReadableStream
 from aligned.lazy_imports import redis
 from aligned.data_source.batch_data_source import (
@@ -180,6 +182,8 @@ class RedisSource(WritableFeatureSource, CodableBatchDataSource):
     config: RedisConfig
     batch_size = 1_000_000
     expire_duration: timedelta | None = None
+    formatter: DateFormatter = field(default_factory=DateFormatter.iso_8601)
+
     type_name: str = "redis_source"
 
     def job_group_key(self) -> str:
@@ -204,17 +208,19 @@ class RedisSource(WritableFeatureSource, CodableBatchDataSource):
     ) -> RetrievalJob:
         from aligned.redis.job import FactualRedisJob
 
-        config = requests[0][0].config
+        source = requests[0][0]
         requested_features = [req for (_, req) in requests]
 
-        return FactualRedisJob(config, requested_features, facts)
+        return FactualRedisJob(
+            source.config, requested_features, facts, formatter=source.formatter
+        )
 
     def features_for(
         self, facts: RetrievalJob, request: RetrievalRequest
     ) -> RetrievalJob:
         from aligned.redis.job import FactualRedisJob
 
-        return FactualRedisJob(self.config, [request], facts)
+        return FactualRedisJob(self.config, [request], facts, formatter=self.formatter)
 
     async def insert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         redis = self.config.redis()
@@ -253,14 +259,11 @@ class RedisSource(WritableFeatureSource, CodableBatchDataSource):
                         .cast(pl.Utf8)
                         .alias(feature.name)
                     )
-                elif feature.dtype.is_datetime:
-                    expr = pl.col(feature.name).dt.to_string()
-                elif feature.dtype == FeatureType.datetime():
-                    expr = (
-                        pl.col(feature.name)
-                        .dt.timestamp("ms")
-                        .cast(pl.Utf8)
-                        .alias(feature.name)
+                elif feature.dtype.is_datetime or (
+                    feature.dtype == FeatureType.datetime()
+                ):
+                    expr = self.formatter.encode_polars(feature.name).alias(
+                        feature.name
                     )
                 elif feature.dtype.is_embedding:
                     expr = pl.col(feature.name).map_elements(
@@ -294,7 +297,12 @@ class RedisSource(WritableFeatureSource, CodableBatchDataSource):
     async def upsert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         await self.insert(job, request)
 
-    async def overwrite(self, job: RetrievalJob, request: RetrievalRequest) -> None:
+    async def overwrite(
+        self,
+        job: RetrievalJob,
+        request: RetrievalRequest,
+        predicate: Expression | None = None,
+    ) -> None:
         return await self.insert(job, request)
 
 

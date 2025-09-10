@@ -248,7 +248,7 @@ class IsInFactory(TransformationFactory):
     def compile(self) -> Transformation:
         from aligned.schemas.transformation import IsIn as IsInTransformation
 
-        return IsInTransformation(self.values, self.feature.name)
+        return IsInTransformation(self.values, self.feature.to_expression())
 
 
 class FillNaStrategy:

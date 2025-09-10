@@ -28,9 +28,12 @@ services:
     command: "pytest"
     environment:
       - PSQL_DATABASE_TEST=postgresql://postgres:postgres@psql_app_db:5432/aligned-test
+      - REDIS_URL=redis://redis:6379
       - MLFLOW_TRACKING_URI=http://mlflow-tracker:8000
       - MLFLOW_REGISTRY_URI=http://mlflow-tracker:8000
     volumes:
       - ${PWD}:/opt/app
     depends_on:
       - mlflow-tracker
+      - redis
+      - psql_app_db

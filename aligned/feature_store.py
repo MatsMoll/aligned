@@ -62,8 +62,9 @@ from aligned.schemas.feature_view import CompiledFeatureView
 from aligned.schemas.model import EventTrigger
 from aligned.schemas.model import Model as ModelSchema
 from aligned.schemas.repo_definition import RepoDefinition, RepoMetadata
+from aligned.schemas.transformation import Expression
 from aligned.sources.in_mem_source import InMemorySource, RetrievalJobSource
-from aligned.sources.local import StorageFileReference
+from aligned.sources.local import Deletable, StorageFileReference
 from aligned.sources.vector_index import VectorIndex
 from aligned.model_store import ModelFeatureStore
 from aligned.validation.interface import PolarsValidator, Validator
@@ -666,7 +667,16 @@ class ContractStore:
         if not isinstance(entities, RetrievalJob):
             logger.debug("Converting entities into a RetrievalJob")
             if isinstance(entities, pl.DataFrame) and entities.is_empty():
-                return RetrievalJob.from_convertable(entities, requests)
+                return RetrievalJob.from_convertable(
+                    entities.with_columns(
+                        *[
+                            pl.lit(None).alias(feat.name).cast(feat.dtype.polars_type)
+                            for feat in requests.request_result.features
+                            if feat.name not in entities.columns
+                        ]
+                    ),
+                    requests,
+                )
             if (
                 _PANDAS_AVAILABLE
                 and isinstance(entities, pd.DataFrame)
@@ -1304,24 +1314,45 @@ class ContractStore:
         self,
         location: ConvertableToLocation,
         values: ConvertableToRetrievalJob | RetrievalJob,
+        predicate: FilterRepresentable | None = None,
     ) -> None:
         used_location = convert_to_location(location)
 
         source = self.sources[used_location]
         write_request = self.write_request_for(used_location)
 
+        exp_pred = None
+        if predicate is not None:
+            exp_pred = Expression.from_value(predicate)
+
         if not isinstance(values, RetrievalJob):
             values = RetrievalJob.from_convertable(values, write_request)
 
         if isinstance(source, WritableFeatureSource):
-            await source.overwrite(values, write_request)
+            await source.overwrite(values, write_request, predicate=exp_pred)
         elif isinstance(source, DataFileReference):
             df = (await values.to_lazy_polars()).select(
                 write_request.all_returned_columns
             )
+            if exp_pred is not None:
+                raise NotImplementedError(
+                    "Currently not implemented overwrite with predicate for DataFileReference"
+                )
+
             await source.write_polars(df)
         else:
             raise ValueError(f"The source {type(source)} do not support writes")
+
+    async def delete(
+        self,
+        location: ConvertableToLocation,
+        predicate: FilterRepresentable | None = None,
+    ) -> None:
+        used_location = convert_to_location(location)
+
+        source = self.sources[used_location]
+        assert isinstance(source, Deletable)
+        await source.delete(Expression.from_value(predicate))
 
     def needed_entities_for(self, features: list[FeatureReference]) -> set[Feature]:
         return self.requests_for_features(features).entities()

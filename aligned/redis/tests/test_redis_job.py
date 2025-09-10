@@ -6,6 +6,7 @@ from redis.asyncio.client import Pipeline  # type: ignore
 from aligned.redis.job import FactualRedisJob
 from aligned.request.retrieval_request import RetrievalRequest
 from aligned.retrieval_job import RetrievalJob
+from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureType
 from aligned.sources.redis import RedisConfig, RedisSource
 
@@ -38,7 +39,10 @@ async def test_factual_redis_job(mocker, retrieval_request) -> None:  # type: ig
         request=retrieval_request,
     )
     job = FactualRedisJob(
-        RedisConfig.localhost(), requests=[retrieval_request], facts=facts
+        RedisConfig.localhost(),
+        requests=[retrieval_request],
+        facts=facts,
+        formatter=DateFormatter.iso_8601(),
     )
 
     result = await job.to_pandas()
@@ -59,7 +63,10 @@ async def test_factual_redis_job_int_as_str(mocker, retrieval_request) -> None: 
     )
 
     job = FactualRedisJob(
-        RedisConfig.localhost(), requests=[retrieval_request], facts=facts
+        RedisConfig.localhost(),
+        requests=[retrieval_request],
+        facts=facts,
+        formatter=DateFormatter.iso_8601(),
     )
 
     result = await job.to_pandas()
@@ -79,7 +86,10 @@ async def test_nan_entities_job(mocker, retrieval_request) -> None:  # type: ign
         request=retrieval_request,
     )
     job = FactualRedisJob(
-        RedisConfig.localhost(), requests=[retrieval_request], facts=facts
+        RedisConfig.localhost(),
+        requests=[retrieval_request],
+        facts=facts,
+        formatter=DateFormatter.iso_8601(),
     )
 
     _ = await job.to_pandas()
@@ -97,7 +107,10 @@ async def test_no_entities_job(mocker, retrieval_request) -> None:  # type: igno
         request=retrieval_request,
     )
     job = FactualRedisJob(
-        RedisConfig.localhost(), requests=[retrieval_request], facts=facts
+        RedisConfig.localhost(),
+        requests=[retrieval_request],
+        facts=facts,
+        formatter=DateFormatter.iso_8601(),
     )
 
     _ = await job.to_pandas()
@@ -126,7 +139,10 @@ async def test_factual_redis_job_int_entity(mocker) -> None:  # type: ignore[no-
         request=retrieval_request,
     )
     job = FactualRedisJob(
-        RedisConfig.localhost(), requests=[retrieval_request], facts=facts
+        RedisConfig.localhost(),
+        requests=[retrieval_request],
+        facts=facts,
+        formatter=DateFormatter.iso_8601(),
     )
 
     result = await job.to_pandas()
@@ -161,7 +177,10 @@ async def test_write_job(mocker, retrieval_request: RetrievalRequest) -> None:  
     await source.insert(insert_facts, retrieval_request)
 
     job = FactualRedisJob(
-        RedisConfig.localhost(), requests=[retrieval_request], facts=facts
+        RedisConfig.localhost(),
+        requests=[retrieval_request],
+        facts=facts,
+        formatter=DateFormatter.iso_8601(),
     )
     data = await job.to_lazy_polars()
 

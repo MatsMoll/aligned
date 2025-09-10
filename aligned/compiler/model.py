@@ -226,10 +226,7 @@ class ModelContractWrapper(Generic[T]):
             condition._name = str(uuid4())
             condition._location = FeatureLocation.model(name)
 
-        if condition.transformation:
-            meta.output_source = FilteredDataSource(main_source, condition.compile())
-        else:
-            meta.output_source = FilteredDataSource(main_source, condition.feature())
+        meta.output_source = FilteredDataSource(main_source, condition.to_expression())
 
         if application_source:
             meta.application_source = application_source

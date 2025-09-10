@@ -15,17 +15,16 @@ from aligned.storage import Storage
 from io import BytesIO
 
 if TYPE_CHECKING:
+    from aligned.sources.local import DeltaConfig, DeltaFileSource
     from azure.storage.blob import BlobServiceClient
     from aligned.sources.azure_blob_storage import (
         AzureBlobParquetDataSource,
         AzureBlobPartitionedParquetDataSource,
         AzureBlobCsvDataSource,
-        AzureBlobDeltaDataSource,
         AzureBlobDirectory,
     )
     from aligned.sources.local import (
         CsvConfig,
-        DeltaFileConfig,
         ParquetConfig,
         StorageFileReference,
         Directory,
@@ -194,16 +193,17 @@ You can choose between two ways of authenticating with Azure Blob Storage.
         self,
         path: str,
         mapping_keys: dict[str, str] | None = None,
-        config: DeltaFileConfig | None = None,
+        config: DeltaConfig | None = None,
         date_formatter: DateFormatter | None = None,
-    ) -> AzureBlobDeltaDataSource:
-        from aligned.sources.azure_blob_storage import AzureBlobDeltaDataSource
+    ) -> DeltaFileSource:
+        from aligned.sources.local import DeltaConfig
 
-        return AzureBlobDeltaDataSource(
-            self,
-            PathResolver.from_value(path),
+        return DeltaFileSource(
+            path=PathResolver.from_value(path),
+            config=config or DeltaConfig(),
             mapping_keys=mapping_keys or {},
             date_formatter=date_formatter or DateFormatter.unix_timestamp(),
+            azure_config=self,
         )
 
     def directory(self, path: str | ConfigValue) -> AzureBlobDirectory:
