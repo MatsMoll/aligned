@@ -615,7 +615,7 @@ Path: *{self.path}*
             raise UnableToFindFileException(path) from error
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
-        url = f"az://{self.path}"
+        url = f"az://{self.path.as_posix()}"
         try:
             creds = self.config.read_creds()
             return pl.scan_parquet(url, storage_options=creds)
@@ -637,7 +637,7 @@ Path: *{self.path}*
         await self.storage.write(self.path.as_posix(), buffer.read())
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
-        url = f"az://{self.path}"
+        url = f"az://{self.path.as_posix()}"
         creds = self.config.read_creds()
         df.collect().write_parquet(url, storage_options=creds)
 
