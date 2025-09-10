@@ -905,6 +905,12 @@ class DeltaFileSource(
             return self.azure_config.read_creds()
         return None
 
+    def resolved_path(self) -> str:
+        raw_path = self.path.as_posix()
+        if self.azure_config:
+            return f"az://{raw_path}"
+        return raw_path
+
     def job_group_key(self) -> str:
         return f"{self.type_name}/{self.path}"
 
@@ -929,9 +935,9 @@ class DeltaFileSource(
             raise UnableToFindFileException(self.path.as_posix())
 
         try:
-            return pl.scan_delta(self.path.as_posix(), storage_options=storage_options)
+            return pl.scan_delta(self.resolved_path(), storage_options=storage_options)
         except OSError:
-            raise UnableToFindFileException(self.path.as_posix())
+            raise UnableToFindFileException(self.resolved_path())
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
         storage_options = self.storage_options()
@@ -941,7 +947,7 @@ class DeltaFileSource(
             create_parent_dir(self.path.as_posix())
 
         df.collect().write_delta(
-            self.path.as_posix(),
+            self.resolved_path(),
             delta_write_options=self.config.write_options(),
             storage_options=storage_options,
         )
@@ -979,7 +985,9 @@ class DeltaFileSource(
         )
 
     async def schema(self) -> dict[str, FeatureType]:
-        parquet_schema = pl.read_delta(self.path.as_posix()).schema
+        parquet_schema = pl.read_delta(
+            self.resolved_path(), storage_options=self.storage_options()
+        ).schema
         return {
             name: FeatureType.from_polars(pl_type)
             for name, pl_type in parquet_schema.items()
@@ -1012,7 +1020,7 @@ class DeltaFileSource(
 
         data = await job.to_lazy_polars()
         data.select(request.all_returned_columns).collect().write_delta(
-            self.path.as_posix(),
+            self.resolved_path(),
             mode="overwrite",
             delta_write_options=write_options,
             storage_options=storage_options,
@@ -1021,7 +1029,7 @@ class DeltaFileSource(
     async def insert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         data = await job.to_lazy_polars()
         data.select(request.all_returned_columns).collect().write_delta(
-            self.path.as_posix(),
+            self.resolved_path(),
             mode="append",
             delta_write_options=self.config.write_options(),
             storage_options=self.storage_options(),
@@ -1035,7 +1043,7 @@ class DeltaFileSource(
         upsert_on_column(
             list(request.entity_names), new_data, existing
         ).collect().write_delta(
-            self.path.as_posix(),
+            self.resolved_path(),
             mode="overwrite",
             storage_options=self.storage_options(),
             delta_write_options=self.config.write_options(),
