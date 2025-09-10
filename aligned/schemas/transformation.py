@@ -839,6 +839,7 @@ UnaryFunction = Literal[
     "round",
     "abs",
     "sqrt",
+    "log",
     "log10",
     "exp",
     "sign",
@@ -903,6 +904,8 @@ class UnaryTransformation(Transformation, InnerTransformation, GlotExprTransform
                 return exp.Anonymous(this="ABS", expressions=[inner_exp])
             case "sqrt":
                 return exp.Anonymous(this="SQRT", expressions=[inner_exp])
+            case "log":
+                return exp.Log(this="LOG", expressions=[inner_exp])
             case "log10":
                 return exp.Anonymous(this="LOG10", expressions=[inner_exp])
             case "exp":
@@ -978,6 +981,8 @@ class UnaryTransformation(Transformation, InnerTransformation, GlotExprTransform
                 return inner.abs()
             case "sqrt":
                 return inner.sqrt()
+            case "log":
+                return inner.log()
             case "log10":
                 return inner.log10()
             case "exp":
@@ -1051,6 +1056,8 @@ class UnaryTransformation(Transformation, InnerTransformation, GlotExprTransform
                 return np.abs(column)  # type: ignore
             case "sqrt":
                 return np.sqrt(column)  # type: ignore
+            case "log":
+                return np.log(column)  # type: ignore
             case "log10":
                 return np.log10(column)  # type: ignore
             case "exp":
@@ -1122,6 +1129,8 @@ class UnaryTransformation(Transformation, InnerTransformation, GlotExprTransform
                 return F.abs(inner)
             case "sqrt":
                 return F.sqrt(inner)
+            case "log":
+                return F.log(inner)
             case "log10":
                 return F.log10(inner)
             case "exp":
