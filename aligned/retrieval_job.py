@@ -33,7 +33,12 @@ from aligned.request.retrieval_request import (
     RequestResult,
     RetrievalRequest,
 )
-from aligned.schemas.feature import Feature, FeatureLocation, FeatureType
+from aligned.schemas.feature import (
+    Feature,
+    FeatureLocation,
+    FeatureReference,
+    FeatureType,
+)
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.transformation import Expression
 from aligned.schemas.vector_storage import VectorIndex
@@ -159,6 +164,19 @@ class TrainTestJob:
             for feat in self.train_job.request_result.features
             if feat.name not in self.target_columns
         ]
+
+    @property
+    def feature_references(self) -> list[FeatureReference]:
+        refs = set()
+        for req in self.train_job.retrieval_requests:
+            refs.update(
+                [
+                    feat.as_reference(req.location)
+                    for feat in req.all_features
+                    if feat.name not in self.target_columns
+                ]
+            )
+        return sorted(refs, key=lambda feat: feat.name)
 
     async def store_dataset_at_directory(
         self,
@@ -450,6 +468,7 @@ class SupervisedJob:
             features,
             self.target_columns,
             self.job.request_result.event_timestamp,
+            self.job.retrieval_requests,
         )
 
     async def to_polars(self) -> SupervisedDataSet[pl.DataFrame]:
@@ -461,6 +480,7 @@ class SupervisedJob:
             features=dataset.feature_columns,
             target=dataset.target_columns,
             event_timestamp_column=dataset.event_timestamp_column,
+            requests=self.job.retrieval_requests,
         )
 
     async def to_lazy_polars(self) -> SupervisedDataSet[pl.LazyFrame]:
@@ -480,6 +500,7 @@ class SupervisedJob:
             set(features),
             self.target_columns,
             self.job.request_result.event_timestamp,
+            requests=self.job.retrieval_requests,
         )
 
     def should_filter_null_targets(self, should_filter: bool) -> SupervisedJob:

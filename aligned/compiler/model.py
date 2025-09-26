@@ -3,7 +3,16 @@ from __future__ import annotations
 import copy
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Callable, Literal, Type, TypeVar, Generic, TYPE_CHECKING
+from typing import (
+    Any,
+    Callable,
+    Literal,
+    Sequence,
+    Type,
+    TypeVar,
+    Generic,
+    TYPE_CHECKING,
+)
 from datetime import timedelta
 
 from uuid import uuid4
@@ -145,6 +154,49 @@ class ModelContractWrapper(Generic[T]):
             copy_default_values=copy_default_values,
             copy_transformations=copy_transformations,
         )
+
+    def feature_references(
+        self,
+        exclude: Sequence[str]
+        | Callable[[T], Sequence[FeatureReferencable] | FeatureReferencable]
+        | None = None,
+        include: Sequence[str]
+        | Callable[[T], Sequence[FeatureReferencable] | FeatureReferencable]
+        | None = None,
+    ) -> list[FeatureReference]:
+        req = self.request()
+
+        if exclude is not None:
+            if callable(exclude):
+                refs = exclude(self.contract())
+                if isinstance(refs, FeatureReferencable):
+                    refs = [refs]
+                feature_names = [feat.feature_reference().name for feat in refs]
+            else:
+                feature_names = list(exclude)
+
+            return [
+                feat.as_reference(req.location)
+                for feat in req.all_features
+                if feat.name not in feature_names
+            ]
+
+        if include is not None:
+            if callable(include):
+                refs = include(self.contract())
+                if isinstance(refs, FeatureReferencable):
+                    refs = [refs]
+                feature_names = [feat.feature_reference().name for feat in refs]
+            else:
+                feature_names = list(include)
+
+            return [
+                feat.as_reference(req.location)
+                for feat in req.all_features
+                if feat.name in feature_names
+            ]
+
+        return [feat.as_reference(req.location) for feat in req.all_features]
 
     def as_langchain_retriever(
         self,
@@ -322,8 +374,11 @@ class FeatureInputVersions:
 
 
 def model_contract(
-    input_features: list[
-        FeatureReferencable | FeatureViewWrapper | ModelContractWrapper
+    input_features: Sequence[
+        FeatureReferencable
+        | FeatureViewWrapper
+        | ModelContractWrapper
+        | Sequence[FeatureReferencable]
     ]
     | FeatureInputVersions,
     name: str | None = None,
@@ -357,7 +412,7 @@ def model_contract(
                         )
                         for feat in request.request_result.features
                     ]
-                    unwrapped_input_features.extend(features)  # type: ignore
+                    unwrapped_input_features.extend(features)
                 elif isinstance(feature, ModelContractWrapper):
                     compiled_model = feature.compile()
                     request = compiled_model.predictions_view.request("")
@@ -365,7 +420,9 @@ def model_contract(
                         feat.as_reference(FeatureLocation.model(compiled_model.name))
                         for feat in request.request_result.features
                     ]
-                    unwrapped_input_features.extend(features)  # type: ignore
+                    unwrapped_input_features.extend(features)
+                elif isinstance(feature, Sequence):
+                    unwrapped_input_features.extend(feature)
                 else:
                     unwrapped_input_features.append(feature)
 

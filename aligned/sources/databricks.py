@@ -676,7 +676,12 @@ class UCFeatureTableSource(
     async def upsert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
         raise NotImplementedError(type(self))
 
-    async def overwrite(self, job: RetrievalJob, request: RetrievalRequest) -> None:
+    async def overwrite(
+        self,
+        job: RetrievalJob,
+        request: RetrievalRequest,
+        predicate: Expression | None = None,
+    ) -> None:
         client = databricks_fe.FeatureEngineeringClient()
 
         conn = self.config.connection()
@@ -1073,7 +1078,12 @@ WHEN MATCHED THEN
 WHEN NOT MATCHED THEN
   INSERT *""")
 
-    async def overwrite(self, job: RetrievalJob, request: RetrievalRequest) -> None:
+    async def overwrite(
+        self,
+        job: RetrievalJob,
+        request: RetrievalRequest,
+        predicate: Expression | None = None,
+    ) -> None:
         import pyspark.sql.functions as F
 
         expected_schema = request.spark_schema()

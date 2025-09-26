@@ -12,6 +12,7 @@ from typing import (
     Any,
     Awaitable,
     Literal,
+    Sequence,
     TypeVar,
     Generic,
     Type,
@@ -26,6 +27,7 @@ from aligned.compiler.feature_factory import (
     Embedding,
     EventTimestamp,
     Bool,
+    FeatureReferencable,
 )
 from aligned.data_source.batch_data_source import (
     AsBatchSource,
@@ -217,6 +219,49 @@ class FeatureViewWrapper(Generic[T]):
             bottom=resolve_source(source),
             source_column=source_column,
         )
+
+    def feature_references(
+        self,
+        exclude: Sequence[str]
+        | Callable[[T], Sequence[FeatureReferencable] | FeatureReferencable]
+        | None = None,
+        include: Sequence[str]
+        | Callable[[T], Sequence[FeatureReferencable] | FeatureReferencable]
+        | None = None,
+    ) -> list[FeatureReference]:
+        req = self.request
+
+        if exclude is not None:
+            if callable(exclude):
+                refs = exclude(self.view)
+                if isinstance(refs, FeatureReferencable):
+                    refs = [refs]
+                feature_names = [feat.feature_reference().name for feat in refs]
+            else:
+                feature_names = list(exclude)
+
+            return [
+                feat.as_reference(req.location)
+                for feat in req.all_features
+                if feat.name not in feature_names
+            ]
+
+        if include is not None:
+            if callable(include):
+                refs = include(self.view)
+                if isinstance(refs, FeatureReferencable):
+                    refs = [refs]
+                feature_names = [feat.feature_reference().name for feat in refs]
+            else:
+                feature_names = list(include)
+
+            return [
+                feat.as_reference(req.location)
+                for feat in req.all_features
+                if feat.name in feature_names
+            ]
+
+        return [feat.as_reference(req.location) for feat in req.all_features]
 
     def filter(
         self,

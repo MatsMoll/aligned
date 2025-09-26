@@ -686,8 +686,13 @@ def convert_to_location(location: ConvertableToLocation) -> FeatureLocation:
     return location.location
 
 
+class FeatureReferencable:
+    def feature_reference(self) -> FeatureReference:
+        raise NotImplementedError(type(self))
+
+
 @dataclass
-class FeatureReference(Codable):
+class FeatureReference(Codable, FeatureReferencable):
     name: str
     location: FeatureLocation
 
