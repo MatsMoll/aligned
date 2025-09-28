@@ -167,6 +167,13 @@ class RetrievalRequest(Codable):
         return {feature.derived_feature for feature in self.aggregated_features}
 
     @property
+    def read_columns(self) -> set[str]:
+        feats = list(self.features) + list(self.entities)
+        if self.event_timestamp:
+            feats.append(self.event_timestamp.as_feature())
+        return {feat.name for feat in feats}
+
+    @property
     def all_required_features(self) -> set[Feature]:
         return self.features - self.entities
 

@@ -211,6 +211,15 @@ class ContractStore:
         )
 
     @staticmethod
+    def with_contracts(
+        *contracts: FeatureViewWrapper | ModelContractWrapper,
+    ) -> ContractStore:
+        store = ContractStore.empty()
+        for contract in contracts:
+            store.add(contract)
+        return store
+
+    @staticmethod
     def experimental() -> ContractStore:
         return ContractStore.empty()
 
@@ -966,6 +975,24 @@ class ContractStore:
             else:
                 return self.model(view)
 
+    def data_contract(self, contract: str | FeatureViewWrapper) -> FeatureViewStore:
+        """
+        Selects a data contract based on a name or contract wrapper.
+
+        From here can you query the data contract for features.
+
+        ```python
+        data = await store.feature_view('my_view').all(limit=10).to_polars()
+        ```
+
+        Args:
+            contract (str | FeatureViewWrapper): The name of the data contract
+
+        Returns:
+            FeatureViewStore: The selected data contract ready for querying
+        """
+        return self.feature_view(contract)
+
     def feature_view(self, view: str | FeatureViewWrapper) -> FeatureViewStore:
         """
         Selects a feature view based on a name.
@@ -1267,7 +1294,7 @@ class ContractStore:
                     .collect()
                     .lazy()
                 )
-            except (UnableToFindFileException, pl.ComputeError):
+            except (UnableToFindFileException, pl.exceptions.ComputeError):
                 write_df = new_df
 
             if isinstance(source, ColumnFeatureMappable):
@@ -1303,7 +1330,7 @@ class ContractStore:
             try:
                 existing_df = await source.to_lazy_polars()
                 write_df = upsert_on_column(entities, new_df, existing_df)
-            except (UnableToFindFileException, pl.ComputeError):
+            except (UnableToFindFileException, pl.exceptions.ComputeError):
                 write_df = new_df
 
             await source.write_polars(write_df)
@@ -1571,8 +1598,17 @@ class FeatureViewStore:
     async def insert(self, values: RetrievalJob | ConvertableToRetrievalJob) -> None:
         await self.store.insert_into(FeatureLocation.feature_view(self.name), values)
 
-    async def overwrite(self, values: RetrievalJob | ConvertableToRetrievalJob) -> None:
-        await self.store.overwrite(FeatureLocation.feature_view(self.name), values)
+    async def overwrite(
+        self,
+        values: RetrievalJob | ConvertableToRetrievalJob,
+        predicate: FilterRepresentable | None = None,
+    ) -> None:
+        await self.store.overwrite(
+            FeatureLocation.feature_view(self.name), values, predicate
+        )
+
+    async def delete(self, predicate: FilterRepresentable | None = None) -> None:
+        await self.store.delete(FeatureLocation.feature_view(self.name), predicate)
 
     @property
     def write_input(self) -> set[str]:
