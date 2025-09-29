@@ -7,6 +7,14 @@ from aligned.sources.random_source import RandomDataSource
 import pytest
 
 
+async def predictor(texts: pl.DataFrame, store: ModelFeatureStore) -> pl.DataFrame:
+    embeddings = []
+    for text in texts["text"].to_list():
+        embeddings.append([1.0 * len(text), 2.0 * len(text)])
+
+    return texts.hstack([pl.Series(name="embedding", values=embeddings)])
+
+
 @pytest.mark.asyncio
 async def test_lancedb() -> None:
     table = "my_embedding"
@@ -16,13 +24,6 @@ async def test_lancedb() -> None:
     class TestFeatureView:
         id = String().as_entity()
         text = String()
-
-    async def predictor(texts: pl.DataFrame, store: ModelFeatureStore) -> pl.DataFrame:
-        embeddings = []
-        for text in texts["text"].to_list():
-            embeddings.append([1.0 * len(text), 2.0 * len(text)])
-
-        return texts.hstack([pl.Series(name="embedding", values=embeddings)])
 
     @model_contract(
         name="my_embedding",

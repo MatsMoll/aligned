@@ -352,7 +352,10 @@ class CodePredictor(ExposedModel, VersionedModel):
             else:
                 pred = function(features, store.store)
 
-        assert isinstance(pred, pl.Series)
+        if isinstance(pred, pl.DataFrame):
+            return pred
+
+        assert isinstance(pred, pl.Series), f"Expected a Series but got {type(pred)}"
 
         pred_view = store.model.predictions_view
         pred_columns = pred_view.labels()
