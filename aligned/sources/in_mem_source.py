@@ -13,6 +13,8 @@ from aligned.data_source.batch_data_source import (
 from aligned.feature_source import WritableFeatureSource
 from aligned.retrieval_job import RetrievalJob, RetrievalRequest
 from aligned.schemas.feature import Feature
+from aligned.schemas.transformation import Expression
+from aligned.sources.local import Deletable
 from aligned.sources.vector_index import VectorIndex
 
 if TYPE_CHECKING:
@@ -57,7 +59,11 @@ class RetrievalJobSource(
 
 
 class InMemorySource(
-    CodableBatchDataSource, DataFileReference, WritableFeatureSource, VectorIndex
+    CodableBatchDataSource,
+    DataFileReference,
+    WritableFeatureSource,
+    VectorIndex,
+    Deletable,
 ):
     type_name = "in_mem_source"
 
@@ -97,8 +103,27 @@ class InMemorySource(
             existing_data=self.data.lazy(),
         ).collect()
 
-    async def overwrite(self, job: RetrievalJob, request: RetrievalRequest) -> None:
-        self.data = await job.to_polars()
+    async def overwrite(
+        self,
+        job: RetrievalJob,
+        request: RetrievalRequest,
+        predicate: Expression | None = None,
+    ) -> None:
+        if predicate is None:
+            self.data = await job.to_polars()
+        else:
+            await self.delete(predicate)
+            self.data = self.data.vstack(
+                (await job.to_polars()).select(self.data.columns)
+            )
+
+    async def delete(self, predicate: Expression | None = None) -> None:
+        if predicate is None:
+            self.data = pl.DataFrame(schema=self.data.schema)
+        else:
+            exp = predicate.to_polars()
+            assert exp is not None
+            self.data = self.data.filter(exp.not_())
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
         self.data = df.collect()

@@ -394,7 +394,7 @@ Partition Keys: *{self.partition_keys}*
             raise UnableToFindFileException(self.directory.as_posix()) from error
         except HTTPStatusError as error:
             raise UnableToFindFileException(self.directory.as_posix()) from error
-        except pl.ComputeError as error:
+        except pl.exceptions.ComputeError as error:
             raise UnableToFindFileException(self.directory.as_posix()) from error
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
@@ -506,7 +506,7 @@ Partition Keys: *{self.partition_keys}*
         try:
             existing_df = (await self.to_lazy_polars()).filter(*filters)
             write_df = upsert_on_column(upsert_on, df.lazy(), existing_df).collect()
-        except (UnableToFindFileException, pl.ComputeError):
+        except (UnableToFindFileException, pl.exceptions.ComputeError):
             write_df = df.lazy()
 
         for row in unique_partitions.iter_rows(named=True):
@@ -623,7 +623,7 @@ Path: *{self.path}*
             raise UnableToFindFileException(url) from error
         except HTTPStatusError as error:
             raise UnableToFindFileException(url) from error
-        except pl.ComputeError as error:
+        except pl.exceptions.ComputeError as error:
             raise UnableToFindFileException(url) from error
 
     async def write_pandas(self, df: pd.DataFrame) -> None:
