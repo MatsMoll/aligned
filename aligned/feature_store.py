@@ -1379,7 +1379,10 @@ class ContractStore:
 
         source = self.sources[used_location]
         assert isinstance(source, Deletable)
-        await source.delete(Expression.from_value(predicate))
+        if predicate is not None:
+            await source.delete(Expression.from_value(predicate))
+        else:
+            await source.delete()
 
     def needed_entities_for(self, features: list[FeatureReference]) -> set[Feature]:
         return self.requests_for_features(features).entities()
