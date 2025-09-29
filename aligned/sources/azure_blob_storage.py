@@ -490,7 +490,7 @@ Partition Keys: *{self.partition_keys}*
 
         unique_partitions = df.select(self.partition_keys).unique()
 
-        filters: list[pl.Expr] = []
+        final_filter: pl.Expr | None = None
         for row in unique_partitions.iter_rows(named=True):
             current: pl.Expr | None = None
 
@@ -501,10 +501,14 @@ Partition Keys: *{self.partition_keys}*
                     current = pl.col(key) == value
 
             if current is not None:
-                filters.append(current)
+                if final_filter is None:
+                    final_filter = current
+                else:
+                    final_filter = final_filter | current
 
+        assert final_filter is not None, "Found partitions to filter on"
         try:
-            existing_df = (await self.to_lazy_polars()).filter(*filters)
+            existing_df = (await self.to_lazy_polars()).filter(final_filter)
             write_df = upsert_on_column(upsert_on, df.lazy(), existing_df).collect()
         except (UnableToFindFileException, pl.exceptions.ComputeError):
             write_df = df.lazy()
