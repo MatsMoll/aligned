@@ -40,6 +40,7 @@ from aligned.schemas.feature import (
     FeatureReference,
     FeatureType,
     StaticFeatureTags,
+    FeatureReferencable,
 )
 from aligned.schemas.literal_value import LiteralValue
 from aligned.schemas.target import ClassificationTarget as ClassificationTargetSchemas
@@ -117,11 +118,6 @@ class TargetProbability:
             outcome=LiteralValue.from_value(self.of_value),
             feature=Feature(self._name, dtype=FeatureType.floating_point()),
         )
-
-
-class FeatureReferencable:
-    def feature_reference(self) -> FeatureReference:
-        raise NotImplementedError(type(self))
 
 
 def compile_hidden_features(
@@ -915,6 +911,19 @@ class ComparableFeature(EquatableFeature):
 
 
 class ArithmeticFeature(ComparableFeature):
+    def __rsub__(self, other: FeatureFactory | Any) -> Float32:
+        from aligned.compiler.transformation_factory import (
+            BinaryFactory,
+            TimeDifferanceFactory,
+        )
+
+        feature = Float32()
+        if self.dtype == FeatureType.datetime():
+            feature.transformation = TimeDifferanceFactory(other, self)
+        else:
+            feature.transformation = BinaryFactory(other, self, "sub")
+        return feature
+
     def __sub__(self, other: FeatureFactory | Any) -> Float32:
         from aligned.compiler.transformation_factory import (
             BinaryFactory,
@@ -940,6 +949,13 @@ class ArithmeticFeature(ComparableFeature):
 
         feature = Float32()
         feature.transformation = BinaryFactory(self, other, "add")
+        return feature
+
+    def __rtruediv__(self, other: FeatureFactory | Any) -> Float32:
+        from aligned.compiler.transformation_factory import BinaryFactory
+
+        feature = Float32()
+        feature.transformation = BinaryFactory(other, self, "div")
         return feature
 
     def __truediv__(self, other: FeatureFactory | Any) -> Float32:
@@ -970,11 +986,32 @@ class ArithmeticFeature(ComparableFeature):
         feature.transformation = BinaryFactory(other, self, "mul")
         return feature
 
+    def __mod__(self, other: FeatureFactory | Any) -> Float32:
+        from aligned.compiler.transformation_factory import BinaryFactory
+
+        feature = Float32()
+        feature.transformation = BinaryFactory(self, other, "mod")
+        return feature
+
+    def __rmod__(self, other: FeatureFactory | Any) -> Float32:
+        from aligned.compiler.transformation_factory import BinaryFactory
+
+        feature = Float32()
+        feature.transformation = BinaryFactory(other, self, "mod")
+        return feature
+
     def __pow__(self, other: FeatureFactory | Any) -> Float32:
         from aligned.compiler.transformation_factory import BinaryFactory
 
         feature = Float32()
         feature.transformation = BinaryFactory(self, other, "pow")
+        return feature
+
+    def __rpow__(self, other: FeatureFactory | Any) -> Float32:
+        from aligned.compiler.transformation_factory import BinaryFactory
+
+        feature = Float32()
+        feature.transformation = BinaryFactory(other, self, "pow")
         return feature
 
     def log1p(self) -> Float32:
@@ -1521,6 +1558,13 @@ class LogicalOperatableFeature(InvertableFeature):
         feature.transformation = BinaryFactory(self, other, "and")
         return feature
 
+    def __rand__(self, other: Bool) -> Bool:
+        from aligned.compiler.transformation_factory import BinaryFactory
+
+        feature = Bool()
+        feature.transformation = BinaryFactory(other, self, "and")
+        return feature
+
     def logical_and(self, other: Bool) -> Bool:
         return self & other
 
@@ -1529,6 +1573,13 @@ class LogicalOperatableFeature(InvertableFeature):
 
         feature = Bool()
         feature.transformation = BinaryFactory(self, other, "or")
+        return feature
+
+    def __ror__(self, other: Bool) -> Bool:
+        from aligned.compiler.transformation_factory import BinaryFactory
+
+        feature = Bool()
+        feature.transformation = BinaryFactory(other, self, "or")
         return feature
 
     def logical_or(self, other: Bool) -> Bool:

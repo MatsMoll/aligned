@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import polars as pl
-from typing import TYPE_CHECKING, Any, AsyncIterable, Callable, Coroutine
+from typing import TYPE_CHECKING, Any, AsyncIterable, Awaitable, Callable, Coroutine
 from dataclasses import dataclass
 from aligned.compiler.feature_factory import FeatureReferencable
 from aligned.config_value import ConfigValue, LiteralValue
@@ -18,6 +18,7 @@ from aligned.schemas.feature import (
 )
 
 if TYPE_CHECKING:
+    from aligned.feature_store import ContractStore
     from aligned.feature_store import ModelFeatureStore
     from aligned.schemas.model import Model
     from aligned.exposed_model.mlflow import MlflowConfig
@@ -168,7 +169,7 @@ class ExposedModel(Codable, SerializableType):
         features: list[FeatureReferencable] | None = None,
     ) -> "ExposedModel":
         refs = [feat.feature_reference() for feat in features or []]
-        return CodePredictor.from_function(callable, refs)
+        return CodePredictor.from_function(callable, refs)  # type: ignore
 
     @staticmethod
     def ollama_generate(
@@ -332,38 +333,54 @@ class CodePredictor(ExposedModel, VersionedModel):
         function = locals()[self.function_name]
         args = inspect.signature(function).parameters
 
-        if self.feature_refs:
-            features = await store.store.features_for(
-                values, self.feature_refs
-            ).to_polars()
-        else:
-            features = await store.input_features_for(values).to_polars()
-
         if len(args) == 1:
+            if self.feature_refs:
+                features = await store.store.features_for(
+                    values, self.feature_refs
+                ).to_polars()
+            else:
+                features = await store.input_features_for(values).to_polars()
+
             if inspect.iscoroutinefunction(function):
                 pred = await function(features)
             else:
                 pred = function(features)
-
-            assert isinstance(pred, pl.Series)
-
-            pred_columns = store.model.predictions_view.labels()
-            if len(pred_columns) != 1:
-                raise ValueError(
-                    f"Expected exactly one prediction column, got {len(pred_columns)} columns."
-                )
-
-            result = features.with_columns(pred.alias(next(iter(pred_columns)).name))
-            return result
         else:
+            features = await values.to_polars()
             if inspect.iscoroutinefunction(function):
-                return await function(features, store)
+                pred = await function(features, store.store)
             else:
-                return function(features, store)
+                pred = function(features, store.store)
+
+        if isinstance(pred, pl.DataFrame):
+            return pred
+
+        assert isinstance(pred, pl.Series), f"Expected a Series but got {type(pred)}"
+
+        pred_view = store.model.predictions_view
+        pred_columns = pred_view.labels()
+        if len(pred_columns) != 1:
+            raise ValueError(
+                f"Expected exactly one prediction column, got {len(pred_columns)} columns."
+            )
+
+        result = features.with_columns(pred.alias(next(iter(pred_columns)).name))
+
+        if pred_view.model_version_column:
+            version = await self.model_version()
+            result = result.with_columns(
+                pl.lit(version).alias(pred_view.model_version_column.name)
+            )
+
+        return result
 
     @staticmethod
     def from_function(
-        function: Callable, feature_refs: list[FeatureReference] | None = None
+        function: Callable[[pl.DataFrame], pl.Series]
+        | Callable[[pl.DataFrame], Awaitable[pl.Series]]
+        | Callable[[pl.DataFrame, ContractStore], pl.Series]
+        | Callable[[pl.DataFrame, ContractStore], Awaitable[pl.Series]],
+        feature_refs: list[FeatureReference] | None = None,
     ) -> CodePredictor:
         import dill
         import inspect

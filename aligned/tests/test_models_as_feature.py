@@ -65,6 +65,18 @@ class Second:
     view_id = Int32().as_entity()
 
 
+@model_contract(
+    name="third",
+    input_features=[
+        OtherView.feature_references(exclude=lambda view: view.feature_b),
+        FirstWithVersions.feature_references(exclude=lambda v: v.target),
+    ],
+)
+class Third:
+    other_id = Int32().as_entity()
+    view_id = Int32().as_entity()
+
+
 @data_contract(source=InMemorySource.from_values({"": ["a", "v"]}))
 class AnnotatedData:
     item_id = Int32().as_entity()
@@ -81,6 +93,12 @@ def test_model_referenced_as_feature() -> None:
     assert feature.location == FeatureLocation.model("test_model")
     assert feature.name == "target"
     assert len(model.predictions_view.entities) == 2
+
+
+def test_exclude() -> None:
+    model = Third.compile()
+    features = model.features.default_features
+    assert len(features) == 2
 
 
 def test_model_pred_request() -> None:

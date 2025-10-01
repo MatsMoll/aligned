@@ -67,6 +67,8 @@ def pyarrow_schema(features: list[Feature]) -> pa.Schema:
             "uint32": pa.uint32(),
             "uint64": pa.uint64(),
             "float": pa.float64(),
+            "float32": pa.float32(),
+            "float64": pa.float64(),
             "double": pa.float64(),
             "string": pa.large_string(),
             "uuid": pa.large_string(),
