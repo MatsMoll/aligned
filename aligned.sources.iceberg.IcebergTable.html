@@ -6,7 +6,7 @@
 
   <head>
     
-    <title>aligned.sources.s3.AwsS3ParquetDataSource</title>
+    <title>aligned.sources.iceberg.IcebergTable</title>
     <meta name="generator" content="pydoctor 25.10.1"> 
         
     </meta>
@@ -110,7 +110,7 @@
 
       <div class="thingTitle">
         <span>Class</span>
-        <code class="thisobject"><a href="aligned.sources.s3.AwsS3ParquetDataSource.html" class="internal-link" title="This class"><wbr></wbr>Aws<wbr></wbr>S3<wbr></wbr>Parquet<wbr></wbr>Data<wbr></wbr>Source</a></code> 
+        <code class="thisobject"><a href="aligned.sources.iceberg.IcebergTable.html" class="internal-link" title="This class"><wbr></wbr>Iceberg<wbr></wbr>Table</a></code> 
       </div>
       
       <div>
@@ -131,7 +131,7 @@
         
 
         
-            <div class="itemName"><code><a href="#job_group_key" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.job_group_key">job<wbr></wbr>_group<wbr></wbr>_key</a></code>
+            <div class="itemName"><code><a href="#multi_source_features_for" class="internal-link" title="aligned.sources.iceberg.IcebergTable.multi_source_features_for">multi<wbr></wbr>_source<wbr></wbr>_features<wbr></wbr>_for</a></code>
             </div>
         
 
@@ -141,7 +141,7 @@
         
 
         
-            <div class="itemName"><code><a href="#read_pandas" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.read_pandas">read<wbr></wbr>_pandas</a></code>
+            <div class="itemName"><code><a href="#__hash__" class="internal-link" title="aligned.sources.iceberg.IcebergTable.__hash__">__hash__</a></code>
             </div>
         
 
@@ -151,7 +151,7 @@
         
 
         
-            <div class="itemName"><code><a href="#to_lazy_polars" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.to_lazy_polars">to<wbr></wbr>_lazy<wbr></wbr>_polars</a></code>
+            <div class="itemName"><code><a href="#all_data" class="internal-link" title="aligned.sources.iceberg.IcebergTable.all_data">all<wbr></wbr>_data</a></code>
             </div>
         
 
@@ -161,7 +161,7 @@
         
 
         
-            <div class="itemName"><code><a href="#write_pandas" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.write_pandas">write<wbr></wbr>_pandas</a></code>
+            <div class="itemName"><code><a href="#delete" class="internal-link" title="aligned.sources.iceberg.IcebergTable.delete">delete</a></code>
             </div>
         
 
@@ -171,7 +171,47 @@
         
 
         
-            <div class="itemName"><code><a href="#write_polars" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.write_polars">write<wbr></wbr>_polars</a></code>
+            <div class="itemName"><code><a href="#identifier" class="internal-link" title="aligned.sources.iceberg.IcebergTable.identifier">identifier</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#insert" class="internal-link" title="aligned.sources.iceberg.IcebergTable.insert">insert</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#job_group_key" class="internal-link" title="aligned.sources.iceberg.IcebergTable.job_group_key">job<wbr></wbr>_group<wbr></wbr>_key</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#overwrite" class="internal-link" title="aligned.sources.iceberg.IcebergTable.overwrite">overwrite</a></code>
+            </div>
+        
+
+    </li><li class="">
+        
+        
+        
+
+        
+            <div class="itemName"><code><a href="#upsert" class="internal-link" title="aligned.sources.iceberg.IcebergTable.upsert">upsert</a></code>
             </div>
         
 
@@ -182,26 +222,6 @@
         <ul>
     
     <li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.BatchDataSource.html#multi_source_features_for" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource.multi_source_features_for">multi<wbr></wbr>_source<wbr></wbr>_features<wbr></wbr>_for</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.BatchDataSource.html#__hash__" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource.__hash__">__hash__</a></code>
-            </div>
-        
-
-    </li><li class="">
         
         
         
@@ -228,16 +248,6 @@
 
         
             <div class="itemName"><code><a href="aligned.data_source.batch_data_source.BatchDataSource.html#all_columns" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource.all_columns">all<wbr></wbr>_columns</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.BatchDataSource.html#all_data" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource.all_data">all<wbr></wbr>_data</a></code>
             </div>
         
 
@@ -371,36 +381,6 @@
             </div>
         
 
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.ColumnFeatureMappable.html#columns_for" class="internal-link" title="aligned.data_source.batch_data_source.ColumnFeatureMappable.columns_for">columns<wbr></wbr>_for</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.ColumnFeatureMappable.html#feature_identifier_for" class="internal-link" title="aligned.data_source.batch_data_source.ColumnFeatureMappable.feature_identifier_for">feature<wbr></wbr>_identifier<wbr></wbr>_for</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.data_source.batch_data_source.ColumnFeatureMappable.html#with_renames" class="internal-link" title="aligned.data_source.batch_data_source.ColumnFeatureMappable.with_renames">with<wbr></wbr>_renames</a></code>
-            </div>
-        
-
     </li><li class="private">
         
         
@@ -433,7 +413,7 @@
         
 
         
-            <div class="itemName"><code><a href="#config" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.config">config</a></code>
+            <div class="itemName"><code><a href="#catalog" class="internal-link" title="aligned.sources.iceberg.IcebergTable.catalog">catalog</a></code>
             </div>
         
 
@@ -443,7 +423,7 @@
         
 
         
-            <div class="itemName"><code><a href="#mapping_keys" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.mapping_keys">mapping<wbr></wbr>_keys</a></code>
+            <div class="itemName"><code><a href="#table" class="internal-link" title="aligned.sources.iceberg.IcebergTable.table">table</a></code>
             </div>
         
 
@@ -453,47 +433,17 @@
         
 
         
-            <div class="itemName"><code><a href="#parquet_config" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.parquet_config">parquet<wbr></wbr>_config</a></code>
+            <div class="itemName"><code><a href="#type_name" class="internal-link" title="aligned.sources.iceberg.IcebergTable.type_name">type<wbr></wbr>_name</a></code>
             </div>
         
 
-    </li><li class="">
+    </li><li class="private">
         
         
         
 
         
-            <div class="itemName"><code><a href="#path" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.path">path</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="#type_name" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.type_name">type<wbr></wbr>_name</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="#storage" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.storage">storage</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="#url" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.url">url</a></code>
+            <div class="itemName"><code><a href="#_schema" class="internal-link" title="aligned.sources.iceberg.IcebergTable._schema">_schema</a></code>
             </div>
         
 
@@ -521,7 +471,7 @@
 
       <div class="thingTitle">
         <span>Module</span>
-        <code><a href="aligned.sources.s3.html" class="internal-link" title="The parent of this class">s3</a></code> 
+        <code><a href="aligned.sources.iceberg.html" class="internal-link" title="The parent of this class">iceberg</a></code> 
       </div>
       
       <div>
@@ -539,27 +489,7 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.sources.s3.AwsS3CsvDataSource.html" class="internal-link" title="aligned.sources.s3.AwsS3CsvDataSource"><wbr></wbr>Aws<wbr></wbr>S3<wbr></wbr>Csv<wbr></wbr>Data<wbr></wbr>Source</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.sources.s3.AwsS3DataSource.html" class="internal-link" title="aligned.sources.s3.AwsS3DataSource"><wbr></wbr>Aws<wbr></wbr>S3<wbr></wbr>Data<wbr></wbr>Source</a></code>
-            </div>
-        
-
-    </li><li class="">
-        
-        
-        
-
-        
-            <div class="itemName"><code><a href="aligned.sources.s3.AwsS3Directory.html" class="internal-link" title="aligned.sources.s3.AwsS3Directory"><wbr></wbr>Aws<wbr></wbr>S3<wbr></wbr>Directory</a></code>
+            <div class="itemName"><code><a href="aligned.sources.iceberg.IcebergCatalog.html" class="internal-link" title="aligned.sources.iceberg.IcebergCatalog"><wbr></wbr>Iceberg<wbr></wbr>Catalog</a></code>
             </div>
         
 
@@ -569,15 +499,28 @@
         
 
         
-            <div class="itemName"><code><a href="aligned.sources.s3.AwsS3ParquetDataSource.html" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource"><wbr></wbr>Aws<wbr></wbr>S3<wbr></wbr>Parquet<wbr></wbr>Data<wbr></wbr>Source</a></code>
+            <div class="itemName"><code><a href="aligned.sources.iceberg.IcebergTable.html" class="internal-link" title="aligned.sources.iceberg.IcebergTable"><wbr></wbr>Iceberg<wbr></wbr>Table</a></code>
             </div>
         
 
     </li>
 </ul>
 
+        <div class="childrenKindTitle">Functions</div>
+        <ul>
+    
+    <li class="">
         
-         
+        
+        
+
+        
+            <div class="itemName"><code><a href="aligned.sources.iceberg.html#read_iceberg_table" class="internal-link" title="aligned.sources.iceberg.read_iceberg_table">read<wbr></wbr>_iceberg<wbr></wbr>_table</a></code>
+            </div>
+        
+
+    </li>
+</ul> 
 
         
          
@@ -607,7 +550,7 @@
         
 
         <div class="page-header">
-          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.sources.html" class="internal-link" title="aligned.sources">sources</a></code><wbr></wbr>.<code><a href="aligned.sources.s3.html" class="internal-link" title="aligned.sources.s3">s3</a></code><wbr></wbr>.<code><a href="aligned.sources.s3.AwsS3ParquetDataSource.html" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource">AwsS3ParquetDataSource</a></code></code></h1>
+          <h1 class="class"><code><code><a href="index.html" class="internal-link">aligned</a></code><wbr></wbr>.<code><a href="aligned.sources.html" class="internal-link" title="aligned.sources">sources</a></code><wbr></wbr>.<code><a href="aligned.sources.iceberg.html" class="internal-link" title="aligned.sources.iceberg">iceberg</a></code><wbr></wbr>.<code><a href="aligned.sources.iceberg.IcebergTable.html" class="internal-link" title="aligned.sources.iceberg.IcebergTable">IcebergTable</a></code></code></h1>
           <div id="show-private">
             <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
           </div>
@@ -618,7 +561,7 @@
         </div>
 
         <div class="extrasDocstring">
-          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">AwsS3ParquetDataSource</span>(<a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a>, DataFileReference, <a href="aligned.data_source.batch_data_source.ColumnFeatureMappable.html" class="internal-link" title="aligned.data_source.batch_data_source.ColumnFeatureMappable">ColumnFeatureMappable</a>): <a href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/s3.py#L281" class="sourceLink">(source)</a></code></p><p><a href="classIndex.html#aligned.sources.s3.AwsS3ParquetDataSource">View In Hierarchy</a></p>
+          <p class="class-signature"><code><span class="py-keyword">class</span> <span class="py-defname">IcebergTable</span>(<a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a>, <a href="aligned.sources.local.Deletable.html" class="internal-link" title="aligned.sources.local.Deletable">Deletable</a>, <a href="aligned.feature_source.WritableFeatureSource.html" class="internal-link" title="aligned.feature_source.WritableFeatureSource">WritableFeatureSource</a>): <a href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/iceberg.py#L70" class="sourceLink">(source)</a></code></p><p><a href="classIndex.html#aligned.sources.iceberg.IcebergTable">View In Hierarchy</a></p>
         </div>
 
         <div class="moduleDocstring">
@@ -626,68 +569,73 @@
         </div>
 
         <div id="split-tables">
-          <table class="children sortable" id="id445">
+          <table class="children sortable" id="id354">
   
   
-  <tr class="method">
+  <tr class="classmethod">
+    
+    <td>Class Method</td>
+    <td><code><a href="#multi_source_features_for" class="internal-link" title="aligned.sources.iceberg.IcebergTable.multi_source_features_for">multi<wbr></wbr>_source<wbr></wbr>_features<wbr></wbr>_for</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
+  </tr><tr class="method">
     
     <td>Method</td>
-    <td><code><a href="#job_group_key" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.job_group_key">job<wbr></wbr>_group<wbr></wbr>_key</a></code></td>
+    <td><code><a href="#__hash__" class="internal-link" title="aligned.sources.iceberg.IcebergTable.__hash__">__hash__</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#all_data" class="internal-link" title="aligned.sources.iceberg.IcebergTable.all_data">all<wbr></wbr>_data</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#delete" class="internal-link" title="aligned.sources.iceberg.IcebergTable.delete">delete</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#identifier" class="internal-link" title="aligned.sources.iceberg.IcebergTable.identifier">identifier</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Async Method</td>
+    <td><code><a href="#insert" class="internal-link" title="aligned.sources.iceberg.IcebergTable.insert">insert</a></code></td>
+    <td><span class="rst-undocumented">Undocumented</span></td>
+  </tr><tr class="method">
+    
+    <td>Method</td>
+    <td><code><a href="#job_group_key" class="internal-link" title="aligned.sources.iceberg.IcebergTable.job_group_key">job<wbr></wbr>_group<wbr></wbr>_key</a></code></td>
     <td>A key defining which sources can be grouped together in one request.</td>
   </tr><tr class="method">
     
     <td>Async Method</td>
-    <td><code><a href="#read_pandas" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.read_pandas">read<wbr></wbr>_pandas</a></code></td>
+    <td><code><a href="#overwrite" class="internal-link" title="aligned.sources.iceberg.IcebergTable.overwrite">overwrite</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="method">
     
     <td>Async Method</td>
-    <td><code><a href="#to_lazy_polars" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.to_lazy_polars">to<wbr></wbr>_lazy<wbr></wbr>_polars</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="method">
-    
-    <td>Async Method</td>
-    <td><code><a href="#write_pandas" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.write_pandas">write<wbr></wbr>_pandas</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="method">
-    
-    <td>Async Method</td>
-    <td><code><a href="#write_polars" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.write_polars">write<wbr></wbr>_polars</a></code></td>
+    <td><code><a href="#upsert" class="internal-link" title="aligned.sources.iceberg.IcebergTable.upsert">upsert</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="classvariable">
     
     <td>Class Variable</td>
-    <td><code><a href="#config" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.config">config</a></code></td>
+    <td><code><a href="#catalog" class="internal-link" title="aligned.sources.iceberg.IcebergTable.catalog">catalog</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="classvariable">
     
     <td>Class Variable</td>
-    <td><code><a href="#mapping_keys" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.mapping_keys">mapping<wbr></wbr>_keys</a></code></td>
+    <td><code><a href="#table" class="internal-link" title="aligned.sources.iceberg.IcebergTable.table">table</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="classvariable">
     
     <td>Class Variable</td>
-    <td><code><a href="#parquet_config" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.parquet_config">parquet<wbr></wbr>_config</a></code></td>
+    <td><code><a href="#type_name" class="internal-link" title="aligned.sources.iceberg.IcebergTable.type_name">type<wbr></wbr>_name</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="classvariable">
+  </tr><tr class="classvariable private">
     
     <td>Class Variable</td>
-    <td><code><a href="#path" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.path">path</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="classvariable">
-    
-    <td>Class Variable</td>
-    <td><code><a href="#type_name" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.type_name">type<wbr></wbr>_name</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="property">
-    
-    <td>Property</td>
-    <td><code><a href="#storage" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.storage">storage</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="property">
-    
-    <td>Property</td>
-    <td><code><a href="#url" class="internal-link" title="aligned.sources.s3.AwsS3ParquetDataSource.url">url</a></code></td>
+    <td><code><a href="#_schema" class="internal-link" title="aligned.sources.iceberg.IcebergTable._schema">_schema</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr>
 </table>
@@ -695,7 +643,7 @@
             <p class="inheritedFrom">
               Inherited from <code><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a></code>:
             </p>
-            <table class="children sortable" id="id446">
+            <table class="children sortable" id="id355">
   
   
   <tr class="baseproperty">
@@ -719,20 +667,10 @@
             <p class="inheritedFrom">
               Inherited from <code><a href="aligned.data_source.batch_data_source.BatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource">BatchDataSource</a></code> (via <code><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a></code>):
             </p>
-            <table class="children sortable" id="id447">
+            <table class="children sortable" id="id356">
   
   
-  <tr class="baseclassmethod">
-    
-    <td>Class Method</td>
-    <td><code><a href="aligned.data_source.batch_data_source.BatchDataSource.html#multi_source_features_for" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource.multi_source_features_for">multi<wbr></wbr>_source<wbr></wbr>_features<wbr></wbr>_for</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="basemethod">
-    
-    <td>Method</td>
-    <td><code><a href="aligned.data_source.batch_data_source.BatchDataSource.html#__hash__" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource.__hash__">__hash__</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="basemethod">
+  <tr class="basemethod">
     
     <td>Method</td>
     <td><code><a href="aligned.data_source.batch_data_source.BatchDataSource.html#all" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource.all">all</a></code></td>
@@ -746,11 +684,6 @@
     
     <td>Method</td>
     <td><code><a href="aligned.data_source.batch_data_source.BatchDataSource.html#all_columns" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource.all_columns">all<wbr></wbr>_columns</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="basemethod">
-    
-    <td>Method</td>
-    <td><code><a href="aligned.data_source.batch_data_source.BatchDataSource.html#all_data" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource.all_data">all<wbr></wbr>_data</a></code></td>
     <td><span class="rst-undocumented">Undocumented</span></td>
   </tr><tr class="basemethod">
     
@@ -820,39 +753,177 @@
   </tr>
 </table>
             
-            <p class="inheritedFrom">
-              Inherited from <code><a href="aligned.data_source.batch_data_source.ColumnFeatureMappable.html" class="internal-link" title="aligned.data_source.batch_data_source.ColumnFeatureMappable">ColumnFeatureMappable</a></code> (via <code><a href="aligned.data_source.batch_data_source.CodableBatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.CodableBatchDataSource">CodableBatchDataSource</a></code>, <code><a href="aligned.data_source.batch_data_source.BatchDataSource.html" class="internal-link" title="aligned.data_source.batch_data_source.BatchDataSource">BatchDataSource</a></code>):
-            </p>
-            <table class="children sortable" id="id448">
-  
-  
-  <tr class="basemethod">
-    
-    <td>Method</td>
-    <td><code><a href="aligned.data_source.batch_data_source.ColumnFeatureMappable.html#columns_for" class="internal-link" title="aligned.data_source.batch_data_source.ColumnFeatureMappable.columns_for">columns<wbr></wbr>_for</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="basemethod">
-    
-    <td>Method</td>
-    <td><code><a href="aligned.data_source.batch_data_source.ColumnFeatureMappable.html#feature_identifier_for" class="internal-link" title="aligned.data_source.batch_data_source.ColumnFeatureMappable.feature_identifier_for">feature<wbr></wbr>_identifier<wbr></wbr>_for</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr><tr class="basemethod">
-    
-    <td>Method</td>
-    <td><code><a href="aligned.data_source.batch_data_source.ColumnFeatureMappable.html#with_renames" class="internal-link" title="aligned.data_source.batch_data_source.ColumnFeatureMappable.with_renames">with<wbr></wbr>_renames</a></code></td>
-    <td><span class="rst-undocumented">Undocumented</span></td>
-  </tr>
-</table>
-            
 
             
         </div>
 
         <div id="child-list">
-          <div class="basemethod">
+          <div class="baseclassmethod">
   
   
-  <a name="aligned.sources.s3.AwsS3ParquetDataSource.job_group_key">
+  <a name="aligned.sources.iceberg.IcebergTable.multi_source_features_for">
+    
+  </a>
+  <a name="multi_source_features_for">
+    
+  </a>
+  <div class="functionHeader">
+    
+    <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#classmethod" class="intersphinx-link">classmethod</a><br /></span></div>
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">multi_source_features_for</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">cls</span>, </span><span class="rst-sig-param">facts: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, </span><span class="rst-sig-param">requests: <code><a href="https://docs.python.org/3/library/stdtypes.html#list" class="intersphinx-link">list</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr><a href="aligned.sources.iceberg.IcebergTable.html" class="internal-link" title="aligned.sources.iceberg.IcebergTable">IcebergTable</a>, <wbr></wbr>RetrievalRequest]]</code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/iceberg.py#L144">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#multi_source_features_for" title="aligned.sources.iceberg.IcebergTable.multi_source_features_for">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.data_source.batch_data_source.BatchDataSource.html#multi_source_features_for" class="internal-link">aligned.data_source.batch_data_source.BatchDataSource.multi_source_features_for</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.sources.iceberg.IcebergTable.__hash__">
+    
+  </a>
+  <a name="__hash__">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">__hash__</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/iceberg.py#L85">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#__hash__" title="aligned.sources.iceberg.IcebergTable.__hash__">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.data_source.batch_data_source.BatchDataSource.html#__hash__" class="internal-link">aligned.data_source.batch_data_source.BatchDataSource.__hash__</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.sources.iceberg.IcebergTable.all_data">
+    
+  </a>
+  <a name="all_data">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">all_data</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">request: <code>RetrievalRequest</code>, </span><span class="rst-sig-param">limit: <code><a href="https://docs.python.org/3/library/functions.html#int" class="intersphinx-link">int</a> | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code></span>) -&gt; <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/iceberg.py#L133">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#all_data" title="aligned.sources.iceberg.IcebergTable.all_data">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.data_source.batch_data_source.BatchDataSource.html#all_data" class="internal-link">aligned.data_source.batch_data_source.BatchDataSource.all_data</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.sources.iceberg.IcebergTable.delete">
+    
+  </a>
+  <a name="delete">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">delete</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">predicate: <code>Expression | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>):</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/iceberg.py#L88">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#delete" title="aligned.sources.iceberg.IcebergTable.delete">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.sources.local.Deletable.html#delete" class="internal-link">aligned.sources.local.Deletable.delete</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.sources.iceberg.IcebergTable.identifier">
+    
+  </a>
+  <a name="identifier">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">def</span>&#160;<span class="py-defname">identifier</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#tuple" class="intersphinx-link">tuple</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code>:</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/iceberg.py#L79">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#identifier" title="aligned.sources.iceberg.IcebergTable.identifier">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.sources.iceberg.IcebergTable.insert">
+    
+  </a>
+  <a name="insert">
+    
+  </a>
+  <div class="functionHeader">
+    
+    
+    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">insert</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">job: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, </span><span class="rst-sig-param">request: <code>RetrievalRequest</code></span>):</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/iceberg.py#L98">
+      
+      (source)
+    </a>
+    <a class="headerLink" href="#insert" title="aligned.sources.iceberg.IcebergTable.insert">
+      
+      
+      ¶
+    </a>
+  </div>
+  <div class="docstring functionBody">
+    <div class="interfaceinfo">overrides <code><a href="aligned.feature_source.WritableFeatureSource.html#insert" class="internal-link">aligned.feature_source.WritableFeatureSource.insert</a></code></div>
+    <div><p class="undocumented">Undocumented</p></div>
+  </div>
+</div><div class="basemethod">
+  
+  
+  <a name="aligned.sources.iceberg.IcebergTable.job_group_key">
     
   </a>
   <a name="job_group_key">
@@ -862,11 +933,11 @@
     
     
     <span class="py-keyword">def</span>&#160;<span class="py-defname">job_group_key</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/s3.py#L292">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/iceberg.py#L82">
       
       (source)
     </a>
-    <a class="headerLink" href="#job_group_key" title="aligned.sources.s3.AwsS3ParquetDataSource.job_group_key">
+    <a class="headerLink" href="#job_group_key" title="aligned.sources.iceberg.IcebergTable.job_group_key">
       
       
       ¶
@@ -879,128 +950,74 @@
 </div><div class="basemethod">
   
   
-  <a name="aligned.sources.s3.AwsS3ParquetDataSource.read_pandas">
+  <a name="aligned.sources.iceberg.IcebergTable.overwrite">
     
   </a>
-  <a name="read_pandas">
+  <a name="overwrite">
     
   </a>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">read_pandas</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code>pd.DataFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/s3.py#L303">
+    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">overwrite</span><span class="function-signature long-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">job: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, </span><span class="rst-sig-param">request: <code>RetrievalRequest</code>, </span><span class="rst-sig-param">predicate: <code>Expression | <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></code> = <a href="https://docs.python.org/3/library/constants.html#None" class="intersphinx-link">None</a></span>):</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/iceberg.py#L110">
       
       (source)
     </a>
-    <a class="headerLink" href="#read_pandas" title="aligned.sources.s3.AwsS3ParquetDataSource.read_pandas">
+    <a class="headerLink" href="#overwrite" title="aligned.sources.iceberg.IcebergTable.overwrite">
       
       
       ¶
     </a>
   </div>
   <div class="docstring functionBody">
-    
+    <div class="interfaceinfo">overrides <code><a href="aligned.feature_source.WritableFeatureSource.html#overwrite" class="internal-link">aligned.feature_source.WritableFeatureSource.overwrite</a></code></div>
     <div><p class="undocumented">Undocumented</p></div>
   </div>
 </div><div class="basemethod">
   
   
-  <a name="aligned.sources.s3.AwsS3ParquetDataSource.to_lazy_polars">
+  <a name="aligned.sources.iceberg.IcebergTable.upsert">
     
   </a>
-  <a name="to_lazy_polars">
+  <a name="upsert">
     
   </a>
   <div class="functionHeader">
     
     
-    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">to_lazy_polars</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span></span>) -&gt; <code>pl.LazyFrame</code>:</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/s3.py#L313">
+    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">upsert</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">job: <code><a href="aligned.retrieval_job.RetrievalJob.html" class="internal-link" title="aligned.retrieval_job.RetrievalJob">RetrievalJob</a></code>, </span><span class="rst-sig-param">request: <code>RetrievalRequest</code></span>):</span>
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/iceberg.py#L103">
       
       (source)
     </a>
-    <a class="headerLink" href="#to_lazy_polars" title="aligned.sources.s3.AwsS3ParquetDataSource.to_lazy_polars">
+    <a class="headerLink" href="#upsert" title="aligned.sources.iceberg.IcebergTable.upsert">
       
       
       ¶
     </a>
   </div>
   <div class="docstring functionBody">
-    
-    <div><p class="undocumented">Undocumented</p></div>
-  </div>
-</div><div class="basemethod">
-  
-  
-  <a name="aligned.sources.s3.AwsS3ParquetDataSource.write_pandas">
-    
-  </a>
-  <a name="write_pandas">
-    
-  </a>
-  <div class="functionHeader">
-    
-    
-    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">write_pandas</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">df: <code>pd.DataFrame</code></span>):</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/s3.py#L323">
-      
-      (source)
-    </a>
-    <a class="headerLink" href="#write_pandas" title="aligned.sources.s3.AwsS3ParquetDataSource.write_pandas">
-      
-      
-      ¶
-    </a>
-  </div>
-  <div class="docstring functionBody">
-    
-    <div><p class="undocumented">Undocumented</p></div>
-  </div>
-</div><div class="basemethod">
-  
-  
-  <a name="aligned.sources.s3.AwsS3ParquetDataSource.write_polars">
-    
-  </a>
-  <a name="write_polars">
-    
-  </a>
-  <div class="functionHeader">
-    
-    
-    <span class="py-keyword">async&#160;def</span>&#160;<span class="py-defname">write_polars</span><span class="function-signature">(<span class="rst-sig-param"><span class="rst-undocumented">self</span>, </span><span class="rst-sig-param">df: <code>pl.LazyFrame</code></span>):</span>
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/s3.py#L333">
-      
-      (source)
-    </a>
-    <a class="headerLink" href="#write_polars" title="aligned.sources.s3.AwsS3ParquetDataSource.write_polars">
-      
-      
-      ¶
-    </a>
-  </div>
-  <div class="docstring functionBody">
-    
+    <div class="interfaceinfo">overrides <code><a href="aligned.feature_source.WritableFeatureSource.html#upsert" class="internal-link">aligned.feature_source.WritableFeatureSource.upsert</a></code></div>
     <div><p class="undocumented">Undocumented</p></div>
   </div>
 </div><div class="baseclassvariable">
   
   
-  <a name="aligned.sources.s3.AwsS3ParquetDataSource.config">
+  <a name="aligned.sources.iceberg.IcebergTable.catalog">
     
   </a>
-  <a name="config">
+  <a name="catalog">
     
   </a>
   <div class="functionHeader">
     
-    <span class="py-defname">config</span>: <code><a href="aligned.AwsS3Config.html" class="internal-link" title="aligned.AwsS3Config">AwsS3Config</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/s3.py#L285">
+    <span class="py-defname">catalog</span>: <code><a href="aligned.sources.iceberg.IcebergCatalog.html" class="internal-link" title="aligned.sources.iceberg.IcebergCatalog">IcebergCatalog</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/iceberg.py#L72">
       
       (source)
     </a>
-    <a class="headerLink" href="#config" title="aligned.sources.s3.AwsS3ParquetDataSource.config">
+    <a class="headerLink" href="#catalog" title="aligned.sources.iceberg.IcebergTable.catalog">
       
       
       ¶
@@ -1014,47 +1031,20 @@
 </div><div class="baseclassvariable">
   
   
-  <a name="aligned.sources.s3.AwsS3ParquetDataSource.mapping_keys">
+  <a name="aligned.sources.iceberg.IcebergTable.table">
     
   </a>
-  <a name="mapping_keys">
-    
-  </a>
-  <div class="functionHeader">
-    
-    <span class="py-defname">mapping_keys</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#dict" class="intersphinx-link">dict</a>[<wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>, <wbr></wbr><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a>]</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/s3.py#L287">
-      
-      (source)
-    </a>
-    <a class="headerLink" href="#mapping_keys" title="aligned.sources.s3.AwsS3ParquetDataSource.mapping_keys">
-      
-      
-      ¶
-    </a>
-  </div>
-  <div class="functionBody">
-    <div class="interfaceinfo">overrides <code><a href="aligned.data_source.batch_data_source.ColumnFeatureMappable.html#mapping_keys" class="internal-link">aligned.data_source.batch_data_source.ColumnFeatureMappable.mapping_keys</a></code></div>
-    <div><p class="undocumented">Undocumented</p></div>
-    
-  </div>
-</div><div class="baseclassvariable">
-  
-  
-  <a name="aligned.sources.s3.AwsS3ParquetDataSource.parquet_config">
-    
-  </a>
-  <a name="parquet_config">
+  <a name="table">
     
   </a>
   <div class="functionHeader">
     
-    <span class="py-defname">parquet_config</span>: <code>ParquetConfig</code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/s3.py#L289">
+    <span class="py-defname">table</span>: <code><a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/iceberg.py#L74">
       
       (source)
     </a>
-    <a class="headerLink" href="#parquet_config" title="aligned.sources.s3.AwsS3ParquetDataSource.parquet_config">
+    <a class="headerLink" href="#table" title="aligned.sources.iceberg.IcebergTable.table">
       
       
       ¶
@@ -1068,34 +1058,7 @@
 </div><div class="baseclassvariable">
   
   
-  <a name="aligned.sources.s3.AwsS3ParquetDataSource.path">
-    
-  </a>
-  <a name="path">
-    
-  </a>
-  <div class="functionHeader">
-    
-    <span class="py-defname">path</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/s3.py#L286">
-      
-      (source)
-    </a>
-    <a class="headerLink" href="#path" title="aligned.sources.s3.AwsS3ParquetDataSource.path">
-      
-      
-      ¶
-    </a>
-  </div>
-  <div class="functionBody">
-    
-    <div><p class="undocumented">Undocumented</p></div>
-    
-  </div>
-</div><div class="baseclassvariable">
-  
-  
-  <a name="aligned.sources.s3.AwsS3ParquetDataSource.type_name">
+  <a name="aligned.sources.iceberg.IcebergTable.type_name">
     
   </a>
   <a name="type_name">
@@ -1104,11 +1067,11 @@
   <div class="functionHeader">
     
     <span class="py-defname">type_name</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/s3.py#L290">
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/iceberg.py#L77">
       
       (source)
     </a>
-    <a class="headerLink" href="#type_name" title="aligned.sources.s3.AwsS3ParquetDataSource.type_name">
+    <a class="headerLink" href="#type_name" title="aligned.sources.iceberg.IcebergTable.type_name">
       
       
       ¶
@@ -1119,50 +1082,23 @@
     <div><p class="undocumented">Undocumented</p></div>
     
   </div>
-</div><div class="baseproperty">
+</div><div class="baseclassvariable private">
   
   
-  <a name="aligned.sources.s3.AwsS3ParquetDataSource.storage">
+  <a name="aligned.sources.iceberg.IcebergTable._schema">
     
   </a>
-  <a name="storage">
-    
-  </a>
-  <div class="functionHeader">
-    <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
-    <span class="py-defname">storage</span>: <code><a href="aligned.storage.Storage.html" class="internal-link" title="aligned.storage.Storage">Storage</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/s3.py#L295">
-      
-      (source)
-    </a>
-    <a class="headerLink" href="#storage" title="aligned.sources.s3.AwsS3ParquetDataSource.storage">
-      
-      
-      ¶
-    </a>
-  </div>
-  <div class="functionBody">
-    
-    <div><p class="undocumented">Undocumented</p></div>
-    
-  </div>
-</div><div class="baseproperty">
-  
-  
-  <a name="aligned.sources.s3.AwsS3ParquetDataSource.url">
-    
-  </a>
-  <a name="url">
+  <a name="_schema">
     
   </a>
   <div class="functionHeader">
-    <div><span class="decorator">@<a href="https://docs.python.org/3/library/functions.html#property" class="intersphinx-link">property</a><br /></span></div>
-    <span class="py-defname">url</span>: <code><a href="https://docs.python.org/3/library/stdtypes.html#str" class="intersphinx-link">str</a></code> =
-    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/s3.py#L299">
+    
+    <span class="py-defname">_schema</span>: <code><a href="aligned.config_value.ConfigValue.html" class="internal-link" title="aligned.config_value.ConfigValue">ConfigValue</a></code> =
+    <a class="sourceLink" href="https://github.com/MatsMoll/aligned/tree/3eb2ef523360d75ff0529c7e0750fb4f770c15a9/aligned/sources/iceberg.py#L75">
       
       (source)
     </a>
-    <a class="headerLink" href="#url" title="aligned.sources.s3.AwsS3ParquetDataSource.url">
+    <a class="headerLink" href="#_schema" title="aligned.sources.iceberg.IcebergTable._schema">
       
       
       ¶
