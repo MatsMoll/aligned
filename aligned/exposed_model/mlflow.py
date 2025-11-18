@@ -36,6 +36,10 @@ try:
             return ColSpec("float", name=feature.name)
         elif dtype.name == "string":
             return ColSpec("string", name=feature.name)
+        elif dtype.name == "bool":
+            return ColSpec("boolean", name=feature.name)
+        elif dtype.name in ["int64"]:
+            return ColSpec("long", name=feature.name)
         elif dtype.is_numeric:
             return ColSpec("integer", name=feature.name)
         elif dtype.is_datetime:

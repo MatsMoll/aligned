@@ -6,7 +6,9 @@ from io import BytesIO
 import polars as pl
 from httpx import HTTPStatusError
 
-from aligned.config_value import ConfigValue
+from aligned.config_value import (
+    ConfigValue,
+)
 from aligned.lazy_imports import pandas as pd
 from aligned.data_source.batch_data_source import (
     CodableBatchDataSource,

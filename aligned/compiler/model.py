@@ -35,7 +35,7 @@ from aligned.feature_view.feature_view import (
     FeatureViewMetadata,
     FeatureViewWrapper,
 )
-from aligned.exposed_model.interface import ExposedModel
+from aligned.exposed_model.interface import CallableModelFunction, ExposedModel
 from aligned.retrieval_job import ConvertableToRetrievalJob, PredictionJob, RetrievalJob
 from aligned.schemas.derivied_feature import DerivedFeature
 from aligned.schemas.feature import (
@@ -363,11 +363,17 @@ class FeatureInputVersions:
     default_version: str
     versions: dict[str, list[FeatureReferencable]]
 
-    def compile(self) -> FeatureVersionSchema:
+    def compile(
+        self, labels: set[FeatureReference] | None = None
+    ) -> FeatureVersionSchema:
         return FeatureVersionSchema(
             default_version=self.default_version,
             versions={
-                version: [feature.feature_reference() for feature in features]
+                version: [
+                    feature.feature_reference()
+                    for feature in features
+                    if feature.feature_reference() not in (labels or set())
+                ]
                 for version, features in self.versions.items()
             },
         )
@@ -380,7 +386,8 @@ def model_contract(
         | ModelContractWrapper
         | Sequence[FeatureReferencable]
     ]
-    | FeatureInputVersions,
+    | FeatureInputVersions
+    | None = None,
     name: str | None = None,
     contacts: list[Contact] | list[str] | None = None,
     tags: list[str] | None = None,
@@ -390,19 +397,24 @@ def model_contract(
     application_source: CodableBatchDataSource | None = None,
     dataset_store: DatasetStore | StorageFileReference | None = None,
     exposed_at_url: str | None = None,
-    exposed_model: ExposedModel | None = None,
+    exposed_model: ExposedModel | CallableModelFunction | None = None,
     acceptable_freshness: timedelta | None = None,
     unacceptable_freshness: timedelta | None = None,
 ) -> Callable[[Type[T]], ModelContractWrapper[T]]:
     def decorator(cls: Type[T]) -> ModelContractWrapper[T]:
         from aligned.sources.renamer import camel_to_snake_case
 
+        if input_features is None and output_source is None:
+            source = RandomDataSource(fill_mode="random_samples")
+        else:
+            source = output_source
+
         if isinstance(input_features, FeatureInputVersions):
             features_versions = input_features
         else:
             unwrapped_input_features: list[FeatureReferencable] = []
 
-            for feature in input_features:
+            for feature in input_features or []:
                 if isinstance(feature, FeatureViewWrapper):
                     compiled_view = feature.compile()
                     request = compiled_view.request_all
@@ -439,9 +451,14 @@ def model_contract(
         elif cls.__doc__:
             used_description = str(cls.__doc__)
 
+        if exposed_model is not None and not isinstance(exposed_model, ExposedModel):
+            model = ExposedModel.polars_predictor(exposed_model)
+        else:
+            model = exposed_model
+
         used_exposed_at_url = exposed_at_url
-        if exposed_model:
-            used_exposed_at_url = exposed_model.exposed_at_url or exposed_at_url
+        if model:
+            used_exposed_at_url = model.exposed_at_url or exposed_at_url
 
         conts = [
             Contact(cont) if isinstance(cont, str) else cont for cont in contacts or []
@@ -453,14 +470,14 @@ def model_contract(
             contacts=conts,
             tags=tags,
             description=used_description,
-            output_source=output_source,
+            output_source=source,
             output_stream=output_stream,
             application_source=application_source,
             dataset_store=resolve_dataset_store(dataset_store)
             if dataset_store
             else None,
             exposed_at_url=used_exposed_at_url,
-            exposed_model=exposed_model,
+            exposed_model=model,
             acceptable_freshness=acceptable_freshness,
             unacceptable_freshness=unacceptable_freshness,
         )
@@ -514,7 +531,9 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
     for var_name in var_names:
         feature = getattr(model, var_name)
         if isinstance(feature, FeatureFactory):
-            assert feature._name, f"Expected name but found none in model: {metadata.name} for feature {var_name}"
+            assert feature._name, (
+                f"Expected name but found none in model: {metadata.name} for feature {var_name}"
+            )
             feature._location = FeatureLocation.model(metadata.name)
 
         if isinstance(feature, FeatureView):
@@ -547,9 +566,9 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
             feature_name = feature.target._name
             assert feature_name
             assert feature._name
-            assert (
-                feature.target._name in classification_targets
-            ), "Target must be a classification target."
+            assert feature.target._name in classification_targets, (
+                "Target must be a classification target."
+            )
 
             target = classification_targets[feature.target._name]
             target.class_probabilities.add(feature.compile())
@@ -632,7 +651,7 @@ def compile_with_metadata(model: Any, metadata: ModelMetadata) -> ModelSchema:
                 inference_view.features.add(feature.feature())
 
     # Needs to run after the feature views have compiled
-    features = metadata.features.compile()
+    features = metadata.features.compile(inference_view.labels_estimates_refs())
 
     for target, probabilities in probability_features.items():
         from aligned.schemas.transformation import MapArgMax

@@ -173,9 +173,9 @@ def add_read_data_route(
     )
     async def read_entity(entity: dict[str, Any]) -> dict:
         first_key = next(iter(entity.keys()))
-        assert not isinstance(
-            entity[first_key], list
-        ), "Expects only one entity. Consider using the /entities request instead."
+        assert not isinstance(entity[first_key], list), (
+            "Expects only one entity. Consider using the /entities request instead."
+        )
 
         start_time = monotonic()
         if location.location_type == "model":
@@ -202,9 +202,9 @@ def add_infer_route(
     assert location.location_type == "model"
     model = store.model(location.name)
 
-    assert (
-        model.has_exposed_model()
-    ), f"Model '{location.name}' needs to have an exposed model to infer."
+    assert model.has_exposed_model(), (
+        f"Model '{location.name}' needs to have an exposed model to infer."
+    )
 
     route_name = location.name.replace("_", "-")
 
@@ -264,7 +264,7 @@ def add_infer_route(
     )
     async def infer(entities: dict[str, list[Any]]) -> dict[str, list[Any]]:
         output = await model.predict_over(entities).to_polars()
-        return output.to_dict(as_series=False)
+        return output.select(view_request.all_returned_columns).to_dict(as_series=False)
 
 
 @overload

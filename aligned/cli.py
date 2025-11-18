@@ -9,7 +9,7 @@ from typing import Any
 
 import click
 import json
-from pytz import utc  # type: ignore
+from pytz import utc
 
 from aligned.compiler.repo_reader import RepoReader, RepoReference
 from aligned.feature_store import ContractStore
@@ -125,6 +125,7 @@ def cli() -> None:
 @click.option("--n-workers", default=1)
 @click.option("--expose-tag")
 @click.option("--log-level", default="info")
+@click.option("--run-as-module", default=True)
 async def start_proxy_server(
     contracts: str,
     host: str,
@@ -132,25 +133,42 @@ async def start_proxy_server(
     n_workers: int,
     log_level: str,
     expose_tag: str | None,
+    run_as_module: bool,
 ) -> None:
+    """
+    Starts a server that exposes the data that exists in the contracts.
+    """
     from fastapi import FastAPI
     import uvicorn
+    from uvicorn.main import LOG_LEVELS  # type: ignore
+    import sys
+
+    if run_as_module:
+        cwd = Path().cwd().as_posix()
+        if cwd not in sys.path:
+            sys.path.append(cwd)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         import logging
         from aligned.proxy_api import router_for_store
 
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(
+            level=LOG_LEVELS[log_level.lower()],
+            # format="%(asctime)s | %(levelname)-8s | %(module)s:%(funcName)s:%(lineno)d - %(message)s"
+        )
 
         logger = logging.getLogger(__name__)
-
         logger.info(f"Loading contract from: '{contracts}'")
 
         if contracts.startswith("http"):
             store = await AlignedCloudSource(contracts).as_contract_store()
         else:
-            store = await store_from_reference(contracts)
+            try:
+                store = await store_from_reference(contracts)
+            except Exception:
+                logger.info(f"Unable to read '{contracts}'. Will try to compile")
+                store = await ContractStore.from_dir()
 
         router_for_store(store, expose_tag=expose_tag, app=app)
         yield
@@ -158,7 +176,7 @@ async def start_proxy_server(
     app = FastAPI(lifespan=lifespan)
 
     config = uvicorn.Config(
-        app, host=host, port=port, workers=n_workers, log_level=log_level
+        app, host=host, port=port, workers=n_workers, log_level=log_level.lower()
     )
     server = uvicorn.Server(config)
     await server.serve()

@@ -220,9 +220,10 @@ class FeatureViewWrapper(Generic[T]):
             source_column=source_column,
         )
 
-    def feature_references(
+    def references(
         self,
-        exclude: Sequence[str]
+        exclude: Sequence[str | FeatureReferencable]
+        | FeatureFactory
         | Callable[[T], Sequence[FeatureReferencable] | FeatureReferencable]
         | None = None,
         include: Sequence[str]
@@ -232,17 +233,36 @@ class FeatureViewWrapper(Generic[T]):
         req = self.request
 
         if exclude is not None:
+            all_features = req.all_features
+
+            if isinstance(exclude, FeatureFactory):
+                exclude = [exclude]
+
             if callable(exclude):
                 refs = exclude(self.view)
                 if isinstance(refs, FeatureReferencable):
                     refs = [refs]
                 feature_names = [feat.feature_reference().name for feat in refs]
             else:
-                feature_names = list(exclude)
+                feature_names = []
+
+                for feat in exclude:
+                    if isinstance(feat, str):
+                        feature_names.append(feat)
+                    elif isinstance(feat, FeatureFactory) and feat._name is None:
+                        feature_names.extend(
+                            [
+                                exfeat.name
+                                for exfeat in all_features
+                                if exfeat.dtype == feat.dtype
+                            ]
+                        )
+                    else:
+                        feature_names.append(feat.feature_reference().name)
 
             return [
                 feat.as_reference(req.location)
-                for feat in req.all_features
+                for feat in all_features
                 if feat.name not in feature_names
             ]
 
@@ -1064,7 +1084,7 @@ class FeatureView(ABC):
 
         return f"""
 from aligned import feature_view, {all_types}
-{imports or ''}
+{imports or ""}
 
 @feature_view(
     name="{view_name}",
