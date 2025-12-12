@@ -45,6 +45,8 @@ from aligned.sources.azure_blob_storage import AzureBlobConfig
 from aligned.exposed_model.interface import ExposedModel
 from aligned.schemas.feature import FeatureLocation
 
+__version__ = "0.0.134"
+
 __all__ = [
     "ContractStore",
     "FeatureStore",
@@ -109,4 +111,5 @@ __all__ = [
     "CsvConfig",
     "ParquetConfig",
     "DockerConfig",
+    "__version__",
 ]

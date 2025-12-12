@@ -29,6 +29,7 @@ from aligned.schemas.record_coders import PassthroughRecordCoder, RecordCoder
 from aligned.schemas.vector_storage import VectorIndex, VectorStorage
 
 if TYPE_CHECKING:
+    from redis.client import AbstractRedis
     from redis.commands.search.field import (
         NumericField,
         TagField,
@@ -40,7 +41,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-redis_manager: dict[str, redis.ConnectionPool] = {}
+redis_manager: dict[str, AbstractRedis] = {}
 
 
 @dataclass
@@ -69,14 +70,23 @@ class RedisConfig(Codable, AsBatchSource):
     def as_source(self) -> CodableBatchDataSource:
         return RedisSource(self)
 
-    def redis(self) -> redis.Redis:
+    def redis(self) -> AbstractRedis:
         url = self.url
         if url not in redis_manager:
-            redis_manager[url] = redis.ConnectionPool.from_url(
-                url, decode_responses=True
-            )
+            from redis import Redis as SyncRedis
 
-        return redis.StrictRedis(connection_pool=redis_manager[url])
+            sync_client = SyncRedis.from_url(url, decode_responses=True)
+            info = sync_client.info()
+            if "cluster_enabled" in info and bool(info["cluster_enabled"]):
+                redis_manager[url] = redis.RedisCluster.from_url(
+                    url=url, decode_responses=True
+                )
+            else:
+                redis_manager[url] = redis.StrictRedis.from_url(
+                    url, decode_responses=True
+                )
+
+        return redis_manager[url]
 
     def stream(self, topic: str) -> RedisStreamSource:
         return RedisStreamSource(topic_name=topic, config=self)
