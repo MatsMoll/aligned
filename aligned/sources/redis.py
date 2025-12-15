@@ -236,7 +236,7 @@ class RedisSource(WritableFeatureSource, CodableBatchDataSource):
         redis = self.config.redis()
         data = await job.to_lazy_polars()
 
-        async with redis.pipeline(transaction=True) as pipe:
+        async with redis.pipeline(transaction=False) as pipe:
             # Run one query per row
             filter_entity_query: pl.Expr = pl.lit(True)
             for entity_name in request.entity_names:
