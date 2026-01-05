@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aligned"
-version = "0.0.135"
+version = "0.0.136"
 description = "A data management and lineage tool for ML applications."
 authors = ["Mats E. Mollestad <mats@mollestad.no>"]
 license = "FSL-1.1-ALv2"
@@ -60,7 +60,7 @@ openai = { version = "^1.52.0", optional = true }
 pandas = { version = "^2.0.0", optional = true }
 fastapi = { version = "^0.100.0", optional = true }
 uvicorn = { version = "^0.17.6", optional = true }
-redis = { version = "^4.3.1", optional = true }
+redis = { version = ">=4.3.0", optional = true }
 aioaws = { version = "^0.12", optional = true }
 asgi-correlation-id = { version = "^3.0.0", optional = true }
 pillow = { version = "^9.4.0", optional = true }
