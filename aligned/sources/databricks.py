@@ -192,6 +192,8 @@ class DatabricksConnectionConfig:
     azure_client_secret: ConfigValue | None = None
     azure_tenant_id: ConfigValue | None = None
 
+    spark_config: dict[str, str] | None = None
+
     def __init__(
         self,
         host: str | ConfigValue,
@@ -200,6 +202,7 @@ class DatabricksConnectionConfig:
         azure_client_id: ConfigValue | None = None,
         azure_client_secret: ConfigValue | None = None,
         azure_tenant_id: ConfigValue | None = None,
+        spark_config: dict[str, str] | None = None,
     ) -> None:
         self.host = LiteralValue.from_value(host)
         self.cluster_id = LiteralValue.from_value(cluster_id) if cluster_id else None
@@ -207,6 +210,7 @@ class DatabricksConnectionConfig:
         self.azure_client_secret = azure_client_secret
         self.azure_client_id = azure_client_id
         self.azure_tenant_id = azure_tenant_id
+        self.spark_config = spark_config
 
     def storage_provider(self) -> pl.CredentialProvider | None:
         if self.azure_client_id and self.azure_client_secret and self.azure_tenant_id:
@@ -221,11 +225,24 @@ class DatabricksConnectionConfig:
             return pl.CredentialProviderAzure(credential=creds)
         return None
 
+    def with_spark_config(self, spark_config: dict[str, str]) -> DatabricksConnectionConfig:
+        merged = dict(self.spark_config or {})
+        merged.update(spark_config)
+        return DatabricksConnectionConfig(
+            host=self.host,
+            cluster_id=self.cluster_id,
+            token=self.token,
+            azure_client_id=self.azure_client_id,
+            azure_client_secret=self.azure_client_secret,
+            azure_tenant_id=self.azure_tenant_id,
+            spark_config=merged,
+        )
+
     def with_auth(
         self, token: str | ConfigValue, host: str | ConfigValue
     ) -> DatabricksConnectionConfig:
         return DatabricksConnectionConfig(
-            cluster_id=self.cluster_id, token=token, host=host
+            cluster_id=self.cluster_id, token=token, host=host, spark_config=self.spark_config
         )
 
     @staticmethod
@@ -257,7 +274,7 @@ class DatabricksConnectionConfig:
     def catalog(self, catalog: str | ConfigValue) -> UnityCatalog:
         return UnityCatalog(self, LiteralValue.from_value(catalog))
 
-    def connection(self) -> SparkSession:
+    def connection(self, spark_config: dict[str, str] | None = None) -> SparkSession:
         from pyspark.errors import PySparkException
 
         cluster_id = self.cluster_id
@@ -284,6 +301,13 @@ class DatabricksConnectionConfig:
 
         if self.token:
             builder = builder.token(self.token.read())
+
+        effective_config = dict(self.spark_config or {})
+        if spark_config:
+            effective_config.update(spark_config)
+
+        for key, value in effective_config.items():
+            builder = builder.config(key, value)
 
         if cluster_id_value == "serverless":
             spark = builder.getOrCreate()
@@ -551,8 +575,24 @@ class UCFeatureTableSource(
 ):
     config: DatabricksConnectionConfig
     table: UnityCatalogTableConfig
+    spark_config: dict[str, str] | None = None
 
     type_name = "uc_feature_table"
+
+    def _configured_connection(self) -> SparkSession:
+        conn = self.config.connection()
+        for key, value in (self.spark_config or {}).items():
+            conn.conf.set(key, value)
+        return conn
+
+    def with_spark_config(self, spark_config: dict[str, str]) -> UCFeatureTableSource:
+        merged = dict(self.spark_config or {})
+        merged.update(spark_config)
+        return UCFeatureTableSource(
+            config=self.config,
+            table=self.table,
+            spark_config=merged,
+        )
 
     def job_group_key(self) -> str:
         return "uc_feature_table"
@@ -661,7 +701,7 @@ class UCFeatureTableSource(
             .freshness()
         )
         """
-        spark = self.config.connection()
+        spark = self._configured_connection()
         return (
             spark.sql(
                 f"SELECT MAX({feature.name}) as {feature.name} FROM {self.table.identifier()}"
@@ -684,7 +724,7 @@ class UCFeatureTableSource(
     ) -> None:
         client = databricks_fe.FeatureEngineeringClient()
 
-        conn = self.config.connection()
+        conn = self._configured_connection()
         df = conn.createDataFrame(await job.unique_entities().to_pandas())
 
         client.create_table(
@@ -692,7 +732,7 @@ class UCFeatureTableSource(
         )
 
     def with_config(self, config: DatabricksConnectionConfig) -> UCFeatureTableSource:
-        return UCFeatureTableSource(config, self.table)
+        return UCFeatureTableSource(config, self.table, spark_config=self.spark_config)
 
 
 def features_to_read(
@@ -801,6 +841,7 @@ class UnityCatalogTableAllJob(RetrievalJob, DatabricksSource):
     _limit: int | None
     where: Expression | None = field(default=None)
     renamer: Renamer | None = field(default=None)
+    spark_config: dict[str, str] | None = field(default=None)
 
     @property
     def request_result(self) -> RequestResult:
@@ -830,7 +871,7 @@ class UnityCatalogTableAllJob(RetrievalJob, DatabricksSource):
         return (await self.to_spark()).toPandas()
 
     async def to_spark(self, session: SparkSession | None = None) -> SparkFrame:
-        con = session or self.config.connection()
+        con = session or self.config.connection(spark_config=self.spark_config)
         spark_df = con.read.table(self.table.identifier())
 
         if self.request.features_to_include:
@@ -914,8 +955,23 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
     table: UnityCatalogTableConfig
     should_overwrite_schema: bool = False
     renamer: Renamer | None = None
+    spark_config: dict[str, str] | None = None
 
     type_name = "uc_table"
+
+    def _configured_connection(self) -> SparkSession:
+        return self.config.connection(spark_config=self.spark_config)
+
+    def with_spark_config(self, spark_config: dict[str, str]) -> UCTableSource:
+        merged = dict(self.spark_config or {})
+        merged.update(spark_config)
+        return UCTableSource(
+            config=self.config,
+            table=self.table,
+            should_overwrite_schema=self.should_overwrite_schema,
+            renamer=self.renamer,
+            spark_config=merged,
+        )
 
     def job_group_key(self) -> str:
         return f"uc_table-{self.table.identifier()}"
@@ -926,6 +982,7 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
             table=self.table,
             should_overwrite_schema=should_overwrite_schema,
             renamer=self.renamer,
+            spark_config=self.spark_config,
         )
 
     def with_renames(self, renames: dict[str, str] | Renamer | None) -> UCTableSource:
@@ -933,12 +990,13 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
             renames = Renamer.noop(renames)
 
         return UCTableSource(
-            self.config, self.table, self.should_overwrite_schema, renames
+            self.config, self.table, self.should_overwrite_schema, renames, self.spark_config
         )
 
     def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
         return UnityCatalogTableAllJob(
-            self.config, self.table, request, limit, renamer=self.renamer
+            self.config, self.table, request, limit, renamer=self.renamer,
+            spark_config=self.spark_config,
         )
 
     def all_between_dates(
@@ -995,7 +1053,7 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
         Returns:
             dict[str, FeatureType]: A dictionary containing the column name and the feature type
         """
-        spark = self.config.connection()
+        spark = self._configured_connection()
         schema = spark.table(self.table.identifier()).schema
 
         aligned_schema: dict[str, FeatureType] = {}
@@ -1011,7 +1069,7 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
             .freshness()
         )
         """
-        spark = self.config.connection()
+        spark = self._configured_connection()
         return (
             spark.sql(
                 f"SELECT MAX({feature.name}) as {feature.name} FROM {self.table.identifier()}"
@@ -1025,7 +1083,7 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
 
         expected_schema = request.spark_schema()
 
-        conn = self.config.connection()
+        conn = self._configured_connection()
         spark_df = await job.to_spark(conn)
 
         df = spark_df.select(
@@ -1046,7 +1104,7 @@ class UCTableSource(CodableBatchDataSource, WritableFeatureSource, DatabricksSou
 
         expected_schema = request.spark_schema()
 
-        conn = self.config.connection()
+        conn = self._configured_connection()
         spark_df = await job.to_spark(conn)
 
         df = spark_df.select(
@@ -1088,7 +1146,7 @@ WHEN NOT MATCHED THEN
 
         expected_schema = request.spark_schema()
 
-        conn = self.config.connection()
+        conn = self._configured_connection()
         spark_df = await job.to_spark(conn)
 
         df = spark_df.select(
@@ -1103,7 +1161,7 @@ WHEN NOT MATCHED THEN
         ).saveAsTable(self.table.identifier())
 
     def with_config(self, config: DatabricksConnectionConfig) -> UCTableSource:
-        return UCTableSource(config, self.table)
+        return UCTableSource(config, self.table, spark_config=self.spark_config)
 
     async def feature_view_code(self, view_name: str) -> str:
         from aligned.sources.renamer import snake_to_pascal

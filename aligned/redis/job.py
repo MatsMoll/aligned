@@ -50,8 +50,9 @@ class FactualRedisJob(RetrievalJob):
                 [
                     (
                         pl.concat_str(
-                            [pl.lit(request.location.identifier), pl.lit(":")]
-                            + [pl.col(col) for col in sorted(request.entity_names)]
+                            [pl.lit(request.location.identifier)]
+                            + [pl.col(col) for col in sorted(request.entity_names)],
+                            separator=":"
                         )
                     ).alias(redis_combine_id),
                     pl.col(list(request.entity_names)),
@@ -67,10 +68,23 @@ class FactualRedisJob(RetrievalJob):
 
             features = list(feature.name for feature in needed_features)
 
+            import snappy
+
             async with redis.pipeline(transaction=False) as pipe:
                 for entity in entities[redis_combine_id]:
                     pipe.hmget(entity, keys=features)
-                result = await pipe.execute()
+
+                result_bytes = await pipe.execute()
+
+                result = []
+                for row in result_bytes:
+                    result.append(
+                        [
+                            snappy.uncompress(val).decode() 
+                            if val else None
+                            for val in row
+                        ]
+                    )
 
             reqs: pl.DataFrame = pl.concat(
                 [entities, pl.DataFrame(result, schema=features, orient="row")],

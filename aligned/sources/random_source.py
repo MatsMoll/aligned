@@ -10,6 +10,7 @@ from aligned.data_file import DataFileReference, upsert_on_column
 from aligned.retrieval_job import RetrievalJob
 
 from aligned.feature_source import WritableFeatureSource
+from aligned.schemas.constraints import MinLength
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureType
 from aligned.request.retrieval_request import RetrievalRequest
 from aligned.data_source.batch_data_source import (
@@ -110,18 +111,33 @@ def random_values_for(
         if _sub_constraints:
             sub_constraints = set(_sub_constraints[0].constraints)
 
+        min_len = 4
+        for constraint in feature.constraints or set():
+            if isinstance(constraint, MinLength):
+                min_len = max(min_len, constraint.value)
+
         if subtype is None:
-            values = np.random.random((size, 4))
+            values = np.random.random((size, min_len))
         else:
             values = [
                 random_values_for(
-                    Feature("dd", dtype=subtype, constraints=sub_constraints), 4
+                    Feature("dd", dtype=subtype, constraints=sub_constraints), min_len
                 )
                 for _ in range(size)
             ]
     elif dtype.is_embedding:
-        embedding_size = dtype.embedding_size() or 10
+        embedding_size = dtype.embedding_size() or 1028
         values = np.random.random((size, embedding_size))
+    elif dtype.is_struct:
+        df = pl.DataFrame()
+        for field, dtype in dtype.struct_fields().items():
+            df = df.with_columns(
+                random_values_for(
+                    Feature(field, dtype), size
+                ).alias(field)
+            )
+
+        return df.to_struct(feature.name)
     else:
         if choices:
             values = np.random.choice(choices, size=size)
