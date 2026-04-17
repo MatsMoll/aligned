@@ -9,6 +9,7 @@ from aligned.retrieval_job import RetrievalJob
 from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureType
 from aligned.sources.redis import RedisConfig, RedisSource
+import snappy
 
 
 @pytest.fixture
@@ -30,7 +31,7 @@ def retrieval_request() -> RetrievalRequest:
 
 @pytest.mark.asyncio
 async def test_factual_redis_job(mocker, retrieval_request) -> None:  # type: ignore[no-untyped-def]
-    values = ["20", "44"]
+    values = [snappy.compress(val) for val in ["20", "44"]]
 
     redis_mock = mocker.patch.object(Pipeline, "execute", return_value=values)
 
@@ -53,7 +54,7 @@ async def test_factual_redis_job(mocker, retrieval_request) -> None:  # type: ig
 
 @pytest.mark.asyncio
 async def test_factual_redis_job_int_as_str(mocker, retrieval_request) -> None:  # type: ignore[no-untyped-def]
-    values = ["20", "44"]
+    values = [snappy.compress(val) for val in ["20", "44"]]
 
     redis_mock = mocker.patch.object(Pipeline, "execute", return_value=values)
 
@@ -77,7 +78,7 @@ async def test_factual_redis_job_int_as_str(mocker, retrieval_request) -> None: 
 
 @pytest.mark.asyncio
 async def test_nan_entities_job(mocker, retrieval_request) -> None:  # type: ignore[no-untyped-def]
-    values = ["20", "44"]
+    values = [snappy.compress(val) for val in ["20", "44"]]
 
     redis_mock = mocker.patch.object(Pipeline, "execute", return_value=values)
 
@@ -98,7 +99,7 @@ async def test_nan_entities_job(mocker, retrieval_request) -> None:  # type: ign
 
 @pytest.mark.asyncio
 async def test_no_entities_job(mocker, retrieval_request) -> None:  # type: ignore[no-untyped-def]
-    values = ["20", "44"]
+    values = [snappy.compress(val) for val in ["20", "44"]]
 
     redis_mock = mocker.patch.object(Pipeline, "execute", return_value=values)
 
@@ -130,7 +131,7 @@ async def test_factual_redis_job_int_entity(mocker) -> None:  # type: ignore[no-
         event_timestamp=None,
     )
 
-    values = ["20", "44", "55"]
+    values = [snappy.compress(val) for val in ["20", "44", "55"]]
 
     redis_mock = mocker.patch.object(Pipeline, "execute", return_value=values)
 

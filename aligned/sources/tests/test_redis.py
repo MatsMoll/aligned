@@ -1,9 +1,15 @@
+import os
 from datetime import timedelta
 import pytest
 import polars as pl
 from aligned import Float32, Int32, List, RedisConfig, String, feature_view, Timestamp
 from aligned.sources.random_source import RandomDataSource
 from aligned.sources.redis import RedisSource
+
+pytestmark = pytest.mark.skipif(
+    not os.environ.get("REDIS_URL"),
+    reason="REDIS_URL not set",
+)
 
 ttl_duration = timedelta(hours=2)
 
