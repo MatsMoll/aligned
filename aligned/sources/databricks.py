@@ -580,10 +580,7 @@ class UCFeatureTableSource(
     type_name = "uc_feature_table"
 
     def _configured_connection(self) -> SparkSession:
-        conn = self.config.connection()
-        for key, value in (self.spark_config or {}).items():
-            conn.conf.set(key, value)
-        return conn
+        return self.config.connection(spark_config=self.spark_config)
 
     def with_spark_config(self, spark_config: dict[str, str]) -> UCFeatureTableSource:
         merged = dict(self.spark_config or {})
