@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
 import logging
 import json
@@ -29,7 +30,6 @@ from aligned.schemas.record_coders import PassthroughRecordCoder, RecordCoder
 from aligned.schemas.vector_storage import VectorIndex, VectorStorage
 
 if TYPE_CHECKING:
-    from redis.client import AbstractRedis
     from redis.commands.search.field import (
         NumericField,
         TagField,
@@ -40,9 +40,51 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+@dataclass
+class RedisManager:
 
-redis_manager: dict[str, AbstractRedis] = {}
+    clients: dict[str, redis.RedisCluster | redis.StrictRedis] = field(default_factory=dict)
+    loops: dict[str, asyncio.AbstractEventLoop] = field(default_factory=dict)
 
+    @classmethod
+    def shared(cls) -> RedisManager:
+
+        key = "_shared"
+        if hasattr(cls, key):
+            manager = getattr(cls, key)
+        else:
+            manager = RedisManager()
+            setattr(cls, key, manager)
+
+        return manager
+
+    @classmethod
+    def client_for(cls, url: str) -> redis.RedisCluster | redis.StrictRedis:
+        from redis import Redis as SyncRedis
+
+        manager = cls.shared()
+        loop = asyncio.get_event_loop()
+
+        if url in manager.clients:
+            client = manager.clients[url]
+
+            if manager.loops[url] is loop:
+                return client
+
+        sync_client = SyncRedis.from_url(url, decode_responses=True)
+        info = sync_client.info()
+        if "cluster_enabled" in info and bool(info["cluster_enabled"]):
+            manager.clients[url] = redis.RedisCluster.from_url(
+                url=url
+            )
+        else:
+            manager.clients[url] = redis.StrictRedis.from_url(
+                url
+            )
+
+        manager.loops[url] = loop
+        return manager.clients[url]
+         
 
 @dataclass
 class RedisConfig(Codable, AsBatchSource):
@@ -70,23 +112,9 @@ class RedisConfig(Codable, AsBatchSource):
     def as_source(self) -> CodableBatchDataSource:
         return RedisSource(self)
 
-    def redis(self) -> AbstractRedis:
+    def redis(self) -> redis.RedisCluster | redis.StrictRedis:
         url = self.url
-        if url not in redis_manager:
-            from redis import Redis as SyncRedis
-
-            sync_client = SyncRedis.from_url(url, decode_responses=True)
-            info = sync_client.info()
-            if "cluster_enabled" in info and bool(info["cluster_enabled"]):
-                redis_manager[url] = redis.RedisCluster.from_url(
-                    url=url, decode_responses=True
-                )
-            else:
-                redis_manager[url] = redis.StrictRedis.from_url(
-                    url, decode_responses=True
-                )
-
-        return redis_manager[url]
+        return RedisManager.client_for(url)
 
     def stream(self, topic: str) -> RedisStreamSource:
         return RedisStreamSource(topic_name=topic, config=self)
@@ -233,6 +261,8 @@ class RedisSource(WritableFeatureSource, CodableBatchDataSource):
         return FactualRedisJob(self.config, [request], facts, formatter=self.formatter)
 
     async def insert(self, job: RetrievalJob, request: RetrievalRequest) -> None:
+        import snappy
+
         redis = self.config.redis()
         data = await job.to_lazy_polars()
 
@@ -247,8 +277,9 @@ class RedisSource(WritableFeatureSource, CodableBatchDataSource):
             request_data = data.filter(filter_entity_query).with_columns(
                 (
                     pl.concat_str(
-                        [pl.lit(request.location.identifier), pl.lit(":")]
-                        + [pl.col(col) for col in sorted(request.entity_names)]
+                        [pl.lit(request.location.identifier)]
+                        + [pl.col(col) for col in sorted(request.entity_names)],
+                        separator=":"
                     )
                 ).alias("id")
             )
@@ -293,7 +324,13 @@ class RedisSource(WritableFeatureSource, CodableBatchDataSource):
                 record_key = record["id"]
                 pipe.hset(
                     record_key,
-                    mapping={key: value for key, value in record.items() if value},
+                    mapping={
+                        # key: value
+                        key: snappy.compress(value)
+                        for key, value 
+                        in record.items() 
+                        if value
+                    },
                 )
                 for key, value in record.items():
                     if value is None:

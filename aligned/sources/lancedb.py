@@ -127,7 +127,8 @@ class LanceDbTable(
         if df.is_empty():
             return
 
-        arrow_table = df.to_arrow()
+        columns = list(request.all_returned_columns)
+        arrow_table = df.select(columns).to_arrow()
         await table.add(arrow_table)
 
     async def overwrite(self, job: "RetrievalJob", request: RetrievalRequest) -> None:
@@ -193,7 +194,8 @@ class LanceDbTable(
                 polars_df = polars_df.select(pl.exclude("_distance"))
                 if df_cols > 1:
                     logger.info(f"Stacking {polars_df.columns} and {item.keys()}")
-                    polars_df = polars_df.select(pl.exclude(org_columns)).hstack(
+                    cols_to_exclude = [c for c in org_columns if c in polars_df.columns]
+                    polars_df = polars_df.select(pl.exclude(cols_to_exclude)).hstack(
                         pl.DataFrame([item] * polars_df.height)
                         .select(org_columns)
                         .select(pl.exclude(embedding.name))

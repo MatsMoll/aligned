@@ -9,6 +9,7 @@ from aligned.retrieval_job import RetrievalJob
 from aligned.schemas.date_formatter import DateFormatter
 from aligned.schemas.feature import Feature, FeatureLocation, FeatureType
 from aligned.sources.redis import RedisConfig, RedisSource
+import snappy
 
 
 @pytest.fixture
@@ -30,7 +31,8 @@ def retrieval_request() -> RetrievalRequest:
 
 @pytest.mark.asyncio
 async def test_factual_redis_job(mocker, retrieval_request) -> None:  # type: ignore[no-untyped-def]
-    values = ["20", "44"]
+    raw_values = ["20", "44"]
+    values = [[snappy.compress(val)] for val in raw_values]
 
     redis_mock = mocker.patch.object(Pipeline, "execute", return_value=values)
 
@@ -47,13 +49,14 @@ async def test_factual_redis_job(mocker, retrieval_request) -> None:  # type: ig
 
     result = await job.to_pandas()
     redis_mock.assert_called_once()
-    x_result = [int(value) for value in values] + [0, 0]
+    x_result = [int(v) for v in raw_values] + [0, 0]
     assert np.all(result["x"].fillna(0).values == x_result), f"Got {result}"  # type: ignore
 
 
 @pytest.mark.asyncio
 async def test_factual_redis_job_int_as_str(mocker, retrieval_request) -> None:  # type: ignore[no-untyped-def]
-    values = ["20", "44"]
+    raw_values = ["20", "44"]
+    values = [[snappy.compress(val)] for val in raw_values]
 
     redis_mock = mocker.patch.object(Pipeline, "execute", return_value=values)
 
@@ -71,13 +74,13 @@ async def test_factual_redis_job_int_as_str(mocker, retrieval_request) -> None: 
 
     result = await job.to_pandas()
     redis_mock.assert_called_once()
-    x_result = [int(value) for value in values] + [0, 0]
+    x_result = [int(v) for v in raw_values] + [0, 0]
     assert np.all(result["x"].fillna(0).values == x_result)  # type: ignore
 
 
 @pytest.mark.asyncio
 async def test_nan_entities_job(mocker, retrieval_request) -> None:  # type: ignore[no-untyped-def]
-    values = ["20", "44"]
+    values = [snappy.compress(val) for val in ["20", "44"]]
 
     redis_mock = mocker.patch.object(Pipeline, "execute", return_value=values)
 
@@ -98,7 +101,7 @@ async def test_nan_entities_job(mocker, retrieval_request) -> None:  # type: ign
 
 @pytest.mark.asyncio
 async def test_no_entities_job(mocker, retrieval_request) -> None:  # type: ignore[no-untyped-def]
-    values = ["20", "44"]
+    values = [snappy.compress(val) for val in ["20", "44"]]
 
     redis_mock = mocker.patch.object(Pipeline, "execute", return_value=values)
 
@@ -130,7 +133,8 @@ async def test_factual_redis_job_int_entity(mocker) -> None:  # type: ignore[no-
         event_timestamp=None,
     )
 
-    values = ["20", "44", "55"]
+    raw_values = ["20", "44", "55"]
+    values = [[snappy.compress(val)] for val in raw_values]
 
     redis_mock = mocker.patch.object(Pipeline, "execute", return_value=values)
 
@@ -147,7 +151,7 @@ async def test_factual_redis_job_int_entity(mocker) -> None:  # type: ignore[no-
 
     result = await job.to_pandas()
     redis_mock.assert_called_once()
-    x_result = [int(value) for value in values] + [0]
+    x_result = [int(v) for v in raw_values] + [0]
     assert np.all(result["x"].fillna(0).values == x_result)  # type: ignore
 
 
@@ -155,7 +159,7 @@ async def test_factual_redis_job_int_entity(mocker) -> None:  # type: ignore[no-
 async def test_write_job(mocker, retrieval_request: RetrievalRequest) -> None:  # type: ignore[no-untyped-def]
     import fakeredis.aioredis
 
-    redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
+    redis = fakeredis.aioredis.FakeRedis(decode_responses=False)
 
     _ = mocker.patch.object(RedisConfig, "redis", return_value=redis)
 

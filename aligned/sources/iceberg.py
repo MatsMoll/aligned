@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class IcebergCatalog(Codable):
-    name: ConfigValue = field(default=ConfigValue.from_value("default"))
+    name: ConfigValue = field(default_factory=lambda: ConfigValue.from_value("default"))
     config: dict[str, ConfigValue] = field(
         default_factory=lambda: {
             "type": ConfigValue.from_value("in-memory"),
