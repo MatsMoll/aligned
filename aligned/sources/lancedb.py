@@ -127,7 +127,8 @@ class LanceDbTable(
         if df.is_empty():
             return
 
-        arrow_table = df.to_arrow()
+        columns = list(request.all_returned_columns)
+        arrow_table = df.select(columns).to_arrow()
         await table.add(arrow_table)
 
     async def overwrite(self, job: "RetrievalJob", request: RetrievalRequest) -> None:
