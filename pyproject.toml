@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aligned"
-version = "0.0.137"
+version = "0.0.138"
 description = "A data management and lineage tool for ML applications."
 authors = ["Mats E. Mollestad <mats@mollestad.no>"]
 license = "FSL-1.1-ALv2"
@@ -44,12 +44,12 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.10"
-python-dotenv = "^0.21.0"
-click = "^8.1.3"
-httpx = "^0.27.0"
-mashumaro = "^3.0.1"
-dill = "^0.3.4"
-pydantic = "^2.0.0"
+python-dotenv = ">=0.21.0"
+click = ">=8.1.3"
+httpx = ">=0.27.0"
+mashumaro = ">=3.0.1"
+dill = ">=0.3.4"
+pydantic = ">=2.0.0"
 polars = { version = ">=1.10.0", extras = ["pyarrow"] }
 pyarrow = ">=17.0.0"
 numpy = "*"
@@ -65,17 +65,17 @@ redis = { version = ">=4.3.0", optional = true }
 aioaws = { version = "^0.12", optional = true }
 asgi-correlation-id = { version = "^3.0.0", optional = true }
 pillow = { version = ">=9.4.0", optional = true }
-kafka-python = { version= "^2.0.2", optional = true }
-connectorx = { version = "^0.3.2", optional = true }
-asyncpg = { version = "^0.29.0", optional = true }
-psycopg2 = { version = "^2.9.9", optional = true }
-ollama = { version = "^0.1.8", optional = true }
+kafka-python = { version= ">=2.0.2", optional = true }
+connectorx = { version = ">=0.3.2", optional = true }
+asyncpg = { version = ">=0.29.0", optional = true }
+psycopg2 = { version = ">=2.9.9", optional = true }
+ollama = { version = ">=0.1.8", optional = true }
 mlflow = { version = ">=2.11.3,<3", optional = true }
 adlfs = { version = ">=2024.4.1", optional = true }
 lancedb = { version = ">=0.15.0", optional = true }
-deltalake = { version = "^1.0.0", optional = true }
-sentence-transformers = { version = "^3.2.0", optional = true }
-tiktoken = { version = "^0.8.0", optional = true }
+deltalake = { version = ">=1.0.0", optional = true }
+sentence-transformers = { version = ">=3.2.0", optional = true }
+tiktoken = { version = ">=0.8.0", optional = true }
 databricks-connect = { version = ">15.1.0", optional = true }
 pyiceberg = { version = ">=0.10.0", optional = true }
 
