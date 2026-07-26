@@ -24,6 +24,7 @@ from aligned.retrieval_job import RetrievalJob
 from aligned.s3.storage import FileStorage, HttpStorage
 from aligned.schemas.codable import Codable
 from aligned.schemas.feature import FeatureType, Feature
+from aligned.sources.s3_config import S3Config
 from aligned.storage import Storage
 from aligned.feature_source import WritableFeatureSource
 from aligned.schemas.date_formatter import DateFormatter
@@ -739,6 +740,9 @@ class ParquetFileSource(
     config: ParquetConfig = field(default_factory=ParquetConfig)
     date_formatter: DateFormatter = field(default_factory=lambda: DateFormatter.noop())
 
+    s3_config: S3Config | None = field(default=None)
+    azure_config: AzureBlobConfig | None = field(default=None)
+
     type_name: str = "parquet"
 
     @property
@@ -759,6 +763,8 @@ class ParquetFileSource(
             mapping_keys=self.mapping_keys,
             config=self.config,
             date_formatter=self.date_formatter,
+            s3_config=self.s3_config,
+            azure_config=self.azure_config,
         )
 
     def job_group_key(self) -> str:
@@ -766,6 +772,20 @@ class ParquetFileSource(
 
     def __hash__(self) -> int:
         return hash(self.job_group_key())
+
+    def storage_options(self) -> dict[str, Any] | None:
+        if self.azure_config:
+            return self.azure_config.read_creds()
+        if self.s3_config:
+            return self.s3_config.storage_options()
+        return None
+
+    def with_protocol(self, path: str) -> str:
+        if self.azure_config:
+            return f"adfs://{path}"
+        if self.s3_config:
+            return f"s3://{path}"
+        return path
 
     async def delete(self, predicate: Expression | None = None) -> None:
         if not predicate:
@@ -778,9 +798,9 @@ class ParquetFileSource(
             await self.write_polars(filtered_df)
 
     async def read_pandas(self) -> pd.DataFrame:
-        path = self.path.as_posix()
+        path = self.with_protocol(self.path.as_posix())
         try:
-            return pd.read_parquet(path)
+            return pd.read_parquet(path, storage_options=self.storage_options())
         except FileNotFoundError:
             raise UnableToFindFileException(path)
         except HTTPStatusError:
@@ -789,26 +809,38 @@ class ParquetFileSource(
     async def write_pandas(self, df: pd.DataFrame) -> None:
         create_parent_dir(self.path.as_posix())
         df.to_parquet(
-            self.path.as_posix(),
+            self.with_protocol(self.path.as_posix()),
             engine=self.config.engine,
             compression=self.config.compression,
             index=False,
+            storage_options=self.storage_options(),
         )
 
     async def to_lazy_polars(self) -> pl.LazyFrame:
-        path = self.path.as_posix()
-        if (not path.startswith("http")) and (not do_file_exist(path)):
+        path = self.with_protocol(self.path.as_posix())
+        storage_options = self.storage_options()
+        if (
+            storage_options is None
+            and (not path.startswith("http"))
+            and (not do_file_exist(path))
+        ):
             raise UnableToFindFileException(path)
 
         try:
-            return pl.scan_parquet(path)
+            return pl.scan_parquet(path, storage_options=storage_options)
         except OSError:
             raise UnableToFindFileException(path)
 
     async def write_polars(self, df: pl.LazyFrame) -> None:
-        path = self.path.as_posix()
-        create_parent_dir(path)
-        df.collect().write_parquet(path, compression=self.config.compression)
+        path = self.with_protocol(self.path.as_posix())
+        if ":" not in path:
+            create_parent_dir(path)
+        logger.info(f"Writing to {path}")
+        df.collect().write_parquet(
+            path,
+            compression=self.config.compression,
+            storage_options=self.storage_options(),
+        )
 
     def all_data(self, request: RetrievalRequest, limit: int | None) -> RetrievalJob:
         return FileFullJob(self, request, limit, date_formatter=self.date_formatter)
@@ -901,12 +933,15 @@ class DeltaFileSource(
     date_formatter: DateFormatter = field(default_factory=lambda: DateFormatter.noop())
 
     azure_config: AzureBlobConfig | None = field(default=None)
+    s3_config: S3Config | None = field(default=None)
 
     type_name: str = "delta"
 
     def storage_options(self) -> dict[str, Any] | None:
         if self.azure_config:
             return self.azure_config.read_creds()
+        if self.s3_config:
+            return self.s3_config.storage_options()
         return None
 
     def resolved_path(self) -> str:

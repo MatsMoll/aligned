@@ -1,7 +1,15 @@
 from __future__ import annotations
 
 import polars as pl
-from typing import TYPE_CHECKING, Any, AsyncIterable, Awaitable, Callable, Coroutine
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterable,
+    Awaitable,
+    Callable,
+    Coroutine,
+    Union,
+)
 from dataclasses import dataclass
 from aligned.compiler.feature_factory import FeatureReferencable
 from aligned.config_value import ConfigValue, LiteralValue
@@ -23,6 +31,18 @@ if TYPE_CHECKING:
     from aligned.schemas.model import Model
     from aligned.exposed_model.mlflow import MlflowConfig
     from aligned.exposed_model.openai import OpenAiConfig
+
+CallableModelFunction = Union[
+    Callable[[pl.DataFrame, "ContractStore"], Awaitable[pl.DataFrame]],
+    Callable[[pl.DataFrame, "ContractStore"], Awaitable[pl.Series]],
+    Callable[[pl.DataFrame], Awaitable[pl.DataFrame]],
+    Callable[[pl.DataFrame], Awaitable[pl.Series]],
+    Callable[[pl.DataFrame, "ContractStore"], pl.DataFrame],
+    Callable[[pl.DataFrame, "ContractStore"], pl.Series],
+    Callable[[pl.DataFrame], pl.DataFrame],
+    Callable[[pl.DataFrame], pl.Series],
+]
+
 
 logger = logging.getLogger(__name__)
 
@@ -140,9 +160,9 @@ class ExposedModel(Codable, SerializableType):
         raise NotImplementedError(type(self))
 
     def _serialize(self) -> dict:
-        assert (
-            self.model_type in PredictorFactory.shared().supported_predictors
-        ), f"Unknown predictor_type: {self.model_type}"
+        assert self.model_type in PredictorFactory.shared().supported_predictors, (
+            f"Unknown predictor_type: {self.model_type}"
+        )
         return self.to_dict()
 
     def with_shadow(self, shadow_model: ExposedModel) -> ShadowModel:
@@ -163,9 +183,7 @@ class ExposedModel(Codable, SerializableType):
 
     @staticmethod
     def polars_predictor(
-        callable: Callable[
-            [pl.DataFrame, ModelFeatureStore], Coroutine[None, None, pl.DataFrame]
-        ],
+        callable: CallableModelFunction,
         features: list[FeatureReferencable] | None = None,
     ) -> "ExposedModel":
         refs = [feat.feature_reference() for feat in features or []]
@@ -331,20 +349,29 @@ class CodePredictor(ExposedModel, VersionedModel):
             exec(self.code)
 
         function = locals()[self.function_name]
-        args = inspect.signature(function).parameters
+        sign = inspect.signature(function)
+
+        args = sign.parameters
 
         if len(args) == 1:
+            out = sign.return_annotation
+
             if self.feature_refs:
-                features = await store.store.features_for(
-                    values, self.feature_refs
-                ).to_polars()
+                job = store.store.features_for(values, self.feature_refs)
+                features = await job.to_polars()
             else:
-                features = await store.input_features_for(values).to_polars()
+                job = store.input_features_for(values)
+                features = await job.to_polars()
+
+            if (out == pl.Series) or (out == "pl.Series"):
+                input_features = features[job.request_result.feature_columns]
+            else:
+                input_features = features
 
             if inspect.iscoroutinefunction(function):
-                pred = await function(features)
+                pred = await function(input_features)
             else:
-                pred = function(features)
+                pred = function(input_features)
         else:
             features = await values.to_polars()
             if inspect.iscoroutinefunction(function):
@@ -355,7 +382,8 @@ class CodePredictor(ExposedModel, VersionedModel):
         if isinstance(pred, pl.DataFrame):
             return pred
 
-        assert isinstance(pred, pl.Series), f"Expected a Series but got {type(pred)}"
+        if not isinstance(pred, pl.Series):
+            pred = pl.Series(pred)
 
         pred_view = store.model.predictions_view
         pred_columns = pred_view.labels()
@@ -376,10 +404,7 @@ class CodePredictor(ExposedModel, VersionedModel):
 
     @staticmethod
     def from_function(
-        function: Callable[[pl.DataFrame], pl.Series]
-        | Callable[[pl.DataFrame], Awaitable[pl.Series]]
-        | Callable[[pl.DataFrame, ContractStore], pl.Series]
-        | Callable[[pl.DataFrame, ContractStore], Awaitable[pl.Series]],
+        function: CallableModelFunction,
         feature_refs: list[FeatureReference] | None = None,
     ) -> CodePredictor:
         import dill

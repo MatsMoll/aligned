@@ -33,7 +33,9 @@ class ViewTags:
 class Contact(Codable):
     name: str
     email: str | None = field(default=None)
+
     slack_member_id: str | None = field(default=None)
+    discord_member_id: str | None = field(default=None)
 
 
 @dataclass
